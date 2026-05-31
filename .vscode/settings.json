@@ -1,28 +1,31 @@
 {
-	"oxc.lint.configPath": ".oxlintrc.json",
-	"oxc.fmt.configPath": ".oxfmtrc.json",
-	"[typescript]": {
-		"editor.defaultFormatter": "oxc.oxc-vscode",
-		"editor.formatOnSave": true
+	"prettier.enable": false,
+	"eslint.enable": false,
+	"editor.formatOnSave": true,
+	"editor.formatOnSaveMode": "file",
+	"oxc.fmt.configPath": "./.oxfmtrc.json",
+	"oxc.fixKind": "safe_fix_or_suggestion",
+	"editor.defaultFormatter": "oxc.oxc-vscode",
+	"editor.gotoLocation.multipleDefinitions": "goto",
+	"editor.quickSuggestions": {
+		"strings": "on"
 	},
-	"[javascript]": {
-		"editor.defaultFormatter": "oxc.oxc-vscode",
-		"editor.formatOnSave": true
+
+	// Auto fix
+	"editor.codeActionsOnSave": {
+		"source.fixAll.oxc": "always"
 	},
-	"[json]": {
-		"editor.defaultFormatter": "oxc.oxc-vscode",
-		"editor.formatOnSave": true
-	},
-	"[jsonc]": {
-		"editor.defaultFormatter": "oxc.oxc-vscode",
-		"editor.formatOnSave": true
-	},
+
+	"js/ts.tsdk.path": "node_modules\\typescript\\lib",
+
 	"editor.tabSize": 4,
 	"editor.useTabStops": true,
 	"editor.insertSpaces": false,
 	"editor.detectIndentation": true,
 	"files.eol": "\n",
+
 	"powershell.codeFormatting.addWhitespaceAroundPipe": true,
+
 	"search.exclude": {
 		"**/node_modules": true,
 		"**/bower_components": true,
