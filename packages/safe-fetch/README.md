@@ -4,8 +4,8 @@ A fetch wrapper on top of Rust's Result, powered by [`@sapphire/result`](https:/
 
 ## Features
 
--   Powered by the native `fetch` function
--   CJS and ESM support
+- Powered by the native `fetch` function
+- CJS and ESM support
 
 ## Usage
 

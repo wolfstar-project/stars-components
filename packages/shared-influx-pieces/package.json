@@ -2,12 +2,35 @@
 	"name": "@wolfstar/shared-influx-pieces",
 	"version": "1.1.0",
 	"description": "The influx pieces for ArchId Network's HTTP-only bots",
-	"author": "@wolfstar",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"ts",
+		"typescript",
+		"wolfstar",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
 	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/shared-influx-pieces"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": [
+		"./dist/register.js"
+	],
 	"main": "dist/index.js",
 	"module": "dist/index.js",
 	"types": "dist/index.d.ts",
-	"type": "module",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -18,14 +41,14 @@
 			"import": "./dist/register.js"
 		}
 	},
-	"sideEffects": [
-		"./dist/register.js"
-	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "tsc -b src",
 		"watch": "tsc -b src --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
-		"lint": "eslint src --ext ts --fix -c ../../package.json",
+		"lint": "oxlint src --fix",
 		"prepack": "yarn build",
 		"bump": "cliff-jumper",
 		"check-update": "cliff-jumper --dry-run"
@@ -36,34 +59,11 @@
 		"discord-api-types": "^0.38.8",
 		"tslib": "^2.8.1"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/shared-influx-pieces"
-	},
-	"files": [
-		"dist/"
-	],
-	"engines": {
-		"node": ">=18"
-	},
-	"keywords": [
-		"discord",
-		"api",
-		"http",
-		"wolfstar",
-		"typescript",
-		"ts",
-		"yarn"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
 	"devDependencies": {
 		"@favware/cliff-jumper": "^6.0.0",
 		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=18"
 	}
 }

@@ -1,5 +1,22 @@
 {
-	"eslint.validate": ["typescript"],
+	"oxc.lint.configPath": ".oxlintrc.json",
+	"oxc.fmt.configPath": ".oxfmtrc.json",
+	"[typescript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+		"editor.formatOnSave": true
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+		"editor.formatOnSave": true
+	},
+	"[json]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+		"editor.formatOnSave": true
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+		"editor.formatOnSave": true
+	},
 	"editor.tabSize": 4,
 	"editor.useTabStops": true,
 	"editor.insertSpaces": false,

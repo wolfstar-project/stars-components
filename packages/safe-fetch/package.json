@@ -1,66 +1,65 @@
 {
-  "name": "@wolfstar/safe-fetch",
-  "version": "1.1.4",
-  "description": "A fetch wrapper on top of Rust's Result",
-  "author": "@wolfstar",
-  "license": "Apache-2.0",
-  "main": "dist/cjs/index.cjs",
-  "module": "dist/esm/index.js",
-  "types": "dist/cjs/index.d.cts",
-  "type": "module",
-  "exports": {
-    "import": {
-      "types": "./dist/esm/index.d.ts",
-      "default": "./dist/esm/index.js"
-    },
-    "require": {
-      "types": "./dist/cjs/index.d.cts",
-      "default": "./dist/cjs/index.cjs"
-    }
-  },
-  "sideEffects": false,
-  "scripts": {
-    "test": "eslint src --ext ts -c ../../package.json",
-    "build": "tsup",
-    "watch": "tsup --watch",
-    "typecheck": "tsc -p tsconfig.eslint.json",
-    "lint": "eslint src --ext ts --fix -c ../../package.json",
-    "prepack": "yarn build",
-    "bump": "cliff-jumper",
-    "check-update": "cliff-jumper --dry-run"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/wolfstar-project/stars-components.git",
-    "directory": "packages/safe-fetch"
-  },
-  "files": [
-    "dist/"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "keywords": [
-    "discord",
-    "api",
-    "http",
-    "wolfstar",
-    "typescript",
-    "ts",
-    "yarn"
-  ],
-  "bugs": {
-    "url": "https://github.com/wolfstar-project/stars-components/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "@sapphire/result": "^2.8.0"
-  },
-  "devDependencies": {
-    "@favware/cliff-jumper": "^6.0.0",
-    "tsup": "^8.5.0",
-    "typescript": "~5.8.3"
-  }
+	"name": "@wolfstar/safe-fetch",
+	"version": "1.1.4",
+	"description": "A fetch wrapper on top of Rust's Result",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"ts",
+		"typescript",
+		"wolfstar",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/safe-fetch"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/cjs/index.cjs",
+	"module": "dist/esm/index.js",
+	"types": "dist/cjs/index.d.cts",
+	"exports": {
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		},
+		"require": {
+			"types": "./dist/cjs/index.d.cts",
+			"default": "./dist/cjs/index.cjs"
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsup",
+		"watch": "tsup --watch",
+		"typecheck": "tsc -p tsconfig.eslint.json",
+		"lint": "oxlint src --fix",
+		"prepack": "yarn build",
+		"bump": "cliff-jumper",
+		"check-update": "cliff-jumper --dry-run"
+	},
+	"dependencies": {
+		"@sapphire/result": "^2.8.0"
+	},
+	"devDependencies": {
+		"@favware/cliff-jumper": "^6.0.0",
+		"tsup": "^8.5.0",
+		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=18"
+	}
 }

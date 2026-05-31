@@ -4,8 +4,8 @@ The shared commands used for ArchId Network's HTTP-only bots.
 
 ## Setup
 
--   Define `locales/{{lng}}/commands/shared:infoEmbedDescription` as a string. This is the content displayed in `/info`'s embed description.
--   Define the information variables.
+- Define `locales/{{lng}}/commands/shared:infoEmbedDescription` as a string. This is the content displayed in `/info`'s embed description.
+- Define the information variables.
 
 ## Usage
 

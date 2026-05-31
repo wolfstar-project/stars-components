@@ -26,7 +26,6 @@ export class ListenerLoaderStrategy extends LoaderStrategy<Listener> {
 		const maxListeners = emitter.getMaxListeners();
 		if (maxListeners !== 0) emitter.setMaxListeners(maxListeners + 1);
 
-		// eslint-disable-next-line @typescript-eslint/dot-notation
 		emitter.on(piece.event, piece['_listener']);
 	}
 
@@ -45,7 +44,6 @@ export class ListenerLoaderStrategy extends LoaderStrategy<Listener> {
 		const maxListeners = emitter.getMaxListeners();
 		if (maxListeners !== 0) emitter.setMaxListeners(maxListeners - 1);
 
-		// eslint-disable-next-line @typescript-eslint/dot-notation
 		emitter.off(piece.event, piece['_listener']);
 	}
 }

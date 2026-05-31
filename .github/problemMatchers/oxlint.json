@@ -1,0 +1,21 @@
+{
+	"problemMatcher": [
+		{
+			"owner": "oxlint",
+			"pattern": [
+				{
+					"regexp": "^\\s*x\\s+(.+)\\s+\\((.+)\\)$",
+					"message": 1,
+					"code": 2
+				},
+				{
+					"regexp": "^\\s+╭─\\[(.+):(\\d+):(\\d+)\\]$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"loop": true
+				}
+			]
+		}
+	]
+}

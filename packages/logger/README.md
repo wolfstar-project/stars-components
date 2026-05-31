@@ -4,11 +4,11 @@ A lightweight logger system with level support.
 
 ## Features
 
--   Logging integration similar to @sapphire/plugin-logger.
-    -   Log levels
-    -   Colorette powered Colours
-    -   Timestamps
-    -   Logging similar to framework (registering commands, errors, successes, etc)
+- Logging integration similar to @sapphire/plugin-logger.
+    - Log levels
+    - Colorette powered Colours
+    - Timestamps
+    - Logging similar to framework (registering commands, errors, successes, etc)
 
 ## Usage
 

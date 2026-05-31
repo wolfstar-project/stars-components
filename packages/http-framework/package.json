@@ -2,25 +2,48 @@
 	"name": "@wolfstar/http-framework",
 	"version": "2.2.1",
 	"description": "The framework for ArchId Network's HTTP-only bots",
-	"author": "@wolfstar",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"ts",
+		"typescript",
+		"wolfstar",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
 	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/http-framework"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
 	"main": "dist/esm/index.js",
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
-	"type": "module",
 	"exports": {
 		"import": {
 			"types": "./dist/esm/index.d.ts",
 			"default": "./dist/esm/index.js"
 		}
 	},
-	"sideEffects": false,
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"test": "vitest run",
 		"build": "tsup",
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
-		"lint": "eslint src --ext ts --fix -c ../../package.json",
+		"lint": "oxlint src --fix",
 		"prepack": "yarn build",
 		"bump": "cliff-jumper",
 		"check-update": "cliff-jumper --dry-run"
@@ -43,30 +66,7 @@
 		"typescript": "~5.8.3",
 		"vitest": "^4.0.8"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/http-framework"
-	},
-	"files": [
-		"dist/"
-	],
 	"engines": {
 		"node": ">=18"
-	},
-	"keywords": [
-		"discord",
-		"api",
-		"http",
-		"wolfstar",
-		"typescript",
-		"ts",
-		"yarn"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
-	},
-	"publishConfig": {
-		"access": "public"
 	}
 }

@@ -4,10 +4,10 @@ A powerful HTTP framework for building your Discord bots, powered by [`node:http
 
 ## Features
 
--   Support for reloading and unloading commands
--   Support for attachment responses
--   Seamless integration with low-level libraries
--   Thin wrapper on top of raw data for maximum performance
+- Support for reloading and unloading commands
+- Support for attachment responses
+- Seamless integration with low-level libraries
+- Thin wrapper on top of raw data for maximum performance
 
 ## Usage
 

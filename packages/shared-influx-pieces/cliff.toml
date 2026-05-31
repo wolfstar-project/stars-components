@@ -60,11 +60,11 @@ commit_parsers = [
 	{ message = "^chore", skip = true },
 	{ message = "^ci", skip = true },
 	{ message = "^build", skip = true },
-	{ body = ".*security", group = "🛡️ Security" },
+	{ body = ".*security", group = "🛡️ Security" }
 ]
 commit_preprocessors = [
 	# remove issue numbers from commits
-	{ pattern = '\s\((\w+\s)?#([0-9]+)\)', replace = "" },
+	{ pattern = '\s\((\w+\s)?#([0-9]+)\)', replace = "" }
 ]
 filter_commits = true
 tag_pattern = "@wolfstar/shared-influx-pieces@[0-9]*"

@@ -1,4 +1,3 @@
-// eslint-disable-next-line spaced-comment
 /// <reference lib="dom" />
 
 import { err, ok, type Result } from '@sapphire/result';

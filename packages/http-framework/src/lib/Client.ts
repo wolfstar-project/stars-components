@@ -85,7 +85,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		const path = postPath ?? process.env.HTTP_POST_PATH ?? '/';
 
 		this.server = createServer(serverOptions ?? {});
-		this.server.on('request', (request, response) => this.handleRawHttpMessage(request, response, path, key));
+		this.server.on('request', (request, response) => void this.handleRawHttpMessage(request, response, path, key));
 
 		return new Promise<void>((resolve) => this.server.listen({ ...listenOptions, port, host: address }, resolve));
 	}

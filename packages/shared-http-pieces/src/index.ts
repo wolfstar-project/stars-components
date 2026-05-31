@@ -1,4 +1,3 @@
-// eslint-disable-next-line spaced-comment
 /// <reference lib="dom" />
 
 export * as Sentry from '@sentry/node';

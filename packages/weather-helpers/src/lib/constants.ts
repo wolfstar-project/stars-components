@@ -5,7 +5,6 @@ import { platform, release } from 'node:os';
  */
 export const BaseUrl = 'https://wttr.in/';
 
-// eslint-disable-next-line @typescript-eslint/no-inferrable-types
 export const version: string = '[VI]{{inject}}[/VI]';
 
 /**

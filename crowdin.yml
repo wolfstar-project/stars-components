@@ -5,5 +5,5 @@ commit_message: 'chore(i18n-crowdin): new translations for %original_file_name% 
 append_commit_message: false
 
 files:
-  - source: /packages/shared-http-pieces/src/locales/en-US/**/*.json
-    translation: /packages/shared-http-pieces/src/locales/%locale%/**/%original_file_name%
+    - source: /packages/shared-http-pieces/src/locales/en-US/**/*.json
+      translation: /packages/shared-http-pieces/src/locales/%locale%/**/%original_file_name%

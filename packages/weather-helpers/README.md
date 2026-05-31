@@ -4,7 +4,7 @@ Very basic weather helper functions for several ArchId bots to ensure we do not 
 
 ## Features
 
--   Powered by the `@wolfstar/safe-fetch` package
+- Powered by the `@wolfstar/safe-fetch` package
 
 ## Usage
 

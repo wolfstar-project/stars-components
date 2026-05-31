@@ -33,7 +33,6 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 	path?: string | URL;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-inferrable-types
 const packageVersion: string = '[VI]{{inject}}[/VI]';
 
 export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {

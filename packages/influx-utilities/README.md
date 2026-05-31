@@ -6,10 +6,10 @@ A tiny opinionated abstraction layer for InfluxDB for interacting with a single 
 
 You can provide the configuration for the Influx client in several ways.
 
--   `INFLUX_URL`: `ConnectionOptions.url`, the base URL to be used.
--   `INFLUX_TOKEN`: `ConnectionOptions.token`, the authentication token.
--   `INFLUX_ORG`: `ConnectionOptions.org`, the organization to use for the query and write APIs.
--   `INFLUX_BUCKET`: `ConnectionOptions.writeBucket`, the bucket to write to in the write API.
+- `INFLUX_URL`: `ConnectionOptions.url`, the base URL to be used.
+- `INFLUX_TOKEN`: `ConnectionOptions.token`, the authentication token.
+- `INFLUX_ORG`: `ConnectionOptions.org`, the organization to use for the query and write APIs.
+- `INFLUX_BUCKET`: `ConnectionOptions.writeBucket`, the bucket to write to in the write API.
 
 ### Environment Variables
 

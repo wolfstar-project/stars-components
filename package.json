@@ -1,16 +1,15 @@
 {
 	"name": "stars-components",
-	"description": "A collection of shared utilities for the ArchId Network",
 	"private": true,
+	"description": "A collection of shared utilities for the ArchId Network",
 	"workspaces": [
 		"packages/*"
 	],
 	"type": "module",
 	"scripts": {
 		"clean": "node scripts/clean.mjs",
-		"lint": "eslint packages --ext mjs,js,ts,tsx --fix",
-		"prettier": "prettier --ignore-path=.prettierignore",
-		"format": "prettier --write \"packages/**/{src,tests,scripts}/**/*.{mjs,ts,js}\"",
+		"lint": "oxlint --type-aware packages && oxfmt --check packages",
+		"lint:fix": "oxlint --type-aware --fix packages && oxfmt --write packages",
 		"test": "vitest run",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
@@ -22,21 +21,16 @@
 		"@commitlint/config-conventional": "^20.0.0",
 		"@favware/cliff-jumper": "^6.0.0",
 		"@favware/npm-deprecate": "^2.0.0",
-		"@sapphire/eslint-config": "^5.0.6",
-		"@sapphire/prettier-config": "^2.0.0",
 		"@sapphire/ts-config": "^5.0.1",
 		"@swc/core": "^1.15.1",
 		"@types/node": "22.15.21",
 		"@types/ws": "^8.18.1",
-		"@typescript-eslint/eslint-plugin": "^7.13.1",
-		"@typescript-eslint/parser": "^7.13.1",
 		"@vitest/coverage-v8": "^4.0.8",
 		"cz-conventional-changelog": "^3.3.0",
-		"eslint": "^8.57.1",
-		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-prettier": "^5.5.4",
 		"lint-staged": "^16.2.6",
-		"prettier": "^3.6.2",
+		"oxfmt": "0.52.0",
+		"oxlint": "0.52.0",
+		"oxlint-tsgolint": "0.52.0",
 		"tsup": "^8.5.0",
 		"turbo": "^2.6.0",
 		"typescript": "~5.8.3",
@@ -47,26 +41,22 @@
 		"ansi-regex": "^5.0.1",
 		"minimist": "1.2.8"
 	},
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"prettier": "@sapphire/prettier-config",
-	"eslintConfig": {
-		"extends": "@sapphire"
+	"lint-staged": {
+		"*.{ts,mts,cts,tsx,mjs,cjs,js,jsx,json,jsonc,yml,yaml,md}": "oxfmt --no-error-on-unmatched-pattern",
+		"*.{ts,mts,cts,tsx,mjs,cjs,js,jsx}": "oxlint --fix"
 	},
 	"commitlint": {
 		"extends": [
 			"@commitlint/config-conventional"
 		]
 	},
-	"lint-staged": {
-		"*": "prettier --ignore-unknown --write",
-		"*.{mjs,js,ts}": "eslint --fix --ext mjs,js,ts"
-	},
 	"config": {
 		"commitizen": {
 			"path": "./node_modules/cz-conventional-changelog"
 		}
+	},
+	"engines": {
+		"node": ">=18.0.0"
 	},
 	"packageManager": "yarn@4.11.0"
 }

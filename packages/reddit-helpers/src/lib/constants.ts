@@ -18,5 +18,4 @@ export const RedditBrandingColor = 0xff4500;
  */
 export const RedditLogoUrl = 'https://cdn.wolfstar.rocks/wolfstar-assets/reddit_logo.png';
 
-// eslint-disable-next-line @typescript-eslint/no-inferrable-types
 export const version: string = '[VI]{{inject}}[/VI]';

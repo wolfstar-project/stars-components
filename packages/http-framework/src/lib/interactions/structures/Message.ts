@@ -24,7 +24,6 @@ export class PartialMessage<I extends BaseInteraction = BaseInteraction> {
 	/**
 	 * The ID of the message.
 	 */
-	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	public get id() {
 		return '@original';
 	}
@@ -32,7 +31,6 @@ export class PartialMessage<I extends BaseInteraction = BaseInteraction> {
 	/**
 	 * The thread, if the message started one.
 	 */
-	// eslint-disable-next-line @typescript-eslint/class-literal-property-style
 	public get thread(): APIChannel | undefined {
 		return undefined;
 	}

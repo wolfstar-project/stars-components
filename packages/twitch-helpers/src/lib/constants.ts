@@ -13,5 +13,4 @@ export const TwitchBrandingColor = 0x6441a4;
  */
 export const TwitchLogoUrl = 'https://cdn.wolfstar.rocks/wolfstar-assets/twitch_logo.png';
 
-// eslint-disable-next-line @typescript-eslint/no-inferrable-types
 export const version: string = '[VI]{{inject}}[/VI]';

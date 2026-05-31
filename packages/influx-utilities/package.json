@@ -2,29 +2,20 @@
 	"name": "@wolfstar/influx-utilities",
 	"version": "1.1.0",
 	"description": "A tiny opinionated abstraction layer for InfluxDB for interacting with a single organization",
-	"author": "@wolfstar",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"ts",
+		"typescript",
+		"wolfstar",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
 	"license": "Apache-2.0",
-	"main": "dist/esm/index.js",
-	"module": "dist/esm/index.js",
-	"types": "dist/esm/index.d.ts",
-	"type": "module",
-	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
-		}
-	},
-	"sideEffects": false,
-	"scripts": {
-		"test": "eslint src --ext ts -c ../../package.json",
-		"build": "tsup",
-		"watch": "tsup --watch",
-		"typecheck": "tsc -p tsconfig.eslint.json",
-		"lint": "eslint src --ext ts --fix -c ../../package.json",
-		"prepack": "yarn build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
-	},
+	"author": "@wolfstar",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/wolfstar-project/stars-components.git",
@@ -33,23 +24,28 @@
 	"files": [
 		"dist/"
 	],
-	"engines": {
-		"node": ">=18"
-	},
-	"keywords": [
-		"discord",
-		"api",
-		"http",
-		"wolfstar",
-		"typescript",
-		"ts",
-		"yarn"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		}
 	},
 	"publishConfig": {
 		"access": "public"
+	},
+	"scripts": {
+		"build": "tsup",
+		"watch": "tsup --watch",
+		"typecheck": "tsc -p tsconfig.eslint.json",
+		"lint": "oxlint src --fix",
+		"prepack": "yarn build",
+		"bump": "cliff-jumper",
+		"check-update": "cliff-jumper --dry-run"
 	},
 	"dependencies": {
 		"@influxdata/influxdb-client": "^1.35.0",
@@ -60,5 +56,8 @@
 		"esbuild-plugin-version-injector": "^1.2.1",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=18"
 	}
 }

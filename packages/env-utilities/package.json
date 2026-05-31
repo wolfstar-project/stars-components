@@ -2,12 +2,36 @@
 	"name": "@wolfstar/env-utilities",
 	"version": "2.0.1",
 	"description": "Functional utilities for reading and parsing environmental variables",
-	"author": "@wolfstar",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"ts",
+		"typescript",
+		"wolfstar",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
 	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/env-utilities"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": [
+		"./dist/esm/setup.js",
+		"./dist/cjs/setup.cjs"
+	],
 	"main": "dist/cjs/index.cjs",
 	"module": "dist/esm/index.js",
 	"types": "dist/cjs/index.d.cts",
-	"type": "module",
 	"exports": {
 		".": {
 			"import": {
@@ -30,16 +54,15 @@
 			}
 		}
 	},
-	"sideEffects": [
-		"./dist/esm/setup.js",
-		"./dist/cjs/setup.cjs"
-	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"test": "vitest run",
 		"build": "tsup",
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
-		"lint": "eslint src --ext ts --fix -c ../../package.json",
+		"lint": "oxlint src --fix",
 		"prepack": "yarn build",
 		"bump": "cliff-jumper",
 		"check-update": "cliff-jumper --dry-run"
@@ -48,32 +71,6 @@
 		"dotenv": "^17.2.3",
 		"dotenv-expand": "^12.0.3"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/env-utilities"
-	},
-	"files": [
-		"dist/"
-	],
-	"engines": {
-		"node": ">=18"
-	},
-	"keywords": [
-		"discord",
-		"api",
-		"http",
-		"wolfstar",
-		"typescript",
-		"ts",
-		"yarn"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
 	"devDependencies": {
 		"@favware/cliff-jumper": "^6.0.0",
 		"@vitest/coverage-v8": "^4.0.8",
@@ -81,5 +78,8 @@
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3",
 		"vitest": "^4.0.8"
+	},
+	"engines": {
+		"node": ">=18"
 	}
 }
