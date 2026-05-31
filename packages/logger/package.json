@@ -1,0 +1,64 @@
+{
+	"name": "@wolfstar/logger",
+	"version": "2.0.4",
+	"description": "A lightweight logger system with level support",
+	"author": "@wolfstar",
+	"license": "Apache-2.0",
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"type": "module",
+	"exports": {
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		}
+	},
+	"sideEffects": false,
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsup",
+		"watch": "tsup --watch",
+		"typecheck": "tsc -p tsconfig.eslint.json",
+		"lint": "eslint src --ext ts --fix -c ../../package.json",
+		"prepack": "yarn build",
+		"bump": "cliff-jumper",
+		"check-update": "cliff-jumper --dry-run"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/logger"
+	},
+	"files": [
+		"dist/"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"keywords": [
+		"discord",
+		"api",
+		"http",
+		"wolfstar",
+		"typescript",
+		"ts",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"colorette": "^2.0.20"
+	},
+	"devDependencies": {
+		"@favware/cliff-jumper": "^6.0.0",
+		"@vitest/coverage-v8": "^4.0.8",
+		"tsup": "^8.5.0",
+		"typescript": "~5.8.3",
+		"vitest": "^4.0.8"
+	}
+}

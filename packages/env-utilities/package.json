@@ -1,0 +1,85 @@
+{
+	"name": "@wolfstar/env-utilities",
+	"version": "2.0.1",
+	"description": "Functional utilities for reading and parsing environmental variables",
+	"author": "@wolfstar",
+	"license": "Apache-2.0",
+	"main": "dist/cjs/index.cjs",
+	"module": "dist/esm/index.js",
+	"types": "dist/cjs/index.d.cts",
+	"type": "module",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			},
+			"require": {
+				"types": "./dist/cjs/index.d.cts",
+				"default": "./dist/cjs/index.cjs"
+			}
+		},
+		"./setup": {
+			"import": {
+				"types": "./dist/esm/setup.d.ts",
+				"default": "./dist/esm/setup.js"
+			},
+			"require": {
+				"types": "./dist/cjs/setup.d.cts",
+				"default": "./dist/cjs/setup.cjs"
+			}
+		}
+	},
+	"sideEffects": [
+		"./dist/esm/setup.js",
+		"./dist/cjs/setup.cjs"
+	],
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsup",
+		"watch": "tsup --watch",
+		"typecheck": "tsc -p tsconfig.eslint.json",
+		"lint": "eslint src --ext ts --fix -c ../../package.json",
+		"prepack": "yarn build",
+		"bump": "cliff-jumper",
+		"check-update": "cliff-jumper --dry-run"
+	},
+	"dependencies": {
+		"dotenv": "^17.2.3",
+		"dotenv-expand": "^12.0.3"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/env-utilities"
+	},
+	"files": [
+		"dist/"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"keywords": [
+		"discord",
+		"api",
+		"http",
+		"wolfstar",
+		"typescript",
+		"ts",
+		"yarn"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"@favware/cliff-jumper": "^6.0.0",
+		"@vitest/coverage-v8": "^4.0.8",
+		"esbuild-plugin-version-injector": "^1.2.1",
+		"tsup": "^8.5.0",
+		"typescript": "~5.8.3",
+		"vitest": "^4.0.8"
+	}
+}

@@ -1,0 +1,10 @@
+name: shared-influx-pieces
+org: wolfstar
+install: true
+packagePath: packages/shared-influx-pieces
+identifierBase: false
+pushTag: true
+githubRelease: true
+githubReleaseLatest: true
+gitRepo: wolfstar-project/stars-components
+gitHostVariant: github

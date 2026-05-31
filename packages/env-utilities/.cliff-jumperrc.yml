@@ -1,0 +1,10 @@
+name: env-utilities
+org: wolfstar
+install: true
+packagePath: packages/env-utilities
+identifierBase: false
+pushTag: true
+githubRelease: true
+githubReleaseLatest: true
+gitRepo: wolfstar-project/stars-components
+gitHostVariant: github

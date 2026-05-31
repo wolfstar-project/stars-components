@@ -1,0 +1,10 @@
+name: http-framework-i18n
+org: wolfstar
+install: true
+packagePath: packages/http-framework-i18n
+identifierBase: false
+pushTag: true
+githubRelease: true
+githubReleaseLatest: true
+gitRepo: wolfstar-project/stars-components
+gitHostVariant: github

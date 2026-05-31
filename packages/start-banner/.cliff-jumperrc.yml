@@ -1,0 +1,10 @@
+name: start-banner
+org: wolfstar
+install: true
+packagePath: packages/start-banner
+identifierBase: false
+pushTag: true
+githubRelease: true
+githubReleaseLatest: true
+gitRepo: wolfstar-project/stars-components
+gitHostVariant: github
