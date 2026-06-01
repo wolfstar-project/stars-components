@@ -5,7 +5,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 ## Stack
 
 - **Language:** TypeScript (`~5.8.3`), Node `>=18`.
-- **Package manager:** `yarn@4.11.0` (Yarn Berry, workspaces under `packages/*`).
+- **Package manager:** `pnpm@11.5.0` (corepack-pinned, workspaces via `pnpm-workspace.yaml`).
 - **Monorepo runner:** `turbo` (`turbo run build|typecheck|check-update`).
 - **Bundler:** `tsup` per package.
 - **Tests:** `vitest` (workspace config at root).
@@ -16,11 +16,11 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 ## Quality gates (in order)
 
-1. `yarn format`
-2. `yarn lint`
-3. `yarn typecheck`
-4. `yarn test`
-5. `yarn build`
+1. `pnpm format`
+2. `pnpm lint`
+3. `pnpm typecheck`
+4. `pnpm test`
+5. `pnpm build`
 
 ## Conventions
 
@@ -47,6 +47,6 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 ## Notes for agents
 
-- Do NOT touch `yarn.lock` manually; let `yarn install` regenerate it after `package.json` edits.
+- Do NOT touch `pnpm-lock.yaml` manually; let `pnpm install` regenerate it after `package.json` edits.
 - Folder names under `packages/` do not contain `skyra`; only package `name`, `author`, scoped imports, and `keywords` need updating.
 - CHANGELOGs are being reset (per user decision) — leave only a header.
