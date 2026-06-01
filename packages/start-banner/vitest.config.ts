@@ -1,7 +1,9 @@
-import { createVitestConfig } from '../../scripts/vitest.config';
+import { defineProject, mergeConfig } from 'vitest/config';
+import configShared from '../../vitest.shared.js';
 
-export default createVitestConfig({
-	esbuild: {
-		target: 'es2021'
-	}
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		esbuild: { target: 'es2021' }
+	})
+);

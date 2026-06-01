@@ -1,6 +1,10 @@
-import { createVitestConfig } from '../../scripts/vitest.config';
 import { esbuildPluginVersionInjector } from 'esbuild-plugin-version-injector';
+import { defineProject, mergeConfig } from 'vitest/config';
+import configShared from '../../vitest.shared.js';
 
-export default createVitestConfig({
-	plugins: [esbuildPluginVersionInjector()]
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [esbuildPluginVersionInjector()]
+	})
+);
