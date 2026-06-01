@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/logger",
-	"version": "2.0.4",
+	"version": "3.0.0",
 	"description": "A lightweight logger system with level support",
 	"keywords": [
 		"api",
@@ -44,15 +44,12 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"colorette": "^2.0.20"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"@vitest/coverage-v8": "^4.0.8",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3",

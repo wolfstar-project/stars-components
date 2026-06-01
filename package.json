@@ -11,13 +11,11 @@
 		"test": "vitest run",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
-		"update": "pnpm update --interactive --recursive",
-		"check-update": "turbo run check-update"
+		"update": "pnpm update --interactive --recursive"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^20.1.0",
 		"@commitlint/config-conventional": "^20.0.0",
-		"@favware/cliff-jumper": "^6.0.0",
 		"@favware/npm-deprecate": "^2.0.0",
 		"@sapphire/ts-config": "^5.0.1",
 		"@swc/core": "^1.15.1",

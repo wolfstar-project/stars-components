@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/influx-utilities",
-	"version": "1.1.0",
+	"version": "3.0.0",
 	"description": "A tiny opinionated abstraction layer for InfluxDB for interacting with a single organization",
 	"keywords": [
 		"api",
@@ -43,16 +43,13 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"@influxdata/influxdb-client": "^1.35.0",
 		"@wolfstar/env-utilities": "workspace:^"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"esbuild-plugin-version-injector": "^1.2.1",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3"

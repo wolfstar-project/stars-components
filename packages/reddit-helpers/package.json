@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/reddit-helpers",
-	"version": "1.2.1",
+	"version": "3.0.0",
 	"description": "Very basic Reddit helper functions used across several ArchId bots",
 	"keywords": [
 		"api",
@@ -43,9 +43,7 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"@discordjs/formatters": "^0.6.1",
@@ -56,7 +54,6 @@
 		"he": "^1.2.0"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"@types/he": "^1.2.3",
 		"esbuild-plugin-version-injector": "^1.2.1",
 		"tsup": "^8.5.0",

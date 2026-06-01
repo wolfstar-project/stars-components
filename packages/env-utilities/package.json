@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/env-utilities",
-	"version": "2.0.1",
+	"version": "3.0.0",
 	"description": "Functional utilities for reading and parsing environmental variables",
 	"keywords": [
 		"api",
@@ -63,16 +63,13 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"dotenv": "^17.2.3",
 		"dotenv-expand": "^12.0.3"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"@vitest/coverage-v8": "^4.0.8",
 		"esbuild-plugin-version-injector": "^1.2.1",
 		"tsup": "^8.5.0",

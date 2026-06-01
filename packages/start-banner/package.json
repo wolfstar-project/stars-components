@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/start-banner",
-	"version": "2.0.2",
+	"version": "3.0.0",
 	"description": "A banner generator utility for your CLI",
 	"keywords": [
 		"api",
@@ -44,12 +44,9 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"@vitest/coverage-v8": "^4.0.8",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3",

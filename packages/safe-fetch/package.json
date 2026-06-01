@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/safe-fetch",
-	"version": "1.1.4",
+	"version": "3.0.0",
 	"description": "A fetch wrapper on top of Rust's Result",
 	"keywords": [
 		"api",
@@ -47,15 +47,12 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"@sapphire/result": "^2.8.0"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3"
 	},

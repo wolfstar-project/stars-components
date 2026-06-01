@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework",
-	"version": "2.2.1",
+	"version": "3.0.0",
 	"description": "The framework for ArchId Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -44,9 +44,7 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p tsconfig.eslint.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.13.0",
@@ -60,7 +58,6 @@
 		"discord-api-types": "^0.38.8"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"@vitest/coverage-v8": "^4.0.8",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3",
