@@ -6,10 +6,10 @@
 		"api",
 		"discord",
 		"http",
+		"pnpm",
 		"ts",
 		"typescript",
-		"wolfstar",
-		"yarn"
+		"wolfstar"
 	],
 	"bugs": {
 		"url": "https://github.com/wolfstar-project/stars-components/issues"
@@ -50,7 +50,7 @@
 		"watch": "tsc -b src --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
-		"prepack": "yarn build",
+		"prepack": "pnpm run build",
 		"bump": "cliff-jumper",
 		"check-update": "cliff-jumper --dry-run"
 	},

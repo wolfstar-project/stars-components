@@ -14,11 +14,11 @@
 [Discord Server][discord server]**.
 
 To contribute to this repository, feel free to create a new fork of the repository and submit a pull request. We highly
-suggest [ESLint] to be installed in your text editor or IDE of your choice to ensure builds from GitHub Actions do not
+suggest [Oxlint] to be installed in your text editor or IDE of your choice to ensure builds from GitHub Actions do not
 fail.
 
 **_Before committing and pushing your changes, please ensure that you do not have any linting errors by running
-`yarn lint`!_**
+`pnpm lint`!_**
 
 ### ArchId Components Concept Guidelines
 
@@ -33,15 +33,13 @@ exhaustive list, but here are some things to consider before/while submitting yo
 - Everything should follow [OOP paradigms][oop paradigms] and generally rely on behaviour over state where possible.
   This generally helps methods be predictable, keeps the codebase simple and understandable, reduces code duplication
   through abstraction, and leads to efficiency and therefore scalability.
-- Everything should follow our ESLint rules as closely as possible, and should pass lint tests even if you must disable
+- Everything should follow our Oxlint rules as closely as possible, and should pass lint tests even if you must disable
   a rule for a single line.
 
 <!-- Link Dump -->
 
 [discord server]: https://join.wolfstar.rocks
 [here]: https://github.com/wolfstar-project/stars-components/pulls
-[eslint]: https://eslint.org/
-[node.js]: https://nodejs.org/en/download/
-[yarn]: https://yarnpkg.com/getting-started/install
+[oxlint]: https://oxc.rs/docs/guide/usage/linter.html
 [oop paradigms]: https://en.wikipedia.org/wiki/Object-oriented_programming
 [scripts]: /scripts
