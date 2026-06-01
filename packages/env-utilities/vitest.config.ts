@@ -1,6 +1,11 @@
-import { createVitestConfig } from '../../scripts/vitest.config';
 import { esbuildPluginVersionInjector } from 'esbuild-plugin-version-injector';
+import { defineProject } from 'vitest/config';
 
-export default createVitestConfig({
-	plugins: [esbuildPluginVersionInjector()]
+export default defineProject({
+	plugins: [esbuildPluginVersionInjector()],
+	test: {
+		globals: true,
+		maxWorkers: 1,
+		isolate: false
+	}
 });
