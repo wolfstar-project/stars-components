@@ -7,7 +7,7 @@ on:
 
 concurrency:
     group: cd-${{ github.ref }}
-    cancel-in-progress: true
+    cancel-in-progress: false
 
 permissions: {}
 
@@ -58,12 +58,18 @@ jobs:
             - name: Set pre-release version
               run: |
                   node --input-type=module --eval "
-                    import { readFileSync, writeFileSync } from 'fs';
-                    const pkgPath = 'packages/${{ matrix.package }}/package.json';
-                    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-                    pkg.version = pkg.version + '-next.' + '${{ github.sha }}'.slice(0, 7);
-                    writeFileSync(pkgPath, JSON.stringify(pkg, null, '\t') + '\n');
-                    console.log('Set version to', pkg.version);
+                    import { readFileSync, writeFileSync, readdirSync } from 'fs';
+                    const sha = '${{ github.sha }}'.slice(0, 7);
+                    for (const dir of readdirSync('packages', { withFileTypes: true })) {
+                      if (!dir.isDirectory()) continue;
+                      const pkgPath = \`packages/\${dir.name}/package.json\`;
+                      try {
+                        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+                        pkg.version = pkg.version + '-next.' + sha;
+                        writeFileSync(pkgPath, JSON.stringify(pkg, null, '\t') + '\n');
+                        console.log('Set', pkg.name, 'to', pkg.version);
+                      } catch {}
+                    }
                   "
             - name: Publish to npm
               run: pnpm publish --tag next --provenance --access public --no-git-checks
