@@ -41,7 +41,7 @@
 	"scripts": {
 		"build": "tsup",
 		"watch": "tsup --watch",
-		"typecheck": "tsc -p tsconfig.eslint.json",
+		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build",
 		"bump": "cliff-jumper",
