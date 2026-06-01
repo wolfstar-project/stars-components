@@ -30,7 +30,7 @@
 		"**/node_modules": true,
 		"**/bower_components": true,
 		"**/*.code-search": true,
-		"**/.yarn": true,
+		"**/.pnpm": true,
 		"**/dist/": true,
 		"**/.git/": true
 	}
