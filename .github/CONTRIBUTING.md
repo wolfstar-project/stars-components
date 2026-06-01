@@ -41,7 +41,5 @@ exhaustive list, but here are some things to consider before/while submitting yo
 [discord server]: https://join.wolfstar.rocks
 [here]: https://github.com/wolfstar-project/stars-components/pulls
 [oxlint]: https://oxc.rs/docs/guide/usage/linter.html
-[node.js]: https://nodejs.org/en/download/
-[pnpm]: https://pnpm.io/installation
 [oop paradigms]: https://en.wikipedia.org/wiki/Object-oriented_programming
 [scripts]: /scripts
