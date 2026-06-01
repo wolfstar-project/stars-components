@@ -1,10 +1,9 @@
-import { defineProject } from 'vitest/config';
+import { defineProject, mergeConfig } from 'vitest/config';
+import configShared from '../../vitest.shared.js';
 
-export default defineProject({
-	esbuild: { target: 'es2021' },
-	test: {
-		globals: true,
-		maxWorkers: 1,
-		isolate: false
-	}
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		esbuild: { target: 'es2021' }
+	})
+);
