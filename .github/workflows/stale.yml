@@ -1,4 +1,4 @@
-name: chore
+name: Stale Issues and PRs
 
 on:
     workflow_dispatch:
