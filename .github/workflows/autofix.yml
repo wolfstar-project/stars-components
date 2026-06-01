@@ -5,13 +5,14 @@ on:
         branches:
             - main
 
-permissions:
-    contents: read
+permissions: {}
 
 jobs:
     code:
         name: Autofix code
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
         steps:
             - name: Checkout Project
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -28,4 +29,4 @@ jobs:
               run: pnpm install --frozen-lockfile
             - name: Lint and format fix
               run: pnpm lint:fix
-            - uses: autofix-ci/action@ea32e6c8f9a5d1c6303ab8de72ba0313c39c4d04 # v1.3.5
+            - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
