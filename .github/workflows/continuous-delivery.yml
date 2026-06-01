@@ -49,7 +49,7 @@ jobs:
             - name: Bump Versions & Publish
               working-directory: packages/${{ matrix.package }}
               run: |
-                  pnpm exec cliff-jumper --preid "next.$(git rev-parse --verify --short HEAD)" --skip-changelog
+                  pnpm bump --preid "next.$(git rev-parse --verify --short HEAD)" --skip-changelog
 
                   pnpm publish --tag next --provenance --access public --no-git-checks
               env:
