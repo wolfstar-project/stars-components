@@ -1,4 +1,0 @@
-{
-	"extends": ["../../tsconfig.eslint.json", "@sapphire/ts-config/decorators"],
-	"include": ["src", "tsup.config.ts"]
-}
