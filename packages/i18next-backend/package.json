@@ -1,64 +1,64 @@
 {
-  "name": "@wolfstar/i18next-backend",
-  "version": "3.0.1",
-  "description": "A fast and modern filesystem-based i18next backend for Node.js.",
-  "keywords": [
-    "api",
-    "discord",
-    "http",
-    "pnpm",
-    "ts",
-    "typescript",
-    "wolfstar"
-  ],
-  "bugs": {
-    "url": "https://github.com/wolfstar-project/stars-components/issues"
-  },
-  "license": "Apache-2.0",
-  "author": "@wolfstar",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/wolfstar-project/stars-components.git",
-    "directory": "packages/i18next-backend"
-  },
-  "files": [
-    "dist/"
-  ],
-  "type": "module",
-  "sideEffects": false,
-  "main": "dist/cjs/index.cjs",
-  "module": "dist/esm/index.js",
-  "types": "dist/cjs/index.d.cts",
-  "exports": {
-    "import": {
-      "types": "./dist/esm/index.d.ts",
-      "default": "./dist/esm/index.js"
-    },
-    "require": {
-      "types": "./dist/cjs/index.d.cts",
-      "default": "./dist/cjs/index.cjs"
-    }
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsup",
-    "watch": "tsup --watch",
-    "typecheck": "tsc -p ../../tsconfig.json",
-    "lint": "oxlint src --fix",
-    "prepack": "pnpm run build"
-  },
-  "dependencies": {
-    "tslib": "^2.8.1"
-  },
-  "devDependencies": {
-    "@types/node": "22.15.21",
-    "i18next": "^25.6.1",
-    "tsup": "^8.5.0",
-    "typescript": "~5.8.3"
-  },
-  "engines": {
-    "node": ">=18"
-  }
+	"name": "@wolfstar/i18next-backend",
+	"version": "3.0.1",
+	"description": "A fast and modern filesystem-based i18next backend for Node.js.",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"pnpm",
+		"ts",
+		"typescript",
+		"wolfstar"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/i18next-backend"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/cjs/index.cjs",
+	"module": "dist/esm/index.js",
+	"types": "dist/cjs/index.d.cts",
+	"exports": {
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		},
+		"require": {
+			"types": "./dist/cjs/index.d.cts",
+			"default": "./dist/cjs/index.cjs"
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsup",
+		"watch": "tsup --watch",
+		"typecheck": "tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"tslib": "^2.8.1"
+	},
+	"devDependencies": {
+		"@types/node": "22.15.21",
+		"i18next": "^25.6.1",
+		"tsup": "^8.5.0",
+		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=18"
+	}
 }
