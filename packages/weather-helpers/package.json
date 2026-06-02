@@ -1,62 +1,62 @@
 {
-	"name": "@wolfstar/weather-helpers",
-	"version": "3.0.0",
-	"description": "Very basic weather helper functions used across several ArchId bots",
-	"keywords": [
-		"api",
-		"discord",
-		"http",
-		"pnpm",
-		"ts",
-		"typescript",
-		"wolfstar"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
-	},
-	"license": "Apache-2.0",
-	"author": "@wolfstar",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/weather-helpers"
-	},
-	"files": [
-		"dist/"
-	],
-	"type": "module",
-	"sideEffects": false,
-	"main": "dist/esm/index.js",
-	"module": "dist/esm/index.js",
-	"types": "dist/esm/index.d.ts",
-	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
-		}
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "tsup",
-		"watch": "tsup --watch",
-		"typecheck": "tsc -p ../../tsconfig.json",
-		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build"
-	},
-	"dependencies": {
-		"@sapphire/result": "^2.8.0",
-		"@sapphire/utilities": "^3.18.2",
-		"@wolfstar/safe-fetch": "workspace:^"
-	},
-	"devDependencies": {
-		"@types/he": "^1.2.3",
-		"esbuild-plugin-version-injector": "^1.2.1",
-		"tsup": "^8.5.0",
-		"typescript": "~5.8.3"
-	},
-	"engines": {
-		"node": ">=18"
-	}
+  "name": "@wolfstar/weather-helpers",
+  "version": "3.0.1",
+  "description": "Very basic weather helper functions used across several ArchId bots",
+  "keywords": [
+    "api",
+    "discord",
+    "http",
+    "pnpm",
+    "ts",
+    "typescript",
+    "wolfstar"
+  ],
+  "bugs": {
+    "url": "https://github.com/wolfstar-project/stars-components/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "@wolfstar",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wolfstar-project/stars-components.git",
+    "directory": "packages/weather-helpers"
+  },
+  "files": [
+    "dist/"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    "import": {
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "typecheck": "tsc -p ../../tsconfig.json",
+    "lint": "oxlint src --fix",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@sapphire/result": "^2.8.0",
+    "@sapphire/utilities": "^3.18.2",
+    "@wolfstar/safe-fetch": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/he": "^1.2.3",
+    "esbuild-plugin-version-injector": "^1.2.1",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
