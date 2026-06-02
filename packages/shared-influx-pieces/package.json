@@ -52,6 +52,8 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
+		"@sapphire/pieces": "^4.4.1",
+		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/http-framework": "workspace:^",
 		"@wolfstar/influx-utilities": "workspace:^",
 		"discord-api-types": "^0.38.8",

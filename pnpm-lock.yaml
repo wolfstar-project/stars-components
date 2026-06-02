@@ -299,6 +299,12 @@ importers:
 
   packages/shared-influx-pieces:
     dependencies:
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
+      '@wolfstar/env-utilities':
+        specifier: workspace:^
+        version: link:../env-utilities
       '@wolfstar/http-framework':
         specifier: workspace:^
         version: link:../http-framework
