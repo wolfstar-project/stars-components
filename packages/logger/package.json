@@ -1,61 +1,61 @@
 {
-	"name": "@wolfstar/logger",
-	"version": "3.0.0",
-	"description": "A lightweight logger system with level support",
-	"keywords": [
-		"api",
-		"discord",
-		"http",
-		"pnpm",
-		"ts",
-		"typescript",
-		"wolfstar"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
-	},
-	"license": "Apache-2.0",
-	"author": "@wolfstar",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/logger"
-	},
-	"files": [
-		"dist/"
-	],
-	"type": "module",
-	"sideEffects": false,
-	"main": "dist/esm/index.js",
-	"module": "dist/esm/index.js",
-	"types": "dist/esm/index.d.ts",
-	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
-		}
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"test": "vitest run",
-		"build": "tsup",
-		"watch": "tsup --watch",
-		"typecheck": "tsc -p ../../tsconfig.json",
-		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build"
-	},
-	"dependencies": {
-		"colorette": "^2.0.20"
-	},
-	"devDependencies": {
-		"@vitest/coverage-v8": "^4.0.8",
-		"tsup": "^8.5.0",
-		"typescript": "~5.8.3",
-		"vitest": "^4.0.8"
-	},
-	"engines": {
-		"node": ">=18"
-	}
+  "name": "@wolfstar/logger",
+  "version": "3.0.1",
+  "description": "A lightweight logger system with level support",
+  "keywords": [
+    "api",
+    "discord",
+    "http",
+    "pnpm",
+    "ts",
+    "typescript",
+    "wolfstar"
+  ],
+  "bugs": {
+    "url": "https://github.com/wolfstar-project/stars-components/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "@wolfstar",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wolfstar-project/stars-components.git",
+    "directory": "packages/logger"
+  },
+  "files": [
+    "dist/"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    "import": {
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "typecheck": "tsc -p ../../tsconfig.json",
+    "lint": "oxlint src --fix",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "colorette": "^2.0.20"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.8",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.3",
+    "vitest": "^4.0.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

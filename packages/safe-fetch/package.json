@@ -1,62 +1,62 @@
 {
-	"name": "@wolfstar/safe-fetch",
-	"version": "3.0.0",
-	"description": "A fetch wrapper on top of Rust's Result",
-	"keywords": [
-		"api",
-		"discord",
-		"http",
-		"pnpm",
-		"ts",
-		"typescript",
-		"wolfstar"
-	],
-	"bugs": {
-		"url": "https://github.com/wolfstar-project/stars-components/issues"
-	},
-	"license": "Apache-2.0",
-	"author": "@wolfstar",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/safe-fetch"
-	},
-	"files": [
-		"dist/"
-	],
-	"type": "module",
-	"sideEffects": false,
-	"main": "dist/cjs/index.cjs",
-	"module": "dist/esm/index.js",
-	"types": "dist/cjs/index.d.cts",
-	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
-		},
-		"require": {
-			"types": "./dist/cjs/index.d.cts",
-			"default": "./dist/cjs/index.cjs"
-		}
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "tsup",
-		"watch": "tsup --watch",
-		"typecheck": "tsc -p ../../tsconfig.json",
-		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build"
-	},
-	"dependencies": {
-		"@sapphire/result": "^2.8.0"
-	},
-	"devDependencies": {
-		"tsup": "^8.5.0",
-		"typescript": "~5.8.3"
-	},
-	"engines": {
-		"node": ">=18"
-	}
+  "name": "@wolfstar/safe-fetch",
+  "version": "3.0.1",
+  "description": "A fetch wrapper on top of Rust's Result",
+  "keywords": [
+    "api",
+    "discord",
+    "http",
+    "pnpm",
+    "ts",
+    "typescript",
+    "wolfstar"
+  ],
+  "bugs": {
+    "url": "https://github.com/wolfstar-project/stars-components/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "@wolfstar",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wolfstar-project/stars-components.git",
+    "directory": "packages/safe-fetch"
+  },
+  "files": [
+    "dist/"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/cjs/index.cjs",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.cts",
+  "exports": {
+    "import": {
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
+    },
+    "require": {
+      "types": "./dist/cjs/index.d.cts",
+      "default": "./dist/cjs/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "typecheck": "tsc -p ../../tsconfig.json",
+    "lint": "oxlint src --fix",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@sapphire/result": "^2.8.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
