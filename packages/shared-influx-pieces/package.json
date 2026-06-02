@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/shared-influx-pieces",
-	"version": "1.1.0",
+	"version": "3.0.0",
 	"description": "The influx pieces for ArchId Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -49,9 +49,7 @@
 		"watch": "tsc -b src --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"@wolfstar/http-framework": "workspace:^",
@@ -60,7 +58,6 @@
 		"tslib": "^2.8.1"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"typescript": "~5.8.3"
 	},
 	"engines": {

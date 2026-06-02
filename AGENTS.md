@@ -6,28 +6,27 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 - **Language:** TypeScript (`~5.8.3`), Node `>=18`.
 - **Package manager:** `pnpm@11.5.0` (corepack-pinned, workspaces via `pnpm-workspace.yaml`).
-- **Monorepo runner:** `turbo` (`turbo run build|typecheck|check-update`).
+- **Monorepo runner:** `turbo` (`turbo run build|typecheck`).
 - **Bundler:** `tsup` per package.
 - **Tests:** `vitest` (workspace config at root).
-- **Lint:** `eslint` with `@sapphire/eslint-config`.
-- **Format:** `prettier` with `@sapphire/prettier-config`.
-- **Release:** `@favware/cliff-jumper` (per-package `cliff.toml` and `.cliff-jumperrc.yml`).
+- **Lint:** `oxlint` with `oxlint-tsgolint`.
+- **Format:** `oxfmt`.
+- **Release:** `danielroe/uppt` (lockstep monorepo OIDC staged publish).
 - **Deprecation:** `@favware/npm-deprecate` (driven by `.npm-deprecaterc.yml`).
 
 ## Quality gates (in order)
 
-1. `pnpm format`
-2. `pnpm lint`
-3. `pnpm typecheck`
-4. `pnpm test`
-5. `pnpm build`
+1. `pnpm lint`
+2. `pnpm typecheck`
+3. `pnpm test`
+4. `pnpm build`
 
 ## Conventions
 
 - Commits: Conventional Commits (`@commitlint/config-conventional`); `cz-conventional-changelog` via commitizen.
 - File paths in CI use the npm scope as `--filter @<scope>/<package>` for turbo.
 - Each package declares: `name`, `author` (scope handle), `repository.url`, `bugs.url`, `homepage`, `keywords`.
-- Each package owns a `cliff.toml` (`tag_pattern`, `owner`) and `.cliff-jumperrc.yml` (`org`, `gitRepo`).
+- All 13 publishable packages share one lockstep semver. `uppt/pr` bumps every workspace together from the value in `packages/*/package.json#version`.
 - Crowdin sync is configured at root (`crowdin.yml`) and only targets `packages/shared-http-pieces/src/locales/**`.
 
 ## Branding (target state after rebrand)
@@ -48,5 +47,6 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 ## Notes for agents
 
 - Do NOT touch `pnpm-lock.yaml` manually; let `pnpm install` regenerate it after `package.json` edits.
+- Do not edit `package.json#version` by hand; `uppt/pr` owns the bump. Manual hotfixes are done by re-running the `Release` workflow on a `v*` tag.
 - Folder names under `packages/` do not contain `skyra`; only package `name`, `author`, scoped imports, and `keywords` need updating.
 - CHANGELOGs are being reset (per user decision) — leave only a header.

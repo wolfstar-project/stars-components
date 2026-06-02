@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/twitch-helpers",
-	"version": "2.0.2",
+	"version": "3.0.0",
 	"description": "Very basic Twitch helper functions used across several ArchId bots",
 	"keywords": [
 		"api",
@@ -43,9 +43,7 @@
 		"watch": "tsup --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build",
-		"bump": "cliff-jumper",
-		"check-update": "cliff-jumper --dry-run"
+		"prepack": "pnpm run build"
 	},
 	"dependencies": {
 		"@sapphire/result": "^2.8.0",
@@ -53,7 +51,6 @@
 		"@wolfstar/safe-fetch": "workspace:^"
 	},
 	"devDependencies": {
-		"@favware/cliff-jumper": "^6.0.0",
 		"esbuild-plugin-version-injector": "^1.2.1",
 		"tsup": "^8.5.0",
 		"typescript": "~5.8.3"
