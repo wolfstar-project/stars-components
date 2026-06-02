@@ -70,8 +70,8 @@ describe('Env file Loader', () => {
 	});
 
 	test('should error if NODE_ENV not set', () => {
-		delete process.env.NODE_ENV;
-		expect(loadEnvFiles).toThrowError('The NODE_ENV environment variable is required but was not specified.');
+		Reflect.deleteProperty(process.env, 'NODE_ENV');
+		expect(loadEnvFiles).toThrow('The NODE_ENV environment variable is required but was not specified.');
 	});
 
 	test('should allow override of NODE_ENV when `env` supplied in options', () => {
@@ -91,7 +91,7 @@ describe('Env file Loader', () => {
 
 		loadEnvFiles({ ...envLoaderConfig, debug: true });
 
-		expect(consoleLogSpy).toBeCalledTimes(4);
+		expect(consoleLogSpy).toHaveBeenCalledTimes(4);
 		expect(consoleLogSpy.mock.calls[0][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.development.local`');
 		expect(consoleLogSpy.mock.calls[1][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.local`');
 		expect(consoleLogSpy.mock.calls[2][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.development`');
@@ -136,6 +136,6 @@ describe('Env file Loader', () => {
 		// use chmodSync to block access to `.env` in fixtures directory
 		chmodSync(resolve(fixturesDirectory, '.env'), 0o000);
 
-		expect(() => loadEnvFiles({ ...envLoaderConfig })).toThrowError(/EACCES: permission denied, open '.+\.env'/);
+		expect(() => loadEnvFiles({ ...envLoaderConfig })).toThrow(/EACCES: permission denied, open '.+\.env'/);
 	});
 });
