@@ -11,9 +11,13 @@
 		"test": "vitest run",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
-		"update": "pnpm update --interactive --recursive"
+		"update": "pnpm update --interactive --recursive",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build && changeset publish --provenance"
 	},
 	"devDependencies": {
+		"@changesets/cli": "^2.31.0",
 		"@commitlint/cli": "^20.1.0",
 		"@commitlint/config-conventional": "^20.0.0",
 		"@favware/npm-deprecate": "^2.0.0",
