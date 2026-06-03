@@ -17,7 +17,7 @@ jobs:
         runs-on: ubuntu-latest
         if: |
             github.repository_owner == 'wolfstar-project'
-            && !contains(github.event.head_commit.message, 'chore: release')
+            && !contains(github.event.head_commit.message, 'version packages')
         permissions:
             id-token: write
             contents: read
