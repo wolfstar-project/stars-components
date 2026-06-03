@@ -6,8 +6,16 @@ import { SharedListener as SharedInteractionHandlerRunInfluxCounter } from './Sh
 
 export function loadInfluxListeners() {
 	const store = 'listeners' as const;
-	void container.stores.loadPiece({ name: 'SharedAnalyticsSync', piece: SharedAnalyticsSync, store });
-	void container.stores.loadPiece({ name: 'SharedCommandAutocompleteRunInfluxCounter', piece: SharedCommandAutocompleteRunInfluxCounter, store });
-	void container.stores.loadPiece({ name: 'SharedCommandRunInfluxCounter', piece: SharedCommandRunInfluxCounter, store });
-	void container.stores.loadPiece({ name: 'SharedInteractionHandlerRunInfluxCounter', piece: SharedInteractionHandlerRunInfluxCounter, store });
+	void container.stores.loadPiece({ name: 'SharedAnalyticsSync', piece: SharedAnalyticsSync as any, store });
+	void container.stores.loadPiece({
+		name: 'SharedCommandAutocompleteRunInfluxCounter',
+		piece: SharedCommandAutocompleteRunInfluxCounter as any,
+		store
+	});
+	void container.stores.loadPiece({ name: 'SharedCommandRunInfluxCounter', piece: SharedCommandRunInfluxCounter as any, store });
+	void container.stores.loadPiece({
+		name: 'SharedInteractionHandlerRunInfluxCounter',
+		piece: SharedInteractionHandlerRunInfluxCounter as any,
+		store
+	});
 }

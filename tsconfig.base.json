@@ -8,6 +8,8 @@
 	],
 	"compilerOptions": {
 		"noEmit": true,
-		"incremental": false
+		"incremental": false,
+		"skipLibCheck": true,
+		"types": ["node", "vitest/globals"]
 	}
 }

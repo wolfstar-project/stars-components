@@ -112,4 +112,4 @@ export class SharedCommand extends Command {
 	}
 }
 
-void container.stores.loadPiece({ name: 'info', piece: SharedCommand, store: 'commands' });
+void container.stores.loadPiece({ name: 'info', piece: SharedCommand as any, store: 'commands' });

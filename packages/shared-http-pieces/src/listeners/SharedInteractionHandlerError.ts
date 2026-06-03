@@ -12,4 +12,4 @@ export class SharedListener extends Listener {
 	}
 }
 
-void container.stores.loadPiece({ name: 'SharedInteractionHandlerError', piece: SharedListener, store: 'listeners' });
+void container.stores.loadPiece({ name: 'SharedInteractionHandlerError', piece: SharedListener as any, store: 'listeners' });
