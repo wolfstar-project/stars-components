@@ -1,13 +1,15 @@
-import { esbuildPluginVersionInjector } from 'esbuild-plugin-version-injector';
-import type { UserConfig } from 'tsdown';
+import { readFileSync } from 'node:fs';
+import Replace from 'unplugin-replace/rolldown';
 import { createTsdownConfig } from '../../scripts/tsdown.config.js';
 
-const defaultOptions: UserConfig = {
-	plugins: [esbuildPluginVersionInjector()],
-	entry: ['src/index.ts', 'src/setup.ts']
-};
+const pkg = JSON.parse(readFileSync(new URL('package.json', import.meta.url), 'utf8'));
+
+const versionReplace = Replace({
+	values: [{ find: /\[VI\]\{\{inject\}\}\[\/VI\]/g, replacement: pkg.version }]
+});
 
 export default createTsdownConfig({
-	cjsOptions: defaultOptions,
-	esmOptions: defaultOptions
+	entry: ['src/index.ts', 'src/setup.ts'],
+	cjsOptions: { plugins: [versionReplace] },
+	esmOptions: { plugins: [versionReplace] }
 });

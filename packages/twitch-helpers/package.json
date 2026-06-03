@@ -51,9 +51,9 @@
 		"@wolfstar/safe-fetch": "workspace:^"
 	},
 	"devDependencies": {
-		"esbuild-plugin-version-injector": "^1.2.1",
 		"tsdown": "^0.22.1",
-		"typescript": "~5.8.3"
+		"typescript": "~5.8.3",
+		"unplugin-replace": "^0.9.0"
 	},
 	"engines": {
 		"node": ">=18"

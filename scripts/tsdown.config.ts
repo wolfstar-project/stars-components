@@ -1,8 +1,8 @@
 import { defineConfig, type UserConfig } from 'tsdown';
 
-type FormatConfig = Exclude<NonNullable<UserConfig['format']>, string | string[]> extends Record<string, infer V> ? NonNullable<V> : never;
+export type FormatConfig = Exclude<NonNullable<UserConfig['format']>, string | string[]> extends Record<string, infer V> ? NonNullable<V> : never;
 
-interface FormatConfigCJS extends FormatConfig {
+export interface FormatConfigCJS extends FormatConfig {
 	disabled?: boolean;
 }
 
@@ -18,11 +18,12 @@ const baseOptions: UserConfig = {
 };
 
 export function createTsdownConfig(options?: EnhancedTsdownOptions) {
-	const { cjsOptions, esmOptions } = options ?? {};
+	const { cjsOptions, esmOptions, entry } = options ?? {};
 	const { disabled: cjsDisabled, ...cjsRest } = cjsOptions ?? {};
 
 	return defineConfig({
 		...baseOptions,
+		entry: entry ?? baseOptions.entry,
 		format: {
 			esm: {
 				outDir: cjsDisabled ? 'dist' : 'dist/esm',
@@ -41,7 +42,8 @@ export function createTsdownConfig(options?: EnhancedTsdownOptions) {
 	});
 }
 
-interface EnhancedTsdownOptions {
+export interface EnhancedTsdownOptions {
 	cjsOptions?: FormatConfigCJS;
 	esmOptions?: FormatConfig;
+	entry?: UserConfig['entry'];
 }
