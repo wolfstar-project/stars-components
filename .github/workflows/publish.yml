@@ -1,24 +1,45 @@
 name: Publish
+run-name: Publish @wolfstar/${{ github.event.inputs.package }}
 
 on:
     workflow_dispatch:
+        inputs:
+            package:
+                description: The package to release
+                required: true
+                type: choice
+                options:
+                    - env-utilities
+                    - http-framework
+                    - http-framework-i18n
+                    - i18next-backend
+                    - influx-utilities
+                    - logger
+                    - reddit-helpers
+                    - safe-fetch
+                    - shared-http-pieces
+                    - shared-influx-pieces
+                    - start-banner
+                    - twitch-helpers
+                    - weather-helpers
 
 permissions: {}
 
 jobs:
     publish:
-        name: Publish to npm
+        name: Publish @wolfstar/${{ github.event.inputs.package }} npm
         runs-on: ubuntu-latest
         if: github.repository_owner == 'wolfstar-project'
         permissions:
             id-token: write
-            contents: read
+            contents: write
         environment: npm
         steps:
             - name: Checkout Project
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   fetch-depth: 0
+                  ref: main
                   persist-credentials: false
                   token: ${{ secrets.WOLFSTAR_TOKEN }}
             - name: Configure Git credentials
@@ -35,10 +56,17 @@ jobs:
                   registry-url: https://registry.npmjs.org/
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
-            - name: Build all packages
-              run: pnpm build
-            - name: Publish to npm
-              run: pnpm changeset publish --provenance
+            - name: Build
+              run: pnpm turbo run build --filter @wolfstar/${{ github.event.inputs.package }}
+            - name: Bump Versions and make release
+              run: |
+                  git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+                  pnpm exec changeset version
+              env:
+                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
+            - name: Publish to NPM
+              working-directory: packages/${{ github.event.inputs.package }}
+              run: pnpm publish --provenance --access public --no-git-checks
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
