@@ -7,7 +7,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - **Language:** TypeScript (`~5.8.3`), Node `>=18`.
 - **Package manager:** `pnpm@11.5.0` (corepack-pinned, workspaces via `pnpm-workspace.yaml`).
 - **Monorepo runner:** `turbo` (`turbo run build|typecheck`).
-- **Bundler:** `tsup` per package.
+- **Bundler:** `tsdown` per package.
 - **Tests:** `vitest` (workspace config at root).
 - **Lint:** `oxlint` with `oxlint-tsgolint`.
 - **Format:** `oxfmt`.
