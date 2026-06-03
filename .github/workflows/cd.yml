@@ -68,3 +68,5 @@ jobs:
             - name: Publish to npm
               run: pnpm publish --tag next --provenance --access public --no-git-checks
               working-directory: packages/${{ matrix.package }}
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
