@@ -53,6 +53,7 @@
 	},
 	"dependencies": {
 		"@sapphire/pieces": "^4.4.1",
+		"@sapphire/result": "^2.8.0",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/http-framework": "workspace:^",
 		"@wolfstar/influx-utilities": "workspace:^",
