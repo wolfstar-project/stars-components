@@ -1,4 +1,4 @@
-import { createTsupConfig } from '../../scripts/tsup.config.js';
+import { createTsupConfig } from '../../scripts/tsup.config';
 
 export default createTsupConfig({
 	cjsOptions: { disabled: true },

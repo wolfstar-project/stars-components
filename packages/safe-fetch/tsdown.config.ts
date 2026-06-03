@@ -1,3 +1,3 @@
-import { createTsdownConfig } from '../../scripts/tsdown.config.js';
+import { createTsdownConfig } from '../../scripts/tsdown.config';
 
 export default createTsdownConfig();
