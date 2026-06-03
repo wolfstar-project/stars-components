@@ -46,8 +46,8 @@
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsup",
-		"watch": "tsup --watch",
+		"build": "tsdown",
+		"watch": "tsdown --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
