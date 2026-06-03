@@ -1,0 +1,27 @@
+{
+	"$schema": "https://unpkg.com/@changesets/config/schema.json",
+	"changelog": "@changesets/cli/changelog",
+	"commit": false,
+	"fixed": [
+		[
+			"@wolfstar/env-utilities",
+			"@wolfstar/http-framework",
+			"@wolfstar/http-framework-i18n",
+			"@wolfstar/i18next-backend",
+			"@wolfstar/influx-utilities",
+			"@wolfstar/logger",
+			"@wolfstar/reddit-helpers",
+			"@wolfstar/safe-fetch",
+			"@wolfstar/shared-http-pieces",
+			"@wolfstar/shared-influx-pieces",
+			"@wolfstar/start-banner",
+			"@wolfstar/twitch-helpers",
+			"@wolfstar/weather-helpers"
+		]
+	],
+	"linked": [],
+	"access": "public",
+	"baseBranch": "main",
+	"updateInternalDependencies": "patch",
+	"ignore": []
+}

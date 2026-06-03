@@ -1,26 +1,19 @@
-name: release
+name: Publish
 
 on:
-    push:
-        branches:
-            - main
     workflow_dispatch:
 
 permissions: {}
 
-concurrency:
-    group: release-${{ github.ref }}
-    cancel-in-progress: false
-
 jobs:
-    release:
-        name: Create Release PR or Publish
+    publish:
+        name: Publish to npm
         runs-on: ubuntu-latest
         if: github.repository_owner == 'wolfstar-project'
         permissions:
-            contents: write
-            pull-requests: write
             id-token: write
+            contents: read
+        environment: npm
         steps:
             - name: Checkout Project
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -37,15 +30,10 @@ jobs:
                   registry-url: https://registry.npmjs.org/
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
-            - name: Create Release Pull Request or Publish
-              uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
-              with:
-                  publish: pnpm release
-                  version: pnpm version
-                  title: 'Version Packages'
-                  commit: 'chore: version packages'
-                  createGithubReleases: true
+            - name: Build all packages
+              run: pnpm build
+            - name: Publish to npm
+              run: pnpm changeset publish --provenance
               env:
-                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
                   NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
