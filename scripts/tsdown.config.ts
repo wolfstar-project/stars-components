@@ -25,7 +25,7 @@ export function createTsdownConfig(options?: EnhancedTsdownOptions) {
 		...baseOptions,
 		format: {
 			esm: {
-				outDir: 'dist/esm',
+				outDir: cjsDisabled ? 'dist' : 'dist/esm',
 				...esmOptions
 			},
 			...(cjsDisabled
