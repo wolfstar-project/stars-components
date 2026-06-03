@@ -12,4 +12,4 @@ export class SharedListener extends Listener {
 	}
 }
 
-void container.stores.loadPiece({ name: 'SharedCommandError', piece: SharedListener, store: 'listeners' });
+void container.stores.loadPiece({ name: 'SharedCommandError', piece: SharedListener as any, store: 'listeners' });

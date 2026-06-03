@@ -12,4 +12,4 @@ export class SharedListener extends Listener {
 	}
 }
 
-void container.stores.loadPiece({ name: 'SharedAutocompleteError', piece: SharedListener, store: 'listeners' });
+void container.stores.loadPiece({ name: 'SharedAutocompleteError', piece: SharedListener as any, store: 'listeners' });

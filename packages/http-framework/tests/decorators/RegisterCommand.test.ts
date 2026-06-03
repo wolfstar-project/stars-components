@@ -81,7 +81,7 @@ describe('RegisterCommand', () => {
 					builder.setName('ping').setDescription('Runs a network connection test with me');
 				}
 			]
-		])('GIVEN %s THEN returns expected body', (_, resolvable) => {
+		])('GIVEN %s THEN returns expected body', (_: string, resolvable: Parameters<typeof RegisterCommand>[0]) => {
 			@RegisterCommand(resolvable)
 			class UserCommand extends Command {
 				public override chatInputRun(interaction: Command.ChatInputInteraction) {

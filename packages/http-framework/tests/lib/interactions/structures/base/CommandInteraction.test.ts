@@ -34,7 +34,7 @@ describe('CommandInteraction', () => {
 			const instance = new ChatInputCommandInteraction(makeResponse(), ChatInputApplicationCommandInteractionData);
 
 			await instance.reply(data);
-			await expect(instance.reply(data)).rejects.toThrowError(AlreadyRepliedMessage);
+			await expect(instance.reply(data)).rejects.toThrow(AlreadyRepliedMessage);
 		});
 	});
 
@@ -56,7 +56,7 @@ describe('CommandInteraction', () => {
 			const instance = new ChatInputCommandInteraction(makeResponse(), ChatInputApplicationCommandInteractionData);
 
 			await instance.defer(data);
-			await expect(instance.defer(data)).rejects.toThrowError(AlreadyRepliedMessage);
+			await expect(instance.defer(data)).rejects.toThrow(AlreadyRepliedMessage);
 		});
 	});
 
@@ -77,7 +77,7 @@ describe('CommandInteraction', () => {
 			const instance = new ChatInputCommandInteraction(makeResponse(), ChatInputApplicationCommandInteractionData);
 
 			await instance.defer({ flags: MessageFlags.Ephemeral });
-			await expect(instance.defer({ flags: MessageFlags.Ephemeral })).rejects.toThrowError(AlreadyRepliedMessage);
+			await expect(instance.defer({ flags: MessageFlags.Ephemeral })).rejects.toThrow(AlreadyRepliedMessage);
 		});
 	});
 

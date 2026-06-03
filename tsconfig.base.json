@@ -1,7 +1,15 @@
 {
-	"extends": ["@sapphire/ts-config", "@sapphire/ts-config/extra-strict", "@sapphire/ts-config/bundler", "@sapphire/ts-config/verbatim"],
+	"extends": [
+		"@sapphire/ts-config",
+		"@sapphire/ts-config/extra-strict",
+		"@sapphire/ts-config/bundler",
+		"@sapphire/ts-config/verbatim",
+		"@sapphire/ts-config/decorators"
+	],
 	"compilerOptions": {
 		"noEmit": true,
-		"incremental": false
+		"incremental": false,
+		"skipLibCheck": true,
+		"types": ["node", "vitest/globals"]
 	}
 }

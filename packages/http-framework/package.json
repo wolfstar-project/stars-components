@@ -1,69 +1,69 @@
 {
-  "name": "@wolfstar/http-framework",
-  "version": "3.0.1",
-  "description": "The framework for ArchId Network's HTTP-only bots",
-  "keywords": [
-    "api",
-    "discord",
-    "http",
-    "pnpm",
-    "ts",
-    "typescript",
-    "wolfstar"
-  ],
-  "bugs": {
-    "url": "https://github.com/wolfstar-project/stars-components/issues"
-  },
-  "license": "Apache-2.0",
-  "author": "@wolfstar",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/wolfstar-project/stars-components.git",
-    "directory": "packages/http-framework"
-  },
-  "files": [
-    "dist/"
-  ],
-  "type": "module",
-  "sideEffects": false,
-  "main": "dist/esm/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
-  "exports": {
-    "import": {
-      "types": "./dist/esm/index.d.ts",
-      "default": "./dist/esm/index.js"
-    }
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "build": "tsup",
-    "watch": "tsup --watch",
-    "typecheck": "tsc -p ../../tsconfig.json",
-    "lint": "oxlint src --fix",
-    "prepack": "pnpm run build"
-  },
-  "dependencies": {
-    "@discordjs/builders": "^1.13.0",
-    "@discordjs/collection": "^2.1.1",
-    "@discordjs/rest": "^2.6.0",
-    "@discordjs/util": "^1.1.1",
-    "@sapphire/pieces": "^4.4.1",
-    "@sapphire/result": "^2.8.0",
-    "@sapphire/utilities": "^3.18.2",
-    "@vladfrangu/async_event_emitter": "^2.4.7",
-    "discord-api-types": "^0.38.8"
-  },
-  "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.8",
-    "tsup": "^8.5.0",
-    "typescript": "~5.8.3",
-    "vitest": "^4.0.8"
-  },
-  "engines": {
-    "node": ">=18"
-  }
+	"name": "@wolfstar/http-framework",
+	"version": "3.0.1",
+	"description": "The framework for ArchId Network's HTTP-only bots",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"pnpm",
+		"ts",
+		"typescript",
+		"wolfstar"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/http-framework"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsup",
+		"watch": "tsup --watch",
+		"typecheck": "tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"@discordjs/builders": "^1.13.0",
+		"@discordjs/collection": "^2.1.1",
+		"@discordjs/rest": "^2.6.0",
+		"@discordjs/util": "^1.1.1",
+		"@sapphire/pieces": "^4.4.1",
+		"@sapphire/result": "^2.8.0",
+		"@sapphire/utilities": "^3.18.2",
+		"@vladfrangu/async_event_emitter": "^2.4.7",
+		"discord-api-types": "^0.38.8"
+	},
+	"devDependencies": {
+		"@vitest/coverage-v8": "^4.0.8",
+		"tsup": "^8.5.0",
+		"typescript": "~5.8.3",
+		"vitest": "^4.0.8"
+	},
+	"engines": {
+		"node": ">=18"
+	}
 }
