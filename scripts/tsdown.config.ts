@@ -1,5 +1,11 @@
 import { defineConfig, type UserConfig } from 'tsdown';
 
+type FormatConfig = Exclude<NonNullable<UserConfig['format']>, string | string[]> extends Record<string, infer V> ? NonNullable<V> : never;
+
+interface FormatConfigCJS extends FormatConfig {
+	disabled?: boolean;
+}
+
 const baseOptions: UserConfig = {
 	clean: true,
 	dts: true,
@@ -36,8 +42,6 @@ export function createTsdownConfig(options?: EnhancedTsdownOptions) {
 }
 
 interface EnhancedTsdownOptions {
-	cjsOptions?: UserConfig & {
-		disabled?: boolean;
-	};
-	esmOptions?: UserConfig;
+	cjsOptions?: FormatConfigCJS;
+	esmOptions?: FormatConfig;
 }
