@@ -27,7 +27,7 @@ jobs:
               with:
                   fetch-depth: 0
                   persist-credentials: false
-                  token: ${{ secrets.WOLFSTAR_TOKEN }}
+                  token: ${{ secrets.WOLFSTAR_TOKEN || github.token }}
             - name: Setup pnpm
               uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
             - name: Setup Node.js v24
@@ -47,6 +47,6 @@ jobs:
                   commit: 'chore: version packages'
                   createGithubReleases: true
               env:
-                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
+                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN || github.token }}
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
                   NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
