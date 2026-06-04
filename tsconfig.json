@@ -1,16 +1,14 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
-	"extends": "./tsconfig.base.json",
+	"extends": "./tsconfig.options.json",
 	"compilerOptions": {
-		"incremental": false,
-		"lib": ["esnext", "dom"],
-		"newLine": "lf",
 		"noEmit": true,
-		"noFallthroughCasesInSwitch": true,
-		"noImplicitReturns": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true
+		"incremental": false,
+		"lib": ["ESNext", "DOM"],
+		"module": "ESNext",
+		"target": "ES2022",
+		"moduleResolution": "Bundler"
 	},
 	"include": ["packages/", "scripts/", "./vitest.config.ts"],
-	"exclude": ["**/dist/**", "**/node_modules/**", "**/tests/**", "**/vitest.config.ts"]
+	"exclude": ["**/build/**", "**/dist/**", "**/node_modules/**", "**/tests/**", "**/vitest.config.ts"]
 }

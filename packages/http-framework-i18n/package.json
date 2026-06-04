@@ -39,8 +39,8 @@
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsup",
-		"watch": "tsup --watch",
+		"build": "tsdown",
+		"watch": "tsdown --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
@@ -54,7 +54,7 @@
 		"tslib": "^2.8.1"
 	},
 	"devDependencies": {
-		"tsup": "^8.5.0",
+		"tsdown": "^0.22.0",
 		"typescript": "~5.8.3"
 	},
 	"engines": {

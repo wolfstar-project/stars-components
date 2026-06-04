@@ -1,6 +1,6 @@
-import { createTsupConfig } from '../../scripts/tsup.config.js';
+import { createTsdownConfig } from '../../scripts/tsdown.config';
 
-export default createTsupConfig({
+export default createTsdownConfig({
 	cjsOptions: { disabled: true },
 	esmOptions: {
 		entry: ['src/index.ts', 'src/register.ts'],

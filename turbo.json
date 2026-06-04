@@ -1,8 +1,15 @@
 {
+	"$schema": "https://turborepo.org/schema.json",
 	"tasks": {
 		"build": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["^typecheck", "^build", "typecheck"],
 			"outputs": ["dist/**"]
+		},
+		"check:exports": {
+			"dependsOn": ["^build"]
+		},
+		"typecheck": {
+			"dependsOn": ["^typecheck"]
 		},
 		"lint": {
 			"dependsOn": [],
@@ -12,9 +19,9 @@
 			"dependsOn": [],
 			"outputs": []
 		},
-		"typecheck": {
-			"dependsOn": [],
-			"outputs": []
+		"clean": {
+			"cache": false,
+			"outputs": ["packages/*/dist"]
 		}
 	}
 }

@@ -1,23 +1,50 @@
 packages:
     - 'packages/*'
 
-autoInstallPeers: true
+catalog:
+    '@arethetypeswrong/cli': ^0.18.2
+    '@commitlint/cli': ^20.1.0
+    '@favware/npm-deprecate': ^2.0.0
+    '@vitest/coverage-v8': ^4.0.8
+    '@sapphire/ts-config': ^5.0.1
+    '@types/ws': ^8.18.1
+    '@changesets/cli': ^2.27.10
+    '@types/node': 22.15.21
+    '@commitlint/config-conventional': ^20.0.0
+    cz-conventional-changelog: ^3.3.0
+    husky: ^9.1.7
+    is-ci: ^4.1.0
+    nano-staged: 1.0.2
+    oxfmt: 0.52.0
+    oxlint: 1.67.0
+    publint: ^0.3.16
+    rimraf: ^6.1.2
+    tsdown: ^0.22.0
+    tsx: ^4.21.0
+    turbo: ^2.9.14
+    typescript: ~5.8.3
+    vitest: ^4.1.7
 
-dedupePeers: true
+autoInstallPeers: true
 
 linkWorkspacePackages: true
 
 preferWorkspacePackages: true
 
-strictPeerDependencies: false
-
 overrides:
+    '@isaacs/brace-expansion': ^5.0.1
     '@types/pg': '8.15.6'
     ansi-regex: '^5.0.1'
+    defu: ^6.1.5
+    minimatch: ^10.2.3
     minimist: '1.2.8'
+    picomatch: ^4.0.4
+    yaml: ^2.8.3
 
 allowBuilds:
     '@swc/core': true
     esbuild: true
 
 minimumReleaseAge: 1440
+
+enablePrePostScripts: true
