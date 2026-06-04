@@ -52,7 +52,7 @@ jobs:
                   cache: pnpm
                   registry-url: https://registry.npmjs.org/
             - name: Install Dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm install --frozen-lockfile --ignore-scripts
             - name: Build package
               run: pnpm turbo run build --filter @wolfstar/${{ matrix.package }}
             - name: Set pre-release version

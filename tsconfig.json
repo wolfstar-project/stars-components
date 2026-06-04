@@ -10,5 +10,5 @@
 		"moduleResolution": "Bundler"
 	},
 	"include": ["packages/", "scripts/", "./vitest.config.ts"],
-	"exclude": ["**/build/**", "**/dist/**", "**/node_modules/**", "**/tests/**", "**/vitest.config.ts"]
+	"exclude": ["**/build/**", "**/dist/**", "**/node_modules/**", "**/tests/**"]
 }

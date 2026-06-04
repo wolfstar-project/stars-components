@@ -55,7 +55,7 @@ jobs:
                   cache: pnpm
                   registry-url: https://registry.npmjs.org/
             - name: Install Dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm install --frozen-lockfile --ignore-scripts
             - name: Build
               run: pnpm turbo run build --filter @wolfstar/${{ github.event.inputs.package }}
             - name: Publish to NPM
