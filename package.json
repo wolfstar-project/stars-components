@@ -7,7 +7,7 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"scripts": {
-		"clean": "node scripts/clean.mjs",
+		"clean": "pnpm",
 		"prepare": "is-ci || husky",
 		"format:ci": "oxfmt . --check",
 		"format": "oxfmt .",

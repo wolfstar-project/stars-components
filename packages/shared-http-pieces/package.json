@@ -46,6 +46,7 @@
 		"access": "public"
 	},
 	"scripts": {
+		"clean": "rimraf build .turbo",
 		"build": "tsdown",
 		"watch": "tsdown --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
