@@ -1,4 +1,4 @@
-import { createTsdownConfig } from '../../scripts/tsdown.config.js';
+import { createTsdownConfig } from '../../scripts/tsdown.config';
 
 export default createTsdownConfig({
 	entry: ['src/index.ts', 'src/register.ts'],
