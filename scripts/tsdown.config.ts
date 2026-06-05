@@ -1,4 +1,5 @@
 import { defineConfig, type UserConfig } from 'tsdown';
+import { relative, resolve as resolveDir } from 'node:path';
 
 export type FormatConfig = Exclude<NonNullable<UserConfig['format']>, string | string[]> extends Record<string, infer V> ? NonNullable<V> : never;
 
@@ -22,6 +23,8 @@ const baseOptions: UserConfig = {
 		profile: 'node16'
 	},
 
+	tsconfig: relative(__dirname, resolveDir(process.cwd(), 'tsconfig.build.json')),
+
 	publint: {
 		enabled: true,
 		level: 'error'
@@ -34,22 +37,26 @@ export function createTsdownConfig(options?: EnhancedTsdownOptions) {
 
 	return defineConfig({
 		...baseOptions,
+		...(cjsDisabled
+			? {
+					...esmOptions
+				}
+			: {}),
 		entry: entry ?? baseOptions.entry,
-		format: {
-			esm: {
-				outDir: cjsDisabled ? 'dist' : 'dist/esm',
-				...esmOptions
-			},
-			...(cjsDisabled
-				? {}
-				: {
-						cjs: {
-							outDir: 'dist/cjs',
-							outExtensions: () => ({ js: '.cjs' }),
-							...cjsRest
-						}
-					})
-		}
+		format: cjsDisabled
+			? 'esm'
+			: {
+					esm: {
+						outDir: 'dist/esm',
+						...esmOptions
+					},
+
+					cjs: {
+						outDir: 'dist/cjs',
+						outExtensions: () => ({ js: '.cjs' }),
+						...cjsRest
+					}
+				}
 	});
 }
 
