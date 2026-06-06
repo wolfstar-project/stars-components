@@ -40,8 +40,8 @@
 	},
 	"scripts": {
 		"test": "vitest run",
-		"build": "tsdown",
-		"watch": "tsdown --watch",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
