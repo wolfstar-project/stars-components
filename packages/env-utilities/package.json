@@ -59,8 +59,8 @@
 	},
 	"scripts": {
 		"test": "vitest run",
-		"build": "tsup",
-		"watch": "tsup --watch",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
@@ -70,13 +70,13 @@
 		"dotenv-expand": "^12.0.3"
 	},
 	"devDependencies": {
+		"@redstardev/unplugin-version-injector": "^0.0.2",
 		"@vitest/coverage-v8": "^4.0.8",
-		"esbuild-plugin-version-injector": "^1.2.1",
-		"tsup": "^8.5.0",
+		"tsdown": "^0.22.1",
 		"typescript": "~5.8.3",
 		"vitest": "^4.0.8"
 	},
 	"engines": {
-		"node": ">=18"
+		"node": ">=20"
 	}
 }

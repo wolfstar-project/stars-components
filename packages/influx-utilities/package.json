@@ -39,8 +39,8 @@
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsup",
-		"watch": "tsup --watch",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
@@ -50,11 +50,11 @@
 		"@wolfstar/env-utilities": "workspace:^"
 	},
 	"devDependencies": {
-		"esbuild-plugin-version-injector": "^1.2.1",
-		"tsup": "^8.5.0",
+		"@redstardev/unplugin-version-injector": "^0.0.2",
+		"tsdown": "^0.22.1",
 		"typescript": "~5.8.3"
 	},
 	"engines": {
-		"node": ">=18"
+		"node": ">=20"
 	}
 }
