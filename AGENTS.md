@@ -4,7 +4,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 ## Stack
 
-- **Language:** TypeScript (`~5.8.3`), Node `>=18`.
+- **Language:** TypeScript (`~5.8.3`), Node `>=20`.
 - **Package manager:** `pnpm@11.5.0` (corepack-pinned, workspaces via `pnpm-workspace.yaml`).
 - **Monorepo runner:** `turbo` (`turbo run build|typecheck`).
 - **Bundler:** `tsdown` per package.
