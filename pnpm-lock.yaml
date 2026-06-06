@@ -64,13 +64,16 @@ importers:
         version: 0.3.21
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       turbo:
         specifier: ^2.6.0
         version: 2.9.16
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
+      unrun:
+        specifier: 0.3.1
+        version: 0.3.1
       vitest:
         specifier: ^4.0.8
         version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.7)(vite@8.0.14)
@@ -92,7 +95,7 @@ importers:
         version: 4.1.7(vitest@4.1.7)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -135,7 +138,7 @@ importers:
         version: 4.1.7(vitest@4.1.7)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -166,7 +169,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -185,7 +188,7 @@ importers:
         version: 25.10.10(typescript@5.8.3)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -204,7 +207,7 @@ importers:
         version: 0.0.2(@nuxt/kit@3.21.7)(@nuxt/schema@3.21.7)(vite@8.0.14)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -220,7 +223,7 @@ importers:
         version: 4.1.7(vitest@4.1.7)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -257,7 +260,7 @@ importers:
         version: 1.2.3
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -270,7 +273,7 @@ importers:
     devDependencies:
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -335,7 +338,7 @@ importers:
         version: 1.35.0
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -347,7 +350,7 @@ importers:
         version: 4.1.7(vitest@4.1.7)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -372,7 +375,7 @@ importers:
         version: 0.0.2(@nuxt/kit@3.21.7)(@nuxt/schema@3.21.7)(vite@8.0.14)
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -397,7 +400,7 @@ importers:
         version: 1.2.3
       tsdown:
         specifier: ^0.22.1
-        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -3177,6 +3180,16 @@ packages:
   unplugin@3.0.0:
     resolution: {integrity: sha512-0Mqk3AT2TZCXWKdcoaufeXNukv2mTrEZExeXlHIOZXdqYoHHr4n51pymnwV8x2BOVxwXbK2HLlI7usrqMpycdg==}
     engines: {node: ^20.19.0 || >=22.12.0}
+
+  unrun@0.3.1:
+    resolution: {integrity: sha512-onIck/oNnCaytwths1ZVp1LK2Gq2hPoyFhiHebObuUXqR3S0uHuLLaBK8K6mRRgV7Ptip8AnNvaUsgzwWwBZuA==}
+    engines: {node: ^22.13.0 || >=24.0.0}
+    hasBin: true
+    peerDependencies:
+      synckit: ^0.11.11
+    peerDependenciesMeta:
+      synckit:
+        optional: true
 
   untyped@2.0.0:
     resolution: {integrity: sha512-nwNCjxJTjNuLCgFr42fEak5OcLuB3ecca+9ksPFNvtfYSLpjf+iJqSIaSnIile6ZPbKYxI5k2AfXqeopGudK/g==}
@@ -6044,7 +6057,7 @@ snapshots:
 
   ts-mixer@6.0.4: {}
 
-  tsdown@0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3):
+  tsdown@0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1):
     dependencies:
       ansis: 4.3.1
       cac: 7.0.0
@@ -6065,6 +6078,7 @@ snapshots:
       '@arethetypeswrong/core': 0.18.3
       publint: 0.3.21
       typescript: 5.8.3
+      unrun: 0.3.1
     transitivePeerDependencies:
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
@@ -6132,6 +6146,10 @@ snapshots:
       '@jridgewell/remapping': 2.3.5
       picomatch: 4.0.4
       webpack-virtual-modules: 0.6.2
+
+  unrun@0.3.1:
+    dependencies:
+      rolldown: 1.0.2
 
   untyped@2.0.0:
     dependencies:

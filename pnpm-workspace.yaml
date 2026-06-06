@@ -24,3 +24,4 @@ minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
     - '@redstardev/*'
+    - unrun@0.3.1
