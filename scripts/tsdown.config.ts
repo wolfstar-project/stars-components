@@ -1,6 +1,16 @@
 import { relative, resolve as resolveDir } from 'path';
-import { type UserConfig } from 'tsdown';
+import { type TsdownPluginOption, type UserConfig } from 'tsdown';
 export type FormatConfig = Exclude<NonNullable<UserConfig['format']>, string | string[]> extends Record<string, infer V> ? NonNullable<V> : never;
+
+function toPluginArray(plugins?: TsdownPluginOption): TsdownPluginOption[] {
+	if (plugins == null || plugins === false) {
+		return [];
+	}
+
+	return (Array.isArray(plugins) ? plugins : [plugins]).filter(
+		(plugin): plugin is Exclude<TsdownPluginOption, false | undefined | null | void> => plugin != null && plugin !== false
+	);
+}
 
 export interface FormatConfigCJS extends FormatConfig {
 	disabled?: boolean;
@@ -20,6 +30,13 @@ function splitFormatOptions<T extends object>(options?: T) {
 const esmOutExtensions = () => ({ js: '.js', dts: '.d.ts' });
 const cjsOutExtensions = () => ({ js: '.cjs', dts: '.d.cts' });
 
+const attwOptions = {
+	entrypoints: ['.'],
+	enabled: true,
+	level: 'error',
+	profile: 'node16'
+} satisfies NonNullable<Extract<UserConfig['attw'], object>>;
+
 const baseOptions: UserConfig = {
 	clean: true,
 	dts: true,
@@ -29,12 +46,7 @@ const baseOptions: UserConfig = {
 	sourcemap: true,
 	target: 'es2021',
 	treeshake: true,
-	attw: {
-		entrypoints: ['.'],
-		enabled: true,
-		level: 'error',
-		profile: 'node16'
-	},
+	attw: attwOptions,
 
 	tsconfig: relative(import.meta.dirname, resolveDir(import.meta.dirname, '../tsconfig.build.json')),
 
@@ -44,12 +56,12 @@ const baseOptions: UserConfig = {
 	}
 };
 
-export function createTsdownOptions(options?: EnhancedTsdownOptions) {
+export function createTsdownOptions(options?: EnhancedTsdownOptions): UserConfig {
 	const { cjsOptions, esmOptions, entry, target, plugins } = options ?? {};
 	const { formatOptions: cjsFormatOptions, plugins: cjsPlugins } = splitFormatOptions(cjsOptions);
 	const { formatOptions: esmFormatOptions, plugins: esmPlugins } = splitFormatOptions(esmOptions);
 	const { disabled: cjsDisabled, ...cjsRest } = cjsFormatOptions ?? {};
-	const mergedPlugins = [...(plugins ?? []), ...(cjsPlugins ?? []), ...(esmPlugins ?? [])];
+	const mergedPlugins = [...toPluginArray(plugins), ...toPluginArray(cjsPlugins), ...toPluginArray(esmPlugins)];
 
 	const esmFormat = {
 		outDir: 'dist/esm',
@@ -60,7 +72,7 @@ export function createTsdownOptions(options?: EnhancedTsdownOptions) {
 	return {
 		...baseOptions,
 		attw: {
-			...baseOptions.attw,
+			...attwOptions,
 			profile: cjsDisabled ? 'esm-only' : 'node16'
 		},
 		entry: entry ?? baseOptions.entry,
