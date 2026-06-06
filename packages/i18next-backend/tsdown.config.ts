@@ -1,3 +1,4 @@
-import { createTsdownConfig } from '../../scripts/tsdown.config';
+import { defineConfig } from 'tsdown';
+import { createTsdownOptions } from '../../scripts/tsdown.config';
 
-export default createTsdownConfig();
+export default defineConfig(createTsdownOptions());

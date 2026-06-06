@@ -1,5 +1,5 @@
-import { defineConfig, type UserConfig } from 'tsdown';
-
+import { relative, resolve as resolveDir } from 'path';
+import { type UserConfig } from 'tsdown';
 export type FormatConfig = Exclude<NonNullable<UserConfig['format']>, string | string[]> extends Record<string, infer V> ? NonNullable<V> : never;
 
 export interface FormatConfigCJS extends FormatConfig {
@@ -14,36 +14,55 @@ const baseOptions: UserConfig = {
 	deps: { skipNodeModulesBundle: true },
 	sourcemap: true,
 	target: 'es2021',
-	treeshake: true
+	treeshake: true,
+	attw: {
+		entrypoints: ['.'],
+		enabled: true,
+		level: 'error',
+		profile: 'node16'
+	},
+
+	tsconfig: relative(import.meta.dirname, resolveDir(process.cwd(), 'tsconfig.build.json')),
+
+	publint: {
+		enabled: true,
+		level: 'error'
+	}
 };
 
-export function createTsdownConfig(options?: EnhancedTsdownOptions) {
-	const { cjsOptions, esmOptions, entry } = options ?? {};
+export function createTsdownOptions(options?: EnhancedTsdownOptions) {
+	const { cjsOptions, esmOptions, entry, target } = options ?? {};
 	const { disabled: cjsDisabled, ...cjsRest } = cjsOptions ?? {};
 
-	return defineConfig({
+	return {
 		...baseOptions,
+		...(cjsDisabled
+			? {
+					...esmOptions
+				}
+			: {}),
 		entry: entry ?? baseOptions.entry,
-		format: {
-			esm: {
-				outDir: cjsDisabled ? 'dist' : 'dist/esm',
-				...esmOptions
-			},
-			...(cjsDisabled
-				? {}
-				: {
-						cjs: {
-							outDir: 'dist/cjs',
-							outExtensions: () => ({ js: '.cjs' }),
-							...cjsRest
-						}
-					})
-		}
-	});
+		...(target ? { target } : {}),
+		format: cjsDisabled
+			? 'esm'
+			: {
+					esm: {
+						outDir: 'dist/esm',
+						...esmOptions
+					},
+
+					cjs: {
+						outDir: 'dist/cjs',
+						outExtensions: () => ({ js: '.cjs' }),
+						...cjsRest
+					}
+				}
+	} satisfies UserConfig;
 }
 
 export interface EnhancedTsdownOptions {
 	cjsOptions?: FormatConfigCJS;
 	esmOptions?: FormatConfig;
 	entry?: UserConfig['entry'];
+	target?: UserConfig['target'];
 }

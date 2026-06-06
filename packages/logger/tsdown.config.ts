@@ -1,5 +1,8 @@
-import { createTsdownConfig } from '../../scripts/tsdown.config';
+import { defineConfig } from 'tsdown';
+import { createTsdownOptions } from '../../scripts/tsdown.config';
 
-export default createTsdownConfig({
-	cjsOptions: { disabled: true }
-});
+export default defineConfig(
+	createTsdownOptions({
+		cjsOptions: { disabled: true }
+	})
+);

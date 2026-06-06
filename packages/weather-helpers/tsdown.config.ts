@@ -1,16 +1,10 @@
-import { readFileSync } from 'node:fs';
-import Replace from 'unplugin-replace/rolldown';
-import { createTsdownConfig } from '../../scripts/tsdown.config';
+import VersionInjector from '@redstardev/unplugin-version-injector/rolldown';
+import { defineConfig } from 'tsdown';
+import { createTsdownOptions } from '../../scripts/tsdown.config';
 
-const pkg = JSON.parse(readFileSync(new URL('package.json', import.meta.url), 'utf8'));
-
-export default createTsdownConfig({
-	cjsOptions: { disabled: true },
-	esmOptions: {
-		plugins: [
-			Replace({
-				values: [{ find: /\[VI\]\{\{inject\}\}\[\/VI\]/g, replacement: pkg.version }]
-			})
-		]
-	}
-});
+export default defineConfig(
+	createTsdownOptions({
+		cjsOptions: { disabled: true },
+		esmOptions: { plugins: [VersionInjector()] }
+	})
+);
