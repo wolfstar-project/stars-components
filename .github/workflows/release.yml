@@ -38,6 +38,10 @@ jobs:
                   registry-url: https://registry.npmjs.org/
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
+            - name: Configure Git credentials
+              run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+              env:
+                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN || github.token }}
             - name: Create Release Pull Request or Publish
               uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
               with:
