@@ -1,7 +1,7 @@
 {
 	"name": "@wolfstar/shared-influx-pieces",
 	"version": "3.0.1",
-	"description": "The influx pieces for ArchId Network's HTTP-only bots",
+	"description": "The influx pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
 		"discord",

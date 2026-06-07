@@ -1,7 +1,7 @@
 {
 	"name": "@wolfstar/weather-helpers",
 	"version": "3.0.1",
-	"description": "Very basic weather helper functions used across several ArchId bots",
+	"description": "Very basic weather helper functions used across several Star bots",
 	"keywords": [
 		"api",
 		"discord",

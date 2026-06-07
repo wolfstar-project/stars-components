@@ -1,6 +1,6 @@
 # `@wolfstar/twitch-helpers`
 
-Very basic Twitch helper functions for several ArchId bots to ensure we do not duplicate code.
+Very basic Twitch helper functions for several Star bots to ensure we do not duplicate code.
 
 ## Features
 

@@ -2,9 +2,9 @@
 
 <!-- TODO(wolfstar): replace with new logo URL -->
 
-# ArchId Network Components
+# Star Network Components
 
-**A collection of shared utilities for the ArchId Network**
+**A collection of shared utilities for the Star Network**
 
 [![GitHub](https://img.shields.io/github/license/wolfstar-project/stars-components)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE.md)
 [![codecov](https://codecov.io/gh/wolfstar-project/stars-components/branch/main/graph/badge.svg?token=CJP65GQC8K)](https://codecov.io/gh/wolfstar-project/stars-components)

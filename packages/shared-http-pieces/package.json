@@ -1,7 +1,7 @@
 {
 	"name": "@wolfstar/shared-http-pieces",
 	"version": "3.0.1",
-	"description": "The common pieces for ArchId Network's HTTP-only bots",
+	"description": "The common pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
 		"discord",
