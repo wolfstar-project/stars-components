@@ -50,10 +50,10 @@
 		"colorette": "^2.0.20"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.0.8",
-		"tsdown": "^0.22.1",
+		"@vitest/coverage-v8": "^4.1.8",
+		"tsdown": "^0.22.2",
 		"typescript": "~5.8.3",
-		"vitest": "^4.0.8"
+		"vitest": "^4.1.8"
 	},
 	"engines": {
 		"node": ">=20"
