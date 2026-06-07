@@ -27,7 +27,6 @@ jobs:
               with:
                   fetch-depth: 0
                   persist-credentials: false
-                  token: ${{ secrets.WOLFSTAR_TOKEN || github.token }}
             - name: Setup pnpm
               uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
             - name: Setup Node.js v24
@@ -39,9 +38,9 @@ jobs:
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
             - name: Configure Git credentials
-              run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+              run: git config --global url."https://x-access-token:${WOLFSTAR_TOKEN}@github.com/".insteadOf "https://github.com/"
               env:
-                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN || github.token }}
+                  WOLFSTAR_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
             - name: Create Release Pull Request or Publish
               uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
               with:
@@ -51,6 +50,6 @@ jobs:
                   commit: 'chore: version packages'
                   createGithubReleases: true
               env:
-                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN || github.token }}
+                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
                   NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
