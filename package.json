@@ -14,7 +14,7 @@
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset",
 		"version": "changeset version",
-		"release": "pnpm build && changeset publish --provenance"
+		"release": "pnpm build && changeset publish"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "^0.18.3",
