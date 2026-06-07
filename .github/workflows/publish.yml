@@ -41,7 +41,6 @@ jobs:
                   fetch-depth: 0
                   ref: main
                   persist-credentials: false
-                  token: ${{ secrets.WOLFSTAR_TOKEN }}
             - name: Configure Git credentials
               run: git config --global url."https://x-access-token:${WOLFSTAR_TOKEN}@github.com/".insteadOf "https://github.com/"
               env:
