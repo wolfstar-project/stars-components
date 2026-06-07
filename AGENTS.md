@@ -41,7 +41,6 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 ## Out of scope for the rebrand
 
-- The product name "ArchId Network" in `package.json#description` and `README.md` heading (no instruction to change it; treat as separate decision).
 - Crowdin `project_id` (`520232`) and per-project Crowdin badge slugs (`sharedhttppieces`) — these are external resources owned by the new org and require a manual Crowdin migration outside the codebase.
 
 ## Notes for agents

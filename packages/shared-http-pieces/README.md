@@ -1,6 +1,6 @@
 # `@wolfstar/shared-http-pieces` [![Crowdin](https://badges.crowdin.net/sharedhttppieces/localized.svg)](https://crowdin.com/project/sharedhttppieces)
 
-The shared commands used for ArchId Network's HTTP-only bots.
+The shared commands used for Star Network's HTTP-only bots.
 
 ## Setup
 

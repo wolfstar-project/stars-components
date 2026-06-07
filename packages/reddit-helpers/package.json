@@ -1,7 +1,7 @@
 {
 	"name": "@wolfstar/reddit-helpers",
 	"version": "3.0.1",
-	"description": "Very basic Reddit helper functions used across several ArchId bots",
+	"description": "Very basic Reddit helper functions used across several Star bots",
 	"keywords": [
 		"api",
 		"discord",

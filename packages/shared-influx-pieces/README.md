@@ -1,6 +1,6 @@
 # `@wolfstar/shared-influx-pieces`
 
-The shared influx pieces used in ArchId Network's HTTP-only bots.
+The shared influx pieces used in Star Network's HTTP-only bots.
 
 ## Usage
 

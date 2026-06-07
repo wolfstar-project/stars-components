@@ -1,7 +1,7 @@
 {
 	"name": "stars-components",
 	"private": true,
-	"description": "A collection of shared utilities for the ArchId Network",
+	"description": "A collection of shared utilities for the Star Network",
 	"type": "module",
 	"scripts": {
 		"clean": "node scripts/clean.mjs",

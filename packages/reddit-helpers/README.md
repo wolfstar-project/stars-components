@@ -1,6 +1,6 @@
 # `@wolfstar/reddit-helpers`
 
-Very basic Reddit helper functions for several ArchId bots to ensure we do not duplicate code.
+Very basic Reddit helper functions for several Star bots to ensure we do not duplicate code.
 
 Note that this package only does [Application Only Oauth](https://github.com/reddit-archive/reddit/wiki/OAuth2#application-only-oauth) and requires
 an application of the "Installed" type!
