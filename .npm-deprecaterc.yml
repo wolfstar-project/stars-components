@@ -4,6 +4,7 @@ package:
     - '@wolfstar/http-framework'
     - '@wolfstar/http-framework-i18n'
     - '@wolfstar/i18next-backend'
+    - '@wolfstar/i18next-type-generator'
     - '@wolfstar/influx-utilities'
     - '@wolfstar/logger'
     - '@wolfstar/reddit-helpers'

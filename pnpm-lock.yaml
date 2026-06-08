@@ -161,8 +161,8 @@ importers:
         specifier: ^0.38.8
         version: 0.38.48
       i18next:
-        specifier: ^22.5.1
-        version: 22.5.1
+        specifier: ^25.10.10
+        version: 25.10.10(typescript@5.8.3)
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -192,6 +192,35 @@ importers:
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
+
+  packages/i18next-type-generator:
+    dependencies:
+      colorette:
+        specifier: ^2.0.20
+        version: 2.0.20
+      commander:
+        specifier: ^13.1.0
+        version: 13.1.0
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+    devDependencies:
+      '@types/node':
+        specifier: 22.15.21
+        version: 22.15.21
+      i18next:
+        specifier: ^25.10.10
+        version: 25.10.10(typescript@5.8.3)
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.2(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+    optionalDependencies:
+      prettier:
+        specifier: ^3.5.3
+        version: 3.8.3
 
   packages/influx-utilities:
     dependencies:
@@ -305,6 +334,9 @@ importers:
         specifier: ^2.8.1
         version: 2.8.1
     devDependencies:
+      '@wolfstar/i18next-type-generator':
+        specifier: workspace:^
+        version: link:../i18next-type-generator
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
@@ -1897,6 +1929,10 @@ packages:
     resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
     engines: {node: '>=18'}
 
+  commander@13.1.0:
+    resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
+    engines: {node: '>=18'}
+
   commitizen@4.3.1:
     resolution: {integrity: sha512-gwAPAVTy/j5YcOOebcCRIijn+mSjWJC+IYKivTu6aG8Ei/scoXgfsMRnuAk6b0GRste2J4NGxVdMN3ZpfNaVaw==}
     engines: {node: '>= 12'}
@@ -2290,9 +2326,6 @@ packages:
     resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
     engines: {node: '>=18'}
     hasBin: true
-
-  i18next@22.5.1:
-    resolution: {integrity: sha512-8TGPgM3pAD+VRsMtUMNknRz3kzqwp/gPALrWMsDnmC1mKqJwpWyooQRLMcbTwq8z8YwSmuj+ZYvc+xCuEpkssA==}
 
   i18next@25.10.10:
     resolution: {integrity: sha512-cqUW2Z3EkRx7NqSyywjkgCLK7KLCL6IFVFcONG7nVYIJ3ekZ1/N5jUsihHV6Bq37NfhgtczxJcxduELtjTwkuQ==}
@@ -2883,6 +2916,11 @@ packages:
   prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
     engines: {node: '>=10.13.0'}
+    hasBin: true
+
+  prettier@3.8.3:
+    resolution: {integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw==}
+    engines: {node: '>=14'}
     hasBin: true
 
   proc-log@5.0.0:
@@ -4957,6 +4995,8 @@ snapshots:
 
   commander@12.1.0: {}
 
+  commander@13.1.0: {}
+
   commitizen@4.3.1(@types/node@22.15.21)(typescript@5.8.3):
     dependencies:
       cachedir: 2.3.0
@@ -5341,10 +5381,6 @@ snapshots:
   human-id@4.1.3: {}
 
   husky@9.1.7: {}
-
-  i18next@22.5.1:
-    dependencies:
-      '@babel/runtime': 7.29.7
 
   i18next@25.10.10(typescript@5.8.3):
     dependencies:
@@ -5895,6 +5931,9 @@ snapshots:
       xtend: 4.0.2
 
   prettier@2.8.8: {}
+
+  prettier@3.8.3:
+    optional: true
 
   proc-log@5.0.0: {}
 

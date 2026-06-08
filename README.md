@@ -15,6 +15,7 @@
 [![npm](https://img.shields.io/npm/v/@wolfstar/http-framework?color=crimson&logo=npm&style=flat-square&label=@wolfstar/http-framework)](https://www.npmjs.com/package/@wolfstar/http-framework)
 [![npm](https://img.shields.io/npm/v/@wolfstar/http-framework-i18n?color=crimson&logo=npm&style=flat-square&label=@wolfstar/http-framework-i18n)](https://www.npmjs.com/package/@wolfstar/http-framework-i18n)
 [![npm](https://img.shields.io/npm/v/@wolfstar/i18next-backend?color=crimson&logo=npm&style=flat-square&label=@wolfstar/i18next-backend)](https://www.npmjs.com/package/@wolfstar/i18next-backend)
+[![npm](https://img.shields.io/npm/v/@wolfstar/i18next-type-generator?color=crimson&logo=npm&style=flat-square&label=@wolfstar/i18next-type-generator)](https://www.npmjs.com/package/@wolfstar/i18next-type-generator)
 [![npm](https://img.shields.io/npm/v/@wolfstar/influx-utilities?color=crimson&logo=npm&style=flat-square&label=@wolfstar/influx-utilities)](https://www.npmjs.com/package/@wolfstar/influx-utilities)
 [![npm](https://img.shields.io/npm/v/@wolfstar/logger?color=crimson&logo=npm&style=flat-square&label=@wolfstar/logger)](https://www.npmjs.com/package/@wolfstar/logger)
 [![npm](https://img.shields.io/npm/v/@wolfstar/reddit-helpers?color=crimson&logo=npm&style=flat-square&label=@wolfstar/reddit-helpers)](https://www.npmjs.com/package/@wolfstar/reddit-helpers)

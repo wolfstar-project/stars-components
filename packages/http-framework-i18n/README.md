@@ -34,19 +34,26 @@ addFormatters(
 await init();
 ```
 
+> **Note**: If you want to customize the options, please check [i18next's TypeScript guide](https://www.i18next.com/overview/typescript) to improve the experience.
+
 ### Definition
 
-```typescript
-import { T, FT } from '@wolfstar/http-framework-i18n';
+Generate type augmentations with [`@wolfstar/i18next-type-generator`](https://www.npmjs.com/package/@wolfstar/i18next-type-generator):
 
-export const InvalidInput = T('path/to/file:invalidInput');
-export const AddResult = FT<{ left: number; right: number; result: number }>('path/to/file:addResult');
+```bash
+i18next-type-generator ./src/locales/en-US/ ./src/@types/i18next.d.ts
 ```
 
 ### Consumption
 
 ```typescript
-import { getSupportedLanguageName, getSupportedUserLanguageName, getT, resolveKey, resolveUserKey } from '@wolfstar/http-framework-i18n';
+import {
+	getSupportedLanguageName,
+	getSupportedUserLanguageName,
+	getT,
+	getSupportedLanguageT,
+	getSupportedUserLanguageT
+} from '@wolfstar/http-framework-i18n';
 
 // Get the name of the supported guild language, falling back to the user's on DMs:
 const guildLanguage = getSupportedLanguageName(interaction);
@@ -55,11 +62,11 @@ const guildLanguage = getSupportedLanguageName(interaction);
 const userLanguage = getSupportedUserLanguageName(interaction);
 
 // Get the function to get a translated key:
-const t = getT(guildLanguage);
+const t = getT(guildLanguage, 'commands/shared');
 
 // Resolving a given key, this calls `getT` and `getSupportedLanguageName` under the hood:
-const content = resolveKey(interaction, InvalidInput);
+const content = getSupportedLanguageT(interaction, 'commands/shared')('invalidInput');
 
 // Resolving a given key, this calls `getT` and `getSupportedUserLanguageName` under the hood:
-const content = resolveUserKey(interaction, AddResult, { left: 5, right: 10, result: 15 });
+const content = getSupportedUserLanguageT(interaction, 'commands/shared')('addResult', { left: 5, right: 10, result: 15 });
 ```
