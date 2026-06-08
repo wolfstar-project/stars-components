@@ -27,10 +27,10 @@ This environment is referenced by the `publish` job in `.github/workflows/publis
 
 Repository secrets (**Settings -> Secrets -> Actions**):
 
-| Secret              | Description                                                                                                                                                             |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows). |
-| `NPM_PUBLISH_TOKEN` | An npm token with `Automation` type and publish access to all `@wolfstar/*` packages. Required at **repository** level for `release.yml` and `cd.yml`.                  |
+| Secret              | Description                                                                                                                                                                                                                                                             |
+| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows).                                                                                                 |
+| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Required at **repository** level for `cd.yml` and `release.yml`. Classic publish tokens will fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI. |
 
 The manual **Publish** workflow (`publish.yml`) uses the `npm` environment for optional reviewer approval; you may mirror `NPM_PUBLISH_TOKEN` there as an environment secret if you use that gate.
 

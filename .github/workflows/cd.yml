@@ -40,7 +40,6 @@ jobs:
         needs: check-npm-token
         if: needs.check-npm-token.outputs.configured == 'true'
         permissions:
-            id-token: write
             contents: read
         strategy:
             fail-fast: false
@@ -87,7 +86,7 @@ jobs:
                     console.log('Set version to', pkg.version);
                   "
             - name: Publish to npm
-              run: pnpm publish --tag next --provenance --access public --no-git-checks
+              run: pnpm publish --tag next --access public --no-git-checks
               working-directory: packages/${{ matrix.package }}
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
