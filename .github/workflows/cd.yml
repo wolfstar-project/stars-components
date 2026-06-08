@@ -30,7 +30,8 @@ jobs:
                     echo "configured=true" >> "$GITHUB_OUTPUT"
                   else
                     echo "configured=false" >> "$GITHUB_OUTPUT"
-                    echo "Skipping CD: NPM_PUBLISH_TOKEN is not configured."
+                    echo "Skipping CD: NPM_PUBLISH_TOKEN is not configured at repository level."
+                    echo "Set it with: gh secret set NPM_PUBLISH_TOKEN --repo ${{ github.repository }}"
                   fi
 
     publish:
@@ -41,7 +42,6 @@ jobs:
         permissions:
             id-token: write
             contents: read
-        environment: npm
         strategy:
             fail-fast: false
             matrix:

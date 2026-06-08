@@ -25,12 +25,14 @@ This environment is referenced by the `publish` job in `.github/workflows/publis
 
 ### 3. Configure secrets
 
-Two secrets are required in **Settings -> Secrets -> Actions**:
+Repository secrets (**Settings -> Secrets -> Actions**):
 
 | Secret              | Description                                                                                                                                                             |
 | :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows). |
-| `NPM_PUBLISH_TOKEN` | An npm token with `Automation` type and publish access to all `@wolfstar/*` packages.                                                                                   |
+| `NPM_PUBLISH_TOKEN` | An npm token with `Automation` type and publish access to all `@wolfstar/*` packages. Required at **repository** level for `release.yml` and `cd.yml`.                  |
+
+The manual **Publish** workflow (`publish.yml`) uses the `npm` environment for optional reviewer approval; you may mirror `NPM_PUBLISH_TOKEN` there as an environment secret if you use that gate.
 
 ### 4. Install the autofix.ci GitHub App (optional)
 
