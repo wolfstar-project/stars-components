@@ -56,7 +56,7 @@ jobs:
               run: |
                   TAG="${INPUT_TAG:-next}"
                   SHA=$(git rev-parse --short HEAD)
-                  RUN="${{ github.run_number }}"
+                  RUN="${{ github.run_number }}.${{ github.run_attempt }}"
                   DRY_RUN="$INPUT_DRY_RUN"
 
                   PACKAGES=(
