@@ -89,7 +89,7 @@ jobs:
                     if [[ "$DRY_RUN" == "true" ]]; then
                       echo "[dry-run] would publish @wolfstar/${PACKAGE} with tag ${TAG}"
                     else
-                      (cd "packages/${PACKAGE}" && pnpm publish --tag "${TAG}" --access public --no-git-checks) # zizmor: ignore[use-trusted-publishing]
+                      (cd "packages/${PACKAGE}" && pnpm publish --provenance --tag "${TAG}" --access public --no-git-checks) # zizmor: ignore[use-trusted-publishing]
                     fi
                   done
               env:
