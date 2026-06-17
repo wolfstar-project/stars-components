@@ -37,7 +37,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@f7d0e5f4b1b3089d2799ef9722859e7ba314c4c8 # v1
+              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
               with:
                   runtime: node@24
                   cache: true
@@ -54,9 +54,10 @@ jobs:
 
             - name: Publish packages
               run: |
-                  TAG="${{ inputs.tag || 'next' }}"
+                  TAG="${INPUT_TAG:-next}"
                   SHA=$(git rev-parse --short HEAD)
-                  DRY_RUN="${{ inputs.dry_run }}"
+                  RUN="${{ github.run_number }}"
+                  DRY_RUN="$INPUT_DRY_RUN"
 
                   PACKAGES=(
                     env-utilities
@@ -75,12 +76,13 @@ jobs:
                   )
 
                   for PACKAGE in "${PACKAGES[@]}"; do
-                    node --input-type=module --eval "
+                    PKG="$PACKAGE" TAG="$TAG" SHA="$SHA" RUN="$RUN" node --input-type=module --eval "
                       import { readFileSync, writeFileSync } from 'fs';
-                      const path = 'packages/${PACKAGE}/package.json';
-                      const pkg = JSON.parse(readFileSync(path, 'utf8'));
-                      pkg.version = pkg.version + '-${TAG}.' + '${SHA}';
-                      writeFileSync(path, JSON.stringify(pkg, null, '\t') + '\n');
+                      const { PKG, TAG, SHA, RUN } = process.env;
+                      const pkgPath = 'packages/' + PKG + '/package.json';
+                      const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+                      pkg.version = pkg.version + '-' + TAG + '.' + SHA + '.' + RUN;
+                      writeFileSync(pkgPath, JSON.stringify(pkg, null, '\t') + '\n');
                       console.log('Bumped', pkg.name, 'to', pkg.version);
                     "
 
@@ -92,3 +94,5 @@ jobs:
                   done
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+                  INPUT_TAG: ${{ inputs.tag }}
+                  INPUT_DRY_RUN: ${{ inputs.dry_run }}
