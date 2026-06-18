@@ -1,6 +1,29 @@
-import { annotateGeneratedFile } from '../src/generate.js';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { annotateGeneratedFile, generate } from '../src/generate.js';
 
 const formatted = ["import 'i18next';", '', "declare module 'i18next' {", '\tinterface CustomTypeOptions {}', '}', ''].join('\n');
+
+const defaultOptions = {
+	verbose: false,
+	oxfmt: false,
+	prettier: false,
+	indentation: '\t'
+} as const;
+
+async function writeFixture(sourceDirectory: string) {
+	await mkdir(join(sourceDirectory, 'commands'), { recursive: true });
+	await writeFile(
+		join(sourceDirectory, 'commands', 'shared.json'),
+		JSON.stringify({
+			hello: 'world',
+			count: 1
+		})
+	);
+	await writeFile(join(sourceDirectory, 'readme.txt'), 'not json');
+}
 
 describe('annotateGeneratedFile', () => {
 	test('GIVEN formatted source THEN prepends the generated file header', () => {
@@ -21,5 +44,92 @@ describe('annotateGeneratedFile', () => {
 		const result = annotateGeneratedFile(formatted);
 
 		expect(result).toContain(['// oxfmt-ignore', '// prettier-ignore', "declare module 'i18next' {"].join('\n'));
+	});
+});
+
+describe('generate', () => {
+	let tempDirectory: string;
+	let sourceDirectory: string;
+	let destinationFile: string;
+
+	beforeEach(async () => {
+		tempDirectory = await mkdtemp(join(tmpdir(), 'i18next-type-generator-'));
+		sourceDirectory = join(tempDirectory, 'locales', 'en-US');
+		destinationFile = join(tempDirectory, 'output', 'i18next.d.ts');
+		await writeFixture(sourceDirectory);
+	});
+
+	afterEach(async () => {
+		await rm(tempDirectory, { recursive: true, force: true });
+	});
+
+	test('GIVEN locale JSON files THEN writes augmented i18next types', async () => {
+		await generate([sourceDirectory, destinationFile], defaultOptions);
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		expect(output).toContain('commands/shared');
+		expect(output).toContain('hello');
+		expect(output).toContain('world');
+		expect(output).toContain("import 'i18next'");
+		expect(output).toContain('interface CustomTypeOptions');
+	});
+
+	test('GIVEN nested locale directories THEN namespaces keys', async () => {
+		await mkdir(join(sourceDirectory, 'guilds'), { recursive: true });
+		await writeFile(join(sourceDirectory, 'guilds', 'settings.json'), JSON.stringify({ enabled: true }));
+
+		await generate([sourceDirectory, destinationFile], defaultOptions);
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		expect(output).toContain('guilds/settings');
+		expect(output).toContain('enabled');
+	});
+
+	test('GIVEN space indentation THEN indents generated resources', async () => {
+		await generate([sourceDirectory, destinationFile], {
+			...defaultOptions,
+			indentation: '  '
+		});
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		expect(output).toContain('  interface CustomTypeOptions');
+		expect(output).toContain('    resources:');
+	});
+
+	test('GIVEN verbose mode THEN logs progress without failing', async () => {
+		const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+		await generate([sourceDirectory, destinationFile], {
+			...defaultOptions,
+			verbose: true
+		});
+
+		expect(logSpy).toHaveBeenCalled();
+		logSpy.mockRestore();
+	});
+
+	test('GIVEN oxfmt enabled THEN formats output', async () => {
+		await generate([sourceDirectory, destinationFile], {
+			...defaultOptions,
+			oxfmt: true
+		});
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		expect(output).toContain('commands/shared');
+	});
+
+	test('GIVEN prettier enabled THEN formats output', async () => {
+		await generate([sourceDirectory, destinationFile], {
+			...defaultOptions,
+			prettier: true
+		});
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		expect(output).toContain('commands/shared');
 	});
 });
