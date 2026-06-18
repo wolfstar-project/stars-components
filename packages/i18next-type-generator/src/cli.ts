@@ -36,7 +36,7 @@ const main = defineCommand({
 			type: 'string',
 			description: 'The indentation to use',
 			alias: 'i',
-			default: '\t'
+			default: 'tabs'
 		},
 		verbose: {
 			type: 'boolean',
