@@ -12,6 +12,7 @@
 		"typescript",
 		"wolfstar"
 	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/i18next-type-generator",
 	"bugs": {
 		"url": "https://github.com/wolfstar-project/stars-components/issues"
 	},
@@ -40,6 +41,7 @@
 		"access": "public"
 	},
 	"scripts": {
+		"test": "vitest run",
 		"build": "tsdown --config-loader unrun",
 		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
@@ -47,17 +49,20 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
+		"citty": "^0.1.6",
 		"colorette": "^2.0.20",
-		"commander": "^13.1.0",
 		"tslib": "^2.8.1"
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",
+		"@vitest/coverage-v8": "^4.1.8",
 		"i18next": "^25.10.10",
 		"tsdown": "^0.22.2",
-		"typescript": "~5.8.3"
+		"typescript": "~5.8.3",
+		"vitest": "^4.1.8"
 	},
 	"optionalDependencies": {
+		"oxfmt": "^0.53.0",
 		"prettier": "^3.5.3"
 	},
 	"engines": {
