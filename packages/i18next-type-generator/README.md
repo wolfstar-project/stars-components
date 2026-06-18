@@ -14,6 +14,7 @@ $ i18next-type-generator [options] [source] [destination]
 # Options:
 #   -V, --version              output the version number
 #   -v, --verbose              Verbose output
+#   -i, --indentation <value>  Indentation for generated output (number of spaces or "tabs", default: tabs)
 #   --no-prettier              Disable prettier
 #   -h, --help                 display help for command
 ```
@@ -48,6 +49,6 @@ The output includes `eslint-disable` / `oxlint-disable` comments to suppress lin
 
 The command reads the JSON files inside a directory writes their contents into the `.d.ts` file. This is needed because `typeof import(pathToJSON)` requires the JSON files to be included in `tsconfig.json`, which may be undesirable, and because it types the keys and their inferred types, but does not load the exact values, which breaks i18next's ability to extract arguments from strings.
 
-This utility does not provide formatting options, so `prettier` is used under the hood to format it before writing to a file, you may opt-out using `--no-prettier` if you want to use a different tool.
+You can control indentation with `-i` / `--indentation` (a space count or `tabs`). `prettier` is also used under the hood to format output before writing to a file; opt out with `--no-prettier` if you want to use a different tool.
 
 > **Note**: If you want to customize `i18next`'s `CustomTypeOptions` to add [extra options](https://www.i18next.com/overview/typescript), create a different file, TypeScript will merge the two of them.
