@@ -8,16 +8,14 @@ const ci = 'CI' in process.env && process.env.CI !== 'false';
 const FileIcon = ci ? '📄' : '\uE628';
 const DirectoryIcon = ci ? '📂' : '\uF413';
 
-const i1 = '\t';
-const i2 = i1.repeat(2);
-const i3 = i1.repeat(3);
-
 /**
  * Recursively walk through the directory and generate the types.
  * @param path The path to walk through.
  * @param namespace The namespace to use.
  */
 async function recurse(lines: string[], path: string, namespace: string, options: GenerateOptions) {
+	const indent = options.indentation.repeat(3);
+
 	if (options.verbose) console.log(gray(`Reading directory ${DirectoryIcon} ${green(path)}...`));
 
 	for await (const dirent of await opendir(path)) {
@@ -28,8 +26,8 @@ async function recurse(lines: string[], path: string, namespace: string, options
 
 			const name = dirent.name.slice(0, -5);
 			const key = namespace ? `'${namespace}/${name}'` : name;
-			const data = JSON.stringify(JSON.parse(await readFile(file, 'utf8')), undefined, i1);
-			lines.push(`${i3}${key}: ${data.replaceAll('\n', `\n${i3}`)};`);
+			const data = JSON.stringify(JSON.parse(await readFile(file, 'utf8')), undefined, options.indentation);
+			lines.push(`${indent}${key}: ${data.replaceAll('\n', `\n${indent}`)};`);
 		} else if (dirent.isDirectory()) {
 			await recurse(lines, file, namespace ? `${namespace}/${dirent.name}` : dirent.name, options);
 		}
@@ -39,6 +37,8 @@ async function recurse(lines: string[], path: string, namespace: string, options
 export async function generate([source, destination]: string[], options: GenerateOptions) {
 	const sourceDirectory = resolve(source);
 	const destinationFile = resolve(destination);
+	const i1 = options.indentation;
+	const i2 = i1.repeat(2);
 
 	if (options.verbose) {
 		const lines = [
@@ -46,7 +46,8 @@ export async function generate([source, destination]: string[], options: Generat
 			`Output: ${FileIcon} ${green(destinationFile)}...`,
 			'',
 			'Options:',
-			`  - Verbose: ${green(options.verbose ? 'yes' : 'no')}`
+			`  - Verbose: ${green(options.verbose ? 'yes' : 'no')}`,
+			`  - Indentation: ${green(JSON.stringify(options.indentation))}`
 		];
 		console.log(italic(gray(lines.join('\n'))));
 	}
@@ -81,4 +82,5 @@ export async function generate([source, destination]: string[], options: Generat
 interface GenerateOptions {
 	verbose: boolean;
 	prettier: boolean;
+	indentation: string;
 }
