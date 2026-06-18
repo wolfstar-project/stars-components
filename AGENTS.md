@@ -49,3 +49,10 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - Do not edit `package.json#version` by hand; `uppt/pr` owns the bump. Manual hotfixes are done by re-running the `Release` workflow on a `v*` tag.
 - Folder names under `packages/` do not contain `skyra`; only package `name`, `author`, scoped imports, and `keywords` need updating.
 - CHANGELOGs are being reset (per user decision) — leave only a header.
+
+## Cursor Cloud specific instructions
+
+- This repo is a **library monorepo** (13 publishable `@wolfstar/*` packages). There is no app/server/GUI to run; "running" the product means exercising packages via the quality gates and/or importing built `dist/` outputs.
+- Dependencies are pre-installed by the startup update script (`pnpm install --frozen-lockfile`). Standard commands live in root `package.json`: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- **Run `pnpm build` before `pnpm typecheck`.** `typecheck` resolves cross-package imports (e.g. `@wolfstar/env-utilities`) against each package's built `dist/*.d.ts`; without a prior build, `tsc` fails with `TS2307: Cannot find module`. CI's "Build & Typecheck" job runs build then typecheck for this reason.
+- Node: CI and `mise.toml` pin Node 24, but `engines` only require `>=20`; the VM's default Node (v22.x via `/exec-daemon/node`) works for all gates. `pnpm` is provided via corepack (pinned `pnpm@11.5.2`).
