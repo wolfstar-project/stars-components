@@ -94,6 +94,33 @@ jobs:
                   name: coverage
                   path: coverage/
 
+    Changesets:
+        name: Verify changesets
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        if: |
+            github.event_name == 'pull_request'
+            && github.event.pull_request.title != 'Version Packages'
+            && !startsWith(github.head_ref, 'changeset-release/')
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout Project
+              uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - name: Setup pnpm + Node.js v24
+              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+              with:
+                  runtime: node@24
+                  cache: true
+                  install: false
+            - name: Install Dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Verify changesets
+              run: pnpm changeset status --since=origin/${{ github.base_ref }}
+
     Upload_Coverage_Report:
         name: Upload coverage report to codecov
         needs: UnitTesting
