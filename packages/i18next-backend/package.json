@@ -55,7 +55,7 @@
 	"devDependencies": {
 		"@types/node": "22.15.21",
 		"i18next": "^25.10.10",
-		"tsdown": "^0.22.2",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
 	"engines": {
