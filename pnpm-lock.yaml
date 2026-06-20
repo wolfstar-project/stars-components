@@ -136,6 +136,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.8
         version: 4.1.8(vitest@4.1.8)
+      '@wolfstar/http-framework-test-utils':
+        specifier: workspace:*
+        version: link:../http-framework-test-utils
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
@@ -173,6 +176,33 @@ importers:
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
+
+  packages/http-framework-test-utils:
+    devDependencies:
+      '@discordjs/builders':
+        specifier: ^1.14.1
+        version: 1.14.1
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
+      '@sapphire/utilities':
+        specifier: ^3.18.2
+        version: 3.18.2
+      '@wolfstar/http-framework':
+        specifier: workspace:*
+        version: link:../http-framework
+      discord-api-types:
+        specifier: ^0.38.8
+        version: 0.38.48
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.2(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.8)(vite@8.0.14)
 
   packages/i18next-backend:
     dependencies:
