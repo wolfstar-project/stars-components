@@ -2,6 +2,6 @@
 "repository": { "url": "https://github.com/yourusername/your-repo.git" }, "bugs": { "url": "https://github.com/yourusername/your-repo/issues" },
 "homepage": "https://github.com/yourusername/your-repo#readme", "keywords": ["discord", "bot", "http", "wolfstar"], "type": "module", "scripts": {
 "build": "tsc", "dev": "node --watch --loader ts-node/esm src/index.ts", "start": "node dist/index.js" }, "dependencies": { "@discordjs/builders":
-"latest", "@wolfstar/http-framework": "^{{versions.httpFramework}}"{{#if i18n}}, "@wolfstar/http-framework-i18n": "^{{versions.httpFrameworkI18n}}"{{/if}},
-"discord-api-types": "^{{versions.discordApiTypes}}" }, "devDependencies": { "@types/node": "latest", "typescript": "^{{versions.typescript}}" },
+"^{{versions.discordJsBuilders}}", "@wolfstar/http-framework": "^{{versions.httpFramework}}"{{#if i18n}}, "@wolfstar/http-framework-i18n": "^{{versions.httpFrameworkI18n}}"{{/if}},
+"discord-api-types": "^{{versions.discordApiTypes}}" }, "devDependencies": { "@types/node": "^{{versions.typesNode}}", "ts-node": "^{{versions.tsNode}}", "typescript": "^{{versions.typescript}}" },
 "engines": { "node": ">=20" } }

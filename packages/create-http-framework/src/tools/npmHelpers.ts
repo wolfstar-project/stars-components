@@ -14,6 +14,9 @@ export interface DependencyVersions {
 	httpFrameworkI18n: string;
 	discordApiTypes: string;
 	typescript: string;
+	tsNode: string;
+	typesNode: string;
+	discordJsBuilders: string;
 }
 
 export function fetchDependencyVersions(): DependencyVersions {
@@ -21,6 +24,9 @@ export function fetchDependencyVersions(): DependencyVersions {
 		httpFramework: fetchVersion('@wolfstar/http-framework'),
 		httpFrameworkI18n: fetchVersion('@wolfstar/http-framework-i18n'),
 		discordApiTypes: fetchVersion('discord-api-types'),
-		typescript: fetchVersion('typescript')
+		typescript: fetchVersion('typescript'),
+		tsNode: fetchVersion('ts-node'),
+		typesNode: fetchVersion('@types/node'),
+		discordJsBuilders: fetchVersion('@discordjs/builders')
 	};
 }

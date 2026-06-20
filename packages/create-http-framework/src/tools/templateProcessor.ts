@@ -21,6 +21,9 @@ export interface TemplateContext {
 		httpFrameworkI18n: string;
 		discordApiTypes: string;
 		typescript: string;
+		tsNode: string;
+		typesNode: string;
+		discordJsBuilders: string;
 	};
 }
 
