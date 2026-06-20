@@ -13,6 +13,7 @@
 	"bugs": {
 		"url": "https://github.com/wolfstar-project/stars-components/issues"
 	},
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/create-http-framework",
 	"license": "Apache-2.0",
 	"author": "@wolfstar",
 	"repository": {

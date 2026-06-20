@@ -1,8 +1,8 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 function fetchVersion(packageName: string): string {
 	try {
-		const result = execSync(`npm show ${packageName} version`, { encoding: 'utf-8', stdio: 'pipe' });
+		const result = execFileSync('npm', ['show', packageName, 'version'], { encoding: 'utf-8', stdio: 'pipe' });
 		return result.trim();
 	} catch {
 		return 'latest';

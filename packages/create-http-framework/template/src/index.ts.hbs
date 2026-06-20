@@ -1,5 +1,15 @@
-import { dirname, join } from 'node:path'; import { fileURLToPath } from 'node:url'; import { Client } from '@wolfstar/http-framework'; const client =
-new Client(); await client.load({ baseUserDirectory: join(dirname(fileURLToPath(import.meta.url)), 'commands') }); await client.listen({ port:
-{{port}}
-}); console.log('Bot is running on port
-{{port}}');
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Client } from '@wolfstar/http-framework';
+
+const client = new Client();
+
+await client.load({
+	baseUserDirectory: join(dirname(fileURLToPath(import.meta.url)), 'commands')
+});
+
+await client.listen({
+	port: {{port}}
+});
+
+console.log('Bot is running on port {{port}}');

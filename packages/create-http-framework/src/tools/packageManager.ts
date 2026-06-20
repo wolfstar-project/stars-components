@@ -18,7 +18,8 @@ export function detectPackageManager(): PackageManager {
 }
 
 export function installDependencies(directory: string, packageManager: PackageManager): void {
-	execSync(`cd ${JSON.stringify(directory)} && ${packageManager} install`, {
+	execSync(`${packageManager} install`, {
+		cwd: directory,
 		stdio: process.env['DEBUG'] ? 'inherit' : 'pipe'
 	});
 }
