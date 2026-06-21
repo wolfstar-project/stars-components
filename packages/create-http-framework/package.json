@@ -1,16 +1,16 @@
 {
-	"name": "@wolfstar/logger",
-	"version": "2.0.4",
-	"description": "A lightweight logger system with level support",
+	"name": "@wolfstar/create-http-framework",
+	"version": "1.0.0",
+	"description": "Create a new WolfStar HTTP Framework bot project",
 	"keywords": [
-		"api",
+		"cli",
+		"create",
 		"discord",
 		"http",
-		"pnpm",
-		"ts",
-		"typescript",
+		"scaffold",
 		"wolfstar"
 	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/create-http-framework",
 	"bugs": {
 		"url": "https://github.com/wolfstar-project/stars-components/issues"
 	},
@@ -19,41 +19,34 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/logger"
+		"directory": "packages/create-http-framework"
+	},
+	"bin": {
+		"create-http-framework": "./dist/index.js"
 	},
 	"files": [
-		"dist/"
+		"dist/",
+		"template/"
 	],
 	"type": "module",
-	"sideEffects": false,
-	"main": "dist/esm/index.js",
-	"module": "dist/esm/index.js",
-	"types": "dist/esm/index.d.ts",
-	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
-		}
-	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"scripts": {
-		"test": "vitest run",
 		"build": "tsdown --config-loader unrun",
-		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"colorette": "^2.0.20"
+		"@clack/prompts": "^1.6.0",
+		"handlebars": "^4.7.9"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.9",
+		"@types/handlebars": "^4.1.0",
+		"@types/node": "22.15.21",
 		"tsdown": "^0.22.3",
-		"typescript": "~5.8.3",
-		"vitest": "^4.1.9"
+		"typescript": "~5.8.3"
 	},
 	"engines": {
 		"node": ">=20"

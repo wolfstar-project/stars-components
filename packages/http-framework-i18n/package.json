@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-i18n",
-	"version": "3.0.1",
+	"version": "1.2.1",
 	"description": "An internationalization layer powered by i18next and @wolfstar/i18next-backend for @wolfstar/http-framework",
 	"keywords": [
 		"api",
@@ -54,7 +54,7 @@
 		"tslib": "^2.8.1"
 	},
 	"devDependencies": {
-		"tsdown": "^0.22.2",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
 	"engines": {
