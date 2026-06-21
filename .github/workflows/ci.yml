@@ -119,7 +119,7 @@ jobs:
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
             - name: Verify changesets
-              run: pnpm changeset status --since=origin/${{ github.base_ref }}
+              run: pnpm exec changeset status --since=origin/${{ github.base_ref }}
 
     Upload_Coverage_Report:
         name: Upload coverage report to codecov

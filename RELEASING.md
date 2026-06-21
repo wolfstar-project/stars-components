@@ -78,6 +78,15 @@ Optional metadata in the changeset summary (parsed by `.changeset/generator.ts`)
 
 All 13 packages are published together from the same version.
 
+### Local release scripts
+
+| Script                      | Purpose                                           |
+| :-------------------------- | :------------------------------------------------ |
+| `pnpm changeset`            | Add a changeset file (`changeset add`)            |
+| `pnpm run publish:dry-run`  | Version, build, and simulate npm publish locally  |
+| `pnpm run publish:snapshot` | Publish a `@next` snapshot (CI uses this)         |
+| `pnpm run publish`          | Version, build, and publish to npm (CI uses this) |
+
 ### Recovering a failed publish
 
 If the automatic publish step in `release.yml` fails after the "Version Packages" PR is merged:
@@ -85,7 +94,7 @@ If the automatic publish step in `release.yml` fails after the "Version Packages
 1. Fix the underlying issue (npm token, network, build failure, etc.).
 2. Go to **Actions -> Republish -> Run workflow**.
 3. Click **Run workflow** on `main`.
-4. The job runs `pnpm release` (`pnpm build && changeset publish --provenance`). It is
+4. The job runs `pnpm run publish` (`changeset version && pnpm build && changeset publish --provenance`). It is
    idempotent and skips packages already published at the current version.
 
 Use this only when versions on `main` are already bumped and you need to retry npm publish
@@ -94,9 +103,8 @@ for the lockstep release. It does not create or update the "Version Packages" PR
 ### Canary (`@next`) channel
 
 The `snapshot` job in `release.yml` publishes all 13 packages under the dist-tag `next`
-whenever `main` receives a push that changes `packages/`, root `package.json`, or
-`pnpm-lock.yaml`. Version bumps use Changesets snapshots (for example `1.2.3-next.0`) via
-`pnpm publish:snapshot`. Snapshot publish is skipped for `chore: version packages` merge
+whenever `main` receives a push that changes `packages/` or root `package.json`. Version bumps use Changesets snapshots (for example `1.2.3-next.0`) via
+`pnpm run publish:snapshot`. Snapshot publish is skipped for `chore: version packages` merge
 commits.
 
 No manual action is needed. Consumers can install the latest canary via:

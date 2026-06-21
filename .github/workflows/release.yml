@@ -46,7 +46,7 @@ jobs:
                     exit 0
                   fi
 
-                  if git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" | grep -qE '^(packages/|package.json$|pnpm-lock.yaml$)'; then
+                  if git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" | grep -qE '^(packages/|package.json$)'; then
                     echo "publish=true" >> "$GITHUB_OUTPUT"
                   else
                     echo "publish=false" >> "$GITHUB_OUTPUT"
@@ -61,6 +61,7 @@ jobs:
             && needs.snapshot_filter.outputs.publish == 'true'
         permissions:
             contents: read
+            pull-requests: read
             id-token: write
         steps:
             - name: Checkout Project
@@ -79,7 +80,7 @@ jobs:
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
             - name: Publish snapshot
-              run: pnpm publish:snapshot
+              run: pnpm run publish:snapshot
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
                   NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
@@ -113,11 +114,11 @@ jobs:
               run: git config --global url."https://x-access-token:${WOLFSTAR_TOKEN}@github.com/".insteadOf "https://github.com/"
               env:
                   WOLFSTAR_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
-            - name: Create Release Pull Request or Publish
+            - name: Process Changesets
+              id: changesets
               uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
               with:
-                  publish: pnpm release
-                  version: pnpm version
+                  publish: pnpm run publish
                   title: 'Version Packages'
                   commit: 'chore: version packages'
                   createGithubReleases: true
