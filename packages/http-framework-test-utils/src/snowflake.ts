@@ -39,9 +39,13 @@ export function generateSnowflake(options: SnowflakeGeneratorOptions = {}): stri
 
 export function createSnowflakeGenerator(options: Omit<SnowflakeGeneratorOptions, 'increment'> = {}): () => string {
 	let increment = 0;
+	let timestamp = options.timestamp instanceof Date ? options.timestamp.getTime() : (options.timestamp ?? defaultTimestamp);
 	return () => {
-		const snowflake = generateSnowflake({ ...options, increment });
+		const snowflake = generateSnowflake({ ...options, timestamp, increment });
 		increment = (increment + 1) & 4095;
+		if (increment === 0) {
+			timestamp++;
+		}
 		return snowflake;
 	};
 }

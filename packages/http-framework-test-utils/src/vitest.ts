@@ -13,6 +13,26 @@ declare module 'vitest' {
 	interface AsymmetricMatchersContaining extends HttpFrameworkMatchers {}
 }
 
+function deepEqual(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	if (a === null || b === null || a === undefined || b === undefined) return a === b;
+	if (typeof a !== typeof b) return false;
+	if (typeof a !== 'object') return false;
+
+	if (Array.isArray(a) && Array.isArray(b)) {
+		if (a.length !== b.length) return false;
+		return a.every((item, index) => deepEqual(item, b[index]));
+	}
+
+	if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+	const keysA = Object.keys(a as object);
+	const keysB = Object.keys(b as object);
+	if (keysA.length !== keysB.length) return false;
+
+	return keysA.every(key => deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+}
+
 export const httpFrameworkMatchers = {
 	toHaveStatus(received: InteractionResult, expected: number) {
 		const pass = received.statusCode === expected;
@@ -30,7 +50,7 @@ export const httpFrameworkMatchers = {
 	},
 	toHaveJsonBody(received: InteractionResult, expected: unknown) {
 		const actual = received.json();
-		const pass = JSON.stringify(actual) === JSON.stringify(expected);
+		const pass = deepEqual(actual, expected);
 		return {
 			pass,
 			message: () => `expected JSON body ${JSON.stringify(actual)} to${pass ? ' not' : ''} equal ${JSON.stringify(expected)}`

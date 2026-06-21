@@ -7,7 +7,7 @@ export function buildSubcommand(name: string, description: string): SlashCommand
 	return new SlashCommandSubcommandBuilder().setName(name).setDescription(description);
 }
 
-export function getAndDelete<Options extends Command.Options>(command: typeof Command<Options>) {
+export function getAndDelete<Options extends Command.Options>(command: Constructor<Command<Options>>) {
 	const entry = applicationCommandRegistry.get(command);
 	if (!entry) throw new Error(`No registry entry found for command '${String(command.name)}'`);
 
