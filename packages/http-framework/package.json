@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework",
-	"version": "3.0.1",
+	"version": "2.2.1",
 	"description": "The framework for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -58,10 +58,10 @@
 		"discord-api-types": "^0.38.8"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.8",
-		"tsdown": "^0.22.2",
+		"@vitest/coverage-v8": "^4.1.9",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3",
-		"vitest": "^4.1.8"
+		"vitest": "^4.1.9"
 	},
 	"engines": {
 		"node": ">=20"

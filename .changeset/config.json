@@ -4,6 +4,7 @@
 	"commit": false,
 	"fixed": [
 		[
+			"@wolfstar/create-http-framework",
 			"@wolfstar/env-utilities",
 			"@wolfstar/http-framework",
 			"@wolfstar/http-framework-i18n",

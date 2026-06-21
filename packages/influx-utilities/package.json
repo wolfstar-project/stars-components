@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/influx-utilities",
-	"version": "3.0.1",
+	"version": "1.1.0",
 	"description": "A tiny opinionated abstraction layer for InfluxDB for interacting with a single organization",
 	"keywords": [
 		"api",
@@ -51,7 +51,7 @@
 	},
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
-		"tsdown": "^0.22.2",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
 	"engines": {

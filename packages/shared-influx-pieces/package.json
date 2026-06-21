@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/shared-influx-pieces",
-	"version": "3.0.1",
+	"version": "1.1.0",
 	"description": "The influx pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -62,7 +62,7 @@
 	},
 	"devDependencies": {
 		"@influxdata/influxdb-client": "^1.35.0",
-		"tsdown": "^0.22.2",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
 	"engines": {
