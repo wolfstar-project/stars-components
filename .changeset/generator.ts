@@ -18,7 +18,7 @@ function readEnv() {
 	return { GITHUB_SERVER_URL };
 }
 
-const ignoredUsers = new Set<string>(['RedStar071']);
+const ignoredUsers = new Set<string>(['redstar071']);
 
 const changelogFunctions: ChangelogFunctions = {
 	getDependencyReleaseLine: async (changesets, dependenciesUpdated, options) => {
