@@ -21,18 +21,18 @@ Without this, `changesets/action` fails when it attempts to open the "Version Pa
 2. Optionally scope it to the `main` branch.
 3. Optionally require a reviewer approval before the publish step runs.
 
-This environment is referenced by the `publish` job in `.github/workflows/publish.yml`.
+This environment is referenced by the `republish` job in `.github/workflows/republish.yml`.
 
 ### 3. Configure secrets
 
 Repository secrets (**Settings -> Secrets -> Actions**):
 
-| Secret              | Description                                                                                                                                                                                                                                                             |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows).                                                                                                 |
-| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Required at **repository** level for `cd.yml` and `release.yml`. Classic publish tokens will fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI. |
+| Secret              | Description                                                                                                                                                                                                                                                                    |
+| :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows).                                                                                                        |
+| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Required at **repository** level for `release.yml` and `republish.yml`. Classic publish tokens will fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI. |
 
-The manual **Publish** workflow (`publish.yml`) uses the `npm` environment for optional reviewer approval; you may mirror `NPM_PUBLISH_TOKEN` there as an environment secret if you use that gate.
+The manual **Republish** workflow (`republish.yml`) uses the `npm` environment for optional reviewer approval; you may mirror `NPM_PUBLISH_TOKEN` there as an environment secret if you use that gate.
 
 ### 4. Install the autofix.ci GitHub App (optional)
 
@@ -57,6 +57,12 @@ The interactive CLI will ask:
 
 This creates a `.changeset/<random-slug>.md` file. Commit it alongside your code changes.
 
+Optional metadata in the changeset summary (parsed by `.changeset/generator.ts`):
+
+- `pr: #123` — link the entry to a pull request
+- `commit: abc1234` — link to a specific commit
+- `author: @username` — credit a contributor in the changelog
+
 ---
 
 ## Release runbook
@@ -74,17 +80,24 @@ All 13 packages are published together from the same version.
 
 ### Recovering a failed publish
 
-If the automatic publish step in `release.yml` fails, use the manual workflow:
+If the automatic publish step in `release.yml` fails after the "Version Packages" PR is merged:
 
-1. Go to **Actions -> Publish -> Run workflow**.
-2. Click **Run workflow** on `main`.
-3. The job runs `pnpm changeset publish --provenance` — it is idempotent and skips
-   packages already published at the current version.
+1. Fix the underlying issue (npm token, network, build failure, etc.).
+2. Go to **Actions -> Republish -> Run workflow**.
+3. Click **Run workflow** on `main`.
+4. The job runs `pnpm release` (`pnpm build && changeset publish --provenance`). It is
+   idempotent and skips packages already published at the current version.
+
+Use this only when versions on `main` are already bumped and you need to retry npm publish
+for the lockstep release. It does not create or update the "Version Packages" PR.
 
 ### Canary (`@next`) channel
 
-Every push to `main` (except "Version Packages" merge commits) triggers `cd.yml`, which
-publishes all 13 packages under the dist-tag `next` with version `X.Y.Z-next.<7-char-sha>`.
+The `snapshot` job in `release.yml` publishes all 13 packages under the dist-tag `next`
+whenever `main` receives a push that changes `packages/`, root `package.json`, or
+`pnpm-lock.yaml`. Version bumps use Changesets snapshots (for example `1.2.3-next.0`) via
+`pnpm publish:snapshot`. Snapshot publish is skipped for `chore: version packages` merge
+commits.
 
 No manual action is needed. Consumers can install the latest canary via:
 
