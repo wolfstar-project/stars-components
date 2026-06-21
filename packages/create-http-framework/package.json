@@ -1,16 +1,16 @@
 {
-	"name": "@wolfstar/safe-fetch",
-	"version": "3.0.1",
-	"description": "A fetch wrapper on top of Rust's Result",
+	"name": "@wolfstar/create-http-framework",
+	"version": "1.0.0",
+	"description": "Create a new WolfStar HTTP Framework bot project",
 	"keywords": [
-		"api",
+		"cli",
+		"create",
 		"discord",
 		"http",
-		"pnpm",
-		"ts",
-		"typescript",
+		"scaffold",
 		"wolfstar"
 	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/create-http-framework",
 	"bugs": {
 		"url": "https://github.com/wolfstar-project/stars-components/issues"
 	},
@@ -19,40 +19,32 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/safe-fetch"
+		"directory": "packages/create-http-framework"
+	},
+	"bin": {
+		"create-http-framework": "./dist/index.js"
 	},
 	"files": [
-		"dist/"
+		"dist/",
+		"template/"
 	],
 	"type": "module",
-	"sideEffects": false,
-	"main": "dist/cjs/index.cjs",
-	"module": "dist/esm/index.js",
-	"types": "dist/cjs/index.d.cts",
-	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
-		},
-		"require": {
-			"types": "./dist/cjs/index.d.cts",
-			"default": "./dist/cjs/index.cjs"
-		}
-	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"scripts": {
 		"build": "tsdown --config-loader unrun",
-		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@sapphire/result": "^2.8.0"
+		"@clack/prompts": "^1.6.0",
+		"handlebars": "^4.7.9"
 	},
 	"devDependencies": {
+		"@types/handlebars": "^4.1.0",
+		"@types/node": "22.15.21",
 		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
