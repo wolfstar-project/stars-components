@@ -1,25 +1,26 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import type { AgentName } from 'package-manager-detector';
+import { resolveCommand } from 'package-manager-detector/commands';
+import { detect } from 'package-manager-detector/detect';
 
-export type PackageManager = 'bun' | 'npm' | 'pnpm' | 'yarn';
+export type PackageManager = AgentName;
 
-export function detectPackageManager(): PackageManager {
-	if (process.versions.bun) {
-		return 'bun';
+export async function detectPackageManager(installIn?: string): Promise<PackageManager> {
+	const detected = await detect({ cwd: process.cwd() });
+	const agent = detected?.agent ?? 'npm';
+	const name = detected?.name ?? 'npm';
+
+	if (installIn) {
+		const resolved = resolveCommand(agent, 'install', []);
+		if (!resolved) {
+			throw new Error(`Could not resolve install command for ${agent}`);
+		}
+
+		execFileSync(resolved.command, resolved.args, {
+			cwd: installIn,
+			stdio: process.env['DEBUG'] ? 'inherit' : 'pipe'
+		});
 	}
 
-	const userAgent = process.env['npm_config_user_agent'];
-	if (userAgent) {
-		if (userAgent.startsWith('yarn')) return 'yarn';
-		if (userAgent.startsWith('pnpm')) return 'pnpm';
-		if (userAgent.startsWith('bun')) return 'bun';
-	}
-
-	return 'npm';
-}
-
-export function installDependencies(directory: string, packageManager: PackageManager): void {
-	execSync(`${packageManager} install`, {
-		cwd: directory,
-		stdio: process.env['DEBUG'] ? 'inherit' : 'pipe'
-	});
+	return name;
 }
