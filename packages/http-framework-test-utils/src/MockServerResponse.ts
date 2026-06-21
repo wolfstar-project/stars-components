@@ -26,7 +26,7 @@ export class MockServerResponse extends Writable {
 	public reset() {
 		this.#chunks.length = 0;
 		this.statusCode = 200;
-		Object.keys(this.headers).forEach(key => delete this.headers[key]);
+		Object.keys(this.headers).forEach((key) => delete this.headers[key]);
 	}
 }
 

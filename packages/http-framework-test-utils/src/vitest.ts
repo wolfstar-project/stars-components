@@ -30,7 +30,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 	const keysB = Object.keys(b as object);
 	if (keysA.length !== keysB.length) return false;
 
-	return keysA.every(key => deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+	return keysA.every((key) => deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
 }
 
 export const httpFrameworkMatchers = {
