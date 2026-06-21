@@ -40,7 +40,8 @@
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.6.0",
-		"handlebars": "^4.7.9"
+		"handlebars": "^4.7.9",
+		"package-manager-detector": "^1.6.0"
 	},
 	"devDependencies": {
 		"@types/handlebars": "^4.1.0",

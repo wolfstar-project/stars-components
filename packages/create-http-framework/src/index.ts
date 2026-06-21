@@ -2,7 +2,7 @@ import { cancel, confirm, intro, isCancel, outro, spinner, text } from '@clack/p
 import { join, resolve } from 'node:path';
 import { directoryExists } from './tools/fileSystem.js';
 import { fetchDependencyVersions } from './tools/npmHelpers.js';
-import { detectPackageManager, installDependencies } from './tools/packageManager.js';
+import { detectPackageManager } from './tools/packageManager.js';
 import { processTemplate } from './tools/templateProcessor.js';
 
 const NAME_PATTERN = /^[a-z0-9_-]+$/;
@@ -10,7 +10,7 @@ const NAME_PATTERN = /^[a-z0-9_-]+$/;
 async function main(): Promise<void> {
 	intro('Welcome to the WolfStar HTTP Framework!');
 
-	const packageManager = detectPackageManager();
+	const packageManager = await detectPackageManager();
 
 	const projectNameArg = process.argv[2];
 
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
 
 	if (wantsInstall) {
 		s.start(`Installing dependencies with ${packageManager}...`);
-		installDependencies(outputDir, packageManager);
+		await detectPackageManager(outputDir);
 		s.stop('Dependencies installed.');
 	}
 
