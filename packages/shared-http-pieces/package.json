@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/shared-http-pieces",
-	"version": "3.0.1",
+	"version": "1.2.3",
 	"description": "The common pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
