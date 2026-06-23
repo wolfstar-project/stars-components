@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/env-utilities",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"description": "Functional utilities for reading and parsing environmental variables",
 	"keywords": [
 		"api",
