@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/safe-fetch",
-	"version": "3.0.1",
+	"version": "1.1.5",
 	"description": "A fetch wrapper on top of Rust's Result",
 	"keywords": [
 		"api",

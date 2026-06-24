@@ -11,6 +11,6 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true
 	},
-	"include": ["packages/", "scripts/", "./vitest.config.ts"],
+	"include": ["packages/", "scripts/", ".changeset/", "./vitest.config.ts"],
 	"exclude": ["**/dist/**", "**/node_modules/**", "**/tests/**", "**/vitest.config.ts"]
 }
