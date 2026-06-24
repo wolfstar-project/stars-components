@@ -1,0 +1,77 @@
+{
+	"name": "@wolfstar/http-framework-test-utils",
+	"version": "1.0.0",
+	"description": "Test utilities for @wolfstar/http-framework",
+	"keywords": [
+		"discord",
+		"http",
+		"test",
+		"typescript",
+		"vitest",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework-test-utils",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/http-framework-test-utils"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./vitest": {
+			"import": {
+				"types": "./dist/esm/vitest.d.ts",
+				"default": "./dist/esm/vitest.js"
+			}
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"typecheck": "tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"devDependencies": {
+		"@discordjs/builders": "^1.14.1",
+		"@sapphire/pieces": "^4.4.1",
+		"@sapphire/utilities": "^3.18.2",
+		"@wolfstar/http-framework": "workspace:*",
+		"discord-api-types": "^0.38.8",
+		"tsdown": "^0.22.3",
+		"typescript": "~5.8.3",
+		"vitest": "^4.1.9"
+	},
+	"peerDependencies": {
+		"@wolfstar/http-framework": "workspace:^",
+		"vitest": ">=4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}
