@@ -100,6 +100,7 @@ jobs:
               with:
                   fetch-depth: 0
                   persist-credentials: false
+                  token: ${{ secrets.WOLFSTAR_TOKEN }}
             - name: Setup pnpm
               uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
             - name: Setup Node.js v24
@@ -119,11 +120,8 @@ jobs:
               uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
               with:
                   publish: pnpm run publish
-                  title: 'Version Packages'
-                  commit: 'chore: version packages'
+                  title: 'chore: update changelog and release'
+                  commit: 'chore: update changelog and release'
                   createGithubReleases: true
               env:
                   GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-                  NPM_CONFIG_PROVENANCE: true
