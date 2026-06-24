@@ -32,4 +32,4 @@
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] I have updated the documentation accordingly
-- [ ] I added a changeset with `pnpm changeset` (or `pnpm changeset add --empty` if no release is needed). See [RELEASING.md](https://github.com/wolfstar-project/stars-components/blob/main/RELEASING.md).
+- [ ] I added a changeset with `pnpm changeset` (or `pnpm changeset add --empty` if no release is needed). See [.changeset/README.md](https://github.com/wolfstar-project/stars-components/blob/main/.changeset/README.md).
