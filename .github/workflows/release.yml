@@ -103,7 +103,6 @@ jobs:
               with:
                   fetch-depth: 0
                   persist-credentials: false
-                  token: ${{ secrets.WOLFSTAR_TOKEN }}
 
             - name: Setup pnpm
               uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -126,4 +125,4 @@ jobs:
                   title: 'chore: update changelog and release'
                   commit: 'chore: update changelog and release'
               env:
-                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
