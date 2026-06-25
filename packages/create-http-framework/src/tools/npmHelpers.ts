@@ -1,12 +1,10 @@
 async function fetchVersion(packageName: string): Promise<string> {
-	try {
-		const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
-		if (!response.ok) return 'latest';
-		const data = (await response.json()) as { version: string };
-		return data.version;
-	} catch {
-		return 'latest';
+	const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
+	if (!response.ok) {
+		throw new Error(`Failed to resolve latest version for ${packageName}: ${response.status} ${response.statusText}`);
 	}
+	const data = (await response.json()) as { version: string };
+	return data.version;
 }
 
 export interface DependencyVersions {
