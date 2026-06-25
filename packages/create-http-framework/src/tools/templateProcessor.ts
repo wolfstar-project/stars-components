@@ -8,7 +8,7 @@ Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
 Handlebars.registerHelper('or', (...args: unknown[]) => args.slice(0, -1).some(Boolean));
 Handlebars.registerHelper('and', (...args: unknown[]) => args.slice(0, -1).every(Boolean));
 
-const templateDir = join(fileURLToPath(import.meta.url), '../../..', 'template');
+const templateDir = join(fileURLToPath(import.meta.url), '../..', 'template');
 
 export interface TemplateContext {
 	name: string;

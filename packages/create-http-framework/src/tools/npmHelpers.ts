@@ -1,9 +1,9 @@
-import { execFileSync } from 'node:child_process';
-
-function fetchVersion(packageName: string): string {
+async function fetchVersion(packageName: string): Promise<string> {
 	try {
-		const result = execFileSync('npm', ['show', packageName, 'version'], { encoding: 'utf-8', stdio: 'pipe' });
-		return result.trim();
+		const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
+		if (!response.ok) return 'latest';
+		const data = (await response.json()) as { version: string };
+		return data.version;
 	} catch {
 		return 'latest';
 	}
@@ -19,14 +19,16 @@ export interface DependencyVersions {
 	discordJsBuilders: string;
 }
 
-export function fetchDependencyVersions(): DependencyVersions {
-	return {
-		httpFramework: fetchVersion('@wolfstar/http-framework'),
-		httpFrameworkI18n: fetchVersion('@wolfstar/http-framework-i18n'),
-		discordApiTypes: fetchVersion('discord-api-types'),
-		typescript: fetchVersion('typescript'),
-		tsNode: fetchVersion('ts-node'),
-		typesNode: fetchVersion('@types/node'),
-		discordJsBuilders: fetchVersion('@discordjs/builders')
-	};
+export async function fetchDependencyVersions(): Promise<DependencyVersions> {
+	const [httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders] = await Promise.all([
+		fetchVersion('@wolfstar/http-framework'),
+		fetchVersion('@wolfstar/http-framework-i18n'),
+		fetchVersion('discord-api-types'),
+		fetchVersion('typescript'),
+		fetchVersion('ts-node'),
+		fetchVersion('@types/node'),
+		fetchVersion('@discordjs/builders')
+	]);
+
+	return { httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders };
 }
