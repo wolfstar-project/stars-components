@@ -23,14 +23,13 @@ reviews:
   auto_review:
     enabled: true
     auto_pause_after_reviewed_commits: 5
-    base_branches:
-      - "!changeset-release/.*"
     labels:
       - "!release"
     ignore_title_keywords:
       - "WIP"
       - "[skip-review]"
       - "chore(release)"
+      - "Version Packages"
     ignore_usernames:
       - "renovate[bot]"
       - "dependabot[bot]"
@@ -68,8 +67,6 @@ reviews:
     markdownlint:
       enabled: false
     languagetool:
-      enabled: false
-    github-checks:
       enabled: false
     checkov:
       enabled: false
