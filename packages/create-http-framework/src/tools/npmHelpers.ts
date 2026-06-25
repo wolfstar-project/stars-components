@@ -17,18 +17,23 @@ export interface DependencyVersions {
 	tsNode: string;
 	typesNode: string;
 	discordJsBuilders: string;
+	anthropicSdk: string;
+	openaiSdk: string;
 }
 
 export async function fetchDependencyVersions(): Promise<DependencyVersions> {
-	const [httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders] = await Promise.all([
-		fetchVersion('@wolfstar/http-framework'),
-		fetchVersion('@wolfstar/http-framework-i18n'),
-		fetchVersion('discord-api-types'),
-		fetchVersion('typescript'),
-		fetchVersion('ts-node'),
-		fetchVersion('@types/node'),
-		fetchVersion('@discordjs/builders')
-	]);
+	const [httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders, anthropicSdk, openaiSdk] =
+		await Promise.all([
+			fetchVersion('@wolfstar/http-framework'),
+			fetchVersion('@wolfstar/http-framework-i18n'),
+			fetchVersion('discord-api-types'),
+			fetchVersion('typescript'),
+			fetchVersion('ts-node'),
+			fetchVersion('@types/node'),
+			fetchVersion('@discordjs/builders'),
+			fetchVersion('@anthropic-ai/sdk'),
+			fetchVersion('openai')
+		]);
 
-	return { httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders };
+	return { httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders, anthropicSdk, openaiSdk };
 }
