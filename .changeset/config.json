@@ -1,25 +1,8 @@
 {
 	"$schema": "https://unpkg.com/@changesets/config/schema.json",
-	"changelog": "@changesets/cli/changelog",
+	"changelog": ["./generator.ts", { "repo": "wolfstar-project/stars-components" }],
 	"commit": false,
-	"fixed": [
-		[
-			"@wolfstar/create-http-framework",
-			"@wolfstar/env-utilities",
-			"@wolfstar/http-framework",
-			"@wolfstar/http-framework-i18n",
-			"@wolfstar/i18next-backend",
-			"@wolfstar/influx-utilities",
-			"@wolfstar/logger",
-			"@wolfstar/reddit-helpers",
-			"@wolfstar/safe-fetch",
-			"@wolfstar/shared-http-pieces",
-			"@wolfstar/shared-influx-pieces",
-			"@wolfstar/start-banner",
-			"@wolfstar/twitch-helpers",
-			"@wolfstar/weather-helpers"
-		]
-	],
+	"fixed": [],
 	"linked": [],
 	"access": "public",
 	"baseBranch": "main",

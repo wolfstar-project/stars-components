@@ -1,16 +1,16 @@
 {
-	"name": "@wolfstar/http-framework",
-	"version": "2.3.0",
-	"description": "The framework for Star Network's HTTP-only bots",
+	"name": "@wolfstar/http-framework-test-utils",
+	"version": "2.0.0",
+	"description": "Test utilities for @wolfstar/http-framework",
 	"keywords": [
-		"api",
 		"discord",
 		"http",
-		"pnpm",
-		"ts",
+		"test",
 		"typescript",
+		"vitest",
 		"wolfstar"
 	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework-test-utils",
 	"bugs": {
 		"url": "https://github.com/wolfstar-project/stars-components/issues"
 	},
@@ -19,7 +19,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/wolfstar-project/stars-components.git",
-		"directory": "packages/http-framework"
+		"directory": "packages/http-framework-test-utils"
 	},
 	"files": [
 		"dist/"
@@ -30,38 +30,46 @@
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
 	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./vitest": {
+			"import": {
+				"types": "./dist/esm/vitest.d.ts",
+				"default": "./dist/esm/vitest.js"
+			}
 		}
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"scripts": {
-		"test": "vitest run",
 		"build": "tsdown --config-loader unrun",
-		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
-	"dependencies": {
-		"@discordjs/builders": "^1.14.1",
-		"@discordjs/collection": "^2.1.1",
-		"@discordjs/rest": "^2.6.1",
-		"@discordjs/util": "^1.2.0",
-		"@sapphire/pieces": "^4.4.1",
-		"@sapphire/result": "^2.8.0",
-		"@sapphire/utilities": "^3.18.2",
-		"@vladfrangu/async_event_emitter": "^2.4.7",
-		"discord-api-types": "^0.38.8"
-	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.9",
+		"@discordjs/builders": "^1.14.1",
+		"@sapphire/pieces": "^4.4.1",
+		"@sapphire/utilities": "^3.18.2",
+		"@wolfstar/http-framework": "workspace:*",
+		"discord-api-types": "^0.38.8",
 		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3",
 		"vitest": "^4.1.9"
+	},
+	"peerDependencies": {
+		"@wolfstar/http-framework": "workspace:^",
+		"vitest": ">=4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=20"
