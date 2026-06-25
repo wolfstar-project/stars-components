@@ -59,7 +59,7 @@ export function processTemplate(outputDir: string, context: TemplateContext): vo
 		const conditionalMatch = /\.if-([a-z]+)\./.exec(relativePath);
 		if (conditionalMatch) {
 			const flag = conditionalMatch[1];
-			if (!(context as Record<string, unknown>)[flag]) continue;
+			if (!(context as unknown as Record<string, unknown>)[flag]) continue;
 		}
 
 		const rawContent = readFileSync(absoluteSource, 'utf-8');
