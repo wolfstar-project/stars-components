@@ -160,39 +160,6 @@ async function main(): Promise<void> {
 		wantsI18n = Boolean(i18nResult);
 	}
 
-	// ── AI SDK integration ────────────────────────────────────────────────────
-	let wantsAi: boolean;
-	let aiProvider: 'anthropic' | 'openai' | null = null;
-
-	if (effectiveYes) {
-		wantsAi = false;
-	} else {
-		const aiResult = await confirm({
-			message: 'Would you like to add AI agent support?',
-			initialValue: false
-		});
-		if (isCancel(aiResult)) {
-			cancel('Operation cancelled.');
-			process.exit(0);
-		}
-		wantsAi = Boolean(aiResult);
-	}
-
-	if (wantsAi) {
-		const providerResult = await select({
-			message: 'Which AI provider would you like to use?',
-			options: [
-				{ value: 'anthropic', label: 'Anthropic (Claude)', hint: '@anthropic-ai/sdk' },
-				{ value: 'openai', label: 'OpenAI (GPT)', hint: 'openai' }
-			]
-		});
-		if (isCancel(providerResult)) {
-			cancel('Operation cancelled.');
-			process.exit(0);
-		}
-		aiProvider = providerResult as 'anthropic' | 'openai';
-	}
-
 	// ── Install ───────────────────────────────────────────────────────────────
 	let wantsInstall: boolean;
 
@@ -223,10 +190,6 @@ async function main(): Promise<void> {
 		name: projectName,
 		port,
 		i18n: wantsI18n,
-		ai: wantsAi,
-		aiProvider,
-		aiIsAnthropic: aiProvider === 'anthropic',
-		aiIsOpenai: aiProvider === 'openai',
 		packageManager,
 		todaysDate: new Date().toISOString().split('T')[0]!,
 		versions
