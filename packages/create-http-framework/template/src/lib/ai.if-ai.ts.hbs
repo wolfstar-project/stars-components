@@ -1,7 +1,3 @@
-{{#if aiIsAnthropic}}import Anthropic from '@anthropic-ai/sdk';
-
-export const aiClient = new Anthropic();
-{{/if}}{{#if aiIsOpenai}}import OpenAI from 'openai';
-
-export const aiClient = new OpenAI();
+{{#if aiIsAnthropic}}import Anthropic from '@anthropic-ai/sdk'; export const aiClient = new Anthropic();
+{{/if}}{{#if aiIsOpenai}}import OpenAI from 'openai'; export const aiClient = new OpenAI();
 {{/if}}
