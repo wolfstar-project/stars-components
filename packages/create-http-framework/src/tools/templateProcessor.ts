@@ -8,7 +8,7 @@ Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
 Handlebars.registerHelper('or', (...args: unknown[]) => args.slice(0, -1).some(Boolean));
 Handlebars.registerHelper('and', (...args: unknown[]) => args.slice(0, -1).every(Boolean));
 
-const templateDir = join(fileURLToPath(import.meta.url), '../../..', 'template');
+const templateDir = join(fileURLToPath(import.meta.url), '../..', 'template');
 
 export interface TemplateContext {
 	name: string;
@@ -49,11 +49,9 @@ export function processTemplate(outputDir: string, context: TemplateContext): vo
 	for (const absoluteSource of allFiles) {
 		const relativePath = relative(templateDir, absoluteSource);
 		const rawContent = readFileSync(absoluteSource, 'utf-8');
-
 		const isHandlebars = relativePath.endsWith('.hbs');
 		const outputRelative = isHandlebars ? relativePath.slice(0, -'.hbs'.length) : relativePath;
 		const outputPath = join(outputDir, outputRelative);
-
 		const content = isHandlebars ? Handlebars.compile(rawContent)(context) : rawContent;
 		writeFile(outputPath, content);
 	}
