@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"clean": "node scripts/clean.mjs",
-		"prepare": "husky",
+		"prepare": "husky || true",
 		"lint": "oxlint packages && oxfmt --check packages",
 		"lint:fix": "oxlint --fix packages && oxfmt --write packages",
 		"test": "vitest run",

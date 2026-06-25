@@ -6,6 +6,9 @@ on:
             - main
     workflow_dispatch:
 
+env:
+    CI: true
+
 permissions: {}
 
 concurrency:
