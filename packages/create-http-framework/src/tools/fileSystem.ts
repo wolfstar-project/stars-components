@@ -1,15 +1,16 @@
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export function directoryExists(path: string): boolean {
-	return existsSync(path);
+	return existsSync(path) && statSync(path).isDirectory();
 }
 
 export function isEmpty(path: string): boolean {
 	try {
 		return readdirSync(path).length === 0;
-	} catch {
-		return true;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+		throw error;
 	}
 }
 

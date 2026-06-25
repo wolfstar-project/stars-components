@@ -73,7 +73,12 @@ async function main(): Promise<void> {
 			cancel('A project name argument is required in non-interactive mode.');
 			process.exit(1);
 		}
-		projectName = argProjectName;
+		const normalized = isValidPackageName(argProjectName) ? argProjectName : toValidPackageName(argProjectName);
+		if (!normalized || !isValidPackageName(normalized)) {
+			cancel('Provide a valid npm-compatible project name in non-interactive mode.');
+			process.exit(1);
+		}
+		projectName = normalized;
 	} else {
 		const suggested = argProjectName ? toValidPackageName(argProjectName) : '';
 		const nameResult = await text({
