@@ -40,6 +40,7 @@
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.6.0",
+		"@vercel/detect-agent": "^1.2.3",
 		"handlebars": "^4.7.9",
 		"mri": "^1.2.0",
 		"package-manager-detector": "^1.6.0"

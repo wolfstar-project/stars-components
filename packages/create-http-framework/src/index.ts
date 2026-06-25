@@ -1,4 +1,5 @@
-import { cancel, confirm, intro, isCancel, outro, select, spinner, text } from '@clack/prompts';
+import { cancel, confirm, intro, isCancel, log, outro, select, spinner, text } from '@clack/prompts';
+import { determineAgent } from '@vercel/detect-agent';
 import mri from 'mri';
 import { resolve } from 'node:path';
 import { directoryExists, emptyDir, isEmpty } from './tools/fileSystem.js';
@@ -24,9 +25,10 @@ function printHelp(): void {
 Usage: create-http-framework [project-name] [options]
 
 Options:
-  --overwrite     Overwrite target directory if it already exists
-  --yes, -y       Skip prompts and use defaults (port 3000, no i18n, auto-install)
-  --help, -h      Print this message and exit
+  --overwrite        Overwrite target directory if it already exists
+  --yes, -y          Skip prompts and use defaults (port 3000, no i18n, auto-install)
+  --interactive, -i  Force interactive prompts even when an AI agent is detected
+  --help, -h         Print this message and exit
 
 `);
 	process.exit(0);
@@ -34,8 +36,8 @@ Options:
 
 async function main(): Promise<void> {
 	const argv = mri(process.argv.slice(2), {
-		boolean: ['overwrite', 'yes', 'help'],
-		alias: { y: 'yes', h: 'help' }
+		boolean: ['overwrite', 'yes', 'help', 'interactive'],
+		alias: { y: 'yes', h: 'help', i: 'interactive' }
 	});
 
 	if (argv['help']) {
@@ -46,17 +48,29 @@ async function main(): Promise<void> {
 	const argProjectName = argv._[0] as string | undefined;
 	const flagOverwrite = argv['overwrite'] as boolean;
 	const flagYes = argv['yes'] as boolean;
+	const flagInteractive = argv['interactive'] as boolean;
+
+	// Detect whether a known AI agent is driving this session
+	const { isAgent, agent } = await determineAgent();
+	const agentMode = isAgent && !flagInteractive;
+
+	// In agent mode, behave as if --yes was passed (skip all interactive prompts)
+	const effectiveYes = flagYes || agentMode;
 
 	intro('Welcome to the WolfStar HTTP Framework!');
+
+	if (agentMode && !flagYes) {
+		log.info(`AI agent detected (${agent.name}) — running in non-interactive mode`);
+	}
 
 	const packageManager = await detectPackageManager();
 
 	// ── Project name ──────────────────────────────────────────────────────────
 	let projectName: string;
 
-	if (flagYes) {
+	if (effectiveYes) {
 		if (!argProjectName) {
-			cancel('--yes requires a project name argument.');
+			cancel('A project name argument is required in non-interactive mode.');
 			process.exit(1);
 		}
 		projectName = argProjectName;
@@ -85,7 +99,7 @@ async function main(): Promise<void> {
 	if (directoryExists(targetDir) && !isEmpty(targetDir)) {
 		if (flagOverwrite) {
 			emptyDir(targetDir);
-		} else if (flagYes) {
+		} else if (effectiveYes) {
 			cancel(`"${projectName}" already exists. Use --overwrite to overwrite it.`);
 			process.exit(1);
 		} else {
@@ -107,7 +121,7 @@ async function main(): Promise<void> {
 	// ── Port ──────────────────────────────────────────────────────────────────
 	let port: number;
 
-	if (flagYes) {
+	if (effectiveYes) {
 		port = 3000;
 	} else {
 		const portResult = await text({
@@ -132,7 +146,7 @@ async function main(): Promise<void> {
 	// ── i18n ──────────────────────────────────────────────────────────────────
 	let wantsI18n: boolean;
 
-	if (flagYes) {
+	if (effectiveYes) {
 		wantsI18n = false;
 	} else {
 		const i18nResult = await confirm({
@@ -146,11 +160,11 @@ async function main(): Promise<void> {
 		wantsI18n = Boolean(i18nResult);
 	}
 
-	// ── AI agent ──────────────────────────────────────────────────────────────
+	// ── AI SDK integration ────────────────────────────────────────────────────
 	let wantsAi: boolean;
 	let aiProvider: 'anthropic' | 'openai' | null = null;
 
-	if (flagYes) {
+	if (effectiveYes) {
 		wantsAi = false;
 	} else {
 		const aiResult = await confirm({
@@ -182,7 +196,7 @@ async function main(): Promise<void> {
 	// ── Install ───────────────────────────────────────────────────────────────
 	let wantsInstall: boolean;
 
-	if (flagYes) {
+	if (effectiveYes) {
 		wantsInstall = true;
 	} else {
 		const installResult = await confirm({
