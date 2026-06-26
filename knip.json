@@ -1,0 +1,35 @@
+{
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"rules": {
+		"exports": "off",
+		"types": "off",
+		"enumMembers": "off"
+	},
+	"workspaces": {
+		".": {
+			"entry": ["scripts/*.{mjs,ts}"],
+			"project": ["scripts/**/*.{mjs,ts}"],
+			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog"]
+		},
+		"packages/*": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
+			"ignoreDependencies": ["tslib"]
+		},
+		"packages/shared-http-pieces": {
+			"ignoreDependencies": ["@discordjs/collection", "tslib"]
+		},
+		"packages/shared-influx-pieces": {
+			"ignoreDependencies": ["@sapphire/pieces", "tslib"]
+		},
+		"packages/weather-helpers": {
+			"ignoreDependencies": ["@sapphire/utilities", "@types/he"]
+		},
+		"packages/create-http-framework": {
+			"ignoreDependencies": ["@types/handlebars", "@types/mri"]
+		},
+		"packages/http-framework": {
+			"ignoreDependencies": ["@wolfstar/http-framework-test-utils"]
+		}
+	}
+}

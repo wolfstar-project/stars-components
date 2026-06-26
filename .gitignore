@@ -32,7 +32,10 @@ tsup.config.bundled*.mjs
 # Ignore heapsnapshot and log files
 *.heapsnapshot
 *.log
+
+# Test artifacts
 coverage/
+*.junit.xml
 docs/
 
 # Ignore package locks
