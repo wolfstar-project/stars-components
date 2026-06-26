@@ -28,6 +28,8 @@ const ignoredUsers = new Set<string>(['redstar071']);
 const TRANSIENT_ERROR =
 	/premature close|Failed to parse data from GitHub|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network timeout|fetch failed|terminated|and retry/i;
 
+const NULL_LINKS = { commit: null, pull: null, user: null } as const;
+
 async function withGitHubRetry<T>(label: string, fn: () => Promise<T>, attempts = 5): Promise<T> {
 	let lastError: unknown;
 	for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -59,13 +61,17 @@ const changelogFunctions: ChangelogFunctions = {
 			await Promise.all(
 				changesets.map(async (cs) => {
 					if (cs.commit) {
-						const { links } = (await withGitHubRetry(`getInfo(commit=${cs.commit})`, () =>
-							getInfo({
-								repo: options.repo,
-								commit: cs.commit!
-							})
-						)) as { links: { commit: string } };
-						return links.commit;
+						try {
+							const { links } = (await withGitHubRetry(`getInfo(commit=${cs.commit})`, () =>
+								getInfo({
+									repo: options.repo,
+									commit: cs.commit!
+								})
+							)) as { links: { commit: string } };
+							return links.commit;
+						} catch {
+							return undefined;
+						}
 					}
 				})
 			)
@@ -111,36 +117,40 @@ const changelogFunctions: ChangelogFunctions = {
 
 		const links = await (async () => {
 			if (prFromSummary !== undefined) {
-				let { links } = await withGitHubRetry(`getInfoFromPullRequest(pull=${prFromSummary})`, () =>
-					getInfoFromPullRequest({
-						repo: options.repo,
-						pull: prFromSummary!
-					})
-				);
-				if (commitFromSummary) {
-					const shortCommitId = commitFromSummary.slice(0, 7);
-					links = {
-						...links,
-						commit: `[\`${shortCommitId}\`](${GITHUB_SERVER_URL}/${options.repo}/commit/${commitFromSummary})`
-					};
+				try {
+					let { links } = await withGitHubRetry(`getInfoFromPullRequest(pull=${prFromSummary})`, () =>
+						getInfoFromPullRequest({
+							repo: options.repo,
+							pull: prFromSummary!
+						})
+					);
+					if (commitFromSummary) {
+						const shortCommitId = commitFromSummary.slice(0, 7);
+						links = {
+							...links,
+							commit: `[\`${shortCommitId}\`](${GITHUB_SERVER_URL}/${options.repo}/commit/${commitFromSummary})`
+						};
+					}
+					return links;
+				} catch {
+					return NULL_LINKS;
 				}
-				return links;
 			}
 			const commitToFetchFrom = commitFromSummary || changeset.commit;
 			if (commitToFetchFrom) {
-				const { links } = await withGitHubRetry(`getInfo(commit=${commitToFetchFrom})`, () =>
-					getInfo({
-						repo: options.repo,
-						commit: commitToFetchFrom
-					})
-				);
-				return links;
+				try {
+					const { links } = await withGitHubRetry(`getInfo(commit=${commitToFetchFrom})`, () =>
+						getInfo({
+							repo: options.repo,
+							commit: commitToFetchFrom
+						})
+					);
+					return links;
+				} catch {
+					return NULL_LINKS;
+				}
 			}
-			return {
-				commit: null,
-				pull: null,
-				user: null
-			};
+			return NULL_LINKS;
 		})();
 
 		const users = usersFromSummary.length
