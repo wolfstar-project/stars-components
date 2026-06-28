@@ -159,4 +159,21 @@ describe('Client plugin lifecycle', () => {
 			await new Promise<void>((resolve) => client.server.close(() => resolve()));
 		}
 	});
+
+	test('GIVEN a postListen hook that rejects THEN listen closes the server before rethrowing', async () => {
+		const error = new Error('postListen failed');
+		const postListenHook = vi.fn().mockRejectedValue(error);
+
+		class TestPlugin extends Plugin {
+			public static override [postListen] = postListenHook;
+		}
+
+		Client.use(TestPlugin);
+
+		const client = new TestableClient();
+
+		await expect(client.listen({ port: 0 })).rejects.toBe(error);
+		expect(postListenHook).toHaveBeenCalledOnce();
+		expect(client.server.listening).toBe(false);
+	});
 });

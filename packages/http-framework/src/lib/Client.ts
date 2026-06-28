@@ -139,9 +139,16 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 
 		await new Promise<void>((resolve) => this.server.listen({ ...listenOptions, port, host: address }, resolve));
 
-		for (const plugin of Client.plugins.values(PluginHook.PostListen)) {
-			await plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+		try {
+			for (const plugin of Client.plugins.values(PluginHook.PostListen)) {
+				await plugin.hook.call(this, this.options);
+				this.emit('pluginLoaded', plugin.type, plugin.name);
+			}
+		} catch (error) {
+			// A postListen hook failed: close the server we just opened so it does not stay bound to the
+			// port as an orphaned listener, then propagate the original error to the caller.
+			await new Promise<void>((resolve) => this.server.close(() => resolve()));
+			throw error;
 		}
 	}
 
