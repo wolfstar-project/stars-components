@@ -74,6 +74,7 @@ describe('PluginManager', () => {
 		const entries = [...manager.values()];
 		expect(entries).toHaveLength(2);
 		expect(entries.map((entry) => entry.type)).toEqual([PluginHook.PreInitialization, PluginHook.PostListen]);
+		expect(entries.map((entry) => entry.name)).toEqual(['TestPlugin', 'TestPlugin']);
 	});
 });
 
@@ -122,7 +123,10 @@ describe('Client plugin lifecycle', () => {
 
 		expect(preLoadHook).toHaveBeenCalledOnce();
 		expect(preLoadHook.mock.instances[0]).toBe(client);
-		expect(loaded).toHaveBeenCalledWith(PluginHook.PreLoad, undefined);
+		expect(preLoadHook).toHaveBeenCalledWith(client.options);
+		expect(client.options.discordToken).toBeUndefined();
+		expect(client.options.discordPublicKey).toBeUndefined();
+		expect(loaded).toHaveBeenCalledWith(PluginHook.PreLoad, 'TestPlugin');
 	});
 
 	test('GIVEN a postListen hook THEN it runs after the server starts and emits pluginLoaded', async () => {
@@ -143,7 +147,7 @@ describe('Client plugin lifecycle', () => {
 		try {
 			expect(postListenHook).toHaveBeenCalledOnce();
 			expect(postListenHook.mock.instances[0]).toBe(client);
-			expect(loaded).toHaveBeenCalledWith(PluginHook.PostListen, undefined);
+			expect(loaded).toHaveBeenCalledWith(PluginHook.PostListen, 'TestPlugin');
 		} finally {
 			await new Promise<void>((resolve) => client.server.close(() => resolve()));
 		}

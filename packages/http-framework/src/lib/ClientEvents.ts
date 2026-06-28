@@ -29,6 +29,17 @@ export interface ClientEventInteractionHandlerContext {
 
 export interface ClientEvents {
 	error: [error: unknown];
+	/**
+	 * Emitted after a plugin hook runs, providing the hook's {@link PluginHook} and the plugin's name
+	 * (or `undefined` when the registering plugin did not provide one).
+	 *
+	 * @remarks
+	 * The `PreGenericsInitialization`, `PreInitialization`, and `PostInitialization` hooks run inside the
+	 * `Client` constructor, so those emissions happen before any listener can be attached to the instance
+	 * and are only observable from within a subclass constructor. Listeners attached after `new Client()`
+	 * returns will only receive the `PreLoad` (during `Client#load`) and `PostListen` (during
+	 * `Client#listen`) emissions.
+	 */
 	pluginLoaded: [hook: PluginHook, name: string | undefined];
 	commandNameMissing: [interaction: APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
 	commandNameUnknown: [interaction: APIApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction, response: ServerResponse];

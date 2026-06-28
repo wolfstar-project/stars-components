@@ -40,7 +40,11 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			this.emit('pluginLoaded', plugin.type, plugin.name);
 		}
 
-		this.options = options;
+		// Persist the options without the Discord credentials: the token and public key are consumed
+		// during construction (the token is handed to `container.rest`, the public key is hashed into
+		// `#discordPublicKey`), so keeping them on this public, plugin-accessible field would needlessly
+		// expose secrets for the lifetime of the client.
+		this.options = { ...options, discordToken: undefined, discordPublicKey: undefined };
 
 		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
 			plugin.hook.call(this, options);

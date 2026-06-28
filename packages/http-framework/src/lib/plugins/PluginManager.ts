@@ -62,7 +62,7 @@ export class PluginManager {
 		for (const [hookSymbol, hookType] of possibleSymbolHooks) {
 			const hook = Reflect.get(plugin, hookSymbol) as HttpFrameworkPluginHook | HttpFrameworkPluginAsyncHook;
 			if (typeof hook !== 'function') continue;
-			this.registerHook(hook, hookType as any);
+			this.registerHook(hook, hookType as any, plugin.name);
 		}
 		return this;
 	}
