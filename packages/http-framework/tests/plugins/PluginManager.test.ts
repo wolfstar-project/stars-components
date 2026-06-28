@@ -104,6 +104,13 @@ describe('Client plugin lifecycle', () => {
 		expect(preGenerics.mock.invocationCallOrder[0]).toBeLessThan(preInit.mock.invocationCallOrder[0]);
 		expect(preInit.mock.invocationCallOrder[0]).toBeLessThan(postInit.mock.invocationCallOrder[0]);
 		expect(preGenerics.mock.instances[0]).toBe(client);
+
+		// Every constructor-phase hook receives the same credential-free options as the persisted field.
+		expect(preGenerics).toHaveBeenCalledWith(client.options);
+		expect(preInit).toHaveBeenCalledWith(client.options);
+		expect(postInit).toHaveBeenCalledWith(client.options);
+		expect(client.options.discordToken).toBeUndefined();
+		expect(client.options.discordPublicKey).toBeUndefined();
 	});
 
 	test('GIVEN a preLoad hook THEN it runs during load and emits pluginLoaded', async () => {

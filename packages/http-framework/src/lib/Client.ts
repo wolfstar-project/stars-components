@@ -35,19 +35,20 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public constructor(options: ClientOptions = {}) {
 		super();
 
+		// Persist the options without the Discord credentials: the token and public key are consumed
+		// during construction (the token is handed to `container.rest`, the public key is hashed into
+		// `#discordPublicKey`). Storing the sanitized copy first lets every lifecycle hook receive the
+		// same credential-free options, so neither this public field nor the plugin hooks retain or
+		// observe secrets for the lifetime of the client.
+		this.options = { ...options, discordToken: undefined, discordPublicKey: undefined };
+
 		for (const plugin of Client.plugins.values(PluginHook.PreGenericsInitialization)) {
-			plugin.hook.call(this, options);
+			plugin.hook.call(this, this.options);
 			this.emit('pluginLoaded', plugin.type, plugin.name);
 		}
 
-		// Persist the options without the Discord credentials: the token and public key are consumed
-		// during construction (the token is handed to `container.rest`, the public key is hashed into
-		// `#discordPublicKey`), so keeping them on this public, plugin-accessible field would needlessly
-		// expose secrets for the lifetime of the client.
-		this.options = { ...options, discordToken: undefined, discordPublicKey: undefined };
-
 		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
-			plugin.hook.call(this, options);
+			plugin.hook.call(this, this.options);
 			this.emit('pluginLoaded', plugin.type, plugin.name);
 		}
 
@@ -74,7 +75,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		});
 
 		for (const plugin of Client.plugins.values(PluginHook.PostInitialization)) {
-			plugin.hook.call(this, options);
+			plugin.hook.call(this, this.options);
 			this.emit('pluginLoaded', plugin.type, plugin.name);
 		}
 	}
