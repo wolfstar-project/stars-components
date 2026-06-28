@@ -10,9 +10,12 @@ import { HttpCodes } from './api/HttpCodes.js';
 import type { IIdParser } from './components/IIdParser.js';
 import { StringIdParser } from './components/StringIdParser.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
+import { PluginManager } from './plugins/PluginManager.js';
+import type { Plugin } from './plugins/Plugin.js';
 import { CommandStore } from './structures/CommandStore.js';
 import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js';
 import { ListenerStore } from './structures/ListenerStore.js';
+import { PluginHook } from './types/Enums.js';
 import { ErrorMessages, Payloads } from './utils/constants.js';
 import { makeKey, verifyBody, type Key } from './utils/security.js';
 import { getSafeTextBody } from './utils/streams.js';
@@ -24,12 +27,26 @@ container.stores.register(new ListenerStore());
 export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public server!: Server;
 	public readonly id: string;
+	public readonly options: ClientOptions;
 	public readonly bodySizeLimit: number;
 	public readonly httpReplyOnError: boolean;
 	#discordPublicKey: string;
 
 	public constructor(options: ClientOptions = {}) {
 		super();
+
+		for (const plugin of Client.plugins.values(PluginHook.PreGenericsInitialization)) {
+			plugin.hook.call(this, options);
+			this.emit('pluginLoaded', plugin.type, plugin.name);
+		}
+
+		this.options = options;
+
+		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
+			plugin.hook.call(this, options);
+			this.emit('pluginLoaded', plugin.type, plugin.name);
+		}
+
 		this.bodySizeLimit = options.bodySizeLimit ?? 1024 * 1024;
 		this.httpReplyOnError = options.httpReplyOnError ?? true;
 
@@ -51,6 +68,29 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			rest: container.rest,
 			authPrefix: options.authPrefix
 		});
+
+		for (const plugin of Client.plugins.values(PluginHook.PostInitialization)) {
+			plugin.hook.call(this, options);
+			this.emit('pluginLoaded', plugin.type, plugin.name);
+		}
+	}
+
+	/**
+	 * The plugin manager, holding every registered plugin hook.
+	 *
+	 * @since 2.4.0
+	 */
+	public static readonly plugins = new PluginManager();
+
+	/**
+	 * Registers a plugin onto the {@link Client}, applying all of its hooks.
+	 *
+	 * @since 2.4.0
+	 * @param plugin The plugin to register.
+	 */
+	public static use(plugin: typeof Plugin) {
+		this.plugins.use(plugin);
+		return this;
 	}
 
 	/**
@@ -68,6 +108,11 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	 * @param options The load options.
 	 */
 	public async load(options: LoadOptions = {}) {
+		for (const plugin of Client.plugins.values(PluginHook.PreLoad)) {
+			await plugin.hook.call(this, this.options);
+			this.emit('pluginLoaded', plugin.type, plugin.name);
+		}
+
 		// Register the user directory if not null:
 		if (options.baseUserDirectory !== null) {
 			container.stores.registerPath(options.baseUserDirectory);
@@ -87,7 +132,12 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		this.server = createServer(serverOptions ?? {});
 		this.server.on('request', (request, response) => void this.handleRawHttpMessage(request, response, path, key));
 
-		return new Promise<void>((resolve) => this.server.listen({ ...listenOptions, port, host: address }, resolve));
+		await new Promise<void>((resolve) => this.server.listen({ ...listenOptions, port, host: address }, resolve));
+
+		for (const plugin of Client.plugins.values(PluginHook.PostListen)) {
+			await plugin.hook.call(this, this.options);
+			this.emit('pluginLoaded', plugin.type, plugin.name);
+		}
 	}
 
 	protected async handleRawHttpMessage(request: IncomingMessage, response: ServerResponse, path: string, key: Key) {

@@ -7,6 +7,7 @@ import type {
 import type { ServerResponse } from 'node:http';
 import type { Command } from './structures/Command.js';
 import type { InteractionHandler } from './structures/InteractionHandler.js';
+import type { PluginHook } from './types/Enums.js';
 
 export interface ClientEventCommandContext {
 	command: Command;
@@ -28,6 +29,7 @@ export interface ClientEventInteractionHandlerContext {
 
 export interface ClientEvents {
 	error: [error: unknown];
+	pluginLoaded: [hook: PluginHook, name: string | undefined];
 	commandNameMissing: [interaction: APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
 	commandNameUnknown: [interaction: APIApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
 	commandMethodUnknown: [context: ClientEventCommandContext];
