@@ -13,7 +13,7 @@
 		"typecheck": "turbo run typecheck",
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset add",
-		"publish": "changeset version && pnpm run build && changeset publish --dry-run",
+		"publish": "pnpm build && changeset publish",
 		"publish:snapshot": "changeset version --snapshot next && pnpm build && changeset publish --tag next --no-git-tag"
 	},
 	"devDependencies": {

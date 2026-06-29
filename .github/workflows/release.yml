@@ -104,6 +104,7 @@ jobs:
             - name: Checkout Project
               uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
               with:
+                  fetch-depth: 0
                   token: ${{ secrets.WOLFSTAR_TOKEN }}
 
             - name: Setup pnpm
@@ -128,3 +129,4 @@ jobs:
                   commit: 'chore: update changelog and release'
               env:
                   GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
