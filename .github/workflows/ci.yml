@@ -144,7 +144,7 @@ jobs:
               run: pnpm install --frozen-lockfile
 
             - name: Check for unused code
-              run: pnpm run knip
+              run: pnpm exec knip
 
     changesets:
         name: 🦋 Verify changesets
