@@ -9,13 +9,12 @@
 		"lint": "oxlint packages && oxfmt --check packages",
 		"lint:fix": "oxlint --fix packages && oxfmt --write packages",
 		"test": "vitest run",
-		"knip": "knip",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset add",
-		"publish": "changeset version && pnpm build && changeset publish",
-		"publish:dry-run": "changeset version && pnpm build && changeset publish --dry-run",
+		"publish": "pnpm build && changeset publish",
+		"publish:dry-run": "pnpm build && changeset publish --dry-run",
 		"publish:snapshot": "changeset version --snapshot next && pnpm build && changeset publish --tag next --no-git-tag"
 	},
 	"devDependencies": {
