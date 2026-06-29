@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`2d15b7d`](https://github.com/wolfstar-project/stars-components/commit/2d15b7d480b402a7334c01bb0116f0b73960ed8c)]:
+    - @wolfstar/http-framework@3.0.0
+
 ## 1.2.5
 
 ### Patch Changes

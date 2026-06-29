@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/http-framework@3.0.0
+
 ## 1.1.2
 
 ### Patch Changes
