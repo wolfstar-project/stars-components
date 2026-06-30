@@ -7,5 +7,6 @@
 	"quoteProps": "as-needed",
 	"trailingComma": "none",
 	"semi": true,
-	"endOfLine": "lf"
+	"endOfLine": "lf",
+	"ignorePatterns": ["packages/create-http-framework/template/**"]
 }

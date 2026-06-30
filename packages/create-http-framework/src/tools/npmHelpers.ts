@@ -1,3 +1,5 @@
+import { TYPESCRIPT_RC_VERSION, type BuildTool, type Formatter, type Language, type Linter } from './options.js';
+
 async function fetchVersion(packageName: string): Promise<string> {
 	const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
 	if (!response.ok) {
@@ -7,26 +9,61 @@ async function fetchVersion(packageName: string): Promise<string> {
 	return data.version;
 }
 
-export interface DependencyVersions {
-	httpFramework: string;
-	httpFrameworkI18n: string;
-	discordApiTypes: string;
-	typescript: string;
-	tsNode: string;
-	typesNode: string;
-	discordJsBuilders: string;
+/** Map of package name → resolved version (without a range prefix). */
+export type DependencyVersions = Record<string, string>;
+
+export interface VersionSelections {
+	i18n: boolean;
+	language: Language;
+	buildTool: BuildTool;
+	linter: Linter;
+	formatter: Formatter;
 }
 
-export async function fetchDependencyVersions(): Promise<DependencyVersions> {
-	const [httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders] = await Promise.all([
-		fetchVersion('@wolfstar/http-framework'),
-		fetchVersion('@wolfstar/http-framework-i18n'),
-		fetchVersion('discord-api-types'),
-		fetchVersion('typescript'),
-		fetchVersion('ts-node'),
-		fetchVersion('@types/node'),
-		fetchVersion('@discordjs/builders')
-	]);
+/**
+ * Resolves the latest versions of only the packages required by the chosen selections.
+ * `ts-node` is intentionally never included. TypeScript 7.0 (tsc7) is pinned to the rc instead
+ * of being fetched, because `typescript@latest` resolves to the 6.x line.
+ */
+export async function fetchDependencyVersions(selections: VersionSelections): Promise<DependencyVersions> {
+	const names = new Set<string>(['@wolfstar/http-framework', 'discord-api-types', '@discordjs/builders']);
 
-	return { httpFramework, httpFrameworkI18n, discordApiTypes, typescript, tsNode, typesNode, discordJsBuilders };
+	if (selections.i18n) names.add('@wolfstar/http-framework-i18n');
+
+	// TypeScript toolchain (skipped entirely for plain JavaScript projects).
+	if (selections.language === 'ts') {
+		names.add('@types/node');
+		switch (selections.buildTool) {
+			case 'tsc6':
+				names.add('typescript').add('tsc-watch');
+				break;
+			case 'tsc7':
+				// typescript is pinned to the rc below; tsc-watch backs `watch:start`.
+				names.add('tsc-watch');
+				break;
+			case 'tsdown':
+				names.add('tsdown').add('typescript');
+				break;
+		}
+	}
+
+	if (selections.linter === 'eslint') {
+		names.add('eslint');
+		names.add(selections.language === 'ts' ? 'typescript-eslint' : '@eslint/js');
+	}
+	if (selections.linter === 'oxlint') names.add('oxlint');
+	if (selections.formatter === 'prettier') names.add('prettier');
+	if (selections.formatter === 'oxfmt') names.add('oxfmt');
+
+	const list = [...names];
+	const resolved = await Promise.all(list.map(fetchVersion));
+
+	const versions: DependencyVersions = {};
+	list.forEach((name, index) => {
+		versions[name] = resolved[index]!;
+	});
+
+	if (selections.language === 'ts' && selections.buildTool === 'tsc7') versions['typescript'] = TYPESCRIPT_RC_VERSION;
+
+	return versions;
 }
