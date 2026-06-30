@@ -61,6 +61,8 @@ expect(result).toHaveBody('{"type":4}');
 expect(result).toHaveJsonBody({ type: 4, data: { content: 'Pong!' } });
 ```
 
+`toHaveJsonBody` performs a strict deep-equality check: the expected object must contain the exact same set of keys as the response body at every level. If you only care about a subset of fields, assert against `result.json()` with Vitest's built-in `toMatchObject` instead.
+
 ### Available fixtures
 
 Pre-built interaction payloads for all interaction types:
