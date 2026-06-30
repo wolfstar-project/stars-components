@@ -3,28 +3,15 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFile } from './fileSystem.js';
-
-Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
-Handlebars.registerHelper('or', (...args: unknown[]) => args.slice(0, -1).some(Boolean));
-Handlebars.registerHelper('and', (...args: unknown[]) => args.slice(0, -1).every(Boolean));
+import type { Language } from './options.js';
 
 const templateDir = join(fileURLToPath(import.meta.url), '../..', 'template');
 
+/** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
 export interface TemplateContext {
 	name: string;
 	port: number;
-	i18n: boolean;
-	packageManager: string;
-	todaysDate: string;
-	versions: {
-		httpFramework: string;
-		httpFrameworkI18n: string;
-		discordApiTypes: string;
-		typescript: string;
-		tsNode: string;
-		typesNode: string;
-		discordJsBuilders: string;
-	};
+	language: Language;
 }
 
 function walkDir(dir: string): string[] {
@@ -48,6 +35,11 @@ export function processTemplate(outputDir: string, context: TemplateContext): vo
 
 	for (const absoluteSource of allFiles) {
 		const relativePath = relative(templateDir, absoluteSource);
+
+		// Source files exist in both `.ts.hbs` and `.js.hbs` variants — keep only the chosen language.
+		if (context.language === 'js' && relativePath.endsWith('.ts.hbs')) continue;
+		if (context.language === 'ts' && relativePath.endsWith('.js.hbs')) continue;
+
 		const rawContent = readFileSync(absoluteSource, 'utf-8');
 		const isHandlebars = relativePath.endsWith('.hbs');
 		const outputRelative = isHandlebars ? relativePath.slice(0, -'.hbs'.length) : relativePath;

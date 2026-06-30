@@ -41,11 +41,13 @@
 	"dependencies": {
 		"@clack/prompts": "^1.6.0",
 		"@vercel/detect-agent": "^1.2.3",
+		"cross-spawn": "^7.0.6",
 		"handlebars": "^4.7.9",
 		"mri": "^1.2.0",
 		"package-manager-detector": "^1.6.0"
 	},
 	"devDependencies": {
+		"@types/cross-spawn": "^6.0.6",
 		"@types/handlebars": "^4.1.0",
 		"@types/mri": "^1.2.0",
 		"@types/node": "22.15.21",

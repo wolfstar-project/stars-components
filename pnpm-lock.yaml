@@ -95,6 +95,9 @@ importers:
       '@vercel/detect-agent':
         specifier: ^1.2.3
         version: 1.2.3
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
       handlebars:
         specifier: ^4.7.9
         version: 4.7.9
@@ -105,6 +108,9 @@ importers:
         specifier: ^1.6.0
         version: 1.6.0
     devDependencies:
+      '@types/cross-spawn':
+        specifier: ^6.0.6
+        version: 6.0.6
       '@types/handlebars':
         specifier: ^4.1.0
         version: 4.1.0
@@ -1959,6 +1965,9 @@ packages:
 
   '@types/connect@3.4.36':
     resolution: {integrity: sha512-P63Zd/JUGq+PdrM1lv0Wv5SBYeA2+CORvbrXbngriYY0jzLUWfQMQQxOhjONEz/wlHOAxOdY7CY65rgQdTjq2w==}
+
+  '@types/cross-spawn@6.0.6':
+    resolution: {integrity: sha512-fXRhhUkG4H3TQk5dBhQ7m/JDdSNHKwR2BBia62lhwEIq9xGiQKLxd6LymNhn47SjXhsUEPmxi+PKw2OkW4LLjA==}
 
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
@@ -5346,6 +5355,10 @@ snapshots:
       assertion-error: 2.0.1
 
   '@types/connect@3.4.36':
+    dependencies:
+      '@types/node': 22.15.21
+
+  '@types/cross-spawn@6.0.6':
     dependencies:
       '@types/node': 22.15.21
 
