@@ -46,6 +46,7 @@ Usage: create-http-framework [project-name] [options]
 Options:
   --overwrite                  Overwrite target directory if it already exists
   --no-interactive             Skip all prompts and use defaults / flags
+  --yes, -y                    Alias for --no-interactive (skip all prompts)
   --interactive, -i            Force interactive prompts even when an AI agent is detected
   --package-manager <pm>       npm | yarn | pnpm | bun (defaults to the detected one)
   --language <lang>            ts | js (default: ts)
@@ -72,9 +73,9 @@ function parseEnum<T extends string>(value: string | undefined, allowed: readonl
 
 async function main(): Promise<void> {
 	const argv = mri(process.argv.slice(2), {
-		boolean: ['overwrite', 'help'],
+		boolean: ['overwrite', 'help', 'yes'],
 		string: ['package-manager', 'language', 'build', 'lint', 'format', 'port'],
-		alias: { h: 'help', i: 'interactive' },
+		alias: { h: 'help', i: 'interactive', y: 'yes' },
 		default: { install: true }
 	});
 
@@ -86,6 +87,8 @@ async function main(): Promise<void> {
 	const argProjectName = argv._[0] as string | undefined;
 	const flagOverwrite = argv['overwrite'] as boolean;
 	const flagInteractive = argv['interactive'] as boolean | undefined;
+	// `--yes` / `-y` is kept as a backward-compatible alias for non-interactive mode.
+	const flagYes = argv['yes'] as boolean | undefined;
 
 	const cliPackageManager = parseEnum(argv['package-manager'] as string | undefined, PACKAGE_MANAGERS, '--package-manager');
 	const cliLanguage = parseEnum(argv['language'] as string | undefined, LANGUAGES, '--language');
@@ -100,8 +103,8 @@ async function main(): Promise<void> {
 	const { isAgent, agent } = await determineAgent();
 	const agentMode = isAgent && flagInteractive !== true;
 
-	// Non-interactive when explicitly requested (--no-interactive) or when an agent is driving.
-	const nonInteractive = flagInteractive === false || agentMode;
+	// Non-interactive when explicitly requested (--no-interactive / --yes / -y) or when an agent is driving.
+	const nonInteractive = flagInteractive === false || flagYes === true || agentMode;
 
 	intro('Welcome to the WolfStar HTTP Framework!');
 
@@ -239,7 +242,11 @@ async function main(): Promise<void> {
 
 	// ── Build tool (TypeScript only) ──────────────────────────────────────────
 	// For JavaScript there is no compile step; buildTool is carried but unused.
-	let buildTool: BuildTool = cliBuild ?? 'tsdown';
+	let buildTool: BuildTool = 'tsdown';
+
+	if (cliBuild !== undefined && language === 'js') {
+		log.warn('--build only applies to TypeScript projects and will be ignored.');
+	}
 
 	if (language === 'ts') {
 		if (nonInteractive) {
