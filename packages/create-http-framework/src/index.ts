@@ -239,7 +239,11 @@ async function main(): Promise<void> {
 
 	// ── Build tool (TypeScript only) ──────────────────────────────────────────
 	// For JavaScript there is no compile step; buildTool is carried but unused.
-	let buildTool: BuildTool = cliBuild ?? 'tsdown';
+	let buildTool: BuildTool = 'tsdown';
+
+	if (cliBuild !== undefined && language === 'js') {
+		log.warn('--build only applies to TypeScript projects and will be ignored.');
+	}
 
 	if (language === 'ts') {
 		if (nonInteractive) {

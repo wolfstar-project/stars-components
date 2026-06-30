@@ -43,7 +43,7 @@ function buildScripts(ctx: ProjectContext): Record<string, string> {
 			build: 'tsdown',
 			dev: getRunScript(pm, 'build', ['--onSuccess', getRunScript(pm, 'start')]),
 			watch: getRunScript(pm, 'build', ['--watch']),
-			'watch:start': getRunScript(pm, 'build', ['--onSuccess', getRunScript(pm, 'start')]),
+			'watch:start': getRunScript(pm, 'build', ['--watch', '--onSuccess', getRunScript(pm, 'start')]),
 			start
 		};
 	} else {
@@ -213,7 +213,7 @@ function writeLinterConfig(targetDir: string, ctx: ProjectContext): void {
 			join(targetDir, '.oxlintrc.json'),
 			json({
 				$schema: './node_modules/oxlint/configuration_schema.json',
-				plugins: ['typescript'],
+				...(ctx.language === 'ts' ? { plugins: ['typescript'] } : {}),
 				categories: { correctness: 'error', suspicious: 'warn' },
 				ignorePatterns: ['dist/**', 'node_modules/**']
 			})

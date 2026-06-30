@@ -23,19 +23,19 @@ The CLI will guide you through the following prompts:
 
 ## Options
 
-| Flag            | Alias | Description                                                          |
-| --------------- | ----- | -------------------------------------------------------------------- |
-| `--overwrite`   |       | Overwrite the target directory if it already exists                  |
-| `--yes`         | `-y`  | Skip all prompts and use defaults (port 3000, no i18n, auto-install) |
-| `--interactive` | `-i`  | Force interactive prompts even when an AI agent is detected          |
-| `--help`        | `-h`  | Print usage and exit                                                 |
+| Flag               | Alias | Description                                                 |
+| ------------------ | ----- | ----------------------------------------------------------- |
+| `--overwrite`      |       | Overwrite the target directory if it already exists         |
+| `--no-interactive` |       | Skip all prompts and use defaults / flags                   |
+| `--interactive`    | `-i`  | Force interactive prompts even when an AI agent is detected |
+| `--help`           | `-h`  | Print usage and exit                                        |
 
 ## Non-interactive / AI agent mode
 
-When the CLI detects an AI agent is running it (via [`@vercel/detect-agent`](https://www.npmjs.com/package/@vercel/detect-agent)), it automatically enters non-interactive mode — equivalent to passing `--yes`. A project name argument is required in this mode:
+When the CLI detects an AI agent is running it (via [`@vercel/detect-agent`](https://www.npmjs.com/package/@vercel/detect-agent)), it automatically enters non-interactive mode, equivalent to passing `--no-interactive`. A project name argument is required in this mode:
 
 ```bash
-create-http-framework my-discord-bot --yes
+create-http-framework my-discord-bot --no-interactive
 ```
 
 ## Generated project structure
