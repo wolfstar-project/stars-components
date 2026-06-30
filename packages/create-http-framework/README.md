@@ -5,13 +5,13 @@ A CLI scaffolding tool for creating new [WolfStar HTTP Framework](https://github
 ## Usage
 
 ```bash
-npm create http-framework@latest my-discord-bot
+npm create @wolfstar/http-framework@latest my-discord-bot
 # or
-pnpm create http-framework my-discord-bot
+pnpm create @wolfstar/http-framework my-discord-bot
 # or
-yarn create http-framework my-discord-bot
+yarn create @wolfstar/http-framework my-discord-bot
 # or
-bun create http-framework my-discord-bot
+bun create @wolfstar/http-framework my-discord-bot
 ```
 
 The CLI will guide you through the following prompts:
