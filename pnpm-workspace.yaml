@@ -13,7 +13,7 @@ strictPeerDependencies: false
 
 overrides:
     '@types/pg': '8.20.0'
-    ansi-regex: '^5.0.1'
+    ansi-regex: '^6.2.2'
     minimist: '1.2.8'
 
 allowBuilds:

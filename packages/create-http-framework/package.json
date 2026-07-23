@@ -1,0 +1,60 @@
+{
+	"name": "@wolfstar/create-http-framework",
+	"version": "2.0.1",
+	"description": "Create a new WolfStar HTTP Framework bot project",
+	"keywords": [
+		"cli",
+		"create",
+		"discord",
+		"http",
+		"scaffold",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/create-http-framework",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/create-http-framework"
+	},
+	"bin": {
+		"create-http-framework": "./dist/index.js"
+	},
+	"files": [
+		"dist/",
+		"template/"
+	],
+	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"typecheck": "tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.6.0",
+		"@vercel/detect-agent": "^1.2.3",
+		"cross-spawn": "^7.0.6",
+		"handlebars": "^4.7.9",
+		"mri": "^1.2.0",
+		"package-manager-detector": "^1.6.0"
+	},
+	"devDependencies": {
+		"@types/cross-spawn": "^6.0.6",
+		"@types/handlebars": "^4.1.0",
+		"@types/mri": "^1.2.0",
+		"@types/node": "22.15.21",
+		"tsdown": "^0.22.3",
+		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

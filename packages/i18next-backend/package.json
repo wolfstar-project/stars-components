@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/i18next-backend",
-	"version": "3.0.1",
+	"version": "2.0.8",
 	"description": "A fast and modern filesystem-based i18next backend for Node.js.",
 	"keywords": [
 		"api",
@@ -55,7 +55,7 @@
 	"devDependencies": {
 		"@types/node": "22.15.21",
 		"i18next": "^25.10.10",
-		"tsdown": "^0.22.2",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
 	"engines": {

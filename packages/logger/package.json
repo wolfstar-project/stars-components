@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/logger",
-	"version": "3.0.1",
+	"version": "2.1.1",
 	"description": "A lightweight logger system with level support",
 	"keywords": [
 		"api",
@@ -50,10 +50,10 @@
 		"colorette": "^2.0.20"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.8",
-		"tsdown": "^0.22.2",
+		"@vitest/coverage-v8": "^4.1.9",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3",
-		"vitest": "^4.1.8"
+		"vitest": "^4.1.9"
 	},
 	"engines": {
 		"node": ">=20"

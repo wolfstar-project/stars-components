@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/safe-fetch",
-	"version": "3.0.1",
+	"version": "1.1.6",
 	"description": "A fetch wrapper on top of Rust's Result",
 	"keywords": [
 		"api",
@@ -53,7 +53,7 @@
 		"@sapphire/result": "^2.8.0"
 	},
 	"devDependencies": {
-		"tsdown": "^0.22.2",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3"
 	},
 	"engines": {

@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/env-utilities",
-	"version": "3.0.1",
+	"version": "2.0.3",
 	"description": "Functional utilities for reading and parsing environmental variables",
 	"keywords": [
 		"api",
@@ -67,14 +67,14 @@
 	},
 	"dependencies": {
 		"dotenv": "^17.4.2",
-		"dotenv-expand": "^12.0.3"
+		"dotenv-expand": "^13.0.0"
 	},
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
-		"@vitest/coverage-v8": "^4.1.8",
-		"tsdown": "^0.22.2",
+		"@vitest/coverage-v8": "^4.1.9",
+		"tsdown": "^0.22.3",
 		"typescript": "~5.8.3",
-		"vitest": "^4.1.8"
+		"vitest": "^4.1.9"
 	},
 	"engines": {
 		"node": ">=20"
