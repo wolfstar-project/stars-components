@@ -8,6 +8,7 @@
 
 [![GitHub License](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE.md)
 [![codecov](https://codecov.io/gh/wolfstar-project/stars-components/branch/main/graph/badge.svg?token=CJP65GQC8K)](https://codecov.io/gh/wolfstar-project/stars-components)
+[![Greptile: The War on Bugs](https://www.greptile.com/badge.svg)](https://www.greptile.com/?utm_source=oss_badge&utm_medium=readme&utm_campaign=greptile_for_open_source)
 
 </div>
 
