@@ -17,7 +17,7 @@ node_modules/
 # Build Artifacts
 dist/
 build/
-docs/
+/docs/
 test_out/
 .swc/
 *.tsbuildinfo
@@ -36,7 +36,9 @@ tsup.config.bundled*.mjs
 # Test artifacts
 coverage/
 *.junit.xml
-docs/
+apps/docs/.vitepress/cache/
+apps/docs/.vitepress/dist/
+apps/docs/api/
 
 # Ignore package locks
 package-lock.json
