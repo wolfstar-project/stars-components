@@ -12,9 +12,7 @@
 			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog"]
 		},
 		"apps/docs": {
-			"entry": [".vitepress/config.ts", ".vitepress/theme/index.ts"],
-			"project": [".vitepress/**/*.{ts,vue}"],
-			"ignoreDependencies": ["typedoc", "typedoc-plugin-markdown", "typedoc-vitepress-theme", "vitepress", "vue-tsc"]
+			"ignoreDependencies": ["@wolfstar/*"]
 		},
 		"packages/*": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
