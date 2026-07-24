@@ -19,6 +19,7 @@ export * from './lib/ClientEvents.js';
 export * from './lib/api/HttpCodes.js';
 export * from './lib/components/IIdParser.js';
 export * from './lib/components/StringIdParser.js';
+export * from './lib/http/index.js';
 export * from './lib/interactions/index.js';
 export * from './lib/interactions/router/CommandRouter.js';
 export type * from './lib/interactions/utils/util-types.js';

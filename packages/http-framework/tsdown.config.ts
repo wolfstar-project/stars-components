@@ -3,6 +3,7 @@ import { createTsdownOptions } from '../../scripts/tsdown.config';
 
 export default defineConfig(
 	createTsdownOptions({
-		cjsOptions: { disabled: true }
+		cjsOptions: { disabled: true },
+		entry: ['src/index.ts', 'src/adapters/fetch/index.ts']
 	})
 );

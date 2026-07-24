@@ -30,9 +30,17 @@
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
 	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./adapters/fetch": {
+			"import": {
+				"types": "./dist/esm/adapters/fetch/index.d.ts",
+				"default": "./dist/esm/adapters/fetch/index.js"
+			}
 		}
 	},
 	"publishConfig": {

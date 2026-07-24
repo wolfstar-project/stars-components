@@ -8,6 +8,7 @@ A powerful HTTP framework for building your Discord bots, powered by [`node:http
 - Support for attachment responses
 - Seamless integration with low-level libraries
 - Thin wrapper on top of raw data for maximum performance
+- Universal Fetch adapter (`createHandler`) to mount on Fastify, Nitro, Hono, Workers, and more — while `Client.listen()` on `node:http` keeps the same behavior
 
 ## Usage
 
@@ -97,8 +98,49 @@ const client = new Client({
 // Load all the commands and message component handlers:
 await client.load();
 
-// Start up the HTTP server;
+// Start up the HTTP server (node:http — same API and behavior as always);
 await client.listen({ port: 3000 });
+```
+
+### Fetch adapter (Fastify, Nitro, Workers, …)
+
+If you already have a server (or deploy to a Fetch runtime), use the universal Web Fetch handler instead of `listen()`. The Node `listen()` path is unchanged.
+
+```typescript
+import { Client } from '@wolfstar/http-framework';
+import { createHandler } from '@wolfstar/http-framework/adapters/fetch';
+
+const client = new Client({
+	discordToken: process.env.DISCORD_TOKEN,
+	discordPublicKey: process.env.DISCORD_PUBLIC_KEY
+});
+await client.load();
+
+const handler = createHandler(client, { postPath: '/interactions' });
+
+// Cloudflare Workers / Bun / Deno:
+// export default { fetch: handler };
+
+// Nitro (h3):
+// export default defineEventHandler((event) => handler(toWebRequest(event)));
+
+// Fastify — convert the incoming request to a Web Request, then pipe the Response back:
+// fastify.route({
+//   method: 'POST',
+//   url: '/interactions',
+//   async handler(request, reply) {
+//     const response = await handler(
+//       new Request(`http://localhost${request.url}`, {
+//         method: 'POST',
+//         headers: request.headers as HeadersInit,
+//         body: JSON.stringify(request.body)
+//       })
+//     );
+//     reply.status(response.status);
+//     response.headers.forEach((value, key) => reply.header(key, value));
+//     return reply.send(Buffer.from(await response.arrayBuffer()));
+//   }
+// });
 ```
 
 ### ApplicationCommandRegistry

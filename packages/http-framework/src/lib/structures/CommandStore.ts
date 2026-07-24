@@ -8,8 +8,8 @@ import {
 	type APIApplicationCommandInteractionData,
 	type APIPrimaryEntryPointCommandInteraction
 } from 'discord-api-types/v10';
-import type { ServerResponse } from 'node:http';
 import { HttpCodes } from '../api/HttpCodes.js';
+import type { HttpReply } from '../http/HttpReply.js';
 import {
 	transformAutocompleteInteraction,
 	transformInteraction,
@@ -38,27 +38,25 @@ export class CommandStore extends Store<Command, 'commands'> {
 	 * Runs an application command.
 	 *
 	 * @since 1.0.0
-	 * @param response - The server response object.
+	 * @param response - The HTTP reply object.
 	 * @param interaction - The API application command interaction object.
-	 * @returns A promise that resolves to the server response.
+	 * @returns A promise that resolves to the HTTP reply.
 	 */
 	public async runApplicationCommand(
-		response: ServerResponse,
+		response: HttpReply,
 		interaction: Exclude<APIApplicationCommandInteraction, APIPrimaryEntryPointCommandInteraction>
-	): Promise<ServerResponse> {
+	): Promise<HttpReply> {
 		const command = this.router.get(interaction);
 		if (!command) {
 			container.client.emit('commandNameUnknown', interaction, response);
-			response.statusCode = HttpCodes.NotImplemented;
-			return response.end(ErrorMessages.UnknownCommandName);
+			return response.status(HttpCodes.NotImplemented).end(ErrorMessages.UnknownCommandName);
 		}
 
 		const context = { command, interaction, response };
 		const method = this.#routeCommandMethodName(command, interaction.data);
 		if (!method) {
 			container.client.emit('commandMethodUnknown', context);
-			response.statusCode = HttpCodes.NotImplemented;
-			return response.end(ErrorMessages.UnknownCommandHandler);
+			return response.status(HttpCodes.NotImplemented).end(ErrorMessages.UnknownCommandHandler);
 		}
 
 		container.client.emit('commandRun', context);
@@ -75,25 +73,23 @@ export class CommandStore extends Store<Command, 'commands'> {
 	 * Runs the application command autocomplete.
 	 *
 	 * @since 1.0.0
-	 * @param response - The server response object.
+	 * @param response - The HTTP reply object.
 	 * @param interaction - The API application command autocomplete interaction object.
-	 * @returns A promise that resolves to the server response.
+	 * @returns A promise that resolves to the HTTP reply.
 	 */
 	public async runApplicationCommandAutocomplete(
-		response: ServerResponse,
+		response: HttpReply,
 		interaction: APIApplicationCommandAutocompleteInteraction
-	): Promise<ServerResponse> {
+	): Promise<HttpReply> {
 		if (!interaction.data?.name) {
 			container.client.emit('commandNameMissing', interaction, response);
-			response.statusCode = HttpCodes.BadRequest;
-			return response.end(ErrorMessages.MissingCommandName);
+			return response.status(HttpCodes.BadRequest).end(ErrorMessages.MissingCommandName);
 		}
 
 		const command = this.router.getChatInput(interaction.data.name);
 		if (!command) {
 			container.client.emit('commandNameUnknown', interaction, response);
-			response.statusCode = HttpCodes.NotImplemented;
-			return response.end(ErrorMessages.UnknownCommandName);
+			return response.status(HttpCodes.NotImplemented).end(ErrorMessages.UnknownCommandName);
 		}
 
 		const context = { command, interaction, response };

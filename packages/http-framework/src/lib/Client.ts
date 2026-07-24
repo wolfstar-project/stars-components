@@ -9,6 +9,10 @@ import type { MappedClientEvents } from './ClientEvents.js';
 import { HttpCodes } from './api/HttpCodes.js';
 import type { IIdParser } from './components/IIdParser.js';
 import { StringIdParser } from './components/StringIdParser.js';
+import type { DiscordHttpRequest, ProcessDiscordHttpOptions } from './http/DiscordHttpRequest.js';
+import { FetchHttpReply } from './http/FetchHttpReply.js';
+import type { HttpReply } from './http/HttpReply.js';
+import { NodeHttpReply } from './http/NodeHttpReply.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
 import { PluginManager } from './plugins/PluginManager.js';
 import type { Plugin } from './plugins/Plugin.js';
@@ -18,7 +22,7 @@ import { ListenerStore } from './structures/ListenerStore.js';
 import { PluginHook } from './types/Enums.js';
 import { ErrorMessages, Payloads } from './utils/constants.js';
 import { makeKey, verifyBody, type Key } from './utils/security.js';
-import { getSafeTextBody } from './utils/streams.js';
+import { getSafeTextBody, getSafeTextBodyFromWebRequest } from './utils/streams.js';
 
 container.stores.register(new CommandStore());
 container.stores.register(new InteractionHandlerStore());
@@ -31,6 +35,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public readonly bodySizeLimit: number;
 	public readonly httpReplyOnError: boolean;
 	#discordPublicKey: string;
+	#verificationKey: Promise<Key> | null = null;
 
 	public constructor(options: ClientOptions = {}) {
 		super();
@@ -109,6 +114,17 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	}
 
 	/**
+	 * Returns the Ed25519 verification key derived from the Discord public key.
+	 * Cached after the first call so adapters can share it across requests.
+	 *
+	 * @since 3.1.0
+	 */
+	public getVerificationKey(): Promise<Key> {
+		this.#verificationKey ??= makeKey(this.#discordPublicKey);
+		return this.#verificationKey;
+	}
+
+	/**
 	 * Loads all the commands.
 	 * @param options The load options.
 	 */
@@ -128,10 +144,11 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 
 	/**
 	 * Starts the HTTP server, listening for HTTP interactions.
+	 * Behavior is unchanged from previous versions: creates a `node:http` server and binds it.
 	 * @param options The listen options.
 	 */
 	public async listen({ serverOptions, postPath, port, address, ...listenOptions }: ListenOptions) {
-		const key = await makeKey(this.#discordPublicKey);
+		const key = await this.getVerificationKey();
 		const path = postPath ?? process.env.HTTP_POST_PATH ?? '/';
 
 		this.server = createServer(serverOptions ?? {});
@@ -152,50 +169,86 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		}
 	}
 
-	protected async handleRawHttpMessage(request: IncomingMessage, response: ServerResponse, path: string, key: Key) {
-		response.setHeader('Content-Type', 'application/json');
+	/**
+	 * Processes a Web Fetch {@link Request} through the Discord interactions pipeline.
+	 * Used by `@wolfstar/http-framework/adapters/fetch` and compatible runtimes.
+	 *
+	 * @since 3.1.0
+	 */
+	public async handleWebRequest(request: Request, options: HandleWebRequestOptions = {}): Promise<Response> {
+		const path = options.postPath ?? process.env.HTTP_POST_PATH ?? '/';
+		const key = options.key ?? (await this.getVerificationKey());
+		const reply = new FetchHttpReply();
 
+		const url = new URL(request.url);
+		await this.processDiscordHttpRequest(
+			{
+				method: request.method,
+				url: url.pathname,
+				signature: request.headers.get('x-signature-ed25519'),
+				timestamp: request.headers.get('x-signature-timestamp'),
+				readBody: () => getSafeTextBodyFromWebRequest(request)
+			},
+			{ path, key, reply }
+		);
+
+		return reply.response;
+	}
+
+	protected async handleRawHttpMessage(request: IncomingMessage, response: ServerResponse, path: string, key: Key) {
+		const reply = new NodeHttpReply(response);
+		reply.header('Content-Type', 'application/json');
+
+		return this.processDiscordHttpRequest(
+			{
+				method: request.method,
+				// Preserve historical Node matching: compare against the raw `url` (path + query).
+				url: request.url,
+				signature: headerValue(request.headers['x-signature-ed25519']),
+				timestamp: headerValue(request.headers['x-signature-timestamp']),
+				readBody: () => getSafeTextBody(request)
+			},
+			{ path, key, reply }
+		);
+	}
+
+	/**
+	 * Shared Discord HTTP pipeline used by both `node:http` and Fetch adapters.
+	 */
+	protected async processDiscordHttpRequest(request: DiscordHttpRequest, { path, key, reply }: ProcessDiscordHttpOptions): Promise<HttpReply> {
 		if (request.url !== path) {
-			response.statusCode = HttpCodes.NotFound;
-			return response.end(ErrorMessages.NotFound);
+			return reply.status(HttpCodes.NotFound).end(ErrorMessages.NotFound);
 		}
 
 		if (request.method !== 'POST') {
-			response.statusCode = HttpCodes.MethodNotAllowed;
-			return response.end(ErrorMessages.UnsupportedHttpMethod);
+			return reply.status(HttpCodes.MethodNotAllowed).end(ErrorMessages.UnsupportedHttpMethod);
 		}
 
-		const signature = request.headers['x-signature-ed25519'];
-		const timestamp = request.headers['x-signature-timestamp'];
-
+		const { signature, timestamp } = request;
 		if (isNullishOrEmpty(signature) || isNullishOrEmpty(timestamp)) {
-			response.statusCode = HttpCodes.Unauthorized;
-			return response.end(ErrorMessages.MissingSignatureInformation);
+			return reply.status(HttpCodes.Unauthorized).end(ErrorMessages.MissingSignatureInformation);
 		}
 
-		const result = await getSafeTextBody(request);
+		const result = await request.readBody();
 		if (result.isErr()) {
-			response.statusCode = HttpCodes.BadRequest;
-			return response.end(result.unwrapErr());
+			return reply.status(HttpCodes.BadRequest).end(result.unwrapErr());
 		}
 
 		const body = result.unwrap();
 		const valid = await verifyBody(body, signature, timestamp, key);
 		if (!valid) {
-			response.statusCode = HttpCodes.Unauthorized;
-			return response.end(ErrorMessages.InvalidSignature);
+			return reply.status(HttpCodes.Unauthorized).end(ErrorMessages.InvalidSignature);
 		}
 
-		return this.handleHttpMessage(JSON.parse(body) as Exclude<APIInteraction, APIPrimaryEntryPointCommandInteraction>, response);
+		return this.handleHttpMessage(JSON.parse(body) as Exclude<APIInteraction, APIPrimaryEntryPointCommandInteraction>, reply);
 	}
 
 	protected async handleHttpMessage(
 		interaction: Exclude<APIInteraction, APIPrimaryEntryPointCommandInteraction>,
-		response: ServerResponse
-	): Promise<ServerResponse> {
+		response: HttpReply
+	): Promise<HttpReply> {
 		if (interaction.type === InteractionType.Ping) {
-			response.statusCode = HttpCodes.OK;
-			return response.end(Payloads.Pong);
+			return response.status(HttpCodes.OK).end(Payloads.Pong);
 		}
 
 		switch (interaction.type) {
@@ -207,11 +260,28 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			case InteractionType.ModalSubmit:
 				return container.stores.get('interaction-handlers').runHandler(response, interaction);
 			default: {
-				response.statusCode = HttpCodes.NotImplemented;
-				return response.end(ErrorMessages.UnknownInteractionType);
+				return response.status(HttpCodes.NotImplemented).end(ErrorMessages.UnknownInteractionType);
 			}
 		}
 	}
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+	if (value === undefined) return undefined;
+	return typeof value === 'string' ? value : value[0];
+}
+
+export interface HandleWebRequestOptions {
+	/**
+	 * The path the handler will accept Discord POSTs on.
+	 * @default process.env.HTTP_POST_PATH ?? '/'
+	 */
+	postPath?: `/${string}`;
+
+	/**
+	 * Optional precomputed verification key. Defaults to {@link Client.getVerificationKey}.
+	 */
+	key?: Key;
 }
 
 export interface ClientOptions {

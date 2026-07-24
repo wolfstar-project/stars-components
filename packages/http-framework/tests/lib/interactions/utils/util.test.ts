@@ -1,4 +1,4 @@
-import type { ServerResponse } from 'node:http';
+import type { HttpReply } from '../../../../src/index.js';
 import {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
@@ -29,7 +29,7 @@ import {
 
 describe('util', () => {
 	describe('makeInteraction', () => {
-		const response = null! as ServerResponse;
+		const response = null! as HttpReply;
 
 		test('GIVEN THEN returns AutocompleteInteraction instance', () => {
 			const interaction = makeInteraction(response, ApplicationCommandAutocompleteInteractionData);

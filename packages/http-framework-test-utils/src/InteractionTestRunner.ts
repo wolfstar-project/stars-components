@@ -1,5 +1,5 @@
 import type { APIInteraction, APIPrimaryEntryPointCommandInteraction } from 'discord-api-types/v10';
-import { MockServerResponse } from './MockServerResponse.js';
+import { MockHttpReply } from './MockServerResponse.js';
 import type { TestableClient } from './TestableClient.js';
 import type { InteractionResult } from './types.js';
 
@@ -11,8 +11,8 @@ export class InteractionTestRunner {
 	}
 
 	public async run(interaction: Exclude<APIInteraction, APIPrimaryEntryPointCommandInteraction>): Promise<InteractionResult> {
-		const response = new MockServerResponse();
-		await this.#client.handleHttpMessage(interaction, response as never);
+		const response = new MockHttpReply();
+		await this.#client.handleHttpMessage(interaction, response);
 		const body = response.getBody();
 		return {
 			statusCode: response.statusCode,

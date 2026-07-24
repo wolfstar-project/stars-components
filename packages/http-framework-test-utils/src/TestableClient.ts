@@ -1,6 +1,5 @@
-import { Client, type ClientOptions } from '@wolfstar/http-framework';
+import { Client, type ClientOptions, type HttpReply } from '@wolfstar/http-framework';
 import type { APIInteraction, APIPrimaryEntryPointCommandInteraction } from 'discord-api-types/v10';
-import type { ServerResponse } from 'node:http';
 
 const TEST_DEFAULTS: ClientOptions = {
 	discordPublicKey: 'a'.repeat(64),
@@ -14,8 +13,8 @@ export class TestableClient extends Client {
 
 	public override async handleHttpMessage(
 		interaction: Exclude<APIInteraction, APIPrimaryEntryPointCommandInteraction>,
-		response: ServerResponse
-	): Promise<ServerResponse> {
+		response: HttpReply
+	): Promise<HttpReply> {
 		return super.handleHttpMessage(interaction, response);
 	}
 }

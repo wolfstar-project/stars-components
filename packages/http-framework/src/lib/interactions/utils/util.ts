@@ -9,8 +9,8 @@ import {
 	type APIMessageComponentButtonInteraction,
 	type APIUserApplicationCommandInteraction
 } from 'discord-api-types/v10';
-import type { ServerResponse } from 'node:http';
 import { HttpCodes } from '../../api/HttpCodes.js';
+import type { HttpReply } from '../../http/HttpReply.js';
 import { ErrorMessages } from '../../utils/constants.js';
 import {
 	AutocompleteInteraction,
@@ -28,8 +28,8 @@ import {
 } from '../structures/interactions/index.js';
 import type { AsyncDiscordResult } from './util-types.js';
 
-export function makeInteraction<T extends BaseInteractionType>(response: ServerResponse, interaction: T): TransformRaw<T>;
-export function makeInteraction(response: ServerResponse, interaction: BaseInteractionType) {
+export function makeInteraction<T extends BaseInteractionType>(response: HttpReply, interaction: T): TransformRaw<T>;
+export function makeInteraction(response: HttpReply, interaction: BaseInteractionType) {
 	switch (interaction.type) {
 		case InteractionType.ApplicationCommand: {
 			switch (interaction.data.type) {
@@ -105,13 +105,12 @@ export type TransformRaw<T extends BaseInteractionType> = T extends Autocomplete
  * @param error The error to handle.
  * @returns The response object.
  */
-export function handleError(response: ServerResponse, error: unknown): ServerResponse {
+export function handleError(response: HttpReply, error: unknown): HttpReply {
 	container.client.emit('error', error);
 
 	if (!container.client.httpReplyOnError || response.closed) return response;
 
-	response.statusCode = HttpCodes.InternalServerError;
-	return response.end(ErrorMessages.InternalError);
+	return response.status(HttpCodes.InternalServerError).end(ErrorMessages.InternalError);
 }
 
 export function resultFromDiscord<T>(promise: Promise<T>): AsyncDiscordResult<T> {

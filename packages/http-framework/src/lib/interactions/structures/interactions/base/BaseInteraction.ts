@@ -10,7 +10,7 @@ import {
 	type RESTGetAPIChannelResult,
 	type RESTGetAPIGuildResult
 } from 'discord-api-types/v10';
-import type { ServerResponse } from 'node:http';
+import type { HttpReply } from '../../../../http/HttpReply.js';
 import { HttpCodes } from '../../../../api/HttpCodes.js';
 import type { DiscordResult } from '../../../utils/util-types.js';
 import { resultFromDiscord } from '../../../utils/util.js';
@@ -20,15 +20,15 @@ export type BaseInteractionType = Exclude<APIInteraction, APIPingInteraction>;
 
 export abstract class BaseInteraction<T extends BaseInteractionType = BaseInteractionType> {
 	protected readonly [Data]: T;
-	protected readonly [Response]: ServerResponse;
+	protected readonly [Response]: HttpReply;
 
-	public constructor(response: ServerResponse, data: T) {
+	public constructor(response: HttpReply, data: T) {
 		this[Data] = data;
 		this[Response] = response;
 	}
 
 	public get replied() {
-		return this[Response].writableEnded;
+		return this[Response].replied;
 	}
 
 	/**
@@ -242,15 +242,10 @@ export abstract class BaseInteraction<T extends BaseInteractionType = BaseIntera
 
 	protected _sendReply(data: NonNullObject) {
 		const response = this[Response];
-		if (response.writableEnded) throw new Error('Cannot send response, the request has already been replied.');
+		if (response.replied) throw new Error('Cannot send response, the request has already been replied.');
 
-		response.statusCode = HttpCodes.OK;
-		return new Promise<void>((resolve) => {
-			response.on('close', () => {
-				resolve();
-			});
-			response.end(JSON.stringify(data));
-		});
+		response.status(HttpCodes.OK).end(JSON.stringify(data));
+		return response.flushed();
 	}
 }
 

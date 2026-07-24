@@ -4,7 +4,7 @@ import type {
 	APIMessageComponentInteraction,
 	APIModalSubmitInteraction
 } from 'discord-api-types/v10';
-import type { ServerResponse } from 'node:http';
+import type { HttpReply } from './http/HttpReply.js';
 import type { Command } from './structures/Command.js';
 import type { InteractionHandler } from './structures/InteractionHandler.js';
 import type { PluginHook } from './types/Enums.js';
@@ -12,19 +12,19 @@ import type { PluginHook } from './types/Enums.js';
 export interface ClientEventCommandContext {
 	command: Command;
 	interaction: APIApplicationCommandInteraction;
-	response: ServerResponse;
+	response: HttpReply;
 }
 
 export interface ClientEventAutocompleteContext {
 	command: Command;
 	interaction: APIApplicationCommandAutocompleteInteraction;
-	response: ServerResponse;
+	response: HttpReply;
 }
 
 export interface ClientEventInteractionHandlerContext {
 	handler: InteractionHandler;
 	interaction: APIMessageComponentInteraction | APIModalSubmitInteraction;
-	response: ServerResponse;
+	response: HttpReply;
 }
 
 export interface ClientEvents {
@@ -42,8 +42,8 @@ export interface ClientEvents {
 	 * observable. To react to the constructor-phase hooks, use the plugin hooks themselves.
 	 */
 	pluginLoaded: [hook: PluginHook, name: string | undefined];
-	commandNameMissing: [interaction: APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
-	commandNameUnknown: [interaction: APIApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
+	commandNameMissing: [interaction: APIApplicationCommandAutocompleteInteraction, response: HttpReply];
+	commandNameUnknown: [interaction: APIApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction, response: HttpReply];
 	commandMethodUnknown: [context: ClientEventCommandContext];
 	commandRun: [context: ClientEventCommandContext];
 	commandSuccess: [context: ClientEventCommandContext, value: unknown];
@@ -53,8 +53,8 @@ export interface ClientEvents {
 	autocompleteSuccess: [context: ClientEventAutocompleteContext, value: unknown];
 	autocompleteError: [error: unknown, context: ClientEventAutocompleteContext];
 	autocompleteFinish: [context: ClientEventAutocompleteContext];
-	interactionHandlerNameInvalid: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: ServerResponse];
-	interactionHandlerNameUnknown: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: ServerResponse];
+	interactionHandlerNameInvalid: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: HttpReply];
+	interactionHandlerNameUnknown: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: HttpReply];
 	interactionHandlerRun: [context: ClientEventInteractionHandlerContext];
 	interactionHandlerSuccess: [context: ClientEventInteractionHandlerContext, value: unknown];
 	interactionHandlerError: [error: unknown, context: ClientEventInteractionHandlerContext];
