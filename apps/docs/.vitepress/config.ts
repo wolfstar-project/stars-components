@@ -12,7 +12,7 @@ export default defineConfig({
 	lastUpdated: true,
 	head: [
 		['meta', { name: 'theme-color', content: '#7657ff' }],
-		['link', { rel: 'icon', href: 'https://cdn.wolfstar.rocks/wolfstar-assets/wolfstar.png' }]
+		['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }]
 	],
 	markdown: {
 		lineNumbers: true,
