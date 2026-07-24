@@ -2,7 +2,7 @@
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
-			"outputs": ["dist/**"]
+			"outputs": [".vitepress/dist/**", "api/**", "dist/**"]
 		},
 		"lint": {
 			"dependsOn": [],

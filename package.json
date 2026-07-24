@@ -12,7 +12,7 @@
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
 		"docs:dev": "pnpm --filter @wolfstar/docs dev",
-		"docs:build": "pnpm --filter @wolfstar/docs build",
+		"docs:build": "turbo run build --filter=@wolfstar/docs...",
 		"docs:preview": "pnpm --filter @wolfstar/docs preview",
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset add",
