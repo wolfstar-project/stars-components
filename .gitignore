@@ -36,9 +36,9 @@ tsup.config.bundled*.mjs
 # Test artifacts
 coverage/
 *.junit.xml
-apps/docs/.vitepress/cache/
-apps/docs/.vitepress/dist/
-apps/docs/api/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/api/
 
 # Ignore package locks
 package-lock.json
