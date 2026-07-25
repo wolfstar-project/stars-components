@@ -40,7 +40,7 @@ Documentation-only changes can use an empty changeset.
 ## Work on the documentation
 
 ```bash
-pnpm docs:dev
+pnpm docs
 ```
 
 The docs command regenerates the API reference from all public package entry points and starts VitePress. Package guides
@@ -49,7 +49,7 @@ include the package README content, so edit `packages/<name>/README.md` when the
 Verify a production documentation build with:
 
 ```bash
-pnpm docs:build
+pnpm docs-build
 ```
 
 ## Project guidelines

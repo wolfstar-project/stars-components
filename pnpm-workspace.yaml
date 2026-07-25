@@ -15,6 +15,7 @@ strictPeerDependencies: false
 overrides:
     '@types/pg': '8.20.0'
     ansi-regex: '^6.2.2'
+    esbuild: '^0.28.0'
     minimist: '1.2.8'
 
 allowBuilds:
@@ -26,3 +27,8 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
     - '@redstardev/*'
     - unrun@0.3.1
+    - vitepress@2.0.0-alpha.18
+    - '@shikijs/vitepress-twoslash@4.3.1'
+    - vitepress-plugin-group-icons@1.7.5
+    - vitepress-plugin-llms@1.13.3
+    - markdown-it-image-size@15.0.1
