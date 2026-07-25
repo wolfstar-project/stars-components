@@ -20,7 +20,6 @@ build/
 test_out/
 .swc/
 *.tsbuildinfo
-tsup.config.bundled*.mjs
 *.zip
 *.tar
 *.tar.xz
@@ -35,9 +34,9 @@ tsup.config.bundled*.mjs
 # Test artifacts
 coverage/
 *.junit.xml
-docs/.vitepress/cache/
-docs/.vitepress/dist/
-docs/api/
+/docs/.vitepress/cache
+/docs/.vitepress/.temp
+/docs/api/
 
 # Ignore package locks
 package-lock.json
