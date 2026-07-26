@@ -23,18 +23,6 @@ function resolveBodySizeLimit(contentLength: string | null | undefined): Result.
 }
 
 /**
- * Validates that a raw body string is within the configured size limit.
- */
-export function validateBodySize(body: string, contentLength: string | null | undefined): Result.Err<string> | Result.Ok<string> {
-	const limitResult = resolveBodySizeLimit(contentLength);
-	if (limitResult.isErr()) return err(limitResult.unwrapErr());
-
-	const limit = limitResult.unwrap();
-	if (body.length > limit) return err(ErrorMessages.InvalidBodySize);
-	return ok(body);
-}
-
-/**
  * Safely reads the {@link IncomingMessage incoming message}'s body as a string.
  * @param request The incoming message to get the data from.
  * @returns The string, if it's within the body size limit.
