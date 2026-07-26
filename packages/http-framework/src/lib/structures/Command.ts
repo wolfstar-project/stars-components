@@ -29,9 +29,13 @@ export abstract class Command<Options extends Command.Options = Command.Options>
 	/**
 	 * Registers this command's application commands imperatively, without relying on decorators.
 	 *
-	 * @remarks This is called once, synchronously, right before this command's router is built. It is the
-	 * decorator-free equivalent of {@link RegisterCommand} and its siblings; a command should use either this method
-	 * or the decorators, not both.
+	 * @remarks This is invoked once, synchronously, from the base {@linkcode Command} constructor, right before this
+	 * command's router is built, and therefore before any subclass field initializers or subclass constructor body have
+	 * run. Because of this it must be declared as a method (not a class-field arrow function, which would not yet be
+	 * assigned at this point and would be silently skipped) and it must not read subclass instance state, which is still
+	 * uninitialized; it should register commands using only the provided `registry`. This matches the static, class-level
+	 * nature of the decorators: it is the decorator-free equivalent of {@link RegisterCommand} and its siblings, and a
+	 * command should use either this method or the decorators, not both.
 	 * @since 3.1.0
 	 * @param registry - The registry to register this command's application commands with.
 	 * @example
