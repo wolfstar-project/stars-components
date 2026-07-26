@@ -1,20 +1,26 @@
 # basic
 
-Minimal Discord HTTP interactions bot using `@wolfstar/http-framework` and `@wolfstar/env-utilities`.
+Minimal HTTP Discord bot matching the bootstrap used by
+[`wolfstar-project/ring`](https://github.com/wolfstar-project/ring),
+[`wolfstar-project/staryl`](https://github.com/wolfstar-project/staryl), and
+[`skyra-project/teryl`](https://github.com/skyra-project/teryl).
+
+## What it wires up
+
+- `@wolfstar/env-utilities` — load `src/.env` and typed parsers
+- `@wolfstar/shared-http-pieces/register` — shared `/info` + error listeners
+- `@wolfstar/http-framework-i18n` — locale load + `init`
+- `@wolfstar/http-framework` — `Client` → `load()` → `listen()`
+- `registerCommands()` — guild push when `REGISTRY_GUILD_ID` is set, else global
+- `@wolfstar/logger` + `@wolfstar/start-banner` — container logger and startup banner
 
 ## Setup
 
 ```bash
-cp .env.example .env
-# fill DISCORD_TOKEN and DISCORD_PUBLIC_KEY
+cp .env.example src/.env
+# fill DISCORD_TOKEN, DISCORD_PUBLIC_KEY, DISCORD_CLIENT_ID
 pnpm --filter basic dev
 ```
 
-Point Discord's Interactions Endpoint URL at a public HTTPS URL that forwards to this process (default port `3000`, path `/` or `HTTP_POST_PATH`).
-
-Optional: `REGISTER_COMMANDS=true` (and preferably `DISCORD_GUILD_ID`) to publish `/ping` on startup.
-
-## Layout
-
-- `src/index.ts` — client bootstrap, piece load, listen
-- `src/commands/ping.ts` — sample chat-input command
+Point Discord's Interactions Endpoint URL at a public HTTPS URL that forwards to
+`HTTP_ADDRESS:HTTP_PORT` (default `0.0.0.0:3000`).

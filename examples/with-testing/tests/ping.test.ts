@@ -1,14 +1,14 @@
-import { ChatInputApplicationCommandInteractionData, createTestHarness } from '@wolfstar/http-framework-test-utils';
 import { container } from '@wolfstar/http-framework';
+import { ChatInputApplicationCommandInteractionData, createTestHarness } from '@wolfstar/http-framework-test-utils';
 import { MessageFlags } from 'discord-api-types/v10';
 import { describe, expect, it } from 'vitest';
-import { PingCommand } from '../src/commands/ping.js';
+import { UserCommand } from '../src/commands/ping.js';
 
 describe('ping command', () => {
 	it('replies with Pong', async () => {
 		const { client, runner } = createTestHarness();
 
-		await container.stores.loadPiece({ name: 'ping', piece: PingCommand, store: 'commands' });
+		await container.stores.loadPiece({ name: 'ping', piece: UserCommand, store: 'commands' });
 		await client.load({ baseUserDirectory: null });
 
 		const result = await runner.run({

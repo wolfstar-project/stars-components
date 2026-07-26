@@ -23,7 +23,8 @@
 		},
 		"examples/*": {
 			"entry": ["src/**/*.ts"],
-			"project": ["src/**/*.ts", "tsdown.config.ts"]
+			"project": ["src/**/*.ts", "tsdown.config.ts"],
+			"ignoreDependencies": ["@sapphire/pieces"]
 		},
 		"examples/with-testing": {
 			"entry": ["src/**/*.ts", "tests/**/*.ts"],

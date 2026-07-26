@@ -1,12 +1,10 @@
 # with-subcommands
 
-Demonstrates `@RegisterSubcommand` with number options (`/math add`).
-
-## Setup
+Same HTTP bot bootstrap as [`basic`](../basic), plus a `/math` command with
+`@RegisterSubcommand` — the pattern used by ring's `config` and staryl's
+`twitchsubscriptions` commands.
 
 ```bash
-cp .env.example .env
+cp .env.example src/.env
 pnpm --filter with-subcommands dev
 ```
-
-Same Discord HTTPS endpoint requirements as [`basic`](../basic).

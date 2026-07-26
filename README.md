@@ -38,15 +38,17 @@
 
 ## Examples
 
-Runnable samples live under [`examples/`](./examples). From the repository root:
+HTTP Discord bot samples under [`examples/`](./examples), structured like production
+WolfStar/Skyra bots (`ring`, `staryl`, `teryl`):
 
 ```bash
 pnpm install
 pnpm build
+cp examples/basic/.env.example examples/basic/src/.env
 pnpm --filter basic dev
 ```
 
-See [`examples/README.md`](./examples/README.md) for the full list (`basic`, `with-subcommands`, `with-i18n`, `with-testing`).
+See [`examples/README.md`](./examples/README.md) for `basic`, `with-subcommands`, `with-i18n`, and `with-testing`.
 
 ---
 

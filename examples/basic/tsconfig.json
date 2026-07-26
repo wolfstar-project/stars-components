@@ -1,19 +1,19 @@
 {
 	"compilerOptions": {
-		"target": "ES2022",
-		"module": "Node16",
-		"moduleResolution": "Node16",
+		"target": "ESNext",
+		"lib": ["ESNext"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
 		"strict": true,
-		"esModuleInterop": true,
 		"skipLibCheck": true,
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-		"outDir": "./dist",
-		"rootDir": "./src",
-		"noEmit": true
+		"noEmit": true,
+		"resolvePackageJsonImports": true,
+		"types": ["node"],
+		"paths": {
+			"#lib/*": ["./src/lib/*"]
+		}
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules", "dist"]

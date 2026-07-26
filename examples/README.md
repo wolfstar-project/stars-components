@@ -1,42 +1,49 @@
 # Examples
 
-Runnable samples for the `@wolfstar/*` packages in this monorepo. Prefer these over copying snippets from docs when you want a full project layout.
+Runnable HTTP Discord bots that mirror the structure used in production WolfStar /
+Skyra bots (`ring`, `staryl`, `teryl`, `iriss`, …).
 
-| Example                                  | Shows                                                     |
-| ---------------------------------------- | --------------------------------------------------------- |
-| [`basic`](./basic)                       | Minimal HTTP Discord bot with a `/ping` command           |
-| [`with-subcommands`](./with-subcommands) | Chat-input subcommands and options                        |
-| [`with-i18n`](./with-i18n)               | `@wolfstar/http-framework-i18n` locales and keyed replies |
-| [`with-testing`](./with-testing)         | Vitest + `@wolfstar/http-framework-test-utils`            |
+| Example                                  | Shows                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------- |
+| [`basic`](./basic)                       | Canonical bootstrap: env setup, shared pieces, i18n, `registerCommands`, banner |
+| [`with-subcommands`](./with-subcommands) | `@RegisterSubcommand` + localized options (`/math`)                             |
+| [`with-i18n`](./with-i18n)               | Multi-locale `LanguageKeys` (`en-US` / `es-ES`)                                 |
+| [`with-testing`](./with-testing)         | Vitest + `@wolfstar/http-framework-test-utils`                                  |
+
+## Canonical layout (matches ring / staryl / teryl)
+
+```text
+src/
+  main.ts                 # setup → i18n → Client → load → registerCommands → listen
+  commands/               # Sapphire Command store
+  lib/setup/all.ts        # envRun + shared-http-pieces/register + setRepository
+  lib/setup/logger.ts     # container.logger = new Logger()
+  lib/types/augments.ts   # Env interface augmentation
+  lib/i18n/LanguageKeys/  # T() / FT() key constants
+  locales/{{lng}}/{{ns}}.json
+  .env                    # copied from .env.example (gitignored)
+```
 
 ## Prerequisites
 
-1. Install dependencies from the repository root (`pnpm install`).
-2. Build the workspace packages so `workspace:*` imports resolve (`pnpm build`).
-3. For the runnable bots (`basic`, `with-subcommands`, `with-i18n`), copy `.env.example` to `.env` and fill in Discord credentials.
+1. From the repository root: `pnpm install && pnpm build`
+2. For runnable bots, `cp .env.example src/.env` and fill Discord credentials
+3. Discord interactions need a **public HTTPS** endpoint (tunnel locally)
 
-Discord interactions require a **public HTTPS** endpoint. Locally, expose the bot with a tunnel (Cloudflare Tunnel, ngrok, etc.) and set that URL as the application's Interactions Endpoint URL.
-
-## Run an example
+## Run
 
 ```bash
-# from the repository root
 pnpm --filter basic dev
 pnpm --filter with-subcommands dev
 pnpm --filter with-i18n dev
-
-# tests only (no Discord credentials)
 pnpm --filter with-testing test
 ```
 
-Optional: set `REGISTER_COMMANDS=true` to push command definitions on startup. Set `DISCORD_GUILD_ID` as well to register guild commands (faster while iterating) instead of global ones.
+`registerCommands()` (from `@wolfstar/shared-http-pieces`) pushes guild commands when
+`REGISTRY_GUILD_ID` is set, otherwise global commands — same as ring/staryl/teryl.
 
-## Scaffolding a new app
-
-For a greenfield project outside this repo, use the published CLI:
+## Scaffolding outside the monorepo
 
 ```bash
 pnpm create @wolfstar/http-framework my-discord-bot
 ```
-
-These examples stay in the monorepo as living documentation and use `workspace:*` versions of the packages.

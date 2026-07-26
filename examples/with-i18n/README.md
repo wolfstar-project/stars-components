@@ -1,14 +1,15 @@
 # with-i18n
 
-Uses `@wolfstar/http-framework-i18n` to reply with locale-aware strings. Locale files live under `src/locales/{{lng}}/{{ns}}.json`.
+Full `http-framework-i18n` flow used by teryl/staryl: `LanguageKeys` with `T`/`FT`,
+`applyLocalizedBuilder`, and locale JSON under `src/locales/{{lng}}/{{ns}}.json`.
 
-## Setup
+Ships `en-US` and `es-ES`. Change your Discord client language (or the guild preferred
+locale) to see `/greet` switch.
 
 ```bash
-cp .env.example .env
+cp .env.example src/.env
 pnpm --filter with-i18n dev
 ```
 
-Switch your Discord client language (or guild preferred locale) between English and Spanish to see `/ping` change.
-
-The create CLI `--i18n` flag only adds the dependency; this example shows the full `load` → `init` → `resolveUserKey` flow.
+The create CLI `--i18n` flag only adds the dependency; this example shows the real
+`load` → `init` → `resolveUserKey` path used in production bots.

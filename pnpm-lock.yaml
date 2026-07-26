@@ -171,15 +171,33 @@ importers:
 
   examples/basic:
     dependencies:
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
       '@wolfstar/env-utilities':
         specifier: workspace:*
         version: link:../../packages/env-utilities
       '@wolfstar/http-framework':
         specifier: workspace:*
         version: link:../../packages/http-framework
+      '@wolfstar/http-framework-i18n':
+        specifier: workspace:*
+        version: link:../../packages/http-framework-i18n
+      '@wolfstar/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@wolfstar/shared-http-pieces':
+        specifier: workspace:*
+        version: link:../../packages/shared-http-pieces
+      '@wolfstar/start-banner':
+        specifier: workspace:*
+        version: link:../../packages/start-banner
       discord-api-types:
         specifier: ^0.38.8
         version: 0.38.48
+      gradient-string:
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@types/node':
         specifier: 22.15.21
@@ -193,6 +211,9 @@ importers:
 
   examples/with-i18n:
     dependencies:
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
       '@wolfstar/env-utilities':
         specifier: workspace:*
         version: link:../../packages/env-utilities
@@ -202,9 +223,21 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
+      '@wolfstar/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@wolfstar/shared-http-pieces':
+        specifier: workspace:*
+        version: link:../../packages/shared-http-pieces
+      '@wolfstar/start-banner':
+        specifier: workspace:*
+        version: link:../../packages/start-banner
       discord-api-types:
         specifier: ^0.38.8
         version: 0.38.48
+      gradient-string:
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@types/node':
         specifier: 22.15.21
@@ -218,15 +251,33 @@ importers:
 
   examples/with-subcommands:
     dependencies:
-      '@discordjs/builders':
-        specifier: ^1.14.1
-        version: 1.14.1
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
       '@wolfstar/env-utilities':
         specifier: workspace:*
         version: link:../../packages/env-utilities
       '@wolfstar/http-framework':
         specifier: workspace:*
         version: link:../../packages/http-framework
+      '@wolfstar/http-framework-i18n':
+        specifier: workspace:*
+        version: link:../../packages/http-framework-i18n
+      '@wolfstar/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@wolfstar/shared-http-pieces':
+        specifier: workspace:*
+        version: link:../../packages/shared-http-pieces
+      '@wolfstar/start-banner':
+        specifier: workspace:*
+        version: link:../../packages/start-banner
+      discord-api-types:
+        specifier: ^0.38.8
+        version: 0.38.48
+      gradient-string:
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       '@types/node':
         specifier: 22.15.21
@@ -2609,6 +2660,9 @@ packages:
   '@types/tedious@4.0.14':
     resolution: {integrity: sha512-KHPsfX/FoVbUGbyYvk1q9MMQHLPeRZhRJZdO45Q4YjvFkv4hMNghCWTvy7rdKessBsmtz4euWCWAB6/tVpI1Iw==}
 
+  '@types/tinycolor2@1.4.6':
+    resolution: {integrity: sha512-iEN8J0BoMnsWBqjVbWH/c0G0Hh7O21lpR2/+PrvAVgWdzL7eexIFm4JN/Wn10PTcmNdtS6U67r499mlWMXOxNw==}
+
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
 
@@ -2942,6 +2996,10 @@ packages:
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
+
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
 
   character-entities-html4@2.1.0:
     resolution: {integrity: sha512-1v7fgQRj6hnSwFpq1Eu0ynr/CDEw0rXo2B61qXrLNdHZmPKgb7fqS1a2JwF0rISo9q77jDI8VMEHoApn8qDoZA==}
@@ -3447,6 +3505,10 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  gradient-string@3.0.0:
+    resolution: {integrity: sha512-frdKI4Qi8Ihp4C6wZNB565de/THpIaw3DjP5ku87M+N9rNSGmPTjfkq61SdRXB7eCaL8O1hkKDvf6CDMtOzIAg==}
+    engines: {node: '>=14'}
 
   gray-matter@4.0.3:
     resolution: {integrity: sha512-5v6yZd4JK3eMI3FqqCouswVqwugaA9r4dNZB1wwcmrD02QkV5H0y7XBQW8QwQqEaZY1pM9aqORSORhJRdNK44Q==}
@@ -4686,6 +4748,9 @@ packages:
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
+  tinycolor2@1.6.0:
+    resolution: {integrity: sha512-XPaBkWQJdsf3pLKJV9p4qN/S+fm2Oj8AIPo1BTUhg5oxkvm9+SVEGFdhyOz7tTdUTfvxMiAs4sp6/eZO2Ew+pw==}
+
   tinyexec@1.2.4:
     resolution: {integrity: sha512-SHf/r48b7vOrjve9PxJo3MN5v5yuyjHvdUcrQffT3WXMUfnGmHDVbC4k3sHJaJTgZCwpUplIaAo5ANtMyp3YHg==}
     engines: {node: '>=18'}
@@ -4693,6 +4758,9 @@ packages:
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
+
+  tinygradient@1.1.5:
+    resolution: {integrity: sha512-8nIfc2vgQ4TeLnk2lFj4tRLvvJwEfQuabdsmvDdQPT0xlk9TaNtpGd6nNRxXoK6vQhN6RSzj+Cnp5tTQmpxmbw==}
 
   tinypool@2.1.0:
     resolution: {integrity: sha512-Pugqs6M0m7Lv1I7FtxN4aoyToKg1C4tu+/381vH35y8oENM/Ai7f7C4StcoK4/+BSw9ebcS8jRiVrORFKCALLw==}
@@ -7011,6 +7079,8 @@ snapshots:
     dependencies:
       '@types/node': 22.15.21
 
+  '@types/tinycolor2@1.4.6': {}
+
   '@types/unist@3.0.3': {}
 
   '@types/web-bluetooth@0.0.21': {}
@@ -7370,6 +7440,8 @@ snapshots:
     dependencies:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
+
+  chalk@5.6.2: {}
 
   character-entities-html4@2.1.0: {}
 
@@ -7884,6 +7956,11 @@ snapshots:
       slash: 3.0.0
 
   graceful-fs@4.2.11: {}
+
+  gradient-string@3.0.0:
+    dependencies:
+      chalk: 5.6.2
+      tinygradient: 1.1.5
 
   gray-matter@4.0.3:
     dependencies:
@@ -9336,12 +9413,19 @@ snapshots:
 
   tinybench@2.9.0: {}
 
+  tinycolor2@1.6.0: {}
+
   tinyexec@1.2.4: {}
 
   tinyglobby@0.2.17:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
+
+  tinygradient@1.1.5:
+    dependencies:
+      '@types/tinycolor2': 1.4.6
+      tinycolor2: 1.6.0
 
   tinypool@2.1.0: {}
 
