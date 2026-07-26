@@ -1,8 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WolfStar">
   <defs>
     <linearGradient id="star" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7657FF"/>
-      <stop offset="0.5" stop-color="#FFE566"/>
+      <stop stop-color="#5B3DFF"/>
+      <stop offset="0.42" stop-color="#8B6CFF"/>
+      <stop offset="0.72" stop-color="#FFE566"/>
       <stop offset="1" stop-color="#41D1FF"/>
     </linearGradient>
   </defs>

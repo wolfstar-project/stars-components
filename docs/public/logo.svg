@@ -2,8 +2,9 @@
   <title>WolfStar</title>
   <defs>
     <linearGradient id="star" x1="18" y1="12" x2="110" y2="116" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7657FF"/>
-      <stop offset="0.5" stop-color="#FFE566"/>
+      <stop stop-color="#5B3DFF"/>
+      <stop offset="0.42" stop-color="#8B6CFF"/>
+      <stop offset="0.72" stop-color="#FFE566"/>
       <stop offset="1" stop-color="#41D1FF"/>
     </linearGradient>
   </defs>
