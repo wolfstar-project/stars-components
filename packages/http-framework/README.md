@@ -9,6 +9,7 @@ A powerful HTTP framework for building your Discord bots, powered by [`node:http
 - Seamless integration with low-level libraries
 - Thin wrapper on top of raw data for maximum performance
 - Universal Fetch adapter (`createHandler`) to mount on Fastify, Nitro, Hono, Workers, and more — while `Client.listen()` on `node:http` keeps the same behavior
+- First-party Bun adapter (`createServer` via `Bun.serve`)
 
 ## Usage
 
@@ -118,7 +119,7 @@ await client.load();
 
 const handler = createHandler(client, { postPath: '/interactions' });
 
-// Cloudflare Workers / Bun / Deno:
+// Cloudflare Workers / Deno:
 // export default { fetch: handler };
 
 // Nitro (h3):
@@ -141,6 +142,23 @@ const handler = createHandler(client, { postPath: '/interactions' });
 //     return reply.send(Buffer.from(await response.arrayBuffer()));
 //   }
 // });
+```
+
+### Bun adapter
+
+On Bun, use the dedicated `Bun.serve` wrapper (still powered by the Fetch handler under the hood):
+
+```typescript
+import { Client } from '@wolfstar/http-framework';
+import { createServer } from '@wolfstar/http-framework/adapters/bun';
+
+const client = new Client({
+	discordToken: process.env.DISCORD_TOKEN,
+	discordPublicKey: process.env.DISCORD_PUBLIC_KEY
+});
+await client.load();
+
+createServer(client, { port: 3000, postPath: '/interactions' });
 ```
 
 ### ApplicationCommandRegistry

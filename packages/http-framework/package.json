@@ -41,6 +41,12 @@
 				"types": "./dist/esm/adapters/fetch/index.d.ts",
 				"default": "./dist/esm/adapters/fetch/index.js"
 			}
+		},
+		"./adapters/bun": {
+			"import": {
+				"types": "./dist/esm/adapters/bun/index.d.ts",
+				"default": "./dist/esm/adapters/bun/index.js"
+			}
 		}
 	},
 	"publishConfig": {
