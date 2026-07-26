@@ -6,9 +6,9 @@ import { TextDecoder } from 'node:util';
 import { ErrorMessages } from './constants.js';
 
 /**
- * Validates that a raw body string is within the configured size limit.
+ * Resolves the effective body size limit from the client config and an optional Content-Length header.
  */
-export function validateBodySize(body: string, contentLength: string | null | undefined): Result.Err<string> | Result.Ok<string> {
+function resolveBodySizeLimit(contentLength: string | null | undefined): Result.Err<string> | Result.Ok<number> {
 	let limit = container.client.bodySizeLimit;
 
 	if (!isNullishOrEmpty(contentLength)) {
@@ -19,6 +19,17 @@ export function validateBodySize(body: string, contentLength: string | null | un
 		limit = parsed;
 	}
 
+	return ok(limit);
+}
+
+/**
+ * Validates that a raw body string is within the configured size limit.
+ */
+export function validateBodySize(body: string, contentLength: string | null | undefined): Result.Err<string> | Result.Ok<string> {
+	const limitResult = resolveBodySizeLimit(contentLength);
+	if (limitResult.isErr()) return err(limitResult.unwrapErr());
+
+	const limit = limitResult.unwrap();
 	if (body.length > limit) return err(ErrorMessages.InvalidBodySize);
 	return ok(body);
 }
@@ -29,19 +40,12 @@ export function validateBodySize(body: string, contentLength: string | null | un
  * @returns The string, if it's within the body size limit.
  */
 export async function getSafeTextBody(request: IncomingMessage): Promise<Result.Err<string> | Result.Ok<string>> {
-	let limit = container.client.bodySizeLimit;
+	const contentLengthHeader = request.headers['content-length'];
+	const contentLength = typeof contentLengthHeader === 'string' ? contentLengthHeader : contentLengthHeader?.[0];
+	const limitResult = resolveBodySizeLimit(contentLength);
+	if (limitResult.isErr()) return err(limitResult.unwrapErr());
 
-	// Validate the Content-Length header:
-	if (!isNullishOrEmpty(request.headers['content-length'])) {
-		const parsed = Number(request.headers['content-length']);
-		if (!Number.isSafeInteger(parsed)) return err(ErrorMessages.InvalidContentLengthInteger);
-		if (parsed <= 0) return err(ErrorMessages.InvalidContentLengthNegative);
-		if (parsed > limit) return err(ErrorMessages.InvalidContentLengthTooBig);
-
-		// If it's a valid length, set the limit to it.
-		limit = parsed;
-	}
-
+	const limit = limitResult.unwrap();
 	const decoder = new TextDecoder();
 
 	let output = '';
@@ -65,19 +69,12 @@ export async function getSafeTextBody(request: IncomingMessage): Promise<Result.
  * Safely reads a Web {@link Request}'s body as a string within the body size limit.
  */
 export async function getSafeTextBodyFromWebRequest(request: Request): Promise<Result.Err<string> | Result.Ok<string>> {
-	const contentLength = request.headers.get('content-length');
-	let limit = container.client.bodySizeLimit;
+	const limitResult = resolveBodySizeLimit(request.headers.get('content-length'));
+	if (limitResult.isErr()) return err(limitResult.unwrapErr());
 
-	if (!isNullishOrEmpty(contentLength)) {
-		const parsed = Number(contentLength);
-		if (!Number.isSafeInteger(parsed)) return err(ErrorMessages.InvalidContentLengthInteger);
-		if (parsed <= 0) return err(ErrorMessages.InvalidContentLengthNegative);
-		if (parsed > limit) return err(ErrorMessages.InvalidContentLengthTooBig);
-		limit = parsed;
-	}
-
+	const limit = limitResult.unwrap();
 	if (!request.body) {
-		return validateBodySize('', contentLength);
+		return ok('');
 	}
 
 	const decoder = new TextDecoder();
