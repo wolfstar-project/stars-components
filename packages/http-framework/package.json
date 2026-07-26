@@ -47,6 +47,12 @@
 				"types": "./dist/esm/adapters/bun/index.d.ts",
 				"default": "./dist/esm/adapters/bun/index.js"
 			}
+		},
+		"./adapters/cloudflare": {
+			"import": {
+				"types": "./dist/esm/adapters/cloudflare/index.d.ts",
+				"default": "./dist/esm/adapters/cloudflare/index.js"
+			}
 		}
 	},
 	"publishConfig": {
