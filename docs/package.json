@@ -4,12 +4,9 @@
 	"type": "module",
 	"scripts": {
 		"api": "typedoc --options typedoc.json",
-		"docs": "pnpm api && vitepress dev .",
-		"docs-build": "pnpm api && vitepress build .",
-		"docs-serve": "vitepress serve .",
-		"dev": "pnpm docs",
-		"build": "pnpm docs-build",
-		"preview": "pnpm docs-serve",
+		"dev": "pnpm api && vitepress dev .",
+		"build": "pnpm api && vitepress build .",
+		"serve": "vitepress serve",
 		"typecheck": "vue-tsc --noEmit -p tsconfig.json"
 	},
 	"devDependencies": {
