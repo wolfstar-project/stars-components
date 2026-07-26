@@ -87,9 +87,10 @@ Stars Components is a TypeScript monorepo of focused packages for Discord HTTP i
 	},
 	themeConfig: {
 		logo: {
-			src: 'https://cdn.wolfstar.rocks/wolfstar-assets/wolfstar.png',
+			src: '/logo.svg',
 			alt: 'WolfStar'
 		},
+		siteTitle: 'Stars Components',
 		nav: [
 			{ text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },
 			{ text: 'Packages', link: '/packages/', activeMatch: '/packages/' },

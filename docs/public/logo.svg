@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="WolfStar">
+  <title>WolfStar</title>
+  <defs>
+    <linearGradient id="ws-warm" x1="64" y1="8" x2="64" y2="72" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE566"/>
+      <stop offset="0.45" stop-color="#FF8F5C"/>
+      <stop offset="1" stop-color="#DC52C8"/>
+    </linearGradient>
+    <linearGradient id="ws-cool" x1="64" y1="40" x2="64" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DC52C8"/>
+      <stop offset="0.55" stop-color="#7657FF"/>
+      <stop offset="1" stop-color="#41D1FF"/>
+    </linearGradient>
+    <linearGradient id="ws-inner" x1="64" y1="42" x2="64" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A998FF"/>
+      <stop offset="1" stop-color="#5B8CFF"/>
+    </linearGradient>
+  </defs>
+  <path
+    fill="url(#ws-cool)"
+    d="M64 6
+       C67 28 78 39 100 42
+       C78 45 67 56 64 78
+       C61 56 50 45 28 42
+       C50 39 61 28 64 6Z"
+  />
+  <path
+    fill="url(#ws-warm)"
+    d="M64 6
+       C66.2 22 74 31.5 90 36
+       C74 37.5 67.2 44 64 56
+       C60.8 44 54 37.5 38 36
+       C54 31.5 61.8 22 64 6Z"
+  />
+  <path
+    fill="url(#ws-inner)"
+    opacity="0.92"
+    d="M64 44
+       L78 58
+       L64 96
+       L50 58Z"
+  />
+  <circle cx="64" cy="58" r="5.5" fill="#B3EE8F"/>
+</svg>

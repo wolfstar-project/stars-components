@@ -1,11 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WolfStar">
   <defs>
-    <linearGradient id="g" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7657ff"/>
-      <stop offset="0.58" stop-color="#dc52c8"/>
-      <stop offset="1" stop-color="#ff8f5c"/>
+    <linearGradient id="f-warm" x1="32" y1="6" x2="32" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE566"/>
+      <stop offset="0.5" stop-color="#FF8F5C"/>
+      <stop offset="1" stop-color="#DC52C8"/>
+    </linearGradient>
+    <linearGradient id="f-cool" x1="32" y1="22" x2="32" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DC52C8"/>
+      <stop offset="0.55" stop-color="#7657FF"/>
+      <stop offset="1" stop-color="#41D1FF"/>
+    </linearGradient>
+    <linearGradient id="f-inner" x1="32" y1="24" x2="32" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A998FF"/>
+      <stop offset="1" stop-color="#5B8CFF"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="16" fill="#17151e"/>
-  <path d="m32 8 6.4 16.2L56 25.4 42.5 36.6l4.4 17L32 44.2 17.1 53.6l4.4-17L8 25.4l17.6-1.2L32 8Z" fill="url(#g)"/>
+  <rect width="64" height="64" rx="14" fill="#17151e"/>
+  <path
+    fill="url(#f-cool)"
+    d="M32 8
+       C33.6 19 39.2 24.6 50 26
+       C39.2 27.4 33.6 33 32 44
+       C30.4 33 24.8 27.4 14 26
+       C24.8 24.6 30.4 19 32 8Z"
+  />
+  <path
+    fill="url(#f-warm)"
+    d="M32 8
+       C33.1 16.2 37.2 21 45 23.2
+       C37.2 24 33.6 27.4 32 33.5
+       C30.4 27.4 26.8 24 19 23.2
+       C26.8 21 30.9 16.2 32 8Z"
+  />
+  <path
+    fill="url(#f-inner)"
+    opacity="0.92"
+    d="M32 25 L39.5 32.5 L32 50 L24.5 32.5Z"
+  />
+  <circle cx="32" cy="32.5" r="2.8" fill="#B3EE8F"/>
 </svg>

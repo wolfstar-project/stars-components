@@ -6,7 +6,7 @@ hero:
     text: Build the Star Network
     tagline: Typed, composable packages for Discord interactions, infrastructure, integrations, and testing.
     image:
-        src: https://cdn.wolfstar.rocks/wolfstar-assets/wolfstar.png
+        src: /logo.svg
         alt: WolfStar
     actions:
         - theme: brand
