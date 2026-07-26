@@ -38,8 +38,7 @@
 
 ## Examples
 
-HTTP Discord bot samples under [`examples/`](./examples), structured like production
-WolfStar/Skyra bots (`ring`, `staryl`, `teryl`):
+HTTP Discord bot samples under [`examples/`](./examples):
 
 ```bash
 pnpm install

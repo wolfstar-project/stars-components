@@ -1,8 +1,7 @@
 # with-testing
 
 Exercises a real `UserCommand` through `@wolfstar/http-framework-test-utils` without
-Discord credentials or an HTTP port — the same approach documented for Skyra/WolfStar
-HTTP bots.
+Discord credentials or an HTTP port.
 
 ```bash
 pnpm --filter with-testing test

@@ -1,9 +1,6 @@
 # basic
 
-Minimal HTTP Discord bot matching the bootstrap used by
-[`wolfstar-project/ring`](https://github.com/wolfstar-project/ring),
-[`wolfstar-project/staryl`](https://github.com/wolfstar-project/staryl), and
-[`skyra-project/teryl`](https://github.com/skyra-project/teryl).
+Minimal HTTP Discord bot using the `@wolfstar/*` HTTP framework stack.
 
 ## What it wires up
 

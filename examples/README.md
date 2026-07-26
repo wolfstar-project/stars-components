@@ -1,7 +1,6 @@
 # Examples
 
-Runnable HTTP Discord bots that mirror the structure used in production WolfStar /
-Skyra bots (`ring`, `staryl`, `teryl`, `iriss`, …).
+Runnable HTTP Discord bots for the `@wolfstar/*` packages in this monorepo.
 
 | Example                                  | Shows                                                                           |
 | ---------------------------------------- | ------------------------------------------------------------------------------- |
@@ -10,7 +9,7 @@ Skyra bots (`ring`, `staryl`, `teryl`, `iriss`, …).
 | [`with-i18n`](./with-i18n)               | Multi-locale `LanguageKeys` (`en-US` / `es-ES`)                                 |
 | [`with-testing`](./with-testing)         | Vitest + `@wolfstar/http-framework-test-utils`                                  |
 
-## Canonical layout (matches ring / staryl / teryl)
+## Canonical layout
 
 ```text
 src/
@@ -40,7 +39,7 @@ pnpm --filter with-testing test
 ```
 
 `registerCommands()` (from `@wolfstar/shared-http-pieces`) pushes guild commands when
-`REGISTRY_GUILD_ID` is set, otherwise global commands — same as ring/staryl/teryl.
+`REGISTRY_GUILD_ID` is set, otherwise global commands.
 
 ## Scaffolding outside the monorepo
 

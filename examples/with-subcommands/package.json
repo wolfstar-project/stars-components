@@ -2,7 +2,7 @@
 	"name": "with-subcommands",
 	"version": "0.0.0",
 	"private": true,
-	"description": "WolfStar HTTP bot example with chat-input subcommands (ring/staryl style)",
+	"description": "WolfStar HTTP bot example with chat-input subcommands",
 	"type": "module",
 	"main": "dist/main.js",
 	"imports": {

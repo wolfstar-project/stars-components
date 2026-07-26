@@ -5,7 +5,7 @@ import '#lib/setup/logger';
 import '@wolfstar/shared-http-pieces/register';
 
 export function setup() {
-	// From dist/lib/setup → src/.env (same path pattern as ring/staryl/teryl)
+	// From dist/lib/setup → src/.env
 	envRun(new URL('../../../src/.env', import.meta.url));
 
 	setRepository('stars-components');

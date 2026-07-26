@@ -2,7 +2,7 @@
 	"name": "basic",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Minimal WolfStar HTTP Discord bot matching ring/staryl/teryl bootstrap",
+	"description": "Minimal WolfStar HTTP Discord bot example",
 	"type": "module",
 	"main": "dist/main.js",
 	"imports": {
