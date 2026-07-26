@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WolfStar">
+  <defs>
+    <linearGradient id="star" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5B3DFF"/>
+      <stop offset="0.42" stop-color="#8B6CFF"/>
+      <stop offset="0.72" stop-color="#FFE566"/>
+      <stop offset="1" stop-color="#41D1FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#17151e"/>
+  <path
+    fill="url(#star)"
+    d="M32 12 L37.29 26.72 L52.92 27.2 L40.56 36.78 L44.93 51.8 L32 43 L19.07 51.8 L23.44 36.78 L11.08 27.2 L26.71 26.72 Z"
+  />
+</svg>

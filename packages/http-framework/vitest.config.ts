@@ -4,7 +4,6 @@ import configShared from '../../vitest.shared.js';
 
 export default defineProject(
 	mergeConfig(configShared, {
-		esbuild: { target: 'es2021' },
 		resolve: {
 			alias: [
 				{
