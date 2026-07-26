@@ -12,9 +12,5 @@
 		"types": ["node", "vitest/globals"]
 	},
 	"include": ["src/**/*.ts", "tests/**/*.ts", "vitest.setup.ts"],
-<<<<<<< HEAD
 	"exclude": ["node_modules", "dist", "vitest.config.ts"]
-=======
-	"exclude": ["node_modules", "dist"]
->>>>>>> 9d58d25 (docs(examples): mirror ring/staryl/teryl HTTP bot bootstrap)
 }
