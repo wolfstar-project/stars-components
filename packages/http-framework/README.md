@@ -82,6 +82,59 @@ interface Args {
 }
 ```
 
+### Registering commands without decorators
+
+If you don't want to rely on TS decorators (for example, when writing plain JavaScript, or [`@sapphire/framework`]-style
+codebases), you can instead override the `registerApplicationCommands` method, which receives a per-command registry
+with the same capabilities as the decorators above:
+
+```typescript
+import { Command } from '@wolfstar/http-framework';
+
+export class UserCommand extends Command {
+	registerApplicationCommands(registry) {
+		registry.registerChatInputCommand((builder) =>
+			builder //
+				.setName('ping')
+				.setDescription('Runs a network connection test with me')
+		);
+	}
+
+	chatInputRun(interaction) {
+		return interaction.sendMessage({ content: 'Pong!' });
+	}
+}
+```
+
+Subcommands, subcommand groups, context menu commands, and guild restriction are all available on the registry:
+
+```typescript
+import { Command } from '@wolfstar/http-framework';
+
+export class UserCommand extends Command {
+	registerApplicationCommands(registry) {
+		registry
+			.registerChatInputCommand((builder) => builder.setName('math').setDescription('Does some maths.'))
+			.registerSubcommand((builder) => buildSubcommandBuilders(builder, 'add', 'Adds the first number to the second number'), 'add')
+			.registerSubcommand(
+				(builder) => buildSubcommandBuilders(builder, 'subtract', 'Subtracts the second number from the first number'),
+				'subtract'
+			);
+	}
+
+	add(interaction, { first, second }) {
+		return interaction.sendMessage({ content: `The result is: ${first + second}` });
+	}
+
+	subtract(interaction, { first, second }) {
+		return interaction.sendMessage({ content: `The result is: ${first - second}` });
+	}
+}
+```
+
+> **Note**: this is an alternative to the decorators, not a replacement — both approaches share the same underlying
+> registry and can be mixed across different commands in the same project.
+
 ### Client
 
 The `Client` class contains the HTTP server, powered by [`node:http`], it also registers a handler that processes whether or not the HTTP request comes from Discord and processes the information accordingly, handling the heavyweight in the background.
@@ -142,3 +195,4 @@ await applicationCommandRegistry.pushGuildRestrictedCommands();
 [`node:http`]: https://nodejs.org/api/http.html
 [`@discordjs/rest`]: https://www.npmjs.com/package/@discordjs/rest
 [`@sapphire/pieces`]: https://www.npmjs.com/package/@sapphire/pieces
+[`@sapphire/framework`]: https://sapphirejs.dev/docs/Guide/commands/application-commands/application-command-registry/

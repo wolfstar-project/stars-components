@@ -2,6 +2,7 @@ import { Piece } from '@sapphire/pieces';
 import type { Awaitable, NonNullObject } from '@sapphire/utilities';
 import type { AutocompleteInteractionArguments, Interactions } from '../interactions/index.js';
 import { CommandRouter } from '../interactions/router/CommandRouter.js';
+import { CommandRegistry } from '../interactions/shared/CommandRegistry.js';
 
 export abstract class Command<Options extends Command.Options = Command.Options> extends Piece<Options, 'commands'> {
 	/**
@@ -12,6 +13,7 @@ export abstract class Command<Options extends Command.Options = Command.Options>
 
 	public constructor(context: Command.LoaderContext, options: Options = {} as Options) {
 		super(context, options);
+		this.registerApplicationCommands?.(new CommandRegistry(this.constructor as typeof Command));
 		this.router = new CommandRouter(this);
 	}
 
@@ -23,6 +25,33 @@ export abstract class Command<Options extends Command.Options = Command.Options>
 	public get registry() {
 		return this.container.applicationCommandRegistry.get(this.constructor as typeof Command) ?? null;
 	}
+
+	/**
+	 * Registers this command's application commands imperatively, without relying on decorators.
+	 *
+	 * @remarks This is called once, synchronously, right before this command's router is built. It is the
+	 * decorator-free equivalent of {@link RegisterCommand} and its siblings; a command should use either this method
+	 * or the decorators, not both.
+	 * @since 3.1.0
+	 * @param registry - The registry to register this command's application commands with.
+	 * @example
+	 * ```typescript
+	 * import { Command } from '@wolfstar/http-framework';
+	 *
+	 * export class UserCommand extends Command {
+	 * 	public override registerApplicationCommands(registry: Command.Registry) {
+	 * 		registry.registerChatInputCommand((builder) =>
+	 * 			builder.setName('ping').setDescription('Runs a network connection test with me')
+	 * 		);
+	 * 	}
+	 *
+	 * 	public override chatInputRun(interaction: Command.ChatInputInteraction) {
+	 * 		return interaction.reply({ content: 'Pong!' });
+	 * 	}
+	 * }
+	 * ```
+	 */
+	public registerApplicationCommands?(registry: Command.Registry): unknown;
 
 	/**
 	 * Responds to the chat input command for this command
@@ -61,6 +90,8 @@ export namespace Command {
 
 	export type Interaction = ChatInputInteraction | AutocompleteInteraction | UserInteraction | MessageInteraction;
 	export type InteractionData = Interaction['data'];
+
+	export type Registry = CommandRegistry;
 
 	// Piece re-exports
 	/** @deprecated Use {@linkcode LoaderContext} instead. */
