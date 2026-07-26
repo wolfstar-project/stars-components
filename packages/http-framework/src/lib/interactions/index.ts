@@ -7,6 +7,7 @@ export * from './decorators/RestrictGuildIds.js';
 export * from './resolvers/InteractionOptions.js';
 export * from './shared/ApplicationCommandRegistry.js';
 export * from './shared/ApplicationCommandRegistryEntry.js';
+export * from './shared/CommandRegistry.js';
 export * from './structures/Message.js';
 export * from './structures/interactions/index.js';
 export type * from './utils/util-types.js';
