@@ -12,7 +12,6 @@
 		"watch": "tsdown --config-loader unrun --watch --onSuccess \"node dist/index.js\""
 	},
 	"dependencies": {
-		"@discordjs/builders": "^1.14.1",
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
 		"discord-api-types": "^0.38.8"

@@ -171,9 +171,6 @@ importers:
 
   examples/basic:
     dependencies:
-      '@discordjs/builders':
-        specifier: ^1.14.1
-        version: 1.14.1
       '@wolfstar/env-utilities':
         specifier: workspace:*
         version: link:../../packages/env-utilities
@@ -196,9 +193,6 @@ importers:
 
   examples/with-i18n:
     dependencies:
-      '@discordjs/builders':
-        specifier: ^1.14.1
-        version: 1.14.1
       '@wolfstar/env-utilities':
         specifier: workspace:*
         version: link:../../packages/env-utilities
@@ -233,9 +227,6 @@ importers:
       '@wolfstar/http-framework':
         specifier: workspace:*
         version: link:../../packages/http-framework
-      discord-api-types:
-        specifier: ^0.38.8
-        version: 0.38.48
     devDependencies:
       '@types/node':
         specifier: 22.15.21
@@ -249,9 +240,6 @@ importers:
 
   examples/with-testing:
     dependencies:
-      '@discordjs/builders':
-        specifier: ^1.14.1
-        version: 1.14.1
       '@wolfstar/http-framework':
         specifier: workspace:*
         version: link:../../packages/http-framework

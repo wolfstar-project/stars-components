@@ -14,8 +14,7 @@
 	"dependencies": {
 		"@discordjs/builders": "^1.14.1",
 		"@wolfstar/env-utilities": "workspace:*",
-		"@wolfstar/http-framework": "workspace:*",
-		"discord-api-types": "^0.38.8"
+		"@wolfstar/http-framework": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",

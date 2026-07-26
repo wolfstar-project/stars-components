@@ -22,11 +22,11 @@
 			"ignoreDependencies": ["tslib"]
 		},
 		"examples/*": {
-			"entry": ["src/**/*.ts", "tests/**/*.ts"],
-			"project": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts", "tsdown.config.ts"]
+			"entry": ["src/**/*.ts"],
+			"project": ["src/**/*.ts", "tsdown.config.ts"]
 		},
 		"examples/with-testing": {
-			"entry": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"],
+			"entry": ["src/**/*.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"]
 		},
 		"packages/shared-http-pieces": {

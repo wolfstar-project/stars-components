@@ -9,7 +9,6 @@
 		"typecheck": "tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
-		"@discordjs/builders": "^1.14.1",
 		"@wolfstar/http-framework": "workspace:*",
 		"discord-api-types": "^0.38.8"
 	},
