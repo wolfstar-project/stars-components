@@ -22,8 +22,12 @@
 			"ignoreDependencies": ["tslib"]
 		},
 		"examples/*": {
-			"entry": ["src/index.ts", "src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"],
+			"entry": ["src/**/*.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts", "tsdown.config.ts"]
+		},
+		"examples/with-testing": {
+			"entry": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"]
 		},
 		"packages/shared-http-pieces": {
 			"ignoreDependencies": ["@discordjs/collection", "tslib"]
