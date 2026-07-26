@@ -21,6 +21,10 @@
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["tslib"]
 		},
+		"examples/*": {
+			"entry": ["src/index.ts", "src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts", "tsdown.config.ts"]
+		},
 		"packages/shared-http-pieces": {
 			"ignoreDependencies": ["@discordjs/collection", "tslib"]
 		},

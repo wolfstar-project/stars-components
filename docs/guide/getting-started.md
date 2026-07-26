@@ -92,3 +92,4 @@ await client.listen({ port: 3000 });
 2. Configure your public URL as the Discord application's interactions endpoint.
 3. Add [interaction tests](/guide/testing) before expanding the command set.
 4. Browse the [`@wolfstar/http-framework` package guide](/packages/http-framework) and [API reference](/api/).
+5. Explore the runnable samples in the repository [`examples/`](https://github.com/wolfstar-project/stars-components/tree/main/examples) folder.

@@ -1,0 +1,29 @@
+{
+	"name": "with-i18n",
+	"version": "0.0.0",
+	"private": true,
+	"description": "@wolfstar/http-framework example with http-framework-i18n",
+	"type": "module",
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"dev": "pnpm build && pnpm start",
+		"start": "node dist/index.js",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"watch": "tsdown --config-loader unrun --watch --onSuccess \"node dist/index.js\""
+	},
+	"dependencies": {
+		"@discordjs/builders": "^1.14.1",
+		"@wolfstar/env-utilities": "workspace:*",
+		"@wolfstar/http-framework": "workspace:*",
+		"@wolfstar/http-framework-i18n": "workspace:*",
+		"discord-api-types": "^0.38.8"
+	},
+	"devDependencies": {
+		"@types/node": "22.15.21",
+		"tsdown": "^0.22.3",
+		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

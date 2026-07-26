@@ -36,6 +36,20 @@
 
 ---
 
+## Examples
+
+Runnable samples live under [`examples/`](./examples). From the repository root:
+
+```bash
+pnpm install
+pnpm build
+pnpm --filter basic dev
+```
+
+See [`examples/README.md`](./examples/README.md) for the full list (`basic`, `with-subcommands`, `with-i18n`, `with-testing`).
+
+---
+
 ## Open in your editor
 
 Want to contribute without setting up locally? Click any button below to open this project in a cloud development environment:
