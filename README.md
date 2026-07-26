@@ -38,16 +38,18 @@
 
 ## Examples
 
-HTTP Discord bot samples under [`examples/`](./examples):
+HTTP Discord bot samples under [`examples/`](./examples) (TypeScript and JavaScript ESM):
 
 ```bash
 pnpm install
 pnpm build
 cp examples/basic/.env.example examples/basic/src/.env
 pnpm --filter basic dev
+# or, plain JS with no build step:
+pnpm --filter basic-js dev
 ```
 
-See [`examples/README.md`](./examples/README.md) for `basic`, `with-subcommands`, `with-i18n`, and `with-testing`.
+See [`examples/README.md`](./examples/README.md) for the full list.
 
 ---
 

@@ -2,22 +2,28 @@
 
 Runnable HTTP Discord bots for the `@wolfstar/*` packages in this monorepo.
 
-| Example                                  | Shows                                                                           |
-| ---------------------------------------- | ------------------------------------------------------------------------------- |
-| [`basic`](./basic)                       | Canonical bootstrap: env setup, shared pieces, i18n, `registerCommands`, banner |
-| [`with-subcommands`](./with-subcommands) | `@RegisterSubcommand` + localized options (`/math`)                             |
-| [`with-i18n`](./with-i18n)               | Multi-locale `LanguageKeys` (`en-US` / `es-ES`)                                 |
-| [`with-testing`](./with-testing)         | Vitest + `@wolfstar/http-framework-test-utils`                                  |
+TypeScript examples use decorator registration (`@RegisterCommand`). JavaScript (ESM)
+examples use the decorator-free `registerApplicationCommands` API.
+
+| Example                                        | Language         | Shows                                                                     |
+| ---------------------------------------------- | ---------------- | ------------------------------------------------------------------------- |
+| [`basic`](./basic)                             | TypeScript       | Canonical bootstrap: env, shared pieces, i18n, `registerCommands`, banner |
+| [`basic-js`](./basic-js)                       | JavaScript (ESM) | Same as `basic`, no build step                                            |
+| [`with-subcommands`](./with-subcommands)       | TypeScript       | `@RegisterSubcommand` + localized options (`/math`)                       |
+| [`with-subcommands-js`](./with-subcommands-js) | JavaScript (ESM) | `registerSubcommand` (`/math`)                                            |
+| [`with-i18n`](./with-i18n)                     | TypeScript       | Multi-locale `LanguageKeys` (`en-US` / `es-ES`)                           |
+| [`with-i18n-js`](./with-i18n-js)               | JavaScript (ESM) | Same multi-locale flow                                                    |
+| [`with-testing`](./with-testing)               | TypeScript       | Vitest + `@wolfstar/http-framework-test-utils`                            |
+| [`with-testing-js`](./with-testing-js)         | JavaScript (ESM) | Same test harness in plain JS                                             |
 
 ## Canonical layout
 
 ```text
 src/
-  main.ts                 # setup → i18n → Client → load → registerCommands → listen
+  main.ts|js              # setup → i18n → Client → load → registerCommands → listen
   commands/               # Sapphire Command store
-  lib/setup/all.ts        # envRun + shared-http-pieces/register + setRepository
-  lib/setup/logger.ts     # container.logger = new Logger()
-  lib/types/augments.ts   # Env interface augmentation
+  lib/setup/all.ts|js     # envRun + shared-http-pieces/register + setRepository
+  lib/setup/logger.ts|js  # container.logger = new Logger()
   lib/i18n/LanguageKeys/  # T() / FT() key constants
   locales/{{lng}}/{{ns}}.json
   .env                    # copied from .env.example (gitignored)
@@ -32,10 +38,17 @@ src/
 ## Run
 
 ```bash
+# TypeScript (build then start)
 pnpm --filter basic dev
 pnpm --filter with-subcommands dev
 pnpm --filter with-i18n dev
 pnpm --filter with-testing test
+
+# JavaScript ESM (no build)
+pnpm --filter basic-js dev
+pnpm --filter with-subcommands-js dev
+pnpm --filter with-i18n-js dev
+pnpm --filter with-testing-js test
 ```
 
 `registerCommands()` (from `@wolfstar/shared-http-pieces`) pushes guild commands when

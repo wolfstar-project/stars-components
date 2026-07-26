@@ -1,0 +1,7 @@
+{
+	"name": "greet",
+	"description": "Greet someone in their language",
+	"optionsNameName": "name",
+	"optionsNameDescription": "Who should I greet?",
+	"reply": "Hello, {{name}}!"
+}
