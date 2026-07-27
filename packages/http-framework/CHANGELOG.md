@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.0
+
+### Minor Changes
+
+- [#85](https://github.com/wolfstar-project/stars-components/pull/85) [`69dd6c8`](https://github.com/wolfstar-project/stars-components/commit/69dd6c87775b0725b50bfd518f54f4138cc07139) - Add an optional `Command#registerApplicationCommands(registry)` instance method, mirroring `@sapphire/framework`'s `ApplicationCommandRegistry` API, so chat input, subcommand, subcommand group, and context menu commands can be registered imperatively instead of via TypeScript decorators. This also makes the framework usable from plain JavaScript, where TS decorators aren't available. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 3.0.0
 
 ### Major Changes
