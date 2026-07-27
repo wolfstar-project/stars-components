@@ -17,18 +17,30 @@ bun create @wolfstar/http-framework my-discord-bot
 The CLI will guide you through the following prompts:
 
 - **Project name** — an npm-compatible name for your bot
+- **Package manager** — npm, yarn, pnpm, or bun
+- **Language** — TypeScript or JavaScript
+- **Build tool** — tsdown, TypeScript 6, or the TypeScript 7 release candidate
+- **Linter and formatter** — Oxlint / ESLint and Oxfmt / Prettier
 - **Port** — the port the HTTP server will listen on (default: `3000`)
 - **i18n support** — optionally add `@wolfstar/http-framework-i18n`
 - **Auto-install** — install dependencies immediately after scaffolding
 
 ## Options
 
-| Flag               | Alias | Description                                                 |
-| ------------------ | ----- | ----------------------------------------------------------- |
-| `--overwrite`      |       | Overwrite the target directory if it already exists         |
-| `--no-interactive` |       | Skip all prompts and use defaults / flags                   |
-| `--interactive`    | `-i`  | Force interactive prompts even when an AI agent is detected |
-| `--help`           | `-h`  | Print usage and exit                                        |
+| Flag                         | Alias | Description                                                 |
+| ---------------------------- | ----- | ----------------------------------------------------------- |
+| `--overwrite`                |       | Overwrite the target directory if it already exists         |
+| `--no-interactive`           |       | Skip all prompts and use defaults / flags                   |
+| `--interactive`              | `-i`  | Force interactive prompts even when an AI agent is detected |
+| `--package-manager <pm>`     |       | Choose npm, yarn, pnpm, or bun                              |
+| `--language <lang>`          |       | Choose TypeScript (`ts`) or JavaScript (`js`)               |
+| `--build <tool>`             |       | Choose `tsc6`, `tsc7`, or `tsdown` for TypeScript           |
+| `--lint <linter>`            |       | Choose `none`, `eslint`, or `oxlint`                        |
+| `--format <formatter>`       |       | Choose `none`, `prettier`, or `oxfmt`                       |
+| `--port <number>`            |       | Set the HTTP port (default: `3000`)                         |
+| `--i18n` / `--no-i18n`       |       | Enable or disable i18n support                              |
+| `--install` / `--no-install` |       | Enable or disable dependency installation                   |
+| `--help`                     | `-h`  | Print usage and exit                                        |
 
 ## Non-interactive / AI agent mode
 

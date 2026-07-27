@@ -39,12 +39,12 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@clack/prompts": "^1.6.0",
+		"@clack/prompts": "^1.7.0",
 		"@vercel/detect-agent": "^1.2.3",
 		"cross-spawn": "^7.0.6",
 		"handlebars": "^4.7.9",
 		"mri": "^1.2.0",
-		"package-manager-detector": "^1.6.0"
+		"package-manager-detector": "^1.7.0"
 	},
 	"devDependencies": {
 		"@types/cross-spawn": "^6.0.6",

@@ -1,0 +1,21 @@
+[build]
+command = "pnpm docs:build"
+publish = "docs/.vitepress/dist"
+
+[build.environment]
+NODE_VERSION = "24"
+PNPM_VERSION = "11.9.0"
+
+[[headers]]
+for = "/assets/*"
+
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+Referrer-Policy = "strict-origin-when-cross-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"

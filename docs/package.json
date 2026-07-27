@@ -1,0 +1,39 @@
+{
+	"name": "@wolfstar/docs",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"api": "typedoc --options typedoc.json",
+		"dev": "pnpm api && vitepress dev .",
+		"build": "pnpm api && vitepress build .",
+		"serve": "vitepress serve",
+		"typecheck": "vue-tsc --noEmit -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@shikijs/vitepress-twoslash": "^4.3.1",
+		"@wolfstar/create-http-framework": "workspace:*",
+		"@wolfstar/env-utilities": "workspace:*",
+		"@wolfstar/http-framework": "workspace:*",
+		"@wolfstar/http-framework-i18n": "workspace:*",
+		"@wolfstar/http-framework-test-utils": "workspace:*",
+		"@wolfstar/i18next-backend": "workspace:*",
+		"@wolfstar/influx-utilities": "workspace:*",
+		"@wolfstar/logger": "workspace:*",
+		"@wolfstar/reddit-helpers": "workspace:*",
+		"@wolfstar/safe-fetch": "workspace:*",
+		"@wolfstar/shared-http-pieces": "workspace:*",
+		"@wolfstar/shared-influx-pieces": "workspace:*",
+		"@wolfstar/start-banner": "workspace:*",
+		"@wolfstar/twitch-helpers": "workspace:*",
+		"@wolfstar/weather-helpers": "workspace:*",
+		"markdown-it-image-size": "^15.0.1",
+		"typedoc": "^0.28.20",
+		"typedoc-plugin-markdown": "^4.12.0",
+		"typedoc-vitepress-theme": "^1.1.3",
+		"vitepress": "^2.0.0-alpha.18",
+		"vitepress-plugin-group-icons": "^1.7.5",
+		"vitepress-plugin-llms": "^1.13.3",
+		"vue": "^3.5.40",
+		"vue-tsc": "^3.3.8"
+	}
+}
