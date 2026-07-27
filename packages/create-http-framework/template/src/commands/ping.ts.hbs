@@ -1,5 +1,13 @@
-import { Command } from '@wolfstar/http-framework'; import { SlashCommandBuilder } from '@discordjs/builders'; import { MessageFlags } from
-'discord-api-types/v10'; export class PingCommand extends Command { public constructor(context: Command.LoaderContext) { super(context, { name:
-'ping', description: 'Replies with pong!' }); } public override chatInputRun(interaction: Command.ChatInputInteraction) { return interaction.reply({
-content: 'Pong!', flags: MessageFlags.Ephemeral }); } public static readonly builder = new SlashCommandBuilder() .setName('ping')
-.setDescription('Replies with pong!'); }
+import { Command, RegisterCommand } from '@wolfstar/http-framework';
+import { MessageFlags } from 'discord-api-types/v10';
+
+@RegisterCommand((builder) =>
+	builder //
+		.setName('ping')
+		.setDescription('Replies with pong!')
+)
+export class PingCommand extends Command {
+	public override chatInputRun(interaction: Command.ChatInputInteraction) {
+		return interaction.reply({ content: 'Pong!', flags: MessageFlags.Ephemeral });
+	}
+}

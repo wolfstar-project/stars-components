@@ -89,7 +89,7 @@ If the automatic publish step in `release.yml` fails after the release PR is mer
 1. Fix the underlying issue (npm token, network, build failure, etc.).
 2. Re-run the failed **Create Release PR or Publish** job from **Actions**, or trigger
    **release** manually via **Run workflow** on `main`.
-3. The job runs `pnpm run publish` (`changeset version && pnpm build && changeset publish`).
+3. The job runs `pnpm run publish` (`pnpm build && changeset publish`).
    `changeset publish` is idempotent and skips packages already published at the current version.
 
 Use this only when versions on `main` are already bumped and you need to retry npm publish.

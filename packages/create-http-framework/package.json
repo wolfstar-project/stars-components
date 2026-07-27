@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/create-http-framework",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"description": "Create a new WolfStar HTTP Framework bot project",
 	"keywords": [
 		"cli",
@@ -39,13 +39,15 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@clack/prompts": "^1.6.0",
+		"@clack/prompts": "^1.7.0",
 		"@vercel/detect-agent": "^1.2.3",
+		"cross-spawn": "^7.0.6",
 		"handlebars": "^4.7.9",
 		"mri": "^1.2.0",
-		"package-manager-detector": "^1.6.0"
+		"package-manager-detector": "^1.7.0"
 	},
 	"devDependencies": {
+		"@types/cross-spawn": "^6.0.6",
 		"@types/handlebars": "^4.1.0",
 		"@types/mri": "^1.2.0",
 		"@types/node": "22.15.21",

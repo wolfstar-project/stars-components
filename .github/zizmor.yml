@@ -4,3 +4,9 @@ rules:
     dangerous-triggers:
         ignore:
             - semantic-pull-requests.yml
+    # The release job checkout intentionally persists WOLFSTAR_TOKEN (no
+    # persist-credentials: false) so changesets/action can push version-bump
+    # commits, tags, and the release PR with that token.
+    artipacked:
+        ignore:
+            - release.yml

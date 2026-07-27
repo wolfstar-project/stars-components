@@ -8,7 +8,7 @@ Very basic weather helper functions for several Star bots to ensure we do not du
 
 ## Usage
 
-You can use the functions exported from this package to interact with the [Weather API]("https://wttr.in").
+You can use the functions exported from this package to interact with the [Weather API](https://wttr.in).
 
 ```typescript
 import { getWeatherData } from '@wolfstar/weather-helpers';
