@@ -87,6 +87,27 @@ describe('generate', () => {
 		expect(output).toContain('enabled');
 	});
 
+	test('GIVEN a root-level file with punctuation THEN emits a quoted resource key', async () => {
+		await writeFile(join(sourceDirectory, 'common-errors.json'), JSON.stringify({ notFound: 'Not found' }));
+
+		await generate([sourceDirectory, destinationFile], defaultOptions);
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		// The key must be quoted; a bare `common-errors:` would be parsed as subtraction and is invalid TS.
+		expect(output).toContain('"common-errors":');
+		expect(output).not.toMatch(/(^|\s)common-errors:/);
+	});
+
+	test('GIVEN generated output THEN exposes a mergeable CustomResources extension point', async () => {
+		await generate([sourceDirectory, destinationFile], defaultOptions);
+
+		const output = await readFile(destinationFile, 'utf8');
+
+		expect(output).toContain('} & CustomResources;');
+		expect(output).toContain('interface CustomResources {}');
+	});
+
 	test('GIVEN space indentation THEN indents generated resources', async () => {
 		await generate([sourceDirectory, destinationFile], {
 			...defaultOptions,

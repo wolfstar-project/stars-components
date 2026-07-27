@@ -22,6 +22,8 @@ declare module "i18next" {
         infoButtonGitHub: "GitHub Repository";
         infoButtonDonate: "Donate";
       };
-    };
+    } & CustomResources;
   }
+
+  interface CustomResources {}
 }

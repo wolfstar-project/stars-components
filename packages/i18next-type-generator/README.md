@@ -40,10 +40,14 @@ declare module 'i18next' {
 				// ...
 			};
 			// ...
-		};
+		} & CustomResources;
 	}
+
+	interface CustomResources {}
 }
 ```
+
+The generated `resources` type is intersected with an empty, mergeable `CustomResources` interface. This is the supported extension point: it lets you add resource keys that are not present in your locale JSON (for example keys whose runtime translation is supplied by the consuming application) without redeclaring `CustomTypeOptions.resources`, which would otherwise trigger `TS2717` for consumers that build with `skipLibCheck: false`.
 
 The output includes `eslint-disable` / `oxlint-disable` comments to suppress linting, and `oxfmt-ignore` / `prettier-ignore` comments before each top-level statement to prevent formatters from rewriting the generated file. These ignore directives are always emitted; the `--no-oxfmt` and `--no-prettier` flags only affect the internal formatting pass used to produce the resource block, not the emitted ignore comments.
 
@@ -51,4 +55,18 @@ The command reads the JSON files inside a directory writes their contents into t
 
 You can control indentation with `-i` / `--indentation` (a space count or `tabs`). `prettier` is also used under the hood to format output before writing to a file; opt out with `--no-prettier` if you want to use a different tool.
 
-> **Note**: If you want to customize `i18next`'s `CustomTypeOptions` to add [extra options](https://www.i18next.com/overview/typescript), create a different file, TypeScript will merge the two of them.
+> **Note**: To add resource keys that are not generated from your locale JSON, merge them into `CustomResources` from a separate declaration file:
+>
+> ```typescript
+> import 'i18next';
+>
+> declare module 'i18next' {
+> 	interface CustomResources {
+> 		'commands/shared': {
+> 			extraKey: string;
+> 		};
+> 	}
+> }
+> ```
+>
+> To add other [`CustomTypeOptions` options](https://www.i18next.com/overview/typescript) (such as `defaultNS`), create a separate file too; TypeScript merges the augmentations.

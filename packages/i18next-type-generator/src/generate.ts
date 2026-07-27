@@ -53,7 +53,7 @@ async function recurse(lines: string[], path: string, namespace: string, options
 			if (options.verbose) console.log(gray(`Processing ${FileIcon} ${green(file)}...`));
 
 			const name = dirent.name.slice(0, -5);
-			const key = namespace ? `'${namespace}/${name}'` : name;
+			const key = JSON.stringify(namespace ? `${namespace}/${name}` : name);
 			const data = JSON.stringify(JSON.parse(await readFile(file, 'utf8')), undefined, options.indentation);
 			lines.push(`${indent}${key}: ${data.replaceAll('\n', `\n${indent}`)};`);
 		} else if (dirent.isDirectory()) {
@@ -141,7 +141,10 @@ export async function generate([source, destination]: string[], options: Generat
 	const lines = ["import 'i18next';", '', "declare module 'i18next' {", `${i1}interface CustomTypeOptions {`, `${i2}resources: {`];
 
 	await recurse(lines, sourceDirectory, '', options);
-	lines.push(`${i2}};`, `${i1}}`, '}', '');
+	// Intersecting with the mergeable `CustomResources` interface lets consumers add extra keys (e.g. keys
+	// whose runtime data is provided externally) from their own declaration file without redeclaring
+	// `resources`, which would otherwise trigger TS2717 (conflicting property declarations).
+	lines.push(`${i2}} & CustomResources;`, `${i1}}`, '', `${i1}interface CustomResources {}`, '}', '');
 
 	let generatedSource = lines.join('\n');
 	generatedSource = await formatSource(generatedSource, destinationFile, options);
