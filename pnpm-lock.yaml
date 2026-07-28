@@ -378,9 +378,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.8
         version: 4.1.9(vitest@4.1.9)
-      i18next:
-        specifier: ^25.10.10
-        version: 25.10.10(typescript@5.8.3)
       tsdown:
         specifier: ^0.22.2
         version: 0.22.3(@arethetypeswrong/core@0.18.4)(oxc-resolver@11.21.3)(publint@0.3.21)(typescript@5.8.3)(unrun@0.3.1)(vue-tsc@3.3.8)
@@ -506,6 +503,9 @@ importers:
       discord-api-types:
         specifier: ^0.38.8
         version: 0.38.48
+      i18next:
+        specifier: ^25.10.10
+        version: 25.10.10(typescript@5.8.3)
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
