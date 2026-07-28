@@ -37,6 +37,7 @@ coverage/
 /docs/.vitepress/cache
 /docs/.vitepress/.temp
 /docs/api/
+/docs/dev-dist/
 
 # Ignore package locks
 package-lock.json

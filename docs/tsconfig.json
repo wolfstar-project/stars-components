@@ -6,7 +6,7 @@
 		"moduleResolution": "Bundler",
 		"noEmit": true,
 		"resolveJsonModule": true,
-		"types": ["node"]
+		"types": ["node", "vite-plugin-pwa/client"]
 	},
 	"include": [".vitepress/**/*.ts", ".vitepress/**/*.vue"]
 }
