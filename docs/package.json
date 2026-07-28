@@ -7,10 +7,13 @@
 		"dev": "pnpm api && vitepress dev .",
 		"build": "pnpm api && vitepress build .",
 		"serve": "vitepress serve",
-		"typecheck": "vue-tsc --noEmit -p tsconfig.json"
+		"typecheck": "vue-tsc --noEmit -p tsconfig.json",
+		"generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
 	},
 	"devDependencies": {
 		"@shikijs/vitepress-twoslash": "^4.3.1",
+		"@vite-pwa/assets-generator": "^1.0.2",
+		"@vite-pwa/vitepress": "^1.1.0",
 		"@wolfstar/create-http-framework": "workspace:*",
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
@@ -30,6 +33,7 @@
 		"typedoc": "^0.28.20",
 		"typedoc-plugin-markdown": "^4.12.0",
 		"typedoc-vitepress-theme": "^1.1.3",
+		"vite-plugin-pwa": "^1.3.0",
 		"vitepress": "^2.0.0-alpha.18",
 		"vitepress-plugin-group-icons": "^1.7.5",
 		"vitepress-plugin-llms": "^1.13.3",

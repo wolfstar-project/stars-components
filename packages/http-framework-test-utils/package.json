@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-test-utils",
-	"version": "3.0.0",
+	"version": "3.0.1",
 	"description": "Test utilities for @wolfstar/http-framework",
 	"keywords": [
 		"discord",

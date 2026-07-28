@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/create-http-framework",
-	"version": "2.0.1",
+	"version": "2.1.0",
 	"description": "Create a new WolfStar HTTP Framework bot project",
 	"keywords": [
 		"cli",
