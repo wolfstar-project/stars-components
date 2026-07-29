@@ -1,0 +1,13 @@
+{
+	"name": "math",
+	"description": "Perform calculations",
+	"addName": "add",
+	"addDescription": "Add two numbers",
+	"subtractName": "subtract",
+	"subtractDescription": "Subtract two numbers",
+	"optionsLeftName": "left",
+	"optionsLeftDescription": "Left value",
+	"optionsRightName": "right",
+	"optionsRightDescription": "Right value",
+	"result": "{{left}} and {{right}} → **{{result}}**"
+}

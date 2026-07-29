@@ -1,0 +1,37 @@
+{
+	"name": "with-subcommands",
+	"version": "0.0.0",
+	"private": true,
+	"description": "WolfStar HTTP bot example with chat-input subcommands",
+	"type": "module",
+	"main": "dist/main.js",
+	"imports": {
+		"#lib/*": "./dist/lib/*.js"
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"dev": "pnpm build && pnpm start",
+		"start": "node --enable-source-maps dist/main.js",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"watch": "tsdown --config-loader unrun --watch --onSuccess \"node --enable-source-maps dist/main.js\""
+	},
+	"dependencies": {
+		"@sapphire/pieces": "^4.4.1",
+		"@wolfstar/env-utilities": "workspace:*",
+		"@wolfstar/http-framework": "workspace:*",
+		"@wolfstar/http-framework-i18n": "workspace:*",
+		"@wolfstar/logger": "workspace:*",
+		"@wolfstar/shared-http-pieces": "workspace:*",
+		"@wolfstar/start-banner": "workspace:*",
+		"discord-api-types": "^0.38.8",
+		"gradient-string": "^3.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "22.15.21",
+		"tsdown": "^0.22.3",
+		"typescript": "~5.8.3"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}
