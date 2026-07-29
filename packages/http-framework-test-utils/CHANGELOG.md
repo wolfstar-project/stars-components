@@ -1,5 +1,13 @@
 # @wolfstar/http-framework-test-utils
 
+## 3.0.1
+
+### Patch Changes
+
+- [#72](https://github.com/wolfstar-project/stars-components/pull/72) [`dda5fa7`](https://github.com/wolfstar-project/stars-components/commit/dda5fa743162aab58582538438dd8d275b30b939) - Add package READMEs documenting installation, usage, and exports. A patch release publishes them to npm so both packages render proper documentation on their package pages. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#64](https://github.com/wolfstar-project/stars-components/pull/64) [`7e3f787`](https://github.com/wolfstar-project/stars-components/commit/7e3f787eb1d78a690fbba52f85998d3f0087f9e8) - Widen the `vitest` peer dependency range to `>=4.1.9` in line with the updated `vitest` dependency. Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 3.0.0
 
 ### Patch Changes
