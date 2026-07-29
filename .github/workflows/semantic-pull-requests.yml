@@ -17,7 +17,7 @@ permissions: {}
 jobs:
     semantic-pr:
         name: Validate PR title
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: ubuntu-latest
         if: github.repository == 'wolfstar-project/stars-components'
         permissions:
             contents: read
