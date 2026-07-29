@@ -3,7 +3,7 @@ import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		globals: true,
-		projects: ['./packages/**/vitest.config.ts'],
+		projects: ['./packages/**/vitest.config.ts', './examples/**/vitest.config.ts', './examples/**/vitest.config.js'],
 		coverage: {
 			provider: 'v8',
 			enabled: true,

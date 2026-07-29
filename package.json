@@ -6,8 +6,8 @@
 	"scripts": {
 		"clean": "node scripts/clean.mjs",
 		"prepare": "husky || true",
-		"lint": "oxlint packages docs && oxfmt --check packages docs",
-		"lint:fix": "oxlint --fix packages docs && oxfmt --write packages docs",
+		"lint": "oxlint packages docs examples && oxfmt --check packages docs examples",
+		"lint:fix": "oxlint --fix packages docs examples && oxfmt --write packages docs examples",
 		"test": "vitest run",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
