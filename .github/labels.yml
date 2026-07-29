@@ -1,3 +1,6 @@
+- name: packages:create-http-framework
+  color: '1d76db'
+  description: Changes in create-http-framework
 - name: packages:env-utilities
   color: '1d76db'
   description: Changes in env-utilities
