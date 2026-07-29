@@ -10,7 +10,7 @@ permissions: {}
 jobs:
     code:
         name: Autofix code
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: ubuntu-latest
         permissions:
             contents: write
         steps:

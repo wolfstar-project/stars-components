@@ -10,7 +10,7 @@ jobs:
     label:
         name: Label
         if: github.event.action != 'edited'
-        runs-on: depot-ubuntu-24.04-4
+        runs-on: ubuntu-latest
         permissions:
             contents: read
             pull-requests: write
