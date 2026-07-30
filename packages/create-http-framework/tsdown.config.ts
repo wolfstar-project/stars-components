@@ -9,7 +9,7 @@ export default defineConfig({
 	clean: true,
 	minify: false,
 	target: 'es2021',
-	deps: { skipNodeModulesBundle: true },
+	deps: { neverBundle: true },
 	attw: { enabled: false },
 	publint: { enabled: false }
 });
