@@ -16,8 +16,9 @@ concurrency:
 
 jobs:
     docs:
-        # TODO: pin to the commit SHA once wolfstar-project/.github/.github/workflows/reusable-documentation.yml lands, to match this repo's other reusable-workflow references.
-        uses: wolfstar-project/.github/.github/workflows/reusable-documentation.yml@main # zizmor: ignore[unpinned-uses]
+        # Pinned to the head of wolfstar-project/.github#add-reusable-documentation-workflow (the workflow has not merged to main yet).
+        # TODO: bump to the merged main commit SHA once that PR lands.
+        uses: wolfstar-project/.github/.github/workflows/reusable-documentation.yml@af5953f6a52509793cdece2e652eb98806d3cb8b # add-reusable-documentation-workflow
         with:
             project-name: stars-components
             docgen-command: cd docs && pnpm exec typedoc --options typedoc.json --json ../docs-output/api.json
