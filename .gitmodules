@@ -1,0 +1,4 @@
+[submodule "docs/projects/plugins"]
+	path = docs/projects/plugins
+	url = https://github.com/wolfstar-project/plugins
+	branch = main

@@ -2,6 +2,7 @@ packages:
     - 'docs'
     - 'packages/*'
     - 'examples/*'
+    - 'docs/projects/plugins/packages/*'
 
 autoInstallPeers: true
 

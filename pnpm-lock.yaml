@@ -178,6 +178,38 @@ importers:
         specifier: ^3.3.8
         version: 3.3.8(typescript@5.8.3)
 
+  docs/projects/plugins/packages/plugin-api:
+    dependencies:
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
+      '@vladfrangu/async_event_emitter':
+        specifier: ^2.4.7
+        version: 2.4.7
+    devDependencies:
+      '@wolfstar/http-framework':
+        specifier: ^3.0.0
+        version: link:../../../../../packages/http-framework
+
+  docs/projects/plugins/packages/plugin-subcommands-advanced:
+    dependencies:
+      '@discordjs/builders':
+        specifier: ^1.13.0
+        version: 1.14.1
+      '@discordjs/collection':
+        specifier: ^2.1.1
+        version: 2.1.1
+      discord-api-types:
+        specifier: ^0.38.33
+        version: 0.38.48
+    devDependencies:
+      '@wolfstar/http-framework':
+        specifier: ^3.1.0
+        version: link:../../../../../packages/http-framework
+      '@wolfstar/http-framework-test-utils':
+        specifier: ^3.0.1
+        version: link:../../../../../packages/http-framework-test-utils
+
   examples/basic:
     dependencies:
       '@sapphire/pieces':
@@ -10744,7 +10776,7 @@ snapshots:
       cli-width: 3.0.0
       external-editor: 3.1.0
       figures: 3.2.0
-      lodash: 4.17.21
+      lodash: 4.18.1
       mute-stream: 0.0.8
       ora: 5.4.1
       run-async: 2.4.1
