@@ -72,7 +72,7 @@
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
 		"@vitest/coverage-v8": "^4.1.9",
-		"tsdown": "^0.22.3",
+		"tsdown": "^0.22.14",
 		"typescript": "~5.8.3",
 		"vitest": "^4.1.9"
 	},

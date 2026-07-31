@@ -58,7 +58,7 @@
 		"@sapphire/utilities": "^3.18.2",
 		"@wolfstar/http-framework": "workspace:*",
 		"discord-api-types": "^0.38.8",
-		"tsdown": "^0.22.3",
+		"tsdown": "^0.22.14",
 		"typescript": "~5.8.3",
 		"vitest": "^4.1.9"
 	},

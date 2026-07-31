@@ -42,7 +42,7 @@ const baseOptions: UserConfig = {
 	dts: true,
 	entry: ['src/index.ts'],
 	minify: false,
-	deps: { skipNodeModulesBundle: true },
+	deps: { neverBundle: true },
 	sourcemap: true,
 	target: 'es2021',
 	treeshake: true,
