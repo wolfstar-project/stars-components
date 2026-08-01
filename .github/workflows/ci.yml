@@ -21,7 +21,7 @@ concurrency:
 jobs:
     lint:
         name: 🔠 Lint project
-        runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 15
 
         steps:
@@ -45,7 +45,7 @@ jobs:
 
     build:
         name: 🏗️ Build & Typecheck
-        runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 15
         permissions:
             contents: read
@@ -79,7 +79,7 @@ jobs:
 
     unit:
         name: 🧪 Unit tests
-        runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 10
         permissions:
             contents: read
@@ -124,7 +124,7 @@ jobs:
 
     knip:
         name: 🧹 Unused code check
-        runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 10
 
         steps:
@@ -148,7 +148,7 @@ jobs:
 
     changesets:
         name: 🦋 Verify changesets
-        runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 10
         if: |
             github.event_name == 'pull_request'
