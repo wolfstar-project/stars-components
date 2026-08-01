@@ -17,9 +17,11 @@ import sharedInfluxPieces from '../../../packages/shared-influx-pieces/package.j
 import startBanner from '../../../packages/start-banner/package.json';
 import twitchHelpers from '../../../packages/twitch-helpers/package.json';
 import weatherHelpers from '../../../packages/weather-helpers/package.json';
+import pluginApi from '../../projects/plugins/packages/plugin-api/package.json';
+import pluginSubcommandsAdvanced from '../../projects/plugins/packages/plugin-subcommands-advanced/package.json';
 
 export interface PackageInfo {
-	category: 'Core framework' | 'Infrastructure' | 'Shared pieces' | 'Platform helpers';
+	category: 'Core framework' | 'Infrastructure' | 'Shared pieces' | 'Platform helpers' | 'Plugins';
 	description: string;
 	name: string;
 	path: string;
@@ -131,5 +133,19 @@ export const packages: PackageInfo[] = [
 		version: weatherHelpers.version,
 		category: 'Platform helpers',
 		description: 'Fetch weather data and convert common units.'
+	},
+	{
+		name: '@wolfstar/plugin-api',
+		path: 'plugin-api',
+		version: pluginApi.version,
+		category: 'Plugins',
+		description: 'Expose a standalone REST API server alongside HTTP Framework interactions.'
+	},
+	{
+		name: '@wolfstar/plugin-subcommands-advanced',
+		path: 'plugin-subcommands-advanced',
+		version: pluginSubcommandsAdvanced.version,
+		category: 'Plugins',
+		description: 'Modularize slash subcommands into separate command classes.'
 	}
 ];
