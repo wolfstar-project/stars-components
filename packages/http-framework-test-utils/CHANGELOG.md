@@ -1,5 +1,11 @@
 # @wolfstar/http-framework-test-utils
 
+## 3.0.2
+
+### Patch Changes
+
+- [#93](https://github.com/wolfstar-project/stars-components/pull/93) [`adce4cb`](https://github.com/wolfstar-project/stars-components/commit/adce4cb983e7f60d23bbd6d13f66adba4e2a08f5) - chore: upgrade tsdown to 0.22.14 and migrate `deps.skipNodeModulesBundle` to `deps.neverBundle` Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 3.0.1
 
 ### Patch Changes

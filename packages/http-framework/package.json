@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework",
-	"version": "3.1.0",
+	"version": "3.1.1",
 	"description": "The framework for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
