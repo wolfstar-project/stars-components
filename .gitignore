@@ -35,10 +35,7 @@ test_out/
 # Test artifacts
 coverage/
 *.junit.xml
-/docs/.vitepress/cache
-/docs/.vitepress/.temp
-/docs/api/
-/docs/dev-dist/
+/docs-output/
 
 # Ignore package locks
 package-lock.json

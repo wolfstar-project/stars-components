@@ -1,11 +1,9 @@
 {
 	"$schema": "https://typedoc.org/schema.json",
-	"entryPoints": ["../packages/*", "./projects/plugins/packages/*"],
+	"entryPoints": ["packages/*"],
 	"entryPointStrategy": "packages",
-	"exclude": ["../packages/create-http-framework"],
-	"plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme"],
-	"out": "./api",
-	"docsRoot": ".",
+	"exclude": ["packages/create-http-framework"],
+	"out": "docs-output/html",
 	"readme": "none",
 	"cleanOutputDir": true,
 	"packageOptions": {
@@ -14,9 +12,5 @@
 		"readme": "none",
 		"excludePrivate": true,
 		"excludeInternal": true
-	},
-	"sidebar": {
-		"collapsed": true,
-		"pretty": true
 	}
 }
