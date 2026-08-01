@@ -17,7 +17,11 @@
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset add",
 		"publish": "pnpm build && changeset publish",
-		"publish:snapshot": "changeset version --snapshot next && pnpm build && changeset publish --tag next --no-git-tag"
+		"publish:snapshot": "changeset version --snapshot next && pnpm build && changeset publish --tag next --no-git-tag",
+		"tolgee:pull": "tolgee pull && node --experimental-strip-types scripts/tolgee-pull-remap.ts",
+		"tolgee:push": "tolgee push --languages en",
+		"tolgee:remap": "node --experimental-strip-types scripts/tolgee-pull-remap.ts",
+		"tolgee:ensure-languages": "node scripts/tolgee-ensure-languages.mjs"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "^0.18.4",
@@ -29,6 +33,7 @@
 		"@favware/npm-deprecate": "^2.0.0",
 		"@sapphire/ts-config": "^5.0.3",
 		"@swc/core": "^1.15.43",
+		"@tolgee/cli": "^2.20.0",
 		"@types/node": "22.15.21",
 		"@types/ws": "^8.18.1",
 		"@vitest/coverage-v8": "^4.1.9",

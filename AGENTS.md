@@ -27,7 +27,10 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - File paths in CI use the npm scope as `--filter @<scope>/<package>` for turbo.
 - Each package declares: `name`, `author` (scope handle), `repository.url`, `bugs.url`, `homepage`, `keywords`.
 - All 13 publishable packages share one lockstep semver. `uppt/pr` bumps every workspace together from the value in `packages/*/package.json#version`.
-- Crowdin sync is configured at root (`crowdin.yml`) and only targets `packages/shared-http-pieces/src/locales/**`.
+- Tolgee sync is configured at root (`.tolgeerc.cjs`) and only targets `packages/shared-http-pieces/src/locales/**`.
+  Scripts: `pnpm tolgee:push` (base `en`), `pnpm tolgee:pull` (pull + remap), `pnpm tolgee:ensure-languages`.
+  Discord locale folders (en-US, es-ES, …) map to shorter Tolgee tags (en, es, …); see `LOCALE_MAP` in `.tolgeerc.cjs`.
+  Project **Shared HTTP Pieces** (`33773`) has Tolgee namespaces disabled — keys live in the default namespace and remap into `commands/shared.json`.
 
 ## Branding (target state after rebrand)
 
@@ -41,7 +44,8 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 ## Out of scope for the rebrand
 
-- Crowdin `project_id` (`520232`) and per-project Crowdin badge slugs (`sharedhttppieces`) — these are external resources owned by the new org and require a manual Crowdin migration outside the codebase.
+- Per-project Tolgee badge slugs on Crowdin-era READMEs are replaced by a generic Tolgee badge.
+  The Tolgee project is **Shared HTTP Pieces** (`projectId` `33773` in `.tolgeerc.cjs`).
 
 ## Notes for agents
 

@@ -49,3 +49,6 @@ package-lock.json
 plans/
 
 .claude/state
+
+# Tolgee pull staging (promoted into locales by scripts/tolgee-pull-remap.ts)
+.tolgee-pull/
