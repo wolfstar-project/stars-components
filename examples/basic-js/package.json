@@ -1,6 +1,6 @@
 {
 	"name": "basic-js",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"description": "Minimal WolfStar HTTP Discord bot example in plain JavaScript (ESM)",
 	"type": "module",
