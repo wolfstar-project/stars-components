@@ -118,7 +118,10 @@ module.exports = {
 	},
 	pull: {
 		path: '.tolgee-pull',
-		fileStructureTemplate: '{languageTag}.json'
+		fileStructureTemplate: '{languageTag}.json',
+		// Clear staging before every pull so leftovers from an interrupted or
+		// failed pull cannot be promoted over live locales by the remapper.
+		emptyDir: true
 	},
 	// Exported for scripts/tolgee-pull-remap.ts (single source of truth with push)
 	tolgeeToLocal: TOLGEE_TO_LOCAL,
