@@ -12,7 +12,7 @@ overrides:
   minimist: 1.2.8
   vitest>vite: 6.4.3
   '@vitest/mocker>vite': 6.4.3
-  '@redstardev/unplugin-version-injector>vite': 6.4.3
+  '@redstardev/unplugin-version-injector>vite': 8.2.0
 
 importers:
 
@@ -1981,7 +1981,7 @@ packages:
       '@nuxt/schema': ^3
       esbuild: ^0.28.0
       rollup: ^3
-      vite: 6.4.3
+      vite: 8.2.0
       webpack: ^4 || ^5
     peerDependenciesMeta:
       '@farmfe/core':
@@ -5438,17 +5438,17 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
-    dependencies:
-      '@emnapi/core': 1.11.0
-      '@emnapi/runtime': 1.11.0
-      '@tybys/wasm-util': 0.10.3
-    optional: true
-
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
       '@emnapi/core': 1.11.1
       '@emnapi/runtime': 1.11.1
+      '@tybys/wasm-util': 0.10.3
+    optional: true
+
+  '@napi-rs/wasm-runtime@1.2.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)':
+    dependencies:
+      '@emnapi/core': 1.11.0
+      '@emnapi/runtime': 1.11.0
       '@tybys/wasm-util': 0.10.3
     optional: true
 
@@ -5934,7 +5934,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.11.0
       '@emnapi/runtime': 1.11.0
-      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
+      '@napi-rs/wasm-runtime': 1.2.0(@emnapi/core@1.11.0)(@emnapi/runtime@1.11.0)
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@11.21.3':
