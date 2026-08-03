@@ -12,7 +12,7 @@ overrides:
   minimist: 1.2.8
   vitest>vite: 8.2.0
   '@vitest/mocker>vite': 6.4.3
-  '@redstardev/unplugin-version-injector>vite': 6.4.3
+  '@redstardev/unplugin-version-injector>vite': 8.2.0
 
 importers:
 
@@ -1981,7 +1981,7 @@ packages:
       '@nuxt/schema': ^3
       esbuild: ^0.28.0
       rollup: ^3
-      vite: 6.4.3
+      vite: 8.2.0
       webpack: ^4 || ^5
     peerDependenciesMeta:
       '@farmfe/core':

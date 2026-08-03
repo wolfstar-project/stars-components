@@ -21,7 +21,7 @@ overrides:
     # TypeScript experimental decorators continue to transform via esbuild.
     'vitest>vite': '8.2.0'
     '@vitest/mocker>vite': '6.4.3'
-    '@redstardev/unplugin-version-injector>vite': '6.4.3'
+    '@redstardev/unplugin-version-injector>vite': '8.2.0'
 
 allowBuilds:
     '@swc/core': true
