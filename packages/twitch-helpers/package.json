@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/twitch-helpers",
-	"version": "2.0.5",
+	"version": "2.0.6",
 	"description": "Very basic Twitch helper functions used across several Star bots",
 	"keywords": [
 		"api",

@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-i18n",
-	"version": "1.2.4",
+	"version": "1.2.5",
 	"description": "An internationalization layer powered by i18next and @wolfstar/i18next-backend for @wolfstar/http-framework",
 	"keywords": [
 		"api",
