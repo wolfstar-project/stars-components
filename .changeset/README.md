@@ -101,7 +101,7 @@ The `snapshot` job in `release.yml` publishes affected packages under the dist-t
 whenever `main` receives a push that changes `packages/` or root `package.json`. Version bumps use
 Changesets snapshots (for example `1.2.3-next.0`) via `pnpm run publish:snapshot`.
 
-Snapshot publish is skipped when the push commit message contains `chore: version packages` or `chore: update changelog and release` (the release PR merge commit).
+Snapshot publish is skipped when the push commit message contains `chore: version packages` or `chore: update changelog and release` (the release PR merge commit), and also when there are no pending changesets to snapshot — `changeset version` exits with code `1` in that case since Changesets v3, so `scripts/publish-snapshot.mjs` checks for pending changesets first and exits cleanly instead of failing the job.
 
 No manual action is needed. Consumers can install the latest canary via:
 
