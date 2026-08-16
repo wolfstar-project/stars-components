@@ -15,7 +15,7 @@
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset add",
 		"publish": "pnpm build && changeset publish",
-		"publish:snapshot": "changeset version --snapshot next && pnpm build && changeset publish --tag next --no-git-tag",
+		"publish:snapshot": "node scripts/publish-snapshot.mjs",
 		"tolgee:pull": "tolgee pull && node --experimental-strip-types scripts/tolgee-pull-remap.ts",
 		"tolgee:push": "tolgee push --languages en",
 		"tolgee:remap": "node --experimental-strip-types scripts/tolgee-pull-remap.ts",
@@ -23,9 +23,9 @@
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "^0.18.4",
-		"@changesets/cli": "^2.31.0",
-		"@changesets/get-github-info": "^0.8.0",
-		"@changesets/types": "^6.1.0",
+		"@changesets/cli": "^3.0.0",
+		"@changesets/get-github-info": "^1.0.0",
+		"@changesets/types": "^7.0.0",
 		"@commitlint/cli": "^21.2.0",
 		"@commitlint/config-conventional": "^21.2.0",
 		"@favware/npm-deprecate": "^2.0.0",
@@ -64,7 +64,7 @@
 		}
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": "^22.11 || ^24 || >=26"
 	},
 	"packageManager": "pnpm@11.10.0"
 }
