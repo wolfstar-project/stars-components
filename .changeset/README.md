@@ -99,7 +99,11 @@ It does not create or update the release PR.
 
 The `snapshot` job in `release.yml` publishes affected packages under the dist-tag `next`
 whenever `main` receives a push that changes `packages/` or root `package.json`. Version bumps use
-Changesets snapshots (for example `1.2.3-next.0`) via `pnpm run publish:snapshot`.
+Changesets snapshots via `pnpm run publish:snapshot`: the base is the version the pending
+changesets would bump to (`snapshot.useCalculatedVersion`), suffixed with the tag and a UTC
+datetime stamp (`snapshot.prereleaseTemplate`) — for example `1.2.3-next-20260816120000`.
+Only packages with pending changesets enter the snapshot release plan; a push with no
+changesets publishes nothing.
 
 Snapshot publish is skipped when the push commit message contains `chore: version packages` or `chore: update changelog and release` (the release PR merge commit).
 
