@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/logger",
-	"version": "2.1.2",
+	"version": "2.1.3",
 	"description": "A lightweight logger system with level support",
 	"keywords": [
 		"api",
@@ -36,7 +36,8 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"test": "vitest run",

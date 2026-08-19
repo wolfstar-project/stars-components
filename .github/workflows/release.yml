@@ -90,7 +90,13 @@ jobs:
             - name: Publish snapshot
               run: pnpm run publish:snapshot
               env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  # Changelog generator (@changesets/get-github-info) requires a token
+                  GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
+                  # setup-node writes .npmrc with ${NODE_AUTH_TOKEN}; npm also checks NPM_TOKEN
+                  # before falling back to OIDC trusted publishing (which is not configured here).
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+                  NPM_CONFIG_PROVENANCE: true
 
     release:
         name: Create Release PR or Publish
@@ -129,4 +135,7 @@ jobs:
                   commit: 'chore: update changelog and release'
               env:
                   GITHUB_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  # Must match the repo secret name documented in .changeset/README.md
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+                  NPM_CONFIG_PROVENANCE: true

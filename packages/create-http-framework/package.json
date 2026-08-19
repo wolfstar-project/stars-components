@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/create-http-framework",
-	"version": "2.1.1",
+	"version": "2.1.2",
 	"description": "Create a new WolfStar HTTP Framework bot project",
 	"keywords": [
 		"cli",
@@ -30,7 +30,8 @@
 	],
 	"type": "module",
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"build": "tsdown --config-loader unrun",

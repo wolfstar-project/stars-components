@@ -1,6 +1,6 @@
 {
 	"name": "with-testing",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"private": true,
 	"description": "Test a WolfStar HTTP command with http-framework-test-utils",
 	"type": "module",
@@ -16,7 +16,7 @@
 		"@types/node": "22.15.21",
 		"@wolfstar/http-framework-test-utils": "workspace:*",
 		"typescript": "~5.8.3",
-		"vitest": "^4.1.9"
+		"vitest": "^4.1.10"
 	},
 	"engines": {
 		"node": ">=20"

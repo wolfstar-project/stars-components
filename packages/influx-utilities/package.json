@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/influx-utilities",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"description": "A tiny opinionated abstraction layer for InfluxDB for interacting with a single organization",
 	"keywords": [
 		"api",
@@ -36,7 +36,8 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"build": "tsdown --config-loader unrun",
