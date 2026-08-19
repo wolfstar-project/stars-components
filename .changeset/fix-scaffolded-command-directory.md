@@ -2,4 +2,6 @@
 '@wolfstar/create-http-framework': patch
 ---
 
-Fixed the generated entry point calling `client.load({ baseUserDirectory: join(dirname(fileURLToPath(import.meta.url)), 'commands') })`, which made the framework look for commands in a doubled-up `commands/commands` directory (since `client.load()` already appends each store's name to `baseUserDirectory`). Scaffolded projects now call `client.load()` with no arguments, matching how the framework auto-detects the `commands` directory next to the entry file.
+Fixed scaffolded projects never loading their commands. `client.load()` locates the `commands` directory relative to `package.json`'s `main` field (falling back to the working directory when `main` is unset), not relative to the file that calls it — but the generated `package.json` had no `main` field, so `client.load()` resolved to the project root instead of `dist/commands` (or `src/commands` for the JavaScript template). Combined with the entry point previously passing `baseUserDirectory: join(dirname(fileURLToPath(import.meta.url)), 'commands')`, which doubled the `commands` segment, scaffolded bots never registered any commands.
+
+The generated `package.json` now sets `main` to the file the `start` script actually runs (`dist/index.js` for TypeScript, `src/index.js` for JavaScript), and the entry point calls `client.load()` with no arguments, matching the convention used by `examples/basic` and the production bots `staryl`/`ring`.
