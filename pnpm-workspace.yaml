@@ -13,9 +13,9 @@ preferWorkspacePackages: true
 strictPeerDependencies: false
 
 overrides:
-    '@types/pg': '8.20.0'
+    '@types/pg': '8.20.3'
     ansi-regex: '^6.2.2'
-    esbuild: '^0.28.0'
+    esbuild: '^0.28.1'
     minimist: '1.2.8'
     '@redstardev/unplugin-version-injector>vite': '8.2.0'
 

@@ -13,7 +13,7 @@
 	},
 	"devDependencies": {
 		"@wolfstar/http-framework-test-utils": "workspace:*",
-		"vitest": "^4.1.9"
+		"vitest": "^4.1.10"
 	},
 	"engines": {
 		"node": ">=20"
