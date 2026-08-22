@@ -1,5 +1,15 @@
 # with-i18n-js
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`2d38bab`](https://github.com/wolfstar-project/stars-components/commit/2d38bab7745fb898809cd65de3337b9bcf42d976)]:
+    - @wolfstar/env-utilities@2.0.6
+    - @wolfstar/http-framework@3.1.3
+    - @wolfstar/logger@2.1.4
+    - @wolfstar/start-banner@2.0.7
+
 ## 0.0.2
 
 ### Patch Changes
