@@ -48,10 +48,15 @@ Without this, `changesets/action` fails when it attempts to open the release PR.
 
 Repository secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret              | Description                                                                                                                                                                                                                                                                                                                                      |
-| :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows). Also required by the `@next` snapshot job so the changelog generator can call the GitHub API.                                                                            |
-| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Wired as both `NODE_AUTH_TOKEN` and `NPM_TOKEN` in `release.yml`. Classic publish tokens will fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI. Do not rename this secret to `NPM_TOKEN` without updating the workflow. |
+| Secret              | Description                                                                                                                                                                                                                                                                              |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Passed to `changesets/action` through its `github-token` input to push commits and open PRs; the default `GITHUB_TOKEN` does not trigger other workflows. Also used by the `@next` snapshot changelog generator to query the GitHub API. |
+| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Wired as `NODE_AUTH_TOKEN` for the `actions/setup-node` registry configuration. Classic publish tokens fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI.        |
+
+`changesets/action` v2 no longer reads the v1 `GITHUB_TOKEN`, `NPM_TOKEN`, `publish`,
+`title`, or `commit` inputs. GitHub authentication is provided through `github-token`,
+while npm authentication comes from `actions/setup-node`'s `registry-url` and
+`NODE_AUTH_TOKEN`.
 
 ### 3. Install the autofix.ci GitHub App (optional)
 
