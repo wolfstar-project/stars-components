@@ -13,11 +13,11 @@ preferWorkspacePackages: true
 strictPeerDependencies: false
 
 overrides:
-    '@types/pg': '8.20.3'
-    ansi-regex: '^6.2.2'
-    esbuild: '^0.28.1'
+    '@types/pg': '8.23.1'
+    ansi-regex: '^6.3.0'
+    esbuild: '^0.28.2'
     minimist: '1.2.8'
-    '@redstardev/unplugin-version-injector>vite': '8.2.0'
+    '@redstardev/unplugin-version-injector>vite': '8.2.1'
 
 allowBuilds:
     '@swc/core': true
