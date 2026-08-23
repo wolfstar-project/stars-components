@@ -9,7 +9,7 @@
 		".": {
 			"entry": ["scripts/*.{mjs,ts}"],
 			"project": ["scripts/**/*.{mjs,ts}"],
-			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog"]
+			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog", "pkg-pr-new"]
 		},
 		"packages/*": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
