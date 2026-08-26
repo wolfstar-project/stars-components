@@ -6,6 +6,15 @@
 	"linked": [],
 	"access": "public",
 	"baseBranch": "main",
+	"format": "oxfmt",
+	"privatePackages": { "version": true, "tag": false },
 	"updateInternalDependencies": "patch",
-	"ignore": []
+	"ignore": [],
+	"snapshot": {
+		"useCalculatedVersion": true,
+		"prereleaseTemplate": "{tag}-{datetime}"
+	},
+	"___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+		"onlyUpdatePeerDependentsWhenOutOfRange": true
+	}
 }

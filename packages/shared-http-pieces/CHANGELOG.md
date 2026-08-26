@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.8
+
+### Patch Changes
+
+- [#107](https://github.com/wolfstar-project/stars-components/pull/107) [`dd057a9`](https://github.com/wolfstar-project/stars-components/commit/dd057a9096cbbaa0d80a69de6b4f10a838cdfadf) - Restore npm provenance attestation on publish for all packages Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`dd057a9`](https://github.com/wolfstar-project/stars-components/commit/dd057a9096cbbaa0d80a69de6b4f10a838cdfadf)]:
+    - @wolfstar/env-utilities@2.0.5
+    - @wolfstar/http-framework@3.1.2
+    - @wolfstar/http-framework-i18n@1.2.5
+
+## 1.2.7
+
+### Patch Changes
+
+- [#96](https://github.com/wolfstar-project/stars-components/pull/96) [`fda4e1d`](https://github.com/wolfstar-project/stars-components/commit/fda4e1d22edff4c516a599cec45294b1dfbde40b) - chore: migrate localization tooling from Crowdin to Tolgee Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`adce4cb`](https://github.com/wolfstar-project/stars-components/commit/adce4cb983e7f60d23bbd6d13f66adba4e2a08f5)]:
+    - @wolfstar/env-utilities@2.0.4
+    - @wolfstar/http-framework-i18n@1.2.4
+    - @wolfstar/http-framework@3.1.1
+
 ## 1.2.6
 
 ### Patch Changes

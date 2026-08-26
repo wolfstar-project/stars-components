@@ -10,9 +10,12 @@ A fetch wrapper on top of Rust's Result, powered by [`@sapphire/result`](https:/
 ## Usage
 
 ```typescript
-import { safeFetch, json } from '@wolfstar/safe-fetch';
+import { Json, safeFetch } from '@wolfstar/safe-fetch';
 
-const data = await json(safeFetch('https://api.example.org'));
+const result = await Json<{ id: number; name: string }>(safeFetch('https://api.example.org/users/1'));
 
-console.log(data);
+result.match({
+	ok: (user) => console.log(user.name),
+	err: (error) => console.error(error)
+});
 ```

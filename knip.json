@@ -9,12 +9,40 @@
 		".": {
 			"entry": ["scripts/*.{mjs,ts}"],
 			"project": ["scripts/**/*.{mjs,ts}"],
-			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog"]
+			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog", "pkg-pr-new"]
 		},
 		"packages/*": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["tslib"]
+		},
+		"examples/*": {
+			"entry": ["src/**/*.{ts,js}"],
+			"project": ["src/**/*.{ts,js}"],
+			"ignoreDependencies": ["@sapphire/pieces"]
+		},
+		"examples/basic": {
+			"entry": ["src/**/*.ts"],
+			"project": ["src/**/*.ts", "tsdown.config.ts"],
+			"ignoreDependencies": ["@sapphire/pieces"]
+		},
+		"examples/with-subcommands": {
+			"entry": ["src/**/*.ts"],
+			"project": ["src/**/*.ts", "tsdown.config.ts"],
+			"ignoreDependencies": ["@sapphire/pieces"]
+		},
+		"examples/with-i18n": {
+			"entry": ["src/**/*.ts"],
+			"project": ["src/**/*.ts", "tsdown.config.ts"],
+			"ignoreDependencies": ["@sapphire/pieces"]
+		},
+		"examples/with-testing": {
+			"entry": ["src/**/*.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts", "vitest.setup.ts"]
+		},
+		"examples/with-testing-js": {
+			"entry": ["src/**/*.js", "tests/**/*.js"],
+			"project": ["src/**/*.js", "tests/**/*.js", "vitest.config.js", "vitest.setup.js"]
 		},
 		"packages/shared-http-pieces": {
 			"ignoreDependencies": ["@discordjs/collection", "tslib"]

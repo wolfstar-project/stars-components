@@ -1,0 +1,21 @@
+{
+	"name": "with-testing-js",
+	"version": "0.0.3",
+	"private": true,
+	"description": "Test a WolfStar HTTP command with http-framework-test-utils in plain JavaScript (ESM)",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@wolfstar/http-framework": "workspace:*",
+		"discord-api-types": "^0.38.8"
+	},
+	"devDependencies": {
+		"@wolfstar/http-framework-test-utils": "workspace:*",
+		"vitest": "^4.1.10"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

@@ -36,6 +36,23 @@
 
 ---
 
+## Examples
+
+HTTP Discord bot samples under [`examples/`](./examples) (TypeScript and JavaScript ESM):
+
+```bash
+pnpm install
+pnpm build
+cp examples/basic/.env.example examples/basic/src/.env
+pnpm --filter basic dev
+# or, plain JS with no build step:
+pnpm --filter basic-js dev
+```
+
+See [`examples/README.md`](./examples/README.md) for the full list.
+
+---
+
 ## Open in your editor
 
 Want to contribute without setting up locally? Click any button below to open this project in a cloud development environment:

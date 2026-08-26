@@ -1,0 +1,29 @@
+{
+	"name": "basic-js",
+	"version": "0.0.3",
+	"private": true,
+	"description": "Minimal WolfStar HTTP Discord bot example in plain JavaScript (ESM)",
+	"type": "module",
+	"main": "src/main.js",
+	"imports": {
+		"#lib/*": "./src/lib/*"
+	},
+	"scripts": {
+		"dev": "node --watch src/main.js",
+		"start": "node --enable-source-maps src/main.js"
+	},
+	"dependencies": {
+		"@sapphire/pieces": "^4.4.1",
+		"@wolfstar/env-utilities": "workspace:*",
+		"@wolfstar/http-framework": "workspace:*",
+		"@wolfstar/http-framework-i18n": "workspace:*",
+		"@wolfstar/logger": "workspace:*",
+		"@wolfstar/shared-http-pieces": "workspace:*",
+		"@wolfstar/start-banner": "workspace:*",
+		"discord-api-types": "^0.38.8",
+		"gradient-string": "^3.0.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-test-utils",
-	"version": "3.0.0",
+	"version": "3.0.4",
 	"description": "Test utilities for @wolfstar/http-framework",
 	"keywords": [
 		"discord",
@@ -44,7 +44,8 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"build": "tsdown --config-loader unrun",
@@ -58,13 +59,13 @@
 		"@sapphire/utilities": "^3.18.2",
 		"@wolfstar/http-framework": "workspace:*",
 		"discord-api-types": "^0.38.8",
-		"tsdown": "^0.22.3",
+		"tsdown": "^0.22.14",
 		"typescript": "~5.8.3",
-		"vitest": "^4.1.9"
+		"vitest": "^4.1.10"
 	},
 	"peerDependencies": {
 		"@wolfstar/http-framework": "workspace:^",
-		"vitest": ">=4.1.9"
+		"vitest": ">=4.1.10"
 	},
 	"peerDependenciesMeta": {
 		"vitest": {

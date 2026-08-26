@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/shared-http-pieces",
-	"version": "1.2.6",
+	"version": "1.2.8",
 	"description": "The common pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -43,7 +43,8 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"build": "tsdown --config-loader unrun",

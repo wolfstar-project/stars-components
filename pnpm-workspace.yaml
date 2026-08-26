@@ -1,5 +1,6 @@
 packages:
     - 'packages/*'
+    - 'examples/*'
 
 autoInstallPeers: true
 
@@ -12,16 +13,25 @@ preferWorkspacePackages: true
 strictPeerDependencies: false
 
 overrides:
-    '@types/pg': '8.20.0'
+    '@types/pg': '8.20.3'
     ansi-regex: '^6.2.2'
+    esbuild: '^0.28.1'
     minimist: '1.2.8'
+    '@redstardev/unplugin-version-injector>vite': '8.2.0'
 
 allowBuilds:
     '@swc/core': true
     esbuild: true
+    sharp: true
 
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
     - '@redstardev/*'
     - unrun@0.3.1
+    - vitepress@2.0.0-alpha.18
+    - '@shikijs/vitepress-twoslash@4.3.1'
+    - vitepress-plugin-group-icons@1.7.5
+    - vitepress-plugin-llms@1.13.3
+    - markdown-it-image-size@15.0.1
+    - vite@6.4.3

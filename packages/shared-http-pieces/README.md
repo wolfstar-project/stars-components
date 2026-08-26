@@ -1,4 +1,4 @@
-# `@wolfstar/shared-http-pieces` [![Crowdin](https://badges.crowdin.net/sharedhttppieces/localized.svg)](https://crowdin.com/project/sharedhttppieces)
+# `@wolfstar/shared-http-pieces` [![Tolgee](https://img.shields.io/badge/Localization-Tolgee-1D2A3A?logo=tolgee&logoColor=white)](https://app.tolgee.io/projects/33773)
 
 The shared commands used for Star Network's HTTP-only bots.
 
