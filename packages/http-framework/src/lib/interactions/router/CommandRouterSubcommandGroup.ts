@@ -1,7 +1,7 @@
 import { Collection } from '@discordjs/collection';
 import { isFunction } from '@sapphire/utilities';
 import type { APIApplicationCommandSubcommandGroupOption, APIApplicationCommandSubcommandOption } from 'discord-api-types/v10';
-import { ChatInputRouterError } from '../../errors/ChatInputRouterError';
+import { ChatInputRouterError } from '../../errors/ChatInputRouterError.js';
 import type { Command } from '../../structures/Command.js';
 import type { CommandRouterSubcommand } from './CommandRouterSubcommand';
 
