@@ -7,9 +7,6 @@
 - name: packages:http-framework
   color: '1d76db'
   description: Changes in http-framework
-- name: packages:http-framework-decorators
-  color: '1d76db'
-  description: Changes in http-framework-decorators
 - name: packages:http-framework-i18n
   color: '1d76db'
   description: Changes in http-framework-i18n

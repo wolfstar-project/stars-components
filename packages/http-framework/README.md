@@ -138,8 +138,7 @@ export class UserCommand extends Command {
 ### Utility decorators
 
 Besides the `Register*` decorators, the framework ships a set of utility decorators for configuring pieces and gating
-methods. They are also re-exported by [`@wolfstar/http-framework-decorators`](https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework-decorators)
-for projects that prefer importing them from a dedicated package.
+methods.
 
 #### `ApplyOptions`
 

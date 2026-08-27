@@ -2,7 +2,6 @@ name: '*next*'
 package:
     - '@wolfstar/env-utilities'
     - '@wolfstar/http-framework'
-    - '@wolfstar/http-framework-decorators'
     - '@wolfstar/http-framework-i18n'
     - '@wolfstar/i18next-backend'
     - '@wolfstar/influx-utilities'

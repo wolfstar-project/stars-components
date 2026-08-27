@@ -8,7 +8,6 @@ const paths = [
 	// Dist folders
 	new URL('env-utilities/dist/', packagesDir),
 	new URL('http-framework/dist/', packagesDir),
-	new URL('http-framework-decorators/dist/', packagesDir),
 	new URL('http-framework-i18n/dist/', packagesDir),
 	new URL('i18next-backend/dist/', packagesDir),
 	new URL('logger/dist/', packagesDir),
@@ -24,7 +23,6 @@ const paths = [
 	// Turbo folders
 	new URL('env-utilities/.turbo/', packagesDir),
 	new URL('http-framework/.turbo/', packagesDir),
-	new URL('http-framework-decorators/.turbo/', packagesDir),
 	new URL('http-framework-i18n/.turbo/', packagesDir),
 	new URL('i18next-backend/.turbo/', packagesDir),
 	new URL('logger/.turbo/', packagesDir),

@@ -42,7 +42,6 @@ jobs:
                   scopes: |
                       env-utilities
                       http-framework
-                      http-framework-decorators
                       http-framework-i18n
                       i18next-backend
                       influx-utilities
