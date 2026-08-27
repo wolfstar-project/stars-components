@@ -10,6 +10,12 @@ packages:http-framework:
                 - packages/http-framework/*
                 - packages/http-framework/**/*
 
+packages:http-framework-decorators:
+    - changed-files:
+          - any-glob-to-any-file:
+                - packages/http-framework-decorators/*
+                - packages/http-framework-decorators/**/*
+
 packages:http-framework-i18n:
     - changed-files:
           - any-glob-to-any-file:
