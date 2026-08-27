@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.5
+
+### Patch Changes
+
+- [#126](https://github.com/wolfstar-project/stars-components/pull/126) [`abf7f77`](https://github.com/wolfstar-project/stars-components/commit/abf7f77462ae91c9840a08e273899e4027f2253a) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 2.1.4
 
 ### Patch Changes

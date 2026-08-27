@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.9
+
+### Patch Changes
+
+- [#112](https://github.com/wolfstar-project/stars-components/pull/112) [`1ed856a`](https://github.com/wolfstar-project/stars-components/commit/1ed856a81eb18bdc2bc47e91ffd438e939cd7591) - fix(deps): update dependency @sentry/node to v10 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`abf7f77`](https://github.com/wolfstar-project/stars-components/commit/abf7f77462ae91c9840a08e273899e4027f2253a)]:
+    - @wolfstar/env-utilities@2.0.7
+    - @wolfstar/http-framework@3.1.4
+
 ## 1.2.8
 
 ### Patch Changes
