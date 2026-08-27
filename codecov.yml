@@ -1,3 +1,7 @@
 coverage:
+    status:
+        project:
+            default:
+                threshold: 5%
     ignore:
         - 'packages/http-framework-test-utils/**'

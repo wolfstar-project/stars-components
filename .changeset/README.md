@@ -48,10 +48,15 @@ Without this, `changesets/action` fails when it attempts to open the release PR.
 
 Repository secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret              | Description                                                                                                                                                                                                                                                                                                                                      |
-| :------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Used by `changesets/action` to push commits and open PRs (the default `GITHUB_TOKEN` does not trigger other workflows). Also required by the `@next` snapshot job so the changelog generator can call the GitHub API.                                                                            |
-| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Wired as both `NODE_AUTH_TOKEN` and `NPM_TOKEN` in `release.yml`. Classic publish tokens will fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI. Do not rename this secret to `NPM_TOKEN` without updating the workflow. |
+| Secret              | Description                                                                                                                                                                                                                                                                              |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Passed to `changesets/action` through its `github-token` input to push commits and open PRs; the default `GITHUB_TOKEN` does not trigger other workflows. Also used by the `@next` snapshot changelog generator to query the GitHub API. |
+| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Wired as `NODE_AUTH_TOKEN` for the `actions/setup-node` registry configuration. Classic publish tokens fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI.        |
+
+`changesets/action` v2 no longer reads the v1 `GITHUB_TOKEN`, `NPM_TOKEN`, `publish`,
+`title`, or `commit` inputs. GitHub authentication is provided through `github-token`,
+while npm authentication comes from `actions/setup-node`'s `registry-url` and
+`NODE_AUTH_TOKEN`.
 
 ### 3. Install the autofix.ci GitHub App (optional)
 
@@ -99,9 +104,13 @@ It does not create or update the release PR.
 
 The `snapshot` job in `release.yml` publishes affected packages under the dist-tag `next`
 whenever `main` receives a push that changes `packages/` or root `package.json`. Version bumps use
-Changesets snapshots (for example `1.2.3-next.0`) via `pnpm run publish:snapshot`.
+Changesets snapshots via `pnpm run publish:snapshot`: the base is the version the pending
+changesets would bump to (`snapshot.useCalculatedVersion`), suffixed with the tag and a UTC
+datetime stamp (`snapshot.prereleaseTemplate`) — for example `1.2.3-next-20260816120000`.
+Only packages with pending changesets enter the snapshot release plan; a push with no
+changesets publishes nothing.
 
-Snapshot publish is skipped when the push commit message contains `chore: version packages` or `chore: update changelog and release` (the release PR merge commit).
+Snapshot publish is skipped when the push commit message contains `chore: version packages` or `chore: update changelog and release` (the release PR merge commit), and also when there are no pending changesets to snapshot — `changeset version` exits with code `1` in that case since Changesets v3, so `scripts/publish-snapshot.mjs` checks for pending changesets first and exits cleanly instead of failing the job.
 
 No manual action is needed. Consumers can install the latest canary via:
 

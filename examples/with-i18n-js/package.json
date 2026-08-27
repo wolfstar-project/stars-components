@@ -1,6 +1,6 @@
 {
 	"name": "with-i18n-js",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"private": true,
 	"description": "WolfStar HTTP bot example with multi-locale i18n in plain JavaScript (ESM)",
 	"type": "module",

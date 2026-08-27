@@ -1,31 +1,47 @@
-name: autofix.ci
+name: pkg.pr.new
 
 on:
     pull_request:
         branches:
             - main
+    push:
+        branches:
+            - main
+    workflow_dispatch:
 
 permissions: {}
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+    cancel-in-progress: true
+
 jobs:
-    code:
-        name: Autofix code
-        runs-on: ubuntu-latest
+    publish:
+        name: 📦 Publish preview packages
+        runs-on: ubuntu-24.04-arm
+        timeout-minutes: 15
+        if: github.repository_owner == 'wolfstar-project'
         permissions:
-            contents: write
+            contents: read
+
         steps:
             - name: Checkout Project
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
+
             - name: Setup pnpm + Node.js v24
               uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
               with:
                   runtime: node@24
                   cache: true
                   install: false
+
             - name: Install Dependencies
               run: pnpm install --frozen-lockfile
-            - name: Lint and format fix
-              run: pnpm lint:fix
-            - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4
+
+            - name: Build code
+              run: pnpm build
+
+            - name: Publish preview packages
+              run: pnpm exec pkg-pr-new publish --pnpm './packages/*'

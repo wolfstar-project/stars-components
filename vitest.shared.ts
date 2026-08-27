@@ -1,13 +1,11 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-	esbuild: {
+	oxc: {
 		target: 'es2021',
-		tsconfigRaw: {
-			compilerOptions: {
-				experimentalDecorators: true,
-				emitDecoratorMetadata: true
-			}
+		decorator: {
+			legacy: true,
+			emitDecoratorMetadata: true
 		}
 	},
 	test: {

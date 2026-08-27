@@ -5,8 +5,16 @@ rules:
         ignore:
             - semantic-pull-requests.yml
     # The release job checkout intentionally persists WOLFSTAR_TOKEN (no
-    # persist-credentials: false) so changesets/action can push version-bump
-    # commits, tags, and the release PR with that token.
+    # persist-credentials: false) so git reads and any CLI fallback keep working
+    # while changesets/action pushes version-bump commits, tags, and the release
+    # PR with the same token passed through its `github-token` input.
     artipacked:
         ignore:
             - release.yml
+    # pkg.pr.new publishes preview tarballs through its GitHub App using the
+    # workflow run's own identity: there is no registry token and no trusted
+    # publishing (OIDC) counterpart to migrate to, so the publish step trips
+    # this audit spuriously.
+    use-trusted-publishing:
+        ignore:
+            - pkg-pr-new.yml

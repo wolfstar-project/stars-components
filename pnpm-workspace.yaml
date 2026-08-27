@@ -13,14 +13,10 @@ preferWorkspacePackages: true
 strictPeerDependencies: false
 
 overrides:
-    '@types/pg': '8.20.0'
+    '@types/pg': '8.20.3'
     ansi-regex: '^6.2.2'
-    esbuild: '^0.28.0'
+    esbuild: '^0.28.1'
     minimist: '1.2.8'
-    # Keep VitePress on Vite 8, but pin Vitest/test tooling to Vite 6 so
-    # TypeScript experimental decorators continue to transform via esbuild.
-    'vitest>vite': '8.2.0'
-    '@vitest/mocker>vite': '6.4.3'
     '@redstardev/unplugin-version-injector>vite': '8.2.0'
 
 allowBuilds:
