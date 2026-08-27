@@ -44,4 +44,24 @@ describe('ApplyOptions', () => {
 
 		expect(new UserPiece(context).context).toBe(context);
 	});
+
+	test('GIVEN a subclass of a decorated piece THEN it retains its own prototype and overrides', () => {
+		@ApplyOptions<PieceOptions>({ name: 'ping' })
+		class DecoratedBase extends FakePiece {
+			public greet() {
+				return 'base';
+			}
+		}
+
+		class UserPiece extends DecoratedBase {
+			public override greet() {
+				return 'derived';
+			}
+		}
+
+		const piece = new UserPiece(context);
+		expect(piece).toBeInstanceOf(UserPiece);
+		expect(piece.greet()).toBe('derived');
+		expect(piece.options).toEqual({ name: 'ping' });
+	});
 });

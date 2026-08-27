@@ -164,6 +164,11 @@ It also accepts a function, which receives the loader context:
 export class UserCommand extends Command {}
 ```
 
+> **Note**: `ApplyOptions` returns a `Proxy` wrapping the class, so it must be applied above (outside of) any other class
+> decorator that keys metadata by class identity, such as `RegisterCommand` — as in the example above. A decorator
+> applied above `ApplyOptions` would run after it and register against the proxy, but instances constructed from the
+> exported class still resolve `.constructor` to the original, unproxied class, so that metadata could never be found.
+
 #### `RequiresGuildContext` / `RequiresDMContext`
 
 Restrict a method to interactions received from a guild, or to interactions received outside of one (DMs and

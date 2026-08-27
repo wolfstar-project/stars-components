@@ -12,6 +12,11 @@ export type PieceConstructor<Options extends PieceOptions = PieceOptions> = new 
  *
  * @remarks The options are merged on top of the ones the piece was constructed with, so a piece that also passes
  * options through `super(context, options)` will have the decorator's values win on conflicting keys.
+ * @remarks Apply this decorator above (outside of) any other class decorator that keys metadata by class identity,
+ * such as {@linkcode RegisterCommand} — as in the example below. This decorator returns a `Proxy` wrapping the class,
+ * so a decorator applied above it (running after it, and therefore registering against the proxy) would register
+ * metadata that instances constructed from the exported class — whose `.constructor` still resolves to the original,
+ * unproxied class — can never be looked up by.
  * @param optionsOrFn The options to pass to the piece's constructor, or a function that builds them from the loader
  * context.
  * @returns A class decorator.
@@ -38,11 +43,18 @@ export function ApplyOptions<Options extends PieceOptions = PieceOptions>(
 ): ClassDecorator {
 	return createClassDecorator((target: PieceConstructor<Options>) =>
 		createProxy(target, {
-			construct: (ctor, [context, baseOptions]: [LoaderPieceContext, Options | undefined]) =>
-				new ctor(context, {
-					...baseOptions,
-					...(typeof optionsOrFn === 'function' ? optionsOrFn(context) : optionsOrFn)
-				}) as object
+			construct: (ctor, [context, baseOptions]: [LoaderPieceContext, Options | undefined], newTarget) =>
+				Reflect.construct(
+					ctor,
+					[
+						context,
+						{
+							...baseOptions,
+							...(typeof optionsOrFn === 'function' ? optionsOrFn(context) : optionsOrFn)
+						}
+					],
+					newTarget
+				) as object
 		})
 	) as ClassDecorator;
 }
