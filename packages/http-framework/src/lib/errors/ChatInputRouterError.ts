@@ -1,11 +1,13 @@
 import type { APIApplicationCommandSubcommandGroupOption, APIApplicationCommandSubcommandOption } from 'discord-api-types/v10';
 import type { Command } from '../structures/Command.js';
+import { Identifiers } from './Identifiers.js';
+import { UserError } from './UserError.js';
 
 /**
  * Represents an error that is thrown when a {@link ChatInputRouter} encounters an error.
  * @since 2.0.0
  */
-export class ChatInputRouterError<Options extends Command.Options = Command.Options> extends Error {
+export class ChatInputRouterError<Options extends Command.Options = Command.Options> extends UserError {
 	/**
 	 * The key identifying the error.
 	 * @since 2.0.0
@@ -36,7 +38,11 @@ export class ChatInputRouterError<Options extends Command.Options = Command.Opti
 		group?: APIApplicationCommandSubcommandGroupOption | null,
 		subcommand?: APIApplicationCommandSubcommandOption | null
 	) {
-		super(ChatInputRouterErrors[key](command.name, group?.name ?? '', subcommand?.name ?? ''));
+		super({
+			identifier: Identifiers[`ChatInputRouter${key}`],
+			message: ChatInputRouterErrors[key](command.name, group?.name ?? '', subcommand?.name ?? ''),
+			context: { command, group: group ?? null, subcommand: subcommand ?? null }
+		});
 		this.key = key;
 		this.command = command;
 		this.group = group ?? null;
@@ -49,6 +55,10 @@ export class ChatInputRouterError<Options extends Command.Options = Command.Opti
 	 */
 	public get path() {
 		return `${this.command.name}${this.group ? `/${this.group.name}` : ''}${this.subcommand ? `/${this.subcommand.name}` : ''}`;
+	}
+
+	public override get name(): string {
+		return 'ChatInputRouterError';
 	}
 }
 
