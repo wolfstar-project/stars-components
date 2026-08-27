@@ -1,7 +1,8 @@
-import type { BaseInteraction } from '@wolfstar/http-framework';
-import { MissingPermissionsError } from './errors/MissingPermissionsError.js';
-import { createFunctionPrecondition } from './utils/decorators.js';
-import { getMissingPermissions, resolvePermissions, type PermissionResolvable } from './utils/permissions.js';
+import type { BaseInteraction } from '../interactions/structures/interactions/base/BaseInteraction.js';
+import { Identifiers } from '../errors/Identifiers.js';
+import { PreconditionError } from '../errors/PreconditionError.js';
+import { createFunctionPrecondition } from './utils.js';
+import { getMissingPermissions, resolvePermissions, toPermissionNames, type PermissionResolvable } from '../utils/permissions.js';
 
 /**
  * Reads the permissions the invoking user has in the channel the interaction was sent from.
@@ -19,14 +20,14 @@ function getUserPermissions(interaction: BaseInteraction): bigint | null {
  * Decorator that only runs the decorated method when the application has all of the given permissions in the channel
  * the interaction was sent from, as reported by the interaction's `app_permissions` field.
  *
- * @remarks When the fallback is omitted, a {@linkcode MissingPermissionsError} is thrown, which the client emits as
- * `commandError` (or `interactionHandlerError`) for a `Listener` to turn into a user-facing reply.
+ * @remarks When the fallback is omitted, a {@linkcode PreconditionError} identified by
+ * {@linkcode Identifiers.PreconditionClientPermissions} is thrown, which the client emits as `commandError` (or
+ * `interactionHandlerError`) for a `Listener` to turn into a user-facing reply.
  * @param permissions The permissions the application must have.
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand } from '@wolfstar/http-framework';
- * import { RequiresClientPermissions } from '@wolfstar/http-framework-decorators';
+ * import { Command, RegisterCommand, RequiresClientPermissions } from '@wolfstar/http-framework';
  *
  * (at)RegisterCommand({ name: 'purge', description: 'Deletes messages' })
  * export class UserCommand extends Command {
@@ -47,7 +48,14 @@ export function RequiresClientPermissions(...permissions: PermissionResolvable[]
 			return granted === undefined || getMissingPermissions(granted, required) === 0n;
 		},
 		(interaction: BaseInteraction) => {
-			throw new MissingPermissionsError('client', getMissingPermissions(interaction.applicationPermissions ?? 0n, required));
+			const missing = getMissingPermissions(interaction.applicationPermissions ?? 0n, required);
+			const missingNames = toPermissionNames(missing);
+			throw new PreconditionError({
+				precondition: 'ClientPermissions',
+				identifier: Identifiers.PreconditionClientPermissions,
+				message: `Sorry, but I am not allowed to do that. I am missing the permissions: ${missingNames.join(', ')}`,
+				context: { missing, missingNames }
+			});
 		}
 	);
 }
@@ -58,14 +66,14 @@ export function RequiresClientPermissions(...permissions: PermissionResolvable[]
  *
  * @remarks Interactions received outside of a guild carry no member permissions, so the check passes for them. Pair
  * this decorator with {@linkcode RequiresGuildContext} when the method must also be guild-only.
- * @remarks When the fallback is omitted, a {@linkcode MissingPermissionsError} is thrown, which the client emits as
- * `commandError` (or `interactionHandlerError`) for a `Listener` to turn into a user-facing reply.
+ * @remarks When the fallback is omitted, a {@linkcode PreconditionError} identified by
+ * {@linkcode Identifiers.PreconditionUserPermissions} is thrown, which the client emits as `commandError` (or
+ * `interactionHandlerError`) for a `Listener` to turn into a user-facing reply.
  * @param permissions The permissions the invoking user must have.
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand } from '@wolfstar/http-framework';
- * import { RequiresUserPermissions } from '@wolfstar/http-framework-decorators';
+ * import { Command, RegisterCommand, RequiresUserPermissions } from '@wolfstar/http-framework';
  *
  * (at)RegisterCommand({ name: 'ban', description: 'Bans a member' })
  * export class UserCommand extends Command {
@@ -84,7 +92,14 @@ export function RequiresUserPermissions(...permissions: PermissionResolvable[]):
 			return granted === null || getMissingPermissions(granted, required) === 0n;
 		},
 		(interaction: BaseInteraction) => {
-			throw new MissingPermissionsError('user', getMissingPermissions(getUserPermissions(interaction) ?? 0n, required));
+			const missing = getMissingPermissions(getUserPermissions(interaction) ?? 0n, required);
+			const missingNames = toPermissionNames(missing);
+			throw new PreconditionError({
+				precondition: 'UserPermissions',
+				identifier: Identifiers.PreconditionUserPermissions,
+				message: `Sorry, but you are not allowed to do that. You are missing the permissions: ${missingNames.join(', ')}`,
+				context: { missing, missingNames }
+			});
 		}
 	);
 }

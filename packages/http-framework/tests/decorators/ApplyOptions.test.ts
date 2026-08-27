@@ -1,5 +1,5 @@
-import type { LoaderPieceContext, PieceOptions } from '@wolfstar/http-framework';
-import { ApplyOptions } from '../src/index.js';
+import type { LoaderPieceContext, PieceOptions } from '../../src/index.js';
+import { ApplyOptions } from '../../src/index.js';
 
 const context = { name: 'Ping', path: '/pieces/Ping.js', root: '/pieces', store: null } as unknown as LoaderPieceContext;
 

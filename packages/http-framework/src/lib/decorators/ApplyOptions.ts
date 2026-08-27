@@ -1,5 +1,5 @@
-import type { LoaderPieceContext, PieceOptions } from '@wolfstar/http-framework';
-import { createClassDecorator, createProxy } from './utils/decorators.js';
+import type { LoaderPieceContext, PieceOptions } from '@sapphire/pieces';
+import { createClassDecorator, createProxy } from './utils.js';
 
 /**
  * The constructor signature shared by every `Piece` of `@wolfstar/http-framework`, such as `Command`, `Listener`, and
@@ -17,8 +17,7 @@ export type PieceConstructor<Options extends PieceOptions = PieceOptions> = new 
  * @returns A class decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand } from '@wolfstar/http-framework';
- * import { ApplyOptions } from '@wolfstar/http-framework-decorators';
+ * import { ApplyOptions, Command, RegisterCommand } from '@wolfstar/http-framework';
  *
  * (at)ApplyOptions<Command.Options>({ name: 'ping', enabled: true })
  * (at)RegisterCommand({ name: 'ping', description: 'A simple ping pong command' })
@@ -45,5 +44,5 @@ export function ApplyOptions<Options extends PieceOptions = PieceOptions>(
 					...(typeof optionsOrFn === 'function' ? optionsOrFn(context) : optionsOrFn)
 				}) as object
 		})
-	);
+	) as ClassDecorator;
 }

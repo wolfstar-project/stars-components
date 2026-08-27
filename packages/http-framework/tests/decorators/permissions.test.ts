@@ -1,5 +1,5 @@
 import { PermissionFlagsBits } from 'discord-api-types/v10';
-import { getMissingPermissions, resolvePermissions, toPermissionNames } from '../src/index.js';
+import { getMissingPermissions, resolvePermissions, toPermissionNames } from '../../src/index.js';
 
 describe('resolvePermissions', () => {
 	test('GIVEN bigint THEN returns it unchanged', () => {

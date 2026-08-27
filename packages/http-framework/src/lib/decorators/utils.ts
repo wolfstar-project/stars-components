@@ -1,30 +1,35 @@
 /**
  * Utility to make a method decorator from a function.
  *
+ * @remarks The decorator is returned with the signature it was given, rather than widened to `MethodDecorator`, so a
+ * decorator built on top of this keeps whatever constraint it declares on its target.
  * @param fn The method to decorate.
  * @returns The decorator.
  * @example
  * ```typescript
  * // Enumerable function that will not append the property to the prototype:
  * function enumerableMethod(value: boolean) {
- * 	return createMethodDecorator((_target, _propertyKey, descriptor) => {
+ * 	return createMethodDecorator((_target: unknown, _propertyKey: string, descriptor: PropertyDescriptor) => {
  * 		descriptor.enumerable = value;
  * 	});
  * }
  * ```
  */
-export function createMethodDecorator(fn: MethodDecorator): MethodDecorator {
+export function createMethodDecorator<TFunction extends (...args: any[]) => unknown>(fn: TFunction): TFunction {
 	return fn;
 }
 
 /**
  * Utility to make a class decorator from a function.
  *
+ * @remarks The decorator is returned with the signature it was given, rather than widened to `ClassDecorator`, so a
+ * decorator built on top of this keeps whatever constraint it declares on its target. This is what lets
+ * {@linkcode RegisterCommand} and its siblings reject a target that is not a `Command`.
  * @param fn The class to decorate.
  * @returns The decorator.
  * @see {@linkcode ApplyOptions}
  */
-export function createClassDecorator<TFunction extends (...args: any[]) => void>(fn: TFunction): ClassDecorator {
+export function createClassDecorator<TFunction extends (...args: any[]) => unknown>(fn: TFunction): TFunction {
 	return fn;
 }
 
@@ -56,8 +61,7 @@ export function createProxy<T extends object>(target: T, handler: Omit<ProxyHand
  * @returns The decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand } from '@wolfstar/http-framework';
- * import { createFunctionPrecondition } from '@wolfstar/http-framework-decorators';
+ * import { Command, RegisterCommand, createFunctionPrecondition } from '@wolfstar/http-framework';
  *
  * const RequiresOwner = createFunctionPrecondition(
  * 	(interaction: Command.ChatInputInteraction) => interaction.user.id === process.env.OWNER_ID,
@@ -69,13 +73,13 @@ export function createFunctionPrecondition(
 	precondition: (...args: any[]) => boolean | Promise<boolean>,
 	fallback: (...args: any[]) => unknown = () => undefined
 ): MethodDecorator {
-	return createMethodDecorator((_target, _propertyKey, descriptor) => {
+	return createMethodDecorator((_target: unknown, _propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
 		const method = descriptor.value;
 		if (!method) throw new Error('Function preconditions require a [[value]].');
 		if (typeof method !== 'function') throw new Error('Function preconditions can only be applied to functions.');
 
 		descriptor.value = async function value(this: unknown, ...args: any[]) {
 			return (await precondition.apply(this, args)) ? method.apply(this, args) : fallback.apply(this, args);
-		} as unknown as undefined;
-	});
+		};
+	}) as MethodDecorator;
 }

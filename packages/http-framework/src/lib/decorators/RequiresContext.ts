@@ -1,5 +1,5 @@
-import type { BaseInteraction } from '@wolfstar/http-framework';
-import { createFunctionPrecondition } from './utils/decorators.js';
+import type { BaseInteraction } from '../interactions/structures/interactions/base/BaseInteraction.js';
+import { createFunctionPrecondition } from './utils.js';
 
 /**
  * The fallback invoked when a context precondition is not met. It receives the same arguments as the decorated method.
@@ -14,8 +14,7 @@ export type ContextFallback = (...args: any[]) => unknown;
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand } from '@wolfstar/http-framework';
- * import { RequiresGuildContext } from '@wolfstar/http-framework-decorators';
+ * import { Command, RegisterCommand, RequiresGuildContext } from '@wolfstar/http-framework';
  *
  * (at)RegisterCommand({ name: 'kick', description: 'Kicks a member' })
  * export class UserCommand extends Command {
@@ -41,8 +40,7 @@ export function RequiresGuildContext(fallback: ContextFallback = () => undefined
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand } from '@wolfstar/http-framework';
- * import { RequiresDMContext } from '@wolfstar/http-framework-decorators';
+ * import { Command, RegisterCommand, RequiresDMContext } from '@wolfstar/http-framework';
  *
  * (at)RegisterCommand({ name: 'private', description: 'Only usable outside of servers' })
  * export class UserCommand extends Command {

@@ -1,4 +1,4 @@
-import { Enumerable, EnumerableMethod } from '../src/index.js';
+import { Enumerable, EnumerableMethod } from '../../src/index.js';
 
 describe('Enumerable', () => {
 	class Container {

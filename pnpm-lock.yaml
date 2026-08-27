@@ -455,14 +455,7 @@ importers:
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.2.1)
 
   packages/http-framework-decorators:
-    dependencies:
-      discord-api-types:
-        specifier: ^0.38.8
-        version: 0.38.53
     devDependencies:
-      '@vitest/coverage-v8':
-        specifier: ^4.1.11
-        version: 4.1.11(vitest@4.1.11)
       '@wolfstar/http-framework':
         specifier: workspace:*
         version: link:../http-framework
@@ -472,9 +465,6 @@ importers:
       typescript:
         specifier: ~5.8.3
         version: 5.8.3
-      vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.2.1)
 
   packages/http-framework-i18n:
     dependencies:

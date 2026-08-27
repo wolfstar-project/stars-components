@@ -1,4 +1,4 @@
-import { createFunctionPrecondition, createProxy } from '../src/index.js';
+import { createFunctionPrecondition, createProxy } from '../../src/index.js';
 
 describe('createProxy', () => {
 	test('GIVEN a construct trap THEN it intercepts instantiation', () => {

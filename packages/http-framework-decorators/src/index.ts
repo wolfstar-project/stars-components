@@ -1,8 +1,24 @@
-export * from './lib/ApplyOptions.js';
-export * from './lib/Enumerable.js';
-export * from './lib/errors/Identifiers.js';
-export * from './lib/errors/MissingPermissionsError.js';
-export * from './lib/RequiresContext.js';
-export * from './lib/RequiresPermissions.js';
-export * from './lib/utils/decorators.js';
-export * from './lib/utils/permissions.js';
+export {
+	ApplyOptions,
+	Enumerable,
+	EnumerableMethod,
+	Identifiers,
+	MissingPermissionsError,
+	RequiresClientPermissions,
+	RequiresDMContext,
+	RequiresGuildContext,
+	RequiresUserPermissions,
+	createClassDecorator,
+	createFunctionPrecondition,
+	createMethodDecorator,
+	createProxy,
+	getMissingPermissions,
+	resolvePermissions,
+	toPermissionNames,
+	type ContextFallback,
+	type Identifier,
+	type MissingPermissionsTarget,
+	type PermissionResolvable,
+	type PermissionString,
+	type PieceConstructor
+} from '@wolfstar/http-framework';

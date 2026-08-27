@@ -1,4 +1,5 @@
 import { Collection } from '@discordjs/collection';
+import { createClassDecorator } from '../../decorators/utils.js';
 import type { Command } from '../../structures/Command.js';
 
 export const restrictedGuildIdRegistry = new Collection<typeof Command<Command.Options>, readonly string[]>();
@@ -25,7 +26,7 @@ export const restrictedGuildIdRegistry = new Collection<typeof Command<Command.O
  * ```
  */
 export function RestrictGuildIds<Options extends Command.Options = Command.Options>(guildIds: readonly string[]) {
-	return function decorate(target: typeof Command<Options>) {
+	return createClassDecorator(function decorate(target: typeof Command<Options>) {
 		restrictedGuildIdRegistry.set(target, guildIds);
-	};
+	});
 }

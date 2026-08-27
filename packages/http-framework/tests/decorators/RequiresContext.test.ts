@@ -1,9 +1,9 @@
-import type { BaseInteraction } from '@wolfstar/http-framework';
-import { RequiresDMContext, RequiresGuildContext } from '../src/index.js';
-import { makeInteraction } from './shared.js';
+import type { BaseInteraction } from '../../src/index.js';
+import { RequiresDMContext, RequiresGuildContext } from '../../src/index.js';
+import { makeFakeInteraction } from './fixtures.js';
 
-const guildInteraction = makeInteraction({ guildId: '737141877803057244' });
-const dmInteraction = makeInteraction();
+const guildInteraction = makeFakeInteraction({ guildId: '737141877803057244' });
+const dmInteraction = makeFakeInteraction();
 
 describe('RequiresGuildContext', () => {
 	test('GIVEN a guild interaction THEN it runs the method', async () => {

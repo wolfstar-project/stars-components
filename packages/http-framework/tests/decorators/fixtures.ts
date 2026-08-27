@@ -1,4 +1,4 @@
-import type { BaseInteraction } from '@wolfstar/http-framework';
+import type { BaseInteraction } from '../../src/index.js';
 
 export interface MakeInteractionOptions {
 	guildId?: string | undefined;
@@ -9,7 +9,7 @@ export interface MakeInteractionOptions {
 /**
  * Builds the smallest object the decorators of this package read from an interaction.
  */
-export function makeInteraction({ guildId, memberPermissions, applicationPermissions }: MakeInteractionOptions = {}): BaseInteraction {
+export function makeFakeInteraction({ guildId, memberPermissions, applicationPermissions }: MakeInteractionOptions = {}): BaseInteraction {
 	return {
 		guildId,
 		applicationPermissions,
