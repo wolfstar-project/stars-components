@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
     docs:
-        uses: wolfstar-project/.github/.github/workflows/reusable-documentation.yml@5d4f5cacfbc3aca1c6952ec65a6253d600e82e88 # main
+        uses: wolfstar-project/.github/.github/workflows/reusable-documentation.yml@8f25e7f1f7df3e0611d29384ae43ac8127d83d76 # main
         with:
             project-name: stars-components
             docgen-command: pnpm exec typedoc --options typedoc.json --json docs-output/api.json
