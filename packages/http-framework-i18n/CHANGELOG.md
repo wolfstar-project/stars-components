@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.6
+
+### Patch Changes
+
+- [#143](https://github.com/wolfstar-project/stars-components/pull/143) [`09dd484`](https://github.com/wolfstar-project/stars-components/commit/09dd484926963690f84c39a24a2069b2622624dc) - Deprecate `@wolfstar/http-framework-i18n` in favour of
+  [`@wolfstar/plugin-i18next`](https://www.npmjs.com/package/@wolfstar/plugin-i18next), the official
+  `@wolfstar/http-framework` plugin that supersedes it. No further feature releases are planned for this package. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 1.2.5
 
 ### Patch Changes
