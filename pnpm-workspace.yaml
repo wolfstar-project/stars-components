@@ -28,6 +28,7 @@ minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
     - '@redstardev/*'
+    - '@wolfstar/plugin-i18next@1.0.0'
     - unrun@0.3.1
     - vitepress@2.0.0-alpha.18
     - '@shikijs/vitepress-twoslash@4.3.1'

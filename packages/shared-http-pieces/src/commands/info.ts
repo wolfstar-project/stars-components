@@ -1,6 +1,6 @@
 import { EmbedBuilder, time, TimestampStyles } from '@discordjs/builders';
 import { Command, container, RegisterCommand } from '@wolfstar/http-framework';
-import { applyLocalizedBuilder, getSupportedUserLanguageT, type TFunction } from '@wolfstar/http-framework-i18n';
+import { applyLocalizedBuilder, getSupportedUserLanguageName, getSupportedUserLanguageT, type TFunction } from '@wolfstar/plugin-i18next';
 import {
 	ButtonStyle,
 	ComponentType,
@@ -17,9 +17,10 @@ import { getInvite, getRepository } from '../lib/information.js';
 export class SharedCommand extends Command {
 	public override chatInputRun(interaction: Command.ChatInputInteraction) {
 		const t = getSupportedUserLanguageT(interaction);
+		const locale = getSupportedUserLanguageName(interaction);
 		const embed = new EmbedBuilder()
 			.setDescription(t(LanguageKeys.Commands.Shared.InfoEmbedDescription))
-			.addFields(this.getUptimeStatistics(t), this.getServerUsageStatistics(t));
+			.addFields(this.getUptimeStatistics(t), this.getServerUsageStatistics(t, locale));
 		const components = this.getComponents(t);
 
 		return interaction.reply({ embeds: [embed.toJSON()], components, flags: MessageFlags.Ephemeral });
@@ -38,15 +39,15 @@ export class SharedCommand extends Command {
 		};
 	}
 
-	private getServerUsageStatistics(t: TFunction): APIEmbedField {
+	private getServerUsageStatistics(t: TFunction, locale: string): APIEmbedField {
 		const usage = process.memoryUsage();
 
 		return {
 			name: t(LanguageKeys.Commands.Shared.InfoFieldServerUsageTitle),
 			value: t(LanguageKeys.Commands.Shared.InfoFieldServerUsageValue, {
 				cpu: cpus().map(SharedCommand.formatCpuInfo.bind(null)).join(' | '),
-				heapUsed: (usage.heapUsed / 1048576).toLocaleString(t.lng, { maximumFractionDigits: 2 }),
-				heapTotal: (usage.heapTotal / 1048576).toLocaleString(t.lng, { maximumFractionDigits: 2 })
+				heapUsed: (usage.heapUsed / 1048576).toLocaleString(locale, { maximumFractionDigits: 2 }),
+				heapTotal: (usage.heapTotal / 1048576).toLocaleString(locale, { maximumFractionDigits: 2 })
 			})
 		};
 	}

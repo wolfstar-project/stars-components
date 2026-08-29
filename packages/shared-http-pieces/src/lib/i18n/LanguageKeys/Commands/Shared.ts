@@ -1,4 +1,4 @@
-import { FT, T } from '@wolfstar/http-framework-i18n';
+import { FT, T } from '@wolfstar/plugin-i18next';
 
 export const DonateName = T('commands/shared:donateName');
 export const DonateDescription = T('commands/shared:donateDescription');
