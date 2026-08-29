@@ -6,6 +6,19 @@ The shared commands used for Star Network's HTTP-only bots.
 
 - Define `locales/{{lng}}/commands/shared:infoEmbedDescription` as a string. This is the content displayed in `/info`'s embed description.
 - Define the information variables.
+- Add this package's bundled locales to your `Client`'s i18n backend, otherwise `commands/shared:*`
+  strings (including `/info`) fall back to their raw keys:
+
+    ```typescript
+    import { localesPath } from '@wolfstar/shared-http-pieces/register';
+    import { Client } from '@wolfstar/http-framework';
+
+    const client = new Client({
+    	i18n: {
+    		backend: { paths: [localesPath] }
+    	}
+    });
+    ```
 
 ## Usage
 
