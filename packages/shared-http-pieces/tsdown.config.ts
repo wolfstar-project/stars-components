@@ -12,10 +12,7 @@ export default defineConfig({
 	// bundlers; without this, rolldown treats every local module as pure and
 	// tree-shakes away the `commands/_load.js` / `listeners/_load.js` imports that
 	// register pieces as a side effect, even though the built file is never dropped
-	// as a whole. `@wolfstar/plugin-i18next/register` is the one external import that
-	// also needs to survive: it's a bare side-effect import that wires the i18n hooks
-	// into `@wolfstar/http-framework`'s `Client`.
-	treeshake: {
-		moduleSideEffects: (id, external) => (external ? id.includes('@wolfstar/plugin-i18next/register') : true)
-	}
+	// as a whole. `@wolfstar/plugin-i18next/register` is imported dynamically in
+	// register.ts (not statically), so it survives regardless of this setting.
+	treeshake: { moduleSideEffects: 'no-external' }
 });
