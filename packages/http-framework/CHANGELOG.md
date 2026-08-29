@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.2.0
+
+### Minor Changes
+
+- [#131](https://github.com/wolfstar-project/stars-components/pull/131) [`f7b31cc`](https://github.com/wolfstar-project/stars-components/commit/f7b31cc0eb5f9a284e64590e28eadbf470e88f64) - Add a set of utility decorators, modelled after `@sapphire/decorators` and adapted to HTTP-only Discord interactions.
+
+    `ApplyOptions` configures any `Piece` without writing a constructor. `RequiresGuildContext` and `RequiresDMContext` gate a method by interaction context. `RequiresUserPermissions` and `RequiresClientPermissions` check `member.permissions` and `app_permissions`, throwing a `MissingPermissionsError` — which the client emits as `commandError` — when the check fails. `Enumerable` and `EnumerableMethod` control property visibility, and `createClassDecorator`, `createMethodDecorator`, `createProxy`, and `createFunctionPrecondition` are exported for building your own.
+
+    The existing `Register*` decorators and `RestrictGuildIds` are now built on those same primitives. `createClassDecorator` and `createMethodDecorator` return the decorator with the signature they were given rather than widening it to `ClassDecorator` / `MethodDecorator`, so those decorators keep rejecting a target that is not a `Command`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#132](https://github.com/wolfstar-project/stars-components/pull/132) [`2504cd7`](https://github.com/wolfstar-project/stars-components/commit/2504cd7b42b470f9146ff6c27d6e8da20e6c3ac8) - feat: add Sapphire-style error types
+
+    Adds a `UserError` base class along with `ArgumentError`, `PreconditionError`, and an `Identifiers` enum, all modelled after `@sapphire/framework`'s error hierarchy but adapted to the HTTP framework (interaction options instead of message arguments, precondition names instead of `Precondition` pieces).
+
+    `ChatInputRouterError` now extends `UserError`, so it exposes `identifier` and `context` in addition to its existing `key`, `command`, `group`, `subcommand`, and `path` properties, and it is now exported from the package root together with the new errors. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 3.1.4
 
 ### Patch Changes
