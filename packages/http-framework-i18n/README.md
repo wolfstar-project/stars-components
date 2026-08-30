@@ -42,19 +42,26 @@ addFormatters(
 await init();
 ```
 
+> **Note**: If you want to customize the options, please check [i18next's TypeScript guide](https://www.i18next.com/overview/typescript) to improve the experience.
+
 ### Definition
 
-```typescript
-import { T, FT } from '@wolfstar/http-framework-i18n';
+Generate type augmentations with [`@wolfstar/i18next-type-generator`](https://www.npmjs.com/package/@wolfstar/i18next-type-generator):
 
-export const InvalidInput = T('path/to/file:invalidInput');
-export const AddResult = FT<{ left: number; right: number; result: number }>('path/to/file:addResult');
+```bash
+i18next-type-generator ./src/locales/en-US/ ./src/@types/i18next.d.ts
 ```
 
 ### Consumption
 
 ```typescript
-import { getSupportedLanguageName, getSupportedUserLanguageName, getT, resolveKey, resolveUserKey } from '@wolfstar/http-framework-i18n';
+import {
+	getSupportedLanguageName,
+	getSupportedUserLanguageName,
+	getT,
+	getSupportedLanguageT,
+	getSupportedUserLanguageT
+} from '@wolfstar/http-framework-i18n';
 
 // Get the name of the supported guild language, falling back to the user's on DMs:
 const guildLanguage = getSupportedLanguageName(interaction);
@@ -63,20 +70,22 @@ const guildLanguage = getSupportedLanguageName(interaction);
 const userLanguage = getSupportedUserLanguageName(interaction);
 
 // Get the function to get a translated key:
-const t = getT(guildLanguage);
+const t = getT(guildLanguage, 'commands/shared');
 
 // Resolving a given key, this calls `getT` and `getSupportedLanguageName` under the hood:
-const content = resolveKey(interaction, InvalidInput);
+const content = getSupportedLanguageT(interaction, 'commands/shared')('invalidInput');
 
 // Resolving a given key, this calls `getT` and `getSupportedUserLanguageName` under the hood:
-const content = resolveUserKey(interaction, AddResult, { left: 5, right: 10, result: 15 });
+const content = getSupportedUserLanguageT(interaction, 'commands/shared')('addResult', { left: 5, right: 10, result: 15 });
 ```
 
 ## Migration
 
-`@wolfstar/plugin-i18next` keeps the same typed-key philosophy (`T` / `FT`, `resolveKey`, `applyLocalizedBuilder`), but
-replaces the manual `load()` + `init()` bootstrap with the `@wolfstar/http-framework` plugin lifecycle and moves the
-loaded state onto `container.i18n`.
+`@wolfstar/plugin-i18next` drops this package's `T`/`FT` branded-key helpers in favour of i18next's native
+TypeScript support: keys are plain strings, typed via a generated `declare module 'i18next'` augmentation
+(the same approach this package already uses via [`@wolfstar/i18next-type-generator`](https://www.npmjs.com/package/@wolfstar/i18next-type-generator)).
+It also replaces the manual `load()` + `init()` bootstrap with the `@wolfstar/http-framework` plugin lifecycle
+and moves the loaded state onto `container.i18n`.
 
 ```bash
 pnpm remove @wolfstar/http-framework-i18n
@@ -115,24 +124,56 @@ pnpm add @wolfstar/plugin-i18next
 The plugin's `preLoad` hook awaits `container.i18n.init()` **before** the stores load, so command builders can still be
 localized at registration time.
 
+### Keys and resolution
+
+```diff
+-import { FT, T } from '@wolfstar/http-framework-i18n';
+-
+-export const Success = T('commands/ping:success');
+-export const SuccessWithLatency = FT<{ latency: number }>('commands/ping:successWithLatency');
++// No wrapper needed — keys are plain strings, typed by the generated `CustomTypeOptions` augmentation.
+```
+
+```diff
+-const content = resolveKey(interaction, Success);
+-const userContent = resolveUserKey(interaction, SuccessWithLatency, { latency: 42 });
++const content = getSupportedLanguageT(interaction, 'commands/ping:success');
++const userContent = getSupportedUserLanguageT(
++	interaction,
++	'commands/ping:successWithLatency',
++	{ latency: 42 }
++);
+```
+
+Omitting the key returns the bound `TFunction` instead, exactly like `getT` did before:
+
+```ts
+const t = getSupportedUserLanguageT(interaction);
+const name = t('commands/ping:name');
+```
+
 ### Exports
 
-`T`, `FT`, `resolveKey`, `resolveUserKey`, `getSupportedLanguageName`, `getSupportedUserLanguageName`,
-`getSupportedLanguageT`, `getSupportedUserLanguageT`, `supportedLanguages`, `isSupportedDiscordLocale`,
-`getLocalizedData`, `applyNameLocalizedBuilder`, `applyDescriptionLocalizedBuilder`, `applyLocalizedBuilder` and
-`createSelectMenuChoiceName` keep the same names and signatures — only the module specifier changes.
+| Removed                                | Replacement                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| `T(key)` / `FT<Args>(key)`             | The key itself, typed by the generated `CustomTypeOptions` augmentation      |
+| `load(directory)`                      | `i18n.defaultLanguageDirectory` client option                                |
+| `init(options)`                        | Handled by the plugin's `preLoad` hook; raw options go to `i18n.i18next`     |
+| `addFormatters(...formatters)`         | `i18n.formatters` client option                                              |
+| `getT(locale)`                         | `container.i18n.getT(locale)`                                                |
+| `resolveKey(target, key, options)`     | `getSupportedLanguageT(target, key, options)`                                |
+| `resolveUserKey(target, key, options)` | `getSupportedUserLanguageT(target, key, options)`                            |
+| `loadedLocales`                        | `container.i18n.languages` (a `Map<string, TFunction>`)                      |
+| `loadedNamespaces`                     | `container.i18n.namespaces`                                                  |
+| `loadedPaths`                          | Derived from `i18n.defaultLanguageDirectory`; extra paths via `i18n.backend` |
+| `loadedFormatters`                     | `container.i18n.options.formatters`                                          |
+| `Formatter`                            | `I18nextFormatter`                                                           |
 
-| Removed                        | Replacement                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| `load(directory)`              | `i18n.defaultLanguageDirectory` client option                                |
-| `init(options)`                | Handled by the plugin's `preLoad` hook; raw options go to `i18n.i18next`     |
-| `addFormatters(...formatters)` | `i18n.formatters` client option                                              |
-| `getT(locale)`                 | `container.i18n.getT(locale)`                                                |
-| `loadedLocales`                | `container.i18n.languages` (a `Map<string, TFunction>`)                      |
-| `loadedNamespaces`             | `container.i18n.namespaces`                                                  |
-| `loadedPaths`                  | Derived from `i18n.defaultLanguageDirectory`; extra paths via `i18n.backend` |
-| `loadedFormatters`             | `container.i18n.options.formatters`                                          |
-| `Formatter`                    | `I18nextFormatter`                                                           |
+`getSupportedLanguageName`, `getSupportedUserLanguageName`, `getSupportedLanguageT`, `getSupportedUserLanguageT`,
+`supportedLanguages`, `isSupportedDiscordLocale`, `getLocalizedData`, `applyNameLocalizedBuilder`,
+`applyDescriptionLocalizedBuilder`, `applyLocalizedBuilder` and `createSelectMenuChoiceName` keep the same names —
+only the module specifier changes (and `getSupportedLanguageT`/`getSupportedUserLanguageT` gain the direct
+`(target, key, options)` overload shown above).
 
 The plugin also adds `fetchLanguage` / `fetchT` / `fetchKey` (asynchronous helpers honouring a custom
 `container.i18n.fetchLanguage` hook), `createLocalizedChoice`, and chokidar-based hot reloading.

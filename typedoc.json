@@ -2,7 +2,7 @@
 	"$schema": "https://typedoc.org/schema.json",
 	"entryPoints": ["packages/*"],
 	"entryPointStrategy": "packages",
-	"exclude": ["packages/create-http-framework"],
+	"exclude": ["packages/create-http-framework", "packages/i18next-type-generator"],
 	"out": "docs-output/html",
 	"readme": "none",
 	"cleanOutputDir": true,

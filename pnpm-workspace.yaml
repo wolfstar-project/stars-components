@@ -36,3 +36,4 @@ minimumReleaseAgeExclude:
     - vitepress-plugin-llms@1.13.3
     - markdown-it-image-size@15.0.1
     - vite@6.4.3
+    - '@wolfstar/plugin-i18next@1.0.1-next-20260830111821'
