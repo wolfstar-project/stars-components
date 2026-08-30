@@ -1,0 +1,42 @@
+import '@wolfstar/plugin-i18next/register';
+import { container } from '@wolfstar/http-framework';
+import { ChatInputApplicationCommandInteractionData, createTestHarness } from '@wolfstar/http-framework-test-utils';
+import { MessageFlags } from 'discord-api-types/v10';
+import { describe, expect, it } from 'vitest';
+import { PingCommand } from '../src/commands/ping.js';
+
+describe('ping command', () => {
+	it('replies with Pong', async () => {
+		// The i18n plugin resolves `container.i18n` from `Client`'s `i18n` option, so the harness needs
+		// the same options passed to `new Client()` in `src/main.ts` — pointing at the locale files
+		// under `src/locales/`, one directory up from this test file.
+		const { client, runner } = createTestHarness({
+			i18n: {
+				defaultLanguageDirectory: new URL('../src/locales', import.meta.url).pathname,
+				defaultName: 'en-US'
+			}
+		});
+
+		await container.stores.loadPiece({ name: 'ping', piece: PingCommand, store: 'commands' });
+		await client.load({ baseUserDirectory: null });
+
+		const result = await runner.run({
+			...ChatInputApplicationCommandInteractionData,
+			data: {
+				id: '0',
+				name: 'ping',
+				type: 1,
+				options: []
+			}
+		});
+
+		expect(result).toHaveStatus(200);
+		expect(result.json()).toMatchObject({
+			type: 4,
+			data: {
+				content: 'Pong!',
+				flags: MessageFlags.Ephemeral
+			}
+		});
+	});
+});

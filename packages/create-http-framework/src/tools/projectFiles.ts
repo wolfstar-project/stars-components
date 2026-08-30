@@ -8,6 +8,8 @@ export interface ProjectContext {
 	name: string;
 	port: number;
 	i18n: boolean;
+	subcommands: boolean;
+	testing: boolean;
 	packageManager: PackageManager;
 	language: Language;
 	/** Only meaningful when `language === 'ts'`. */
@@ -27,16 +29,16 @@ function json(value: unknown): string {
 	return `${JSON.stringify(value, null, '\t')}\n`;
 }
 
-function buildScripts(ctx: ProjectContext): Record<string, string> {
+export function buildScripts(ctx: ProjectContext): Record<string, string> {
 	const { packageManager: pm, buildTool } = ctx;
-	const start = 'node dist/index.js';
+	const start = 'node dist/main.js';
 
 	let scripts: Record<string, string>;
 	if (ctx.language === 'js') {
 		// Plain JavaScript runs directly — no compile step.
 		scripts = {
-			start: 'node src/index.js',
-			dev: 'node --watch src/index.js'
+			start: 'node src/main.js',
+			dev: 'node --watch src/main.js'
 		};
 	} else if (buildTool === 'tsdown') {
 		scripts = {
@@ -72,21 +74,28 @@ function buildScripts(ctx: ProjectContext): Record<string, string> {
 		scripts['format:check'] = 'prettier --check src';
 	}
 
+	if (ctx.i18n) scripts['generate:i18n'] = 'i18next-type-generator ./src/locales/en-US/ ./src/@types/i18next.d.ts';
+	if (ctx.testing) scripts['test'] = 'vitest run';
+
 	return scripts;
 }
 
-function buildDependencies(ctx: ProjectContext): Record<string, string> {
+export function buildDependencies(ctx: ProjectContext): Record<string, string> {
 	const v = ctx.versions;
 	const dependencies: Record<string, string> = {
-		'@discordjs/builders': caret(v['@discordjs/builders']!),
 		'@wolfstar/http-framework': caret(v['@wolfstar/http-framework']!),
-		'discord-api-types': caret(v['discord-api-types']!)
+		'@sapphire/pieces': caret(v['@sapphire/pieces']!),
+		'discord-api-types': caret(v['discord-api-types']!),
+		'@wolfstar/env-utilities': caret(v['@wolfstar/env-utilities']!),
+		'@wolfstar/logger': caret(v['@wolfstar/logger']!),
+		'@wolfstar/start-banner': caret(v['@wolfstar/start-banner']!),
+		'gradient-string': caret(v['gradient-string']!)
 	};
-	if (ctx.i18n) dependencies['@wolfstar/http-framework-i18n'] = caret(v['@wolfstar/http-framework-i18n']!);
+	if (ctx.i18n) dependencies['@wolfstar/plugin-i18next'] = caret(v['@wolfstar/plugin-i18next']!);
 	return sortKeys(dependencies);
 }
 
-function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
+export function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
 	const v = ctx.versions;
 	const dev: Record<string, string> = {};
 
@@ -123,14 +132,21 @@ function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
 		dev['oxfmt'] = caret(v['oxfmt']!);
 	}
 
+	if (ctx.i18n) dev['@wolfstar/i18next-type-generator'] = caret(v['@wolfstar/i18next-type-generator']!);
+
+	if (ctx.testing) {
+		dev['vitest'] = caret(v['vitest']!);
+		dev['@wolfstar/http-framework-test-utils'] = caret(v['@wolfstar/http-framework-test-utils']!);
+	}
+
 	return sortKeys(dev);
 }
 
-function packageJson(ctx: ProjectContext): string {
+export function packageJson(ctx: ProjectContext): string {
 	const devDependencies = buildDevDependencies(ctx);
 	// client.load() locates the commands directory relative to this field (dirname(main) + 'commands'), not relative
 	// to the running file, so it must point at whichever file `start` actually runs.
-	const main = ctx.language === 'js' ? 'src/index.js' : 'dist/index.js';
+	const main = ctx.language === 'js' ? 'src/main.js' : 'dist/main.js';
 	return json({
 		name: ctx.name,
 		version: '1.0.0',
@@ -201,7 +217,7 @@ function writeBuildConfig(targetDir: string, ctx: ProjectContext): void {
 		"\ttarget: 'node20',",
 		'\t// Mirror the src/ structure so the framework can load command pieces from dist/commands at runtime.',
 		'\tunbundle: true,',
-		'\t// Emit dist/index.js so the shared `start` script (node dist/index.js) works.',
+		'\t// Emit dist/main.js so the shared `start` script (node dist/main.js) works.',
 		"\toutExtensions: () => ({ js: '.js' }),",
 		'\tclean: true,',
 		'\tsourcemap: true',

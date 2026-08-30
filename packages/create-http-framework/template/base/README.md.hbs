@@ -1,0 +1,30 @@
+# {{name}}
+
+A Discord bot built with [`@wolfstar/http-framework`](https://www.npmjs.com/package/@wolfstar/http-framework), an HTTP-interactions framework for Discord bots.
+
+## Setup
+
+1. Install dependencies (skip this if the generator already installed them for you).
+
+2. This project was generated with a `.env` file already in place — it's written with placeholder values directly as `.env` (there is no separate `.env.example`), and `.gitignore` keeps it out of version control. Open `.env` and replace the placeholders with your bot's real `DISCORD_TOKEN`, `DISCORD_PUBLIC_KEY`, and `DISCORD_CLIENT_ID`.
+{{#if i18n}}
+3. This project uses [`@wolfstar/plugin-i18next`](https://www.npmjs.com/package/@wolfstar/plugin-i18next). Locale resources live under `src/locales/`; after editing them, regenerate the typed i18next resources with `npm run generate:i18n`.
+{{/if}}
+
+## Scripts
+
+- `npm run dev` — run the bot in watch mode.
+- `npm run build` — compile the project (TypeScript projects only).
+- `npm start` — run the bot.
+{{#if testing}}
+- `npm test` — run the test suite with vitest.
+{{/if}}
+
+## Commands
+
+- `/ping` — replies with `Pong!`.
+{{#if subcommands}}
+- `/math add` / `/math subtract` — basic arithmetic on two integers.
+{{/if}}
+
+The HTTP server listens on `HTTP_ADDRESS`:`HTTP_PORT` from `.env` — `{{port}}` by default.

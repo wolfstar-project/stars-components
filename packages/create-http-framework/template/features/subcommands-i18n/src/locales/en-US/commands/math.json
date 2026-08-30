@@ -1,0 +1,14 @@
+{
+	"name": "math",
+	"description": "Perform basic arithmetic",
+	"addName": "add",
+	"addDescription": "Add two numbers",
+	"subtractName": "subtract",
+	"subtractDescription": "Subtract two numbers",
+	"optionsLeftName": "left",
+	"optionsLeftDescription": "The left operand",
+	"optionsRightName": "right",
+	"optionsRightDescription": "The right operand",
+	"addResult": "{{left}} + {{right}} = {{result}}",
+	"subtractResult": "{{left}} - {{right}} = {{result}}"
+}
