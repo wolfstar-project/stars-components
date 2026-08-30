@@ -17,7 +17,7 @@ overrides:
     ansi-regex: '^6.3.0'
     esbuild: '^0.28.2'
     minimist: '1.2.8'
-    '@redstardev/unplugin-version-injector>vite': '8.2.1'
+    '@redstardev/unplugin-version-injector>vite': '8.2.2'
 
 allowBuilds:
     '@swc/core': true
