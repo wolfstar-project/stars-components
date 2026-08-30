@@ -1,0 +1,47 @@
+- name: packages:create-http-framework
+  color: '1d76db'
+  description: Changes in create-http-framework
+- name: packages:env-utilities
+  color: '1d76db'
+  description: Changes in env-utilities
+- name: packages:http-framework
+  color: '1d76db'
+  description: Changes in http-framework
+- name: packages:http-framework-i18n
+  color: '1d76db'
+  description: Changes in http-framework-i18n
+- name: packages:http-framework-test-utils
+  color: '1d76db'
+  description: Changes in http-framework-test-utils
+- name: packages:i18next-backend
+  color: '1d76db'
+  description: Changes in i18next-backend
+- name: packages:influx-utilities
+  color: '1d76db'
+  description: Changes in influx-utilities
+- name: packages:logger
+  color: '1d76db'
+  description: Changes in logger
+- name: packages:reddit-helpers
+  color: '1d76db'
+  description: Changes in reddit-helpers
+- name: packages:safe-fetch
+  color: '1d76db'
+  description: Changes in safe-fetch
+- name: packages:shared-http-pieces
+  color: '1d76db'
+  description: Changes in shared-http-pieces
+- name: packages:shared-influx-pieces
+  color: '1d76db'
+  description: Changes in shared-influx-pieces
+- name: packages:start-banner
+  color: '1d76db'
+  description: Changes in start-banner
+- name: packages:twitch-helpers
+  color: '1d76db'
+  description: Changes in twitch-helpers
+- name: packages:weather-helpers
+  color: '1d76db'
+  description: Changes in weather-helpers
+- name: stale
+  color: 'ededed'

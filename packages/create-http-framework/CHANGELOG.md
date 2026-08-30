@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.1.4
+
+### Patch Changes
+
+- [#126](https://github.com/wolfstar-project/stars-components/pull/126) [`abf7f77`](https://github.com/wolfstar-project/stars-components/commit/abf7f77462ae91c9840a08e273899e4027f2253a) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+## 2.1.3
+
+### Patch Changes
+
+- [#102](https://github.com/wolfstar-project/stars-components/pull/102) [`2d38bab`](https://github.com/wolfstar-project/stars-components/commit/2d38bab7745fb898809cd65de3337b9bcf42d976) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+- [#122](https://github.com/wolfstar-project/stars-components/pull/122) [`a1dc4e9`](https://github.com/wolfstar-project/stars-components/commit/a1dc4e9cfb8c2b8aa34d65223b8c82f800d47e2e) - Fixed scaffolded projects never loading their commands. `client.load()` locates the `commands` directory relative to `package.json`'s `main` field (falling back to the working directory when `main` is unset), not relative to the file that calls it — but the generated `package.json` had no `main` field, so `client.load()` resolved to the project root instead of `dist/commands` (or `src/commands` for the JavaScript template). Combined with the entry point previously passing `baseUserDirectory: join(dirname(fileURLToPath(import.meta.url)), 'commands')`, which doubled the `commands` segment, scaffolded bots never registered any commands.
+
+    The generated `package.json` now sets `main` to the file the `start` script actually runs (`dist/index.js` for TypeScript, `src/index.js` for JavaScript), and the entry point calls `client.load()` with no arguments, matching the convention used by `examples/basic` and the production bots `staryl`/`ring`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 2.1.2
+
+### Patch Changes
+
+- [#107](https://github.com/wolfstar-project/stars-components/pull/107) [`dd057a9`](https://github.com/wolfstar-project/stars-components/commit/dd057a9096cbbaa0d80a69de6b4f10a838cdfadf) - Restore npm provenance attestation on publish for all packages Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 2.1.1
+
+### Patch Changes
+
+- [#93](https://github.com/wolfstar-project/stars-components/pull/93) [`adce4cb`](https://github.com/wolfstar-project/stars-components/commit/adce4cb983e7f60d23bbd6d13f66adba4e2a08f5) - chore: upgrade tsdown to 0.22.14 and migrate `deps.skipNodeModulesBundle` to `deps.neverBundle` Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.0
 
 ### Minor Changes

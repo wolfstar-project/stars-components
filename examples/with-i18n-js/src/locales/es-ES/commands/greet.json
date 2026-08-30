@@ -1,0 +1,7 @@
+{
+	"name": "saludar",
+	"description": "Saluda a alguien en su idioma",
+	"optionsNameName": "nombre",
+	"optionsNameDescription": "¿A quién debo saludar?",
+	"reply": "¡Hola, {{name}}!"
+}

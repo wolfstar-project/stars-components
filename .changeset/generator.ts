@@ -1,4 +1,4 @@
-import { getInfo, getInfoFromPullRequest } from '@changesets/get-github-info';
+import { getCommitInfo, getPullRequestInfo } from '@changesets/get-github-info';
 import type { ChangelogFunctions } from '@changesets/types';
 
 // "match what you skip, capture what you want": the left alternative
@@ -18,26 +18,31 @@ function readEnv() {
 	return { GITHUB_SERVER_URL };
 }
 
+// since @changesets/types v7 the changelog options are typed as
+// `null | Record<string, unknown>` instead of `any`, so `repo` has to be narrowed by hand
+function readRepo(options: null | Record<string, unknown>): string {
+	const repo = options?.repo;
+	if (typeof repo !== 'string') {
+		throw new Error('Please provide a repo to this changelog generator like this:\n"changelog": ["./generator.ts", { "repo": "org/repo" }]');
+	}
+	return repo;
+}
+
 const ignoredUsers = new Set<string>(['redstar071']);
+const ignoredLinkedAuthors = new Set<string>(['thewilloftheshadow']);
 
 const changelogFunctions: ChangelogFunctions = {
 	getDependencyReleaseLine: async (changesets, dependenciesUpdated, options) => {
-		if (!options.repo) {
-			throw new Error(
-				'Please provide a repo to this changelog generator like this:\n"changelog": ["@changesets/changelog-github", { "repo": "org/repo" }]'
-			);
-		}
+		const repo = readRepo(options);
 		if (dependenciesUpdated.length === 0) return '';
 
 		const changesetLink = `- Updated dependencies [${(
 			await Promise.all(
 				changesets.map(async (cs) => {
 					if (cs.commit) {
-						const { links } = await getInfo({
-							repo: options.repo,
-							commit: cs.commit
-						});
-						return links.commit;
+						// getCommitInfo resolves to undefined when the commit cannot be found
+						const info = await getCommitInfo({ repo, commit: cs.commit });
+						return info?.commit.markdownLink;
 					}
 				})
 			)
@@ -51,11 +56,7 @@ const changelogFunctions: ChangelogFunctions = {
 	},
 	getReleaseLine: async (changeset, _type, options) => {
 		const { GITHUB_SERVER_URL } = readEnv();
-		if (!options?.repo) {
-			throw new Error(
-				'Please provide a repo to this changelog generator like this:\n"changelog": ["@changesets/changelog-github", { "repo": "org/repo" }]'
-			);
-		}
+		const repo = readRepo(options);
 
 		let prFromSummary: number | undefined;
 		let commitFromSummary: string | undefined;
@@ -83,52 +84,56 @@ const changelogFunctions: ChangelogFunctions = {
 
 		const links = await (async () => {
 			if (prFromSummary !== undefined) {
-				let { links } = await getInfoFromPullRequest({
-					repo: options.repo,
+				// getPullRequestInfo resolves to undefined when the pull request cannot be found
+				const info = await getPullRequestInfo({
+					repo,
 					pull: prFromSummary
 				});
-				if (commitFromSummary) {
-					const shortCommitId = commitFromSummary.slice(0, 7);
-					links = {
-						...links,
-						commit: `[\`${shortCommitId}\`](${GITHUB_SERVER_URL}/${options.repo}/commit/${commitFromSummary})`
-					};
-				}
-				return links;
+				return {
+					commit: commitFromSummary
+						? `[\`${commitFromSummary.slice(0, 7)}\`](${GITHUB_SERVER_URL}/${repo}/commit/${commitFromSummary})`
+						: (info?.commit?.markdownLink ?? null),
+					pull: info?.pull.markdownLink ?? null,
+					author: info?.author ?? null
+				};
 			}
 			const commitToFetchFrom = commitFromSummary || changeset.commit;
 			if (commitToFetchFrom) {
-				const { links } = await getInfo({
-					repo: options.repo,
+				const info = await getCommitInfo({
+					repo,
 					commit: commitToFetchFrom
 				});
-				return links;
+				return {
+					commit: info?.commit.markdownLink ?? null,
+					pull: info?.pull?.markdownLink ?? null,
+					author: info?.author ?? null
+				};
 			}
 			return {
 				commit: null,
 				pull: null,
-				user: null
+				author: null
 			};
 		})();
 
 		const users = usersFromSummary.length
 			? usersFromSummary.map((userFromSummary) => `[@${userFromSummary}](${GITHUB_SERVER_URL}/${userFromSummary})`).join(', ')
-			: links.user?.toLowerCase().includes('[@thewilloftheshadow]')
-				? null
-				: links.user;
+			: links.author && !ignoredLinkedAuthors.has(links.author.login.toLowerCase())
+				? links.author.markdownLink
+				: null;
 
 		const prefix = [links.pull === null ? '' : ` ${links.pull}`, links.commit === null ? '' : ` ${links.commit}`].join('');
 
 		const releaseLine = `\n\n-${prefix ? `${prefix} -` : ''} ${linkifyIssueRefs(firstLine, {
 			serverUrl: GITHUB_SERVER_URL,
-			repo: options?.repo
+			repo
 		})}`;
 		const futureReleaseLines = futureLines
 			.map(
 				(l) =>
 					`  ${linkifyIssueRefs(l, {
 						serverUrl: GITHUB_SERVER_URL,
-						repo: options?.repo
+						repo
 					})}`
 			)
 			.join('\n');

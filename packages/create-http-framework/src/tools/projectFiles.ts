@@ -128,11 +128,15 @@ function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
 
 function packageJson(ctx: ProjectContext): string {
 	const devDependencies = buildDevDependencies(ctx);
+	// client.load() locates the commands directory relative to this field (dirname(main) + 'commands'), not relative
+	// to the running file, so it must point at whichever file `start` actually runs.
+	const main = ctx.language === 'js' ? 'src/index.js' : 'dist/index.js';
 	return json({
 		name: ctx.name,
 		version: '1.0.0',
 		description: 'A Discord HTTP bot built with `@wolfstar/http-framework`',
 		type: 'module',
+		main,
 		scripts: buildScripts(ctx),
 		dependencies: buildDependencies(ctx),
 		...(Object.keys(devDependencies).length > 0 ? { devDependencies } : {}),

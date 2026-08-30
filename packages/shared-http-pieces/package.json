@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/shared-http-pieces",
-	"version": "1.2.6",
+	"version": "1.2.9",
 	"description": "The common pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -43,7 +43,8 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"build": "tsdown --config-loader unrun",
@@ -56,7 +57,7 @@
 	"dependencies": {
 		"@discordjs/builders": "^1.14.1",
 		"@discordjs/collection": "^2.1.1",
-		"@sentry/node": "^8.55.2",
+		"@sentry/node": "^10.69.0",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/http-framework": "workspace:^",
 		"@wolfstar/plugin-i18next": "1.0.1-next-20260830111821",

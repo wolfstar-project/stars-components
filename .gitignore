@@ -10,6 +10,7 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+examples/**/.env
 
 # pnpm
 .pnpm-store/
@@ -34,10 +35,7 @@ test_out/
 # Test artifacts
 coverage/
 *.junit.xml
-/docs/.vitepress/cache
-/docs/.vitepress/.temp
-/docs/api/
-/docs/dev-dist/
+/docs-output/
 
 # Ignore package locks
 package-lock.json
@@ -48,3 +46,6 @@ package-lock.json
 plans/
 
 .claude/state
+
+# Tolgee pull staging (promoted into locales by scripts/tolgee-pull-remap.ts)
+.tolgee-pull/

@@ -1,3 +1,4 @@
+import { createClassDecorator } from '../../decorators/utils.js';
 import type { Command } from '../../structures/Command';
 import type { ChatInputCommandResolver } from '../resolvers/ChatInputCommandResolver';
 import { ensureChatInputCommandResolver } from './_shared';
@@ -23,7 +24,7 @@ import { ensureChatInputCommandResolver } from './_shared';
  * ```
  */
 export function RegisterCommand<Options extends Command.Options = Command.Options>(data: ChatInputCommandResolver.CommandData) {
-	return function decorate(target: typeof Command<Options>) {
+	return createClassDecorator(function decorate(target: typeof Command<Options>) {
 		ensureChatInputCommandResolver(target).setCommand(data);
-	};
+	});
 }

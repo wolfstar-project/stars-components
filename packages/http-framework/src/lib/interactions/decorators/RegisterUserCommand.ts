@@ -1,4 +1,5 @@
 import { ApplicationCommandType } from 'discord-api-types/v10';
+import { createMethodDecorator } from '../../decorators/utils.js';
 import type { Command } from '../../structures/Command';
 import type { ContextMenuCommandResolver } from '../resolvers/ContextMenuCommandResolver';
 import { ensureContextMenuCommandResolver } from './_shared';
@@ -20,7 +21,7 @@ import { ensureContextMenuCommandResolver } from './_shared';
  * ```
  */
 export function RegisterUserCommand<Options extends Command.Options = Command.Options>(data: ContextMenuCommandResolver.CommandData) {
-	return function decorate(target: Command<Options>, method: string) {
+	return createMethodDecorator(function decorate(target: Command<Options>, method: string) {
 		ensureContextMenuCommandResolver(target.constructor as typeof Command).setCommand(data, ApplicationCommandType.User, method);
-	};
+	});
 }

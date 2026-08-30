@@ -1,4 +1,4 @@
-# `@wolfstar/shared-http-pieces` [![Crowdin](https://badges.crowdin.net/sharedhttppieces/localized.svg)](https://crowdin.com/project/sharedhttppieces)
+# `@wolfstar/shared-http-pieces` [![Tolgee](https://img.shields.io/badge/Localization-Tolgee-1D2A3A?logo=tolgee&logoColor=white)](https://app.tolgee.io/projects/33773)
 
 The shared commands used for Star Network's HTTP-only bots.
 
@@ -6,6 +6,10 @@ The shared commands used for Star Network's HTTP-only bots.
 
 - Define `locales/{{lng}}/commands/shared:infoEmbedDescription` as a string. This is the content displayed in `/info`'s embed description.
 - Define the information variables.
+- Importing `@wolfstar/shared-http-pieces/register` registers a `preGenericsInitialization` hook
+  that adds this package's bundled locales to your `Client`'s i18n backend automatically — as long
+  as it's imported before `new Client(...)`, no manual wiring is required. The resolved path is
+  also exported as `localesPath`, if you need it directly.
 
 ## Usage
 

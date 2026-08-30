@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/start-banner",
-	"version": "2.0.4",
+	"version": "2.0.8",
 	"description": "A banner generator utility for your CLI",
 	"keywords": [
 		"api",
@@ -36,7 +36,8 @@
 		}
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"test": "vitest run",
@@ -47,10 +48,10 @@
 		"prepack": "pnpm run build"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.9",
-		"tsdown": "^0.22.3",
+		"@vitest/coverage-v8": "^4.1.11",
+		"tsdown": "^0.22.14",
 		"typescript": "~5.8.3",
-		"vitest": "^4.1.9"
+		"vitest": "^4.1.11"
 	},
 	"engines": {
 		"node": ">=20"

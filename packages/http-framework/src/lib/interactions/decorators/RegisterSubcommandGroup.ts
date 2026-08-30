@@ -1,3 +1,4 @@
+import { createMethodDecorator } from '../../decorators/utils.js';
 import type { Command } from '../../structures/Command';
 import type { ChatInputCommandResolver } from '../resolvers/ChatInputCommandResolver';
 import { ensureChatInputCommandResolver } from './_shared';
@@ -32,7 +33,7 @@ import { ensureChatInputCommandResolver } from './_shared';
  * ```
  */
 export function RegisterSubcommandGroup<Options extends Command.Options = Command.Options>(data: ChatInputCommandResolver.SubcommandGroupData) {
-	return function decorate(target: Command<Options>, method: string) {
+	return createMethodDecorator(function decorate(target: Command<Options>, method: string) {
 		ensureChatInputCommandResolver(target.constructor as typeof Command).addSubcommandGroup(data, method);
-	};
+	});
 }

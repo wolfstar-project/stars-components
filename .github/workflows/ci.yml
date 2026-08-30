@@ -21,17 +21,17 @@ concurrency:
 jobs:
     lint:
         name: 🔠 Lint project
-        runs-on: depot-ubuntu-24.04-arm-4
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 15
 
         steps:
             - name: Checkout Project
-              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+              uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
               with:
                   runtime: node@24
                   cache: true
@@ -45,7 +45,7 @@ jobs:
 
     build:
         name: 🏗️ Build & Typecheck
-        runs-on: depot-ubuntu-24.04-arm-4
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 15
         permissions:
             contents: read
@@ -53,15 +53,16 @@ jobs:
 
         steps:
             - name: Checkout Project
-              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
+                  submodules: true
 
             - name: Add problem matchers
               run: echo "::add-matcher::.github/problemMatchers/tsc.json"
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+              uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
               with:
                   runtime: node@24
                   cache: true
@@ -78,19 +79,19 @@ jobs:
 
     unit:
         name: 🧪 Unit tests
-        runs-on: depot-ubuntu-24.04-arm-4
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 10
         permissions:
             contents: read
 
         steps:
             - name: Checkout Project
-              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+              uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
               with:
                   runtime: node@24
                   cache: true
@@ -123,17 +124,17 @@ jobs:
 
     knip:
         name: 🧹 Unused code check
-        runs-on: depot-ubuntu-24.04-arm-4
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 10
 
         steps:
             - name: Checkout Project
-              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+              uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
               with:
                   runtime: node@24
                   cache: true
@@ -147,7 +148,7 @@ jobs:
 
     changesets:
         name: 🦋 Verify changesets
-        runs-on: depot-ubuntu-24.04-arm-4
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 10
         if: |
             github.event_name == 'pull_request'
@@ -155,13 +156,13 @@ jobs:
             && !startsWith(github.head_ref, 'changeset-release/')
         steps:
             - name: Checkout Project
-              uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                   fetch-depth: 0
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1
+              uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
               with:
                   runtime: node@24
                   cache: true

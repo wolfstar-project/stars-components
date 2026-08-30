@@ -154,21 +154,29 @@ const name = t('commands/ping:name');
 
 ### Exports
 
-| Removed                                | Replacement                                                              |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `T(key)` / `FT<Args>(key)`             | The key itself, typed by the generated `CustomTypeOptions` augmentation  |
-| `load(directory)`                      | `i18n.defaultLanguageDirectory` client option                            |
-| `init(options)`                        | Handled by the plugin's `preLoad` hook; raw options go to `i18n.i18next` |
-| `addFormatters(...formatters)`         | `i18n.formatters` client option                                          |
-| `getT(locale)`                         | `container.i18n.getT(locale)`                                            |
-| `resolveKey(target, key, options)`     | `getSupportedLanguageT(target, key, options)`                            |
-| `resolveUserKey(target, key, options)` | `getSupportedUserLanguageT(target, key, options)`                        |
+| Removed                                | Replacement                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| `T(key)` / `FT<Args>(key)`             | The key itself, typed by the generated `CustomTypeOptions` augmentation      |
+| `load(directory)`                      | `i18n.defaultLanguageDirectory` client option                                |
+| `init(options)`                        | Handled by the plugin's `preLoad` hook; raw options go to `i18n.i18next`     |
+| `addFormatters(...formatters)`         | `i18n.formatters` client option                                              |
+| `getT(locale)`                         | `container.i18n.getT(locale)`                                                |
+| `resolveKey(target, key, options)`     | `getSupportedLanguageT(target, key, options)`                                |
+| `resolveUserKey(target, key, options)` | `getSupportedUserLanguageT(target, key, options)`                            |
+| `loadedLocales`                        | `container.i18n.languages` (a `Map<string, TFunction>`)                      |
+| `loadedNamespaces`                     | `container.i18n.namespaces`                                                  |
+| `loadedPaths`                          | Derived from `i18n.defaultLanguageDirectory`; extra paths via `i18n.backend` |
+| `loadedFormatters`                     | `container.i18n.options.formatters`                                          |
+| `Formatter`                            | `I18nextFormatter`                                                           |
 
 `getSupportedLanguageName`, `getSupportedUserLanguageName`, `getSupportedLanguageT`, `getSupportedUserLanguageT`,
 `supportedLanguages`, `isSupportedDiscordLocale`, `getLocalizedData`, `applyNameLocalizedBuilder`,
 `applyDescriptionLocalizedBuilder`, `applyLocalizedBuilder` and `createSelectMenuChoiceName` keep the same names —
 only the module specifier changes (and `getSupportedLanguageT`/`getSupportedUserLanguageT` gain the direct
 `(target, key, options)` overload shown above).
+
+The plugin also adds `fetchLanguage` / `fetchT` / `fetchKey` (asynchronous helpers honouring a custom
+`container.i18n.fetchLanguage` hook), `createLocalizedChoice`, and chokidar-based hot reloading.
 
 ### Other changes
 
