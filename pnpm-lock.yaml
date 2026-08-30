@@ -497,9 +497,9 @@ importers:
       '@wolfstar/http-framework':
         specifier: workspace:^
         version: link:../http-framework
-      '@wolfstar/http-framework-i18n':
-        specifier: workspace:^
-        version: link:../http-framework-i18n
+      '@wolfstar/plugin-i18next':
+        specifier: 1.0.1-next-20260830111821
+        version: 1.0.1-next-20260830111821(@wolfstar/http-framework@packages+http-framework)(typescript@5.8.3)
       discord-api-types:
         specifier: ^0.38.8
         version: 0.38.48
@@ -3552,6 +3552,16 @@ packages:
     resolution: {integrity: sha512-bZpge9eSXwa4ToSiqJ7j6KRwhAsneMFoSz3LMWKQDkqimm3D/tbFlrklrs/IOqC8tEcYmXQZJ6N0UrjhBirVCg==}
     peerDependencies:
       vue: ^3.5.0
+
+  '@wolfstar/i18next-backend@2.0.10':
+    resolution: {integrity: sha512-k+YOdgn6v4K5iFdOKe81SU2EOigdpLi0BGxIAOuFz2l4QUr0zDS+1dRzy11aKEJjqLrZho2uaa3CNdW/JQbO+Q==}
+    engines: {node: '>=20'}
+
+  '@wolfstar/plugin-i18next@1.0.1-next-20260830111821':
+    resolution: {integrity: sha512-iVdicg24E07oj/o+VHnAO7+Hkc0gNqyvXjwc9SVTqDjm//1PPuYjby21NBqS27Sg/9wdyYDMWh0tqySyA5eOZQ==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      '@wolfstar/http-framework': ^3.1.0
 
   acorn-import-attributes@1.9.5:
     resolution: {integrity: sha512-n02Vykv5uA3eHGM/Z2dQrcD56kL8TyDb2p1+0P83PClMnC/nc+anbQRhIOWnSq4Ke/KvDPrY3C9hDtC/A3eHnQ==}
@@ -9546,6 +9556,24 @@ snapshots:
   '@vueuse/shared@14.3.0(vue@3.5.40)':
     dependencies:
       vue: 3.5.40(typescript@5.8.3)
+
+  '@wolfstar/i18next-backend@2.0.10':
+    dependencies:
+      tslib: 2.8.1
+
+  '@wolfstar/plugin-i18next@1.0.1-next-20260830111821(@wolfstar/http-framework@packages+http-framework)(typescript@5.8.3)':
+    dependencies:
+      '@discordjs/collection': 2.1.1
+      '@sapphire/pieces': 4.4.1
+      '@sapphire/result': 2.8.0
+      '@sapphire/utilities': 3.18.2
+      '@wolfstar/http-framework': link:packages/http-framework
+      '@wolfstar/i18next-backend': 2.0.10
+      chokidar: 5.0.0
+      discord-api-types: 0.38.48
+      i18next: 25.10.10(typescript@5.8.3)
+    transitivePeerDependencies:
+      - typescript
 
   acorn-import-attributes@1.9.5(acorn@8.16.0):
     dependencies:
