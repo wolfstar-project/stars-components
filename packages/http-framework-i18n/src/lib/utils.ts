@@ -2,7 +2,7 @@ import { Collection } from '@discordjs/collection';
 import type { NonNullObject } from '@sapphire/utilities';
 import { lazy } from '@sapphire/utilities';
 import type { APIInteraction, APIPingInteraction, LocaleString, LocalizationMap } from 'discord-api-types/v10';
-import type { DefaultNamespace, Namespace, TFunction, TypeOptions } from 'i18next';
+import type { Namespace, TFunction, TypeOptions } from 'i18next';
 import { getT, loadedLocales } from './registry.js';
 
 export type Interaction = Pick<Exclude<APIInteraction, APIPingInteraction>, 'locale' | 'guild_locale' | 'guild_id'>;
@@ -15,7 +15,7 @@ export function getSupportedUserLanguageName(interaction: Interaction): LocaleSt
 	return 'en-US';
 }
 
-export function getSupportedUserLanguageT<const Ns extends Namespace = DefaultNamespace>(interaction: Interaction, namespace?: Ns): TFunction<Ns> {
+export function getSupportedUserLanguageT<const Ns extends Namespace = Namespace>(interaction: Interaction, namespace?: Ns): TFunction<Ns> {
 	return getT(getSupportedUserLanguageName(interaction), namespace);
 }
 
@@ -28,7 +28,7 @@ export function getSupportedLanguageName(interaction: Interaction): LocaleString
 	return 'en-US';
 }
 
-export function getSupportedLanguageT<const Ns extends Namespace = DefaultNamespace>(interaction: Interaction, namespace?: Ns): TFunction<Ns> {
+export function getSupportedLanguageT<const Ns extends Namespace = Namespace>(interaction: Interaction, namespace?: Ns): TFunction<Ns> {
 	return getT(getSupportedLanguageName(interaction), namespace);
 }
 
@@ -50,8 +50,8 @@ export function getLocalizedData(key: LocalePrefixKey): LocalizedData {
 	const defaultT = getDefaultT();
 
 	return {
-		value: defaultT(key),
-		localizations: Object.fromEntries(locales.map((t, locale) => [locale, t(key)]))
+		value: defaultT(key as never),
+		localizations: Object.fromEntries(locales.map((t, locale) => [locale, t(key as never)]))
 	};
 }
 

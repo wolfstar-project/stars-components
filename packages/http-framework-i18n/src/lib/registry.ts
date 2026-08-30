@@ -1,6 +1,6 @@
 import { Backend } from '@wolfstar/i18next-backend';
 import { Locale, type LocaleString } from 'discord-api-types/v10';
-import i18next, { getFixedT, type DefaultNamespace, type InitOptions, type Namespace, type TFunction } from 'i18next';
+import i18next, { getFixedT, type InitOptions, type Namespace, type TFunction } from 'i18next';
 import type { PathLike } from 'node:fs';
 import { opendir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -84,7 +84,7 @@ async function loadLocale(directory: string, ns: string) {
 	}
 }
 
-export function getT<const Ns extends Namespace = DefaultNamespace>(locale: LocaleString, namespace?: Ns): TFunction<Ns> {
+export function getT<const Ns extends Namespace = Namespace>(locale: LocaleString, namespace?: Ns): TFunction<Ns> {
 	if (!loadedLocales.has(locale)) throw new ReferenceError(`Invalid language (${locale})`);
-	return getFixedT<Ns>(locale, namespace);
+	return getFixedT(locale, namespace) as TFunction<Ns>;
 }
