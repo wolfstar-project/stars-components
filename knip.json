@@ -9,7 +9,7 @@
 		".": {
 			"entry": ["scripts/*.{mjs,ts}"],
 			"project": ["scripts/**/*.{mjs,ts}"],
-			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog", "pkg-pr-new"]
+			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog", "golar", "pkg-pr-new"]
 		},
 		"packages/*": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
@@ -45,18 +45,28 @@
 			"project": ["src/**/*.js", "tests/**/*.js", "vitest.config.js", "vitest.setup.js"]
 		},
 		"packages/shared-http-pieces": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@discordjs/collection", "tslib"]
 		},
 		"packages/shared-influx-pieces": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@sapphire/pieces", "tslib"]
 		},
 		"packages/weather-helpers": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@sapphire/utilities", "@types/he"]
 		},
 		"packages/create-http-framework": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@types/handlebars", "@types/mri"]
 		},
 		"packages/http-framework": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@wolfstar/http-framework-test-utils"]
 		}
 	}
