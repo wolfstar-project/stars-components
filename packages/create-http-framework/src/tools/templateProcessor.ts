@@ -1,6 +1,6 @@
 import Handlebars from 'handlebars';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFile } from './fileSystem.js';
 import type { Language } from './options.js';
@@ -28,6 +28,22 @@ function readManifest(outputDir: string): TemplateContext | undefined {
 
 function writeManifest(outputDir: string, context: TemplateContext): void {
 	writeFile(join(outputDir, manifestFilename), `${JSON.stringify(context, null, '\t')}\n`);
+}
+
+/**
+ * `@wolfstar/i18next-type-generator` writes this file when the CLI runs it after `processTemplate`
+ * (see `index.ts`). It isn't part of the Handlebars template set — its content is derived from the
+ * project's own locale keys, not from a static source file — so {@link removeStaleGeneratedFiles}
+ * has no candidate to diff it against and would never touch it, manifest or not. Delete it directly
+ * whenever i18n is disabled: it's pure `generate:i18n` output, never meant to be hand-edited.
+ */
+function removeI18nDeclaration(outputDir: string): void {
+	const target = join(outputDir, 'src', '@types', 'i18next.d.ts');
+	if (!existsSync(target)) return;
+
+	rmSync(target);
+	const typesDir = dirname(target);
+	if (existsSync(typesDir) && readdirSync(typesDir).length === 0) rmSync(typesDir, { recursive: true });
 }
 
 /** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
@@ -204,6 +220,7 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
 export async function processTemplate(outputDir: string, context: TemplateContext): Promise<string[]> {
 	const renderContext = readManifest(outputDir) ?? context;
 	const preserved = removeStaleGeneratedFiles(outputDir, context, renderContext);
+	if (!context.i18n) removeI18nDeclaration(outputDir);
 
 	processDir(baseDir, outputDir, context);
 

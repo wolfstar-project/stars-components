@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -228,5 +228,29 @@ describe('processTemplate', () => {
 		const content = await readFile(mainTs, 'utf8');
 		expect(content).not.toContain('@wolfstar/plugin-i18next');
 		expect(content).toContain('4000');
+	});
+
+	test('GIVEN a rerun with i18n disabled THEN removes the generated i18next.d.ts declaration', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true }));
+		// `generate:i18n` (not processTemplate) writes this in real usage — simulate its output.
+		const declaration = join(outputDir, 'src', '@types', 'i18next.d.ts');
+		await mkdir(join(outputDir, 'src', '@types'), { recursive: true });
+		await writeFile(declaration, 'declare module "i18next" {}\n', 'utf8');
+
+		await processTemplate(outputDir, makeContext({ i18n: false }));
+
+		expect(existsSync(declaration)).toBe(false);
+	});
+
+	test('GIVEN a legacy project with no manifest THEN a rerun with i18n disabled still removes the i18next.d.ts declaration', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true }));
+		const declaration = join(outputDir, 'src', '@types', 'i18next.d.ts');
+		await mkdir(join(outputDir, 'src', '@types'), { recursive: true });
+		await writeFile(declaration, 'declare module "i18next" {}\n', 'utf8');
+		await rm(join(outputDir, '.create-http-framework.json'), { force: true });
+
+		await processTemplate(outputDir, makeContext({ i18n: false }));
+
+		expect(existsSync(declaration)).toBe(false);
 	});
 });
