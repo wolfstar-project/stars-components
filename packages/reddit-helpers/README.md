@@ -20,15 +20,6 @@ Very basic Reddit helper functions for several Star bots to ensure we do not dup
 Note that this package only does [Application Only Oauth](https://github.com/reddit-archive/reddit/wiki/OAuth2#application-only-oauth) and requires
 an application of the "Installed" type!
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/reddit-helpers
-```
-
 ## Features
 
 - Powered by the `@wolfstar/safe-fetch` package

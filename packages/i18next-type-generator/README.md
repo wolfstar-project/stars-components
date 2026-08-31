@@ -17,15 +17,6 @@
 
 A fast and modern type augmentation generator for the [`@wolfstar/i18next-backend`](https://www.npmjs.com/package/@wolfstar/i18next-backend) filesystem-based [`i18next`](https://www.npmjs.com/package/i18next) backend for Node.js.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install --save-dev @wolfstar/i18next-type-generator
-```
-
 ## Usage
 
 ```bash

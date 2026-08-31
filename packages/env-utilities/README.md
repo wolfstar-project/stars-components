@@ -17,15 +17,6 @@
 
 Functional utilities for reading and parsing environmental variables, based on [Wolfstar](https://wolfstar.rocks)'s internal tools.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/env-utilities
-```
-
 ## Usage
 
 ### Setup

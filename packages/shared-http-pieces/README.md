@@ -18,15 +18,6 @@
 
 The shared commands used for Star Network's HTTP-only bots.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/shared-http-pieces
-```
-
 ## Setup
 
 - Define `locales/{{lng}}/commands/shared:infoEmbedDescription` as a string. This is the content displayed in `/info`'s embed description.

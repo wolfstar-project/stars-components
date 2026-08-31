@@ -17,15 +17,6 @@
 
 A tiny opinionated abstraction layer for InfluxDB for interacting with a single organization, based on [Wolfstar](https://wolfstar.rocks)'s internal tools.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/influx-utilities
-```
-
 ## Usage
 
 You can provide the configuration for the Influx client in several ways.

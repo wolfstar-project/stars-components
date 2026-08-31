@@ -17,15 +17,6 @@
 
 A fast and modern filesystem-based [`i18next`](https://www.npmjs.com/package/i18next) backend for Node.js.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/i18next-backend i18next
-```
-
 ## Usage
 
 ```typescript

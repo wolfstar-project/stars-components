@@ -40,15 +40,6 @@ The width of the left section depends on the width of the "logo" field without t
 
 If the height of the right section is higher than the height of the logo, then an empty padding with the logo's width will be used.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/start-banner
-```
-
 ## Usage
 
 To use the module, you import the `createBanner` function from the package, and then pass arrays with the lines.

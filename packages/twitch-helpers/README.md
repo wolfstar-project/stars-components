@@ -17,15 +17,6 @@
 
 Very basic Twitch helper functions for several Star bots to ensure we do not duplicate code.
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/twitch-helpers
-```
-
 ## Features
 
 - Powered by the `@wolfstar/safe-fetch` package

@@ -17,15 +17,6 @@
 
 A powerful HTTP framework for building your Discord bots, powered by [`node:http`], [`@discordjs/rest`], and [`@sapphire/pieces`].
 
-## Installation
-
-You can use the following command to install this package, or replace `npm install` with your package
-manager of choice.
-
-```sh
-npm install @wolfstar/http-framework
-```
-
 ## Features
 
 - Support for reloading and unloading commands
