@@ -1,4 +1,19 @@
-# `@wolfstar/twitch-helpers`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/twitch-helpers
+
+**Twitch helper functions shared across Star Network bots.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/twitch-helpers)](https://npmx.dev/package/@wolfstar/twitch-helpers)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/twitch-helpers)](https://npmx.dev/package/@wolfstar/twitch-helpers)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 Very basic Twitch helper functions for several Star bots to ensure we do not duplicate code.
 

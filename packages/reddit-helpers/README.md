@@ -1,4 +1,19 @@
-# `@wolfstar/reddit-helpers`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/reddit-helpers
+
+**Reddit helper functions shared across Star Network bots.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/reddit-helpers)](https://npmx.dev/package/@wolfstar/reddit-helpers)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/reddit-helpers)](https://npmx.dev/package/@wolfstar/reddit-helpers)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 Very basic Reddit helper functions for several Star bots to ensure we do not duplicate code.
 

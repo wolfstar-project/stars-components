@@ -1,4 +1,19 @@
-# `@wolfstar/logger`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/logger
+
+**A lightweight logger system with level-based filtering and coloured output.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/logger)](https://npmx.dev/package/@wolfstar/logger)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/logger)](https://npmx.dev/package/@wolfstar/logger)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 A lightweight logger system with level support.
 

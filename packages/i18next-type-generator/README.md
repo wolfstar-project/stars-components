@@ -1,4 +1,19 @@
-# `@wolfstar/i18next-type-generator`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/i18next-type-generator
+
+**Generate the i18next TypeScript augmentation straight from your locale files.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/i18next-type-generator)](https://npmx.dev/package/@wolfstar/i18next-type-generator)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/i18next-type-generator)](https://npmx.dev/package/@wolfstar/i18next-type-generator)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 A fast and modern type augmentation generator for the [`@wolfstar/i18next-backend`](https://www.npmjs.com/package/@wolfstar/i18next-backend) filesystem-based [`i18next`](https://www.npmjs.com/package/i18next) backend for Node.js.
 

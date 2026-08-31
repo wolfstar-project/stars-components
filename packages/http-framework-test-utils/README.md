@@ -1,4 +1,19 @@
-# `@wolfstar/http-framework-test-utils`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/http-framework-test-utils
+
+**Test utilities and fixtures for <a href="https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework">@wolfstar/http-framework</a>.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework-test-utils)](https://npmx.dev/package/@wolfstar/http-framework-test-utils)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/http-framework-test-utils)](https://npmx.dev/package/@wolfstar/http-framework-test-utils)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 Test utilities and fixtures for [`@wolfstar/http-framework`](https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework) — designed to work with [Vitest](https://vitest.dev/).
 
