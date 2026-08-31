@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.0.0
+
+### Major Changes
+
+- [#30](https://github.com/wolfstar-project/stars-components/pull/30) [`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55) - feat: adopt i18next v25 native TypeScript types
+
+    `@wolfstar/http-framework-i18n` now targets i18next v25 with namespace-aware `getT` / `getSupportedLanguageT` helpers and drops the deprecated `T`, `FT`, `resolveKey`, and `resolveUserKey` APIs. `@wolfstar/shared-http-pieces` removes the hand-maintained `LanguageKeys` export in favour of the generated `CustomTypeOptions` augmentation and direct `TFunction<'commands/shared'>` usage. Adds `@wolfstar/i18next-type-generator`, the CLI used to generate that augmentation from locale JSON files. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#151](https://github.com/wolfstar-project/stars-components/pull/151) [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8) - build: replace tsc with golar as typechecker, bump typescript to 7.0.2
+
+    `typecheck` scripts now run `golar tsc` instead of `tsc` directly. This is a dev-tooling-only change with no effect on published output. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#144](https://github.com/wolfstar-project/stars-components/pull/144) [`d3209cd`](https://github.com/wolfstar-project/stars-components/commit/d3209cd08a5148d0d0d5dc0b79d80a07ffd529d6) - chore: migrate i18n from `@wolfstar/http-framework-i18n` to `@wolfstar/plugin-i18next`, adopting its native
+  i18next TypeScript types (dropping the branded `T`/`FT` key helpers) from
+  [wolfstar-project/plugins#57](https://github.com/wolfstar-project/plugins/pull/57).
+
+    Importing `@wolfstar/shared-http-pieces/register` still registers this package's bundled
+    locales automatically, matching the previous behavior: it now does so by registering a
+    `preGenericsInitialization` hook that splices `localesPath` into your `Client`'s
+    `i18n.backend.paths` before `@wolfstar/plugin-i18next` builds its handler. No consumer
+    changes are required, as long as the register entrypoint is imported before `new Client(...)`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- Updated dependencies [[`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8)]:
+    - @wolfstar/env-utilities@2.0.8
+    - @wolfstar/http-framework@3.2.1
+
 ## 1.2.9
 
 ### Patch Changes

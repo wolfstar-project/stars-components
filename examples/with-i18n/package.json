@@ -1,6 +1,6 @@
 {
 	"name": "with-i18n",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"private": true,
 	"description": "WolfStar HTTP bot example with multi-locale http-framework-i18n",
 	"type": "module",
@@ -12,7 +12,7 @@
 		"build": "tsdown --config-loader unrun",
 		"dev": "pnpm build && pnpm start",
 		"start": "node --enable-source-maps dist/main.js",
-		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"typecheck": "golar tsc -p tsconfig.json --noEmit",
 		"watch": "tsdown --config-loader unrun --watch --onSuccess \"node --enable-source-maps dist/main.js\""
 	},
 	"dependencies": {
@@ -28,8 +28,9 @@
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",
+		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
-		"typescript": "~5.8.3"
+		"typescript": "~7.0.2"
 	},
 	"engines": {
 		"node": ">=20"

@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/twitch-helpers",
-	"version": "2.0.6",
+	"version": "2.0.7",
 	"description": "Very basic Twitch helper functions used across several Star bots",
 	"keywords": [
 		"api",
@@ -42,7 +42,7 @@
 	"scripts": {
 		"build": "tsdown --config-loader unrun",
 		"watch": "tsdown --config-loader unrun --watch",
-		"typecheck": "tsc -p ../../tsconfig.json",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
@@ -53,8 +53,9 @@
 	},
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
+		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
-		"typescript": "~5.8.3"
+		"typescript": "~7.0.2"
 	},
 	"engines": {
 		"node": ">=20"

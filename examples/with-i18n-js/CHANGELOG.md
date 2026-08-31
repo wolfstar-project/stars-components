@@ -1,5 +1,17 @@
 # with-i18n-js
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55), [`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55), [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8), [`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55), [`d3209cd`](https://github.com/wolfstar-project/stars-components/commit/d3209cd08a5148d0d0d5dc0b79d80a07ffd529d6)]:
+    - @wolfstar/http-framework-i18n@2.0.0
+    - @wolfstar/env-utilities@2.0.8
+    - @wolfstar/http-framework@3.2.1
+    - @wolfstar/logger@2.1.6
+    - @wolfstar/shared-http-pieces@2.0.0
+    - @wolfstar/start-banner@2.0.9
+
 ## 0.0.5
 
 ### Patch Changes
