@@ -1,3 +1,4 @@
+import type { Piece } from '@sapphire/pieces';
 import type {
 	APIApplicationCommandAutocompleteInteraction,
 	APIApplicationCommandInteraction,
@@ -59,6 +60,43 @@ export interface ClientEvents {
 	interactionHandlerSuccess: [context: ClientEventInteractionHandlerContext, value: unknown];
 	interactionHandlerError: [error: unknown, context: ClientEventInteractionHandlerContext];
 	interactionHandlerFinish: [context: ClientEventInteractionHandlerContext];
+	/**
+	 * Emitted when the Hot Module Reloader starts watching, with the list of watched store paths.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrStart: [paths: string[]];
+	/**
+	 * Emitted when the Hot Module Reloader stops watching and all of its watchers have been closed.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrStop: [];
+	/**
+	 * Emitted when the Hot Module Reloader loads the pieces of a newly created file.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrPiecesLoaded: [pieces: Piece[], path: string];
+	/**
+	 * Emitted when the Hot Module Reloader reloads an already loaded piece after its file changed.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrPieceReloaded: [piece: Piece, path: string];
+	/**
+	 * Emitted when the Hot Module Reloader unloads a piece after its file was deleted.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrPieceUnloaded: [piece: Piece, path: string];
+	/**
+	 * Emitted when the Hot Module Reloader fails to load, reload, or unload the pieces of a file. The error is not
+	 * rethrown: saving the file again retries the operation.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrError: [error: unknown, path: string];
 }
 
 export type MappedClientEvents = { [K in keyof ClientEvents]: ClientEvents[K] };

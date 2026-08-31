@@ -7,6 +7,7 @@ import { createServer, type IncomingMessage, type Server, type ServerOptions, ty
 import type { ListenOptions as NetListenOptions } from 'node:net';
 import type { MappedClientEvents } from './ClientEvents.js';
 import { HttpCodes } from './api/HttpCodes.js';
+import { HotModuleReloader, type HMROptions } from './hmr/HotModuleReloader.js';
 import type { IIdParser } from './components/IIdParser.js';
 import { StringIdParser } from './components/StringIdParser.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
@@ -26,6 +27,15 @@ container.stores.register(new ListenerStore());
 
 export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public server!: Server;
+
+	/**
+	 * The Hot Module Reloader, set by {@link Client#load} when {@link ClientOptions.hmr} is enabled, and `null`
+	 * otherwise.
+	 *
+	 * @since 3.3.0
+	 */
+	public hmr: HotModuleReloader | null = null;
+
 	public readonly id: string;
 	public readonly options: ClientOptions;
 	public readonly bodySizeLimit: number;
@@ -124,6 +134,11 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		}
 
 		await container.stores.load();
+
+		if (this.options.hmr && (this.options.hmr.enabled ?? true)) {
+			this.hmr = new HotModuleReloader(this.options.hmr);
+			await this.hmr.start();
+		}
 	}
 
 	/**
@@ -260,6 +275,16 @@ export interface ClientOptions {
 	 * @since 2.0.0
 	 */
 	authPrefix?: RequestAuthPrefix;
+
+	/**
+	 * The Hot Module Reloading options. When {@link HMROptions.enabled} is `true`, {@link Client#load} starts a
+	 * {@link HotModuleReloader} that watches every store path and reloads pieces as their files change.
+	 *
+	 * @remarks HMR is meant for development only, keep it disabled in production.
+	 * @default undefined // HMR is not started
+	 * @since 3.3.0
+	 */
+	hmr?: HMROptions;
 }
 
 export interface LoadOptions {

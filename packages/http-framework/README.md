@@ -20,6 +20,7 @@ A powerful HTTP framework for building your Discord bots, powered by [`node:http
 ## Features
 
 - Support for reloading and unloading commands
+- Built-in Hot Module Reloading for every store
 - Support for attachment responses
 - Seamless integration with low-level libraries
 - Thin wrapper on top of raw data for maximum performance
@@ -310,6 +311,71 @@ await client.load();
 await client.listen({ port: 3000 });
 ```
 
+### Hot Module Reloading
+
+`@wolfstar/http-framework` ships with Hot Module Reloading (HMR) as a core feature, no plugin required. When enabled,
+every path registered in every store is watched, and pieces are loaded, reloaded, and unloaded in place as their files
+are created, changed, and deleted, without restarting the process.
+
+```typescript
+import { Client } from '@wolfstar/http-framework';
+
+const client = new Client({
+	discordToken: process.env.DISCORD_TOKEN,
+	discordPublicKey: process.env.DISCORD_PUBLIC_KEY,
+	// Development only, do not enable this in production:
+	hmr: { enabled: process.env.NODE_ENV !== 'production' }
+});
+
+// `load` starts the reloader once the stores have been loaded:
+await client.load();
+```
+
+The `hmr` option accepts [all of chokidar's options], plus:
+
+| Option    | Default | Description                                                                                |
+| --------- | ------- | ------------------------------------------------------------------------------------------ |
+| `enabled` | `true`  | Whether HMR is started. Omitting the `hmr` option entirely also leaves the reloader unset. |
+| `silent`  | `false` | Whether the reloader refrains from writing to the console. Events are always emitted.      |
+
+The reloader is exposed as `client.hmr`, which is `null` when HMR is disabled, and can be stopped at any time:
+
+```typescript
+await client.hmr?.stop();
+```
+
+It can also be used standalone, without a `Client`, as long as the stores are registered in the container:
+
+```typescript
+import { HotModuleReloader } from '@wolfstar/http-framework';
+
+const reloader = await new HotModuleReloader({ silent: true }).start();
+```
+
+The client emits an event for every operation, which is useful to react to changes, for example to push the updated
+application commands to Discord while developing:
+
+```typescript
+client.on('hmrPieceReloaded', async (piece) => {
+	if (piece.store.name === 'commands') {
+		await client.registry.pushGlobalCommandsInGuild(process.env.DEVELOPMENT_GUILD_ID);
+	}
+});
+```
+
+| Event              | Arguments               | Description                                          |
+| ------------------ | ----------------------- | ---------------------------------------------------- |
+| `hmrStart`         | `paths: string[]`       | The reloader started watching the given store paths. |
+| `hmrStop`          | —                       | The reloader stopped and closed all of its watchers. |
+| `hmrPiecesLoaded`  | `pieces: Piece[], path` | A new file was created and its pieces were loaded.   |
+| `hmrPieceReloaded` | `piece: Piece, path`    | An existing file changed and its piece was reloaded. |
+| `hmrPieceUnloaded` | `piece: Piece, path`    | A file was deleted and its piece was unloaded.       |
+| `hmrError`         | `error: unknown, path`  | An operation failed; saving the file again retries.  |
+
+> **Note**: unloading a command also removes its entry from the `ApplicationCommandRegistry`, so a reloaded command is
+> registered exactly once. HMR does not push the updated commands to Discord on its own, subscribe to the events above
+> if you want that behaviour.
+
 ### ApplicationCommandRegistry
 
 The `ApplicationCommandRegistry` is `@wolfstar/http-framework`'s centralized registry and uses [`@discordjs/rest`] to register them in Discord.
@@ -348,6 +414,7 @@ await applicationCommandRegistry.pushGuildRestrictedCommands();
 > **Note**: calling `applicationCommandRegistry.setup()` is not needed if you are using the `Client` class because it is
 > already called automatically for you.
 
+[all of chokidar's options]: https://github.com/paulmillr/chokidar#api
 [`node:http`]: https://nodejs.org/api/http.html
 [`@discordjs/rest`]: https://www.npmjs.com/package/@discordjs/rest
 [`@sapphire/pieces`]: https://www.npmjs.com/package/@sapphire/pieces
