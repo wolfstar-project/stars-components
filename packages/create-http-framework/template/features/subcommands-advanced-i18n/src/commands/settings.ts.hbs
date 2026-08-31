@@ -1,0 +1,62 @@
+import { Command, RegisterCommand, RegisterSubcommand, RegisterSubcommandGroup } from '@wolfstar/http-framework';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
+import { ApplicationIntegrationType, InteractionContextType } from 'discord-api-types/v10';
+
+@RegisterCommand((builder) =>
+	applyLocalizedBuilder(builder, 'commands/settings:name', 'commands/settings:description') //
+		.setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+		.setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+)
+export class SettingsCommand extends Command {
+	@RegisterSubcommandGroup((builder) =>
+		applyLocalizedBuilder(builder, 'commands/settings:profileName', 'commands/settings:profileDescription')
+	)
+	@RegisterSubcommand(
+		(builder) => applyLocalizedBuilder(builder, 'commands/settings:profileGetName', 'commands/settings:profileGetDescription'),
+		'profile'
+	)
+	public profileGet(interaction: Command.ChatInputInteraction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:profileGetResult') });
+	}
+
+	@RegisterSubcommand(
+		(builder) =>
+			applyLocalizedBuilder(builder, 'commands/settings:profileSetName', 'commands/settings:profileSetDescription').addStringOption(
+				(option) =>
+					applyLocalizedBuilder(option, 'commands/settings:optionsNameName', 'commands/settings:optionsNameDescription').setRequired(true)
+			),
+		'profile'
+	)
+	public profileSet(interaction: Command.ChatInputInteraction, { name }: SettingsProfileSetOptions) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:profileSetResult', { name }) });
+	}
+
+	@RegisterSubcommandGroup((builder) =>
+		applyLocalizedBuilder(builder, 'commands/settings:notificationsName', 'commands/settings:notificationsDescription')
+	)
+	@RegisterSubcommand(
+		(builder) =>
+			applyLocalizedBuilder(builder, 'commands/settings:notificationsEnableName', 'commands/settings:notificationsEnableDescription'),
+		'notifications'
+	)
+	public notificationsEnable(interaction: Command.ChatInputInteraction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:notificationsEnableResult') });
+	}
+
+	@RegisterSubcommand(
+		(builder) =>
+			applyLocalizedBuilder(builder, 'commands/settings:notificationsDisableName', 'commands/settings:notificationsDisableDescription'),
+		'notifications'
+	)
+	public notificationsDisable(interaction: Command.ChatInputInteraction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:notificationsDisableResult') });
+	}
+}
+
+interface SettingsProfileSetOptions {
+	name: string;
+}

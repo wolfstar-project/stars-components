@@ -1,0 +1,78 @@
+import { Command } from '@wolfstar/http-framework';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
+import { ApplicationIntegrationType, InteractionContextType } from 'discord-api-types/v10';
+
+export class SettingsCommand extends Command {
+	registerApplicationCommands(registry) {
+		registry
+			.registerChatInputCommand((builder) =>
+				applyLocalizedBuilder(builder, 'commands/settings:name', 'commands/settings:description')
+					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+					.setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+			)
+			.registerSubcommandGroup((builder) =>
+				applyLocalizedBuilder(builder, 'commands/settings:profileName', 'commands/settings:profileDescription')
+			)
+			.registerSubcommand(
+				(builder) => applyLocalizedBuilder(builder, 'commands/settings:profileGetName', 'commands/settings:profileGetDescription'),
+				'profileGet',
+				'profile'
+			)
+			.registerSubcommand(
+				(builder) =>
+					applyLocalizedBuilder(builder, 'commands/settings:profileSetName', 'commands/settings:profileSetDescription').addStringOption(
+						(option) =>
+							applyLocalizedBuilder(
+								option,
+								'commands/settings:optionsNameName',
+								'commands/settings:optionsNameDescription'
+							).setRequired(true)
+					),
+				'profileSet',
+				'profile'
+			)
+			.registerSubcommandGroup((builder) =>
+				applyLocalizedBuilder(builder, 'commands/settings:notificationsName', 'commands/settings:notificationsDescription')
+			)
+			.registerSubcommand(
+				(builder) =>
+					applyLocalizedBuilder(
+						builder,
+						'commands/settings:notificationsEnableName',
+						'commands/settings:notificationsEnableDescription'
+					),
+				'notificationsEnable',
+				'notifications'
+			)
+			.registerSubcommand(
+				(builder) =>
+					applyLocalizedBuilder(
+						builder,
+						'commands/settings:notificationsDisableName',
+						'commands/settings:notificationsDisableDescription'
+					),
+				'notificationsDisable',
+				'notifications'
+			);
+	}
+
+	profileGet(interaction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:profileGetResult') });
+	}
+
+	profileSet(interaction, { name }) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:profileSetResult', { name }) });
+	}
+
+	notificationsEnable(interaction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:notificationsEnableResult') });
+	}
+
+	notificationsDisable(interaction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/settings:notificationsDisableResult') });
+	}
+}
