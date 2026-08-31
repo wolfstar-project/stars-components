@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -212,5 +212,72 @@ describe('processTemplate', () => {
 		expect(existsSync(join(outputDir, 'src', 'main.ts'))).toBe(false);
 		expect(existsSync(join(outputDir, 'src', 'main.js'))).toBe(true);
 		expect(preserved).toStrictEqual([]);
+	});
+
+	test('GIVEN a rerun with i18n disabled AND a different port THEN still removes the pristine i18n entrypoint', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, port: 3000 }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		expect(await readFile(mainTs, 'utf8')).toContain("import '@wolfstar/plugin-i18next/register';");
+
+		// The manifest from the first run records port 3000, so the stale file is compared against
+		// an exact render with *that* port, not this run's 4000 — otherwise it would look hand-edited.
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, port: 4000 }));
+
+		expect(preserved).toStrictEqual([]);
+		const content = await readFile(mainTs, 'utf8');
+		expect(content).not.toContain('@wolfstar/plugin-i18next');
+		expect(content).toContain('4000');
+	});
+
+	test('GIVEN a rerun with both language and port switched THEN still removes the pristine i18n entrypoint', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, language: 'ts', port: 3000 }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		expect(await readFile(mainTs, 'utf8')).toContain("import '@wolfstar/plugin-i18next/register';");
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js', port: 4000 }));
+
+		expect(preserved).toStrictEqual([]);
+		expect(existsSync(mainTs)).toBe(false);
+		const mainJs = await readFile(join(outputDir, 'src', 'main.js'), 'utf8');
+		expect(mainJs).not.toContain('@wolfstar/plugin-i18next');
+		expect(mainJs).toContain('4000');
+	});
+
+	test('GIVEN the port slot itself was hand-edited THEN preserves the file instead of deleting it', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, port: 3000 }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		// Only the interpolated port value changes — everything else stays byte-for-byte generated.
+		const original = await readFile(mainTs, 'utf8');
+		await writeFile(mainTs, original.replace('3000', '5000'), 'utf8');
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js', port: 4000 }));
+
+		expect(preserved).toContain('src/main.ts');
+		expect(existsSync(mainTs)).toBe(true);
+		expect(await readFile(mainTs, 'utf8')).toContain('5000');
+	});
+
+	test('GIVEN a legacy project with no manifest THEN a rerun still removes the pristine i18n entrypoint (best-effort)', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, language: 'ts', port: 3000 }));
+		await rm(join(outputDir, '.create-http-framework.json'), { force: true });
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js', port: 4000 }));
+
+		expect(preserved).toStrictEqual([]);
+		expect(existsSync(join(outputDir, 'src', 'main.ts'))).toBe(false);
+		const content = await readFile(join(outputDir, 'src', 'main.js'), 'utf8');
+		expect(content).not.toContain('@wolfstar/plugin-i18next');
+	});
+
+	test('GIVEN a rerun with i18n disabled THEN removes the generated i18next.d.ts declaration', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true }));
+		// `generate:i18n` (not processTemplate) writes this in real usage — simulate its output.
+		const declaration = join(outputDir, 'src', '@types', 'i18next.d.ts');
+		await mkdir(join(outputDir, 'src', '@types'), { recursive: true });
+		await writeFile(declaration, 'declare module "i18next" {}\n', 'utf8');
+
+		await processTemplate(outputDir, makeContext({ i18n: false }));
+
+		expect(existsSync(declaration)).toBe(false);
 	});
 });
