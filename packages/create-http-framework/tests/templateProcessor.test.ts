@@ -174,4 +174,20 @@ describe('processTemplate', () => {
 		expect(existsSync(join(outputDir, 'src', 'commands', 'settings.ts'))).toBe(true);
 		expect(existsSync(join(outputDir, 'src', 'commands', 'math.ts'))).toBe(false);
 	});
+
+	test('GIVEN a rerun with i18n and subcommands disabled THEN removes stale feature files and leaves no import of the dropped package', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, subcommands: true }));
+		expect(existsSync(join(outputDir, 'src', 'commands', 'math.ts'))).toBe(true);
+		expect(existsSync(join(outputDir, 'src', 'locales', 'en-US', 'commands', 'math.json'))).toBe(true);
+
+		await processTemplate(outputDir, makeContext({ i18n: false, subcommands: false }));
+
+		// The subcommands overlay's math.ts (and its i18n locale JSON) are unique to the disabled
+		// features and must be removed, not just left behind with a dangling import.
+		expect(existsSync(join(outputDir, 'src', 'commands', 'math.ts'))).toBe(false);
+		expect(existsSync(join(outputDir, 'src', 'locales', 'en-US', 'commands', 'math.json'))).toBe(false);
+
+		const pingContent = await readFile(join(outputDir, 'src', 'commands', 'ping.ts'), 'utf8');
+		expect(pingContent).not.toContain('@wolfstar/plugin-i18next');
+	});
 });

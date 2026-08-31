@@ -1,5 +1,5 @@
 import Handlebars from 'handlebars';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFile } from './fileSystem.js';
@@ -59,6 +59,53 @@ export function resolveFeatureDirs(ctx: Pick<TemplateContext, 'i18n' | 'subcomma
 	return dirs;
 }
 
+/** The output-relative path a source file under a template root resolves to for the given language, or `null` if the file doesn't apply to that language. */
+function toOutputRelative(root: string, absoluteSource: string, language: Language): string | null {
+	const relativePath = relative(root, absoluteSource);
+
+	if (language === 'js' && relativePath.endsWith('.ts.hbs')) return null;
+	if (language === 'ts' && relativePath.endsWith('.js.hbs')) return null;
+
+	return relativePath.endsWith('.hbs') ? relativePath.slice(0, -'.hbs'.length) : relativePath;
+}
+
+/** The set of output-relative paths that writing `root` for `language` would produce. */
+function collectOutputPaths(root: string, language: Language): Set<string> {
+	const paths = new Set<string>();
+	for (const absoluteSource of walkDir(root)) {
+		const outputRelative = toOutputRelative(root, absoluteSource, language);
+		if (outputRelative !== null) paths.add(outputRelative);
+	}
+	return paths;
+}
+
+/**
+ * When re-running against a non-empty `outputDir` (`--ignore`), files written by a previously
+ * enabled feature overlay (e.g. `src/commands/math.ts` from `subcommands`) survive even after that
+ * feature is disabled — `processTemplate` only ever writes the currently active overlays, it never
+ * deletes. Left behind, those files keep importing packages that `writeProjectFiles` just dropped
+ * from `package.json` (e.g. `@wolfstar/plugin-i18next`), breaking install/build. Delete any
+ * generator-owned path that belongs to a disabled feature and isn't also produced by `base/` or a
+ * still-active feature this run, before rendering the new template.
+ */
+function removeStaleFeatureFiles(outputDir: string, context: TemplateContext): void {
+	const activeFeatures = new Set(resolveFeatureDirs(context));
+	const keepPaths = collectOutputPaths(baseDir, context.language);
+	for (const feature of activeFeatures) {
+		for (const path of collectOutputPaths(join(featuresDir, feature), context.language)) keepPaths.add(path);
+	}
+
+	for (const feature of readdirSync(featuresDir)) {
+		if (activeFeatures.has(feature)) continue;
+
+		for (const path of collectOutputPaths(join(featuresDir, feature), context.language)) {
+			if (keepPaths.has(path)) continue;
+			const target = join(outputDir, path);
+			if (existsSync(target)) rmSync(target);
+		}
+	}
+}
+
 /**
  * Walks `root` and writes every file into `outputDir`, preserving the relative path.
  *
@@ -68,18 +115,13 @@ export function resolveFeatureDirs(ctx: Pick<TemplateContext, 'i18n' | 'subcomma
  *   no extension stripped, no Handlebars compilation.
  */
 function processDir(root: string, outputDir: string, context: TemplateContext): void {
-	const allFiles = walkDir(root);
-
-	for (const absoluteSource of allFiles) {
-		const relativePath = relative(root, absoluteSource);
-
+	for (const absoluteSource of walkDir(root)) {
 		// Source files exist in both `.ts.hbs` and `.js.hbs` variants — keep only the chosen language.
-		if (context.language === 'js' && relativePath.endsWith('.ts.hbs')) continue;
-		if (context.language === 'ts' && relativePath.endsWith('.js.hbs')) continue;
+		const outputRelative = toOutputRelative(root, absoluteSource, context.language);
+		if (outputRelative === null) continue;
 
 		const rawContent = readFileSync(absoluteSource, 'utf-8');
-		const isHandlebars = relativePath.endsWith('.hbs');
-		const outputRelative = isHandlebars ? relativePath.slice(0, -'.hbs'.length) : relativePath;
+		const isHandlebars = absoluteSource.endsWith('.hbs');
 		const outputPath = join(outputDir, outputRelative);
 		const content = isHandlebars ? Handlebars.compile(rawContent)(context) : rawContent;
 		writeFile(outputPath, content);
@@ -92,6 +134,8 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
  * output-relative path (e.g. `features/i18n/src/main.ts.hbs` overwrites `base/src/main.ts.hbs`).
  */
 export async function processTemplate(outputDir: string, context: TemplateContext): Promise<void> {
+	removeStaleFeatureFiles(outputDir, context);
+
 	processDir(baseDir, outputDir, context);
 
 	for (const feature of resolveFeatureDirs(context)) {
