@@ -4,6 +4,7 @@ function makeSelections(overrides: Partial<VersionSelections> = {}): VersionSele
 	return {
 		i18n: false,
 		subcommands: false,
+		subcommandsAdvanced: false,
 		testing: false,
 		language: 'ts',
 		buildTool: 'tsdown',

@@ -16,6 +16,7 @@ export interface TemplateContext {
 	language: Language;
 	i18n: boolean;
 	subcommands: boolean;
+	subcommandsAdvanced: boolean;
 	testing: boolean;
 }
 
@@ -39,10 +40,14 @@ function walkDir(dir: string): string[] {
  * Resolves which `template/features/*` directories should be layered on top of `template/base/`,
  * in application order. Later entries overwrite earlier ones (and `base/`) on path collisions.
  */
-export function resolveFeatureDirs(ctx: Pick<TemplateContext, 'i18n' | 'subcommands' | 'testing'>): string[] {
+export function resolveFeatureDirs(ctx: Pick<TemplateContext, 'i18n' | 'subcommands' | 'subcommandsAdvanced' | 'testing'>): string[] {
 	const dirs: string[] = [];
 	if (ctx.i18n) dirs.push('i18n');
-	if (ctx.subcommands) dirs.push(ctx.i18n ? 'subcommands-i18n' : 'subcommands');
+	if (ctx.subcommandsAdvanced) {
+		dirs.push(ctx.i18n ? 'subcommands-advanced-i18n' : 'subcommands-advanced');
+	} else if (ctx.subcommands) {
+		dirs.push(ctx.i18n ? 'subcommands-i18n' : 'subcommands');
+	}
 	if (ctx.testing) {
 		dirs.push('testing');
 		// `applyLocalizedBuilder` requires `container.i18n` to be initialized, so the generated

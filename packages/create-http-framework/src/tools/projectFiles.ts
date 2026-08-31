@@ -9,6 +9,7 @@ export interface ProjectContext {
 	port: number;
 	i18n: boolean;
 	subcommands: boolean;
+	subcommandsAdvanced: boolean;
 	testing: boolean;
 	packageManager: PackageManager;
 	language: Language;

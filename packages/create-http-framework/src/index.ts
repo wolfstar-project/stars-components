@@ -55,6 +55,7 @@ Options:
   --port <number>              HTTP port (default: 3000)
   --i18n / --no-i18n           Toggle @wolfstar/plugin-i18next (default: off)
   --subcommands / --no-subcommands  Toggle the subcommands example command (default: off)
+  --subcommands-advanced / --no-subcommands-advanced  Toggle the subcommand groups example command (default: off; overrides --subcommands)
   --testing / --no-testing     Toggle the testing setup (vitest) (default: off)
   --install / --no-install     Toggle dependency installation (default: on)
   --ignore                     Write into an existing, non-empty directory without clearing it
@@ -99,6 +100,7 @@ async function main(): Promise<void> {
 	const cliPort = argv['port'] as string | undefined;
 	const cliI18n = argv['i18n'] as boolean | undefined;
 	const cliSubcommands = argv['subcommands'] as boolean | undefined;
+	const cliSubcommandsAdvanced = argv['subcommands-advanced'] as boolean | undefined;
 	const cliTesting = argv['testing'] as boolean | undefined;
 	const cliInstall = argv['install'] as boolean;
 
@@ -322,11 +324,13 @@ async function main(): Promise<void> {
 	// ── Optional features ────────────────────────────────────────────────────
 	let wantsI18n: boolean;
 	let wantsSubcommands: boolean;
+	let wantsSubcommandsAdvanced: boolean;
 	let wantsTesting: boolean;
 
 	if (nonInteractive) {
 		wantsI18n = cliI18n ?? false;
 		wantsSubcommands = cliSubcommands ?? false;
+		wantsSubcommandsAdvanced = cliSubcommandsAdvanced ?? false;
 		wantsTesting = cliTesting ?? false;
 	} else {
 		const featuresResult = await multiselect({
@@ -334,6 +338,7 @@ async function main(): Promise<void> {
 			options: [
 				{ value: 'i18n', label: 'i18n support (@wolfstar/plugin-i18next)' },
 				{ value: 'subcommands', label: 'Subcommands example command' },
+				{ value: 'subcommands-advanced', label: 'Subcommands example command (with groups)' },
 				{ value: 'testing', label: 'Testing setup (vitest)' }
 			],
 			initialValues: [],
@@ -346,7 +351,13 @@ async function main(): Promise<void> {
 		const features = new Set(featuresResult as string[]);
 		wantsI18n = features.has('i18n');
 		wantsSubcommands = features.has('subcommands');
+		wantsSubcommandsAdvanced = features.has('subcommands-advanced');
 		wantsTesting = features.has('testing');
+	}
+
+	if (wantsSubcommands && wantsSubcommandsAdvanced) {
+		log.warn('Both --subcommands and --subcommands-advanced were selected; using the advanced example (with groups).');
+		wantsSubcommands = false;
 	}
 
 	// ── Install ───────────────────────────────────────────────────────────────
@@ -373,6 +384,7 @@ async function main(): Promise<void> {
 	const versions = await fetchDependencyVersions({
 		i18n: wantsI18n,
 		subcommands: wantsSubcommands,
+		subcommandsAdvanced: wantsSubcommandsAdvanced,
 		testing: wantsTesting,
 		language,
 		buildTool,
@@ -389,6 +401,7 @@ async function main(): Promise<void> {
 		language,
 		i18n: wantsI18n,
 		subcommands: wantsSubcommands,
+		subcommandsAdvanced: wantsSubcommandsAdvanced,
 		testing: wantsTesting
 	});
 	writeProjectFiles(targetDir, {
@@ -396,6 +409,7 @@ async function main(): Promise<void> {
 		port,
 		i18n: wantsI18n,
 		subcommands: wantsSubcommands,
+		subcommandsAdvanced: wantsSubcommandsAdvanced,
 		testing: wantsTesting,
 		packageManager,
 		language,

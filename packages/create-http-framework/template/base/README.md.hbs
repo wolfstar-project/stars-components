@@ -26,5 +26,8 @@ A Discord bot built with [`@wolfstar/http-framework`](https://www.npmjs.com/pack
 {{#if subcommands}}
 - `/math add` / `/math subtract` — basic arithmetic on two integers.
 {{/if}}
+{{#if subcommandsAdvanced}}
+- `/settings profile get` / `/settings profile set` / `/settings notifications enable` / `/settings notifications disable` — subcommand groups example.
+{{/if}}
 
 The HTTP server listens on `HTTP_ADDRESS`:`HTTP_PORT` from `.env` — `{{port}}` by default.

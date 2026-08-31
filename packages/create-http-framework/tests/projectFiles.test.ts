@@ -30,6 +30,7 @@ function makeContext(overrides: Partial<ProjectContext> = {}): ProjectContext {
 		port: 3000,
 		i18n: false,
 		subcommands: false,
+		subcommandsAdvanced: false,
 		testing: false,
 		packageManager: 'pnpm',
 		language: 'ts',

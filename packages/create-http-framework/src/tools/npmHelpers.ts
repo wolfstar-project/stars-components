@@ -15,6 +15,7 @@ export type DependencyVersions = Record<string, string>;
 export interface VersionSelections {
 	i18n: boolean;
 	subcommands: boolean;
+	subcommandsAdvanced: boolean;
 	testing: boolean;
 	language: Language;
 	buildTool: BuildTool;

@@ -26,51 +26,70 @@ vi.mock('node:url', async (importOriginal) => {
 
 describe('resolveFeatureDirs', () => {
 	test('GIVEN nothing enabled THEN returns an empty array', () => {
-		expect(resolveFeatureDirs({ i18n: false, subcommands: false, testing: false })).toStrictEqual([]);
+		expect(resolveFeatureDirs({ i18n: false, subcommands: false, subcommandsAdvanced: false, testing: false })).toStrictEqual([]);
 	});
 
 	test('GIVEN i18n and subcommands enabled THEN resolves the combined subcommands-i18n directory, not the plain one', () => {
-		const dirs = resolveFeatureDirs({ i18n: true, subcommands: true, testing: false });
+		const dirs = resolveFeatureDirs({ i18n: true, subcommands: true, subcommandsAdvanced: false, testing: false });
 
 		expect(dirs).toContain('subcommands-i18n');
 		expect(dirs).not.toContain('subcommands');
 	});
 
 	test('GIVEN subcommands enabled without i18n THEN resolves the plain subcommands directory', () => {
-		const dirs = resolveFeatureDirs({ i18n: false, subcommands: true, testing: false });
+		const dirs = resolveFeatureDirs({ i18n: false, subcommands: true, subcommandsAdvanced: false, testing: false });
 
 		expect(dirs).toStrictEqual(['subcommands']);
 	});
 
 	test('GIVEN i18n enabled without subcommands THEN resolves only the i18n directory', () => {
-		const dirs = resolveFeatureDirs({ i18n: true, subcommands: false, testing: false });
+		const dirs = resolveFeatureDirs({ i18n: true, subcommands: false, subcommandsAdvanced: false, testing: false });
 
 		expect(dirs).toStrictEqual(['i18n']);
 	});
 
+	test('GIVEN subcommandsAdvanced enabled without i18n THEN resolves the plain subcommands-advanced directory', () => {
+		const dirs = resolveFeatureDirs({ i18n: false, subcommands: false, subcommandsAdvanced: true, testing: false });
+
+		expect(dirs).toStrictEqual(['subcommands-advanced']);
+	});
+
+	test('GIVEN i18n and subcommandsAdvanced enabled THEN resolves the combined subcommands-advanced-i18n directory, not the plain one', () => {
+		const dirs = resolveFeatureDirs({ i18n: true, subcommands: false, subcommandsAdvanced: true, testing: false });
+
+		expect(dirs).toContain('subcommands-advanced-i18n');
+		expect(dirs).not.toContain('subcommands-advanced');
+	});
+
+	test('GIVEN both subcommands and subcommandsAdvanced enabled THEN only resolves the advanced directory', () => {
+		const dirs = resolveFeatureDirs({ i18n: false, subcommands: true, subcommandsAdvanced: true, testing: false });
+
+		expect(dirs).toStrictEqual(['subcommands-advanced']);
+	});
+
 	test.each([
-		[{ i18n: false, subcommands: false, testing: true }],
-		[{ i18n: true, subcommands: false, testing: true }],
-		[{ i18n: false, subcommands: true, testing: true }],
-		[{ i18n: true, subcommands: true, testing: true }]
+		[{ i18n: false, subcommands: false, subcommandsAdvanced: false, testing: true }],
+		[{ i18n: true, subcommands: false, subcommandsAdvanced: false, testing: true }],
+		[{ i18n: false, subcommands: true, subcommandsAdvanced: false, testing: true }],
+		[{ i18n: true, subcommands: true, subcommandsAdvanced: false, testing: true }]
 	])('GIVEN testing enabled THEN always includes the testing directory (%o)', (ctx) => {
 		expect(resolveFeatureDirs(ctx)).toContain('testing');
 	});
 
 	test('GIVEN every toggle enabled THEN resolves i18n, subcommands-i18n, testing and testing-i18n in order', () => {
-		const dirs = resolveFeatureDirs({ i18n: true, subcommands: true, testing: true });
+		const dirs = resolveFeatureDirs({ i18n: true, subcommands: true, subcommandsAdvanced: false, testing: true });
 
 		expect(dirs).toStrictEqual(['i18n', 'subcommands-i18n', 'testing', 'testing-i18n']);
 	});
 
 	test('GIVEN testing and i18n enabled without subcommands THEN layers the testing-i18n overlay on top of testing', () => {
-		const dirs = resolveFeatureDirs({ i18n: true, subcommands: false, testing: true });
+		const dirs = resolveFeatureDirs({ i18n: true, subcommands: false, subcommandsAdvanced: false, testing: true });
 
 		expect(dirs).toStrictEqual(['i18n', 'testing', 'testing-i18n']);
 	});
 
 	test('GIVEN testing enabled without i18n THEN does not layer the testing-i18n overlay', () => {
-		const dirs = resolveFeatureDirs({ i18n: false, subcommands: false, testing: true });
+		const dirs = resolveFeatureDirs({ i18n: false, subcommands: false, subcommandsAdvanced: false, testing: true });
 
 		expect(dirs).not.toContain('testing-i18n');
 	});
@@ -94,6 +113,7 @@ describe('processTemplate', () => {
 			language: 'ts',
 			i18n: false,
 			subcommands: false,
+			subcommandsAdvanced: false,
 			testing: false,
 			...overrides
 		};
@@ -123,5 +143,35 @@ describe('processTemplate', () => {
 
 		const content = await readFile(pingCommand, 'utf8');
 		expect(content).not.toContain('applyLocalizedBuilder');
+	});
+
+	test('GIVEN subcommandsAdvanced enabled THEN writes the settings command with subcommand groups', async () => {
+		await processTemplate(outputDir, makeContext({ subcommandsAdvanced: true }));
+
+		const settingsCommand = join(outputDir, 'src', 'commands', 'settings.ts');
+		expect(existsSync(settingsCommand)).toBe(true);
+
+		const content = await readFile(settingsCommand, 'utf8');
+		expect(content).toContain('RegisterSubcommandGroup');
+	});
+
+	test('GIVEN subcommandsAdvanced and i18n enabled THEN writes the localized settings command and locale JSON', async () => {
+		await processTemplate(outputDir, makeContext({ subcommandsAdvanced: true, i18n: true }));
+
+		const localeFile = join(outputDir, 'src', 'locales', 'en-US', 'commands', 'settings.json');
+		const settingsCommand = join(outputDir, 'src', 'commands', 'settings.ts');
+
+		expect(existsSync(localeFile)).toBe(true);
+		expect(existsSync(settingsCommand)).toBe(true);
+
+		const content = await readFile(settingsCommand, 'utf8');
+		expect(content).toContain('applyLocalizedBuilder');
+	});
+
+	test('GIVEN both subcommands and subcommandsAdvanced enabled THEN only writes the settings command, not math', async () => {
+		await processTemplate(outputDir, makeContext({ subcommands: true, subcommandsAdvanced: true }));
+
+		expect(existsSync(join(outputDir, 'src', 'commands', 'settings.ts'))).toBe(true);
+		expect(existsSync(join(outputDir, 'src', 'commands', 'math.ts'))).toBe(false);
 	});
 });

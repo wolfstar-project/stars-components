@@ -1,0 +1,53 @@
+import { Command } from '@wolfstar/http-framework';
+import { ApplicationIntegrationType, InteractionContextType } from 'discord-api-types/v10';
+
+export class SettingsCommand extends Command {
+	registerApplicationCommands(registry) {
+		registry
+			.registerChatInputCommand((builder) =>
+				builder
+					.setName('settings')
+					.setDescription('Manage your settings')
+					.setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+					.setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+			)
+			.registerSubcommandGroup((builder) => builder.setName('profile').setDescription('Manage your profile settings'))
+			.registerSubcommand((builder) => builder.setName('get').setDescription('View your current profile name'), 'profileGet', 'profile')
+			.registerSubcommand(
+				(builder) =>
+					builder
+						.setName('set')
+						.setDescription('Set your profile name')
+						.addStringOption((option) => option.setName('name').setDescription('The new profile name').setRequired(true)),
+				'profileSet',
+				'profile'
+			)
+			.registerSubcommandGroup((builder) => builder.setName('notifications').setDescription('Manage your notification settings'))
+			.registerSubcommand(
+				(builder) => builder.setName('enable').setDescription('Enable notifications'),
+				'notificationsEnable',
+				'notifications'
+			)
+			.registerSubcommand(
+				(builder) => builder.setName('disable').setDescription('Disable notifications'),
+				'notificationsDisable',
+				'notifications'
+			);
+	}
+
+	profileGet(interaction) {
+		return interaction.reply({ content: 'Your profile name is not set yet.' });
+	}
+
+	profileSet(interaction, { name }) {
+		return interaction.reply({ content: `Your profile name is now "${name}".` });
+	}
+
+	notificationsEnable(interaction) {
+		return interaction.reply({ content: 'Notifications enabled.' });
+	}
+
+	notificationsDisable(interaction) {
+		return interaction.reply({ content: 'Notifications disabled.' });
+	}
+}
