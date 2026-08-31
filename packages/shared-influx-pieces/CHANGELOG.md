@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.6
+
+### Patch Changes
+
+- [#151](https://github.com/wolfstar-project/stars-components/pull/151) [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8) - build: replace tsc with golar as typechecker, bump typescript to 7.0.2
+
+    `typecheck` scripts now run `golar tsc` instead of `tsc` directly. This is a dev-tooling-only change with no effect on published output. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- Updated dependencies [[`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8)]:
+    - @wolfstar/env-utilities@2.0.8
+    - @wolfstar/http-framework@3.2.1
+    - @wolfstar/influx-utilities@1.1.5
+
 ## 1.1.5
 
 ### Patch Changes
