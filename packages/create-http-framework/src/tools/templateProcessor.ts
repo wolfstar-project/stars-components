@@ -79,31 +79,70 @@ function collectOutputPaths(root: string, language: Language): Set<string> {
 	return paths;
 }
 
+function renderSource(absoluteSource: string, context: TemplateContext): string {
+	const rawContent = readFileSync(absoluteSource, 'utf-8');
+	return absoluteSource.endsWith('.hbs') ? Handlebars.compile(rawContent)(context) : rawContent;
+}
+
 /**
- * When re-running against a non-empty `outputDir` (`--ignore`), files written by a previously
- * enabled feature overlay (e.g. `src/commands/math.ts` from `subcommands`) survive even after that
- * feature is disabled — `processTemplate` only ever writes the currently active overlays, it never
- * deletes. Left behind, those files keep importing packages that `writeProjectFiles` just dropped
- * from `package.json` (e.g. `@wolfstar/plugin-i18next`), breaking install/build. Delete any
- * generator-owned path that belongs to a disabled feature and isn't also produced by `base/` or a
- * still-active feature this run, before rendering the new template.
+ * Maps every output-relative path `root` could ever produce — for either language — to the source
+ * file(s) that render it. Unlike {@link collectOutputPaths} this ignores `context.language`, so it
+ * also surfaces paths left behind by a previous run under the *other* language (e.g. `src/main.ts`
+ * after rerunning with `--language js`).
  */
-function removeStaleFeatureFiles(outputDir: string, context: TemplateContext): void {
-	const activeFeatures = new Set(resolveFeatureDirs(context));
+function collectCandidateSources(root: string): Map<string, string[]> {
+	const candidates = new Map<string, string[]>();
+	for (const absoluteSource of walkDir(root)) {
+		const relativePath = relative(root, absoluteSource);
+		const outputRelative = relativePath.endsWith('.hbs') ? relativePath.slice(0, -'.hbs'.length) : relativePath;
+		const sources = candidates.get(outputRelative);
+		if (sources) sources.push(absoluteSource);
+		else candidates.set(outputRelative, [absoluteSource]);
+	}
+	return candidates;
+}
+
+/**
+ * When re-running against a non-empty `outputDir` (`--ignore`), files written by a previous run
+ * survive even after the feature that produced them is disabled, or the project's language is
+ * switched — `processTemplate` only ever (re)writes the paths the *current* selections produce, it
+ * never deletes. Left behind, those files can keep importing packages that `writeProjectFiles` just
+ * dropped from `package.json` (e.g. `@wolfstar/plugin-i18next`), breaking install/build.
+ *
+ * Deletes any known generator output path that isn't produced by `base/` or an active feature this
+ * run, but only when the file on disk still matches byte-for-byte what the generator would have
+ * written for it — i.e. it wasn't hand-edited since. Hand-edited files are left in place (and their
+ * paths returned) so the caller can warn instead of silently discarding user work.
+ */
+function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext): string[] {
 	const keepPaths = collectOutputPaths(baseDir, context.language);
-	for (const feature of activeFeatures) {
+	for (const feature of resolveFeatureDirs(context)) {
 		for (const path of collectOutputPaths(join(featuresDir, feature), context.language)) keepPaths.add(path);
 	}
 
+	const candidates = collectCandidateSources(baseDir);
 	for (const feature of readdirSync(featuresDir)) {
-		if (activeFeatures.has(feature)) continue;
-
-		for (const path of collectOutputPaths(join(featuresDir, feature), context.language)) {
-			if (keepPaths.has(path)) continue;
-			const target = join(outputDir, path);
-			if (existsSync(target)) rmSync(target);
+		for (const [path, sources] of collectCandidateSources(join(featuresDir, feature))) {
+			const existing = candidates.get(path);
+			if (existing) existing.push(...sources);
+			else candidates.set(path, sources);
 		}
 	}
+
+	const preserved: string[] = [];
+	for (const [path, sources] of candidates) {
+		if (keepPaths.has(path)) continue;
+
+		const target = join(outputDir, path);
+		if (!existsSync(target)) continue;
+
+		const actual = readFileSync(target, 'utf-8');
+		const isUnmodifiedGeneratorOutput = sources.some((source) => renderSource(source, context) === actual);
+		if (isUnmodifiedGeneratorOutput) rmSync(target);
+		else preserved.push(path);
+	}
+
+	return preserved;
 }
 
 /**
@@ -132,13 +171,18 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
  * Renders `template/base/` into `outputDir`, then layers the feature directories resolved by
  * {@link resolveFeatureDirs} on top, in order — feature files overwrite base files at the same
  * output-relative path (e.g. `features/i18n/src/main.ts.hbs` overwrites `base/src/main.ts.hbs`).
+ *
+ * @returns Output-relative paths that looked stale (belong to a disabled feature or the other
+ * language) but were left in place because they'd been hand-edited since the last run.
  */
-export async function processTemplate(outputDir: string, context: TemplateContext): Promise<void> {
-	removeStaleFeatureFiles(outputDir, context);
+export async function processTemplate(outputDir: string, context: TemplateContext): Promise<string[]> {
+	const preserved = removeStaleGeneratedFiles(outputDir, context);
 
 	processDir(baseDir, outputDir, context);
 
 	for (const feature of resolveFeatureDirs(context)) {
 		processDir(join(featuresDir, feature), outputDir, context);
 	}
+
+	return preserved;
 }

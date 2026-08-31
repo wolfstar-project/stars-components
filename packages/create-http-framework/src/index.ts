@@ -395,7 +395,7 @@ async function main(): Promise<void> {
 
 	// ── Generate files ────────────────────────────────────────────────────────
 	s.start('Generating project files...');
-	await processTemplate(targetDir, {
+	const preservedFiles = await processTemplate(targetDir, {
 		name: projectName,
 		port,
 		language,
@@ -419,6 +419,9 @@ async function main(): Promise<void> {
 		versions
 	});
 	s.stop('Project files generated.');
+	for (const file of preservedFiles) {
+		log.warn(`Kept hand-edited "${file}" even though its feature is now disabled — remove it manually if it's no longer needed.`);
+	}
 
 	// ── Generate i18n types ───────────────────────────────────────────────────
 	if (wantsI18n) {

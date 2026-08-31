@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -189,5 +189,28 @@ describe('processTemplate', () => {
 
 		const pingContent = await readFile(join(outputDir, 'src', 'commands', 'ping.ts'), 'utf8');
 		expect(pingContent).not.toContain('@wolfstar/plugin-i18next');
+	});
+
+	test('GIVEN a rerun with subcommands disabled and the generated file hand-edited THEN preserves it and reports its path', async () => {
+		await processTemplate(outputDir, makeContext({ subcommands: true }));
+		const mathCommand = join(outputDir, 'src', 'commands', 'math.ts');
+		await writeFile(mathCommand, '// hand-edited by the user\n', 'utf8');
+
+		const preserved = await processTemplate(outputDir, makeContext({ subcommands: false }));
+
+		expect(existsSync(mathCommand)).toBe(true);
+		expect(await readFile(mathCommand, 'utf8')).toBe('// hand-edited by the user\n');
+		expect(preserved).toContain('src/commands/math.ts');
+	});
+
+	test('GIVEN a rerun with the language switched THEN removes the unmodified other-language base file', async () => {
+		await processTemplate(outputDir, makeContext({ language: 'ts' }));
+		expect(existsSync(join(outputDir, 'src', 'main.ts'))).toBe(true);
+
+		const preserved = await processTemplate(outputDir, makeContext({ language: 'js' }));
+
+		expect(existsSync(join(outputDir, 'src', 'main.ts'))).toBe(false);
+		expect(existsSync(join(outputDir, 'src', 'main.js'))).toBe(true);
+		expect(preserved).toStrictEqual([]);
 	});
 });
