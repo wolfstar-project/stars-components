@@ -14,6 +14,9 @@ export type DependencyVersions = Record<string, string>;
 
 export interface VersionSelections {
 	i18n: boolean;
+	subcommands: boolean;
+	subcommandsAdvanced: boolean;
+	testing: boolean;
 	language: Language;
 	buildTool: BuildTool;
 	linter: Linter;
@@ -26,9 +29,18 @@ export interface VersionSelections {
  * of being fetched, because `typescript@latest` resolves to the 6.x line.
  */
 export async function fetchDependencyVersions(selections: VersionSelections): Promise<DependencyVersions> {
-	const names = new Set<string>(['@wolfstar/http-framework', 'discord-api-types', '@discordjs/builders']);
+	const names = new Set<string>([
+		'@wolfstar/http-framework',
+		'@sapphire/pieces',
+		'discord-api-types',
+		'@wolfstar/env-utilities',
+		'@wolfstar/logger',
+		'@wolfstar/start-banner',
+		'gradient-string'
+	]);
 
-	if (selections.i18n) names.add('@wolfstar/http-framework-i18n');
+	if (selections.i18n) names.add('@wolfstar/plugin-i18next').add('@wolfstar/i18next-type-generator');
+	if (selections.testing) names.add('vitest').add('@wolfstar/http-framework-test-utils');
 
 	// TypeScript toolchain (skipped entirely for plain JavaScript projects).
 	if (selections.language === 'ts') {

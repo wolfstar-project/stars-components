@@ -1,0 +1,38 @@
+import { Command, RegisterCommand, RegisterSubcommand } from '@wolfstar/http-framework';
+import { ApplicationIntegrationType, InteractionContextType } from 'discord-api-types/v10';
+
+@RegisterCommand((builder) =>
+	builder //
+		.setName('math')
+		.setDescription('Perform basic arithmetic')
+		.setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+		.setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+)
+export class MathCommand extends Command {
+	@RegisterSubcommand((builder) =>
+		builder //
+			.setName('add')
+			.setDescription('Add two numbers')
+			.addIntegerOption((option) => option.setName('left').setDescription('The left operand').setRequired(true))
+			.addIntegerOption((option) => option.setName('right').setDescription('The right operand').setRequired(true))
+	)
+	public add(interaction: Command.ChatInputInteraction, { left, right }: MathOptions) {
+		return interaction.reply({ content: `${left} + ${right} = ${left + right}` });
+	}
+
+	@RegisterSubcommand((builder) =>
+		builder //
+			.setName('subtract')
+			.setDescription('Subtract two numbers')
+			.addIntegerOption((option) => option.setName('left').setDescription('The left operand').setRequired(true))
+			.addIntegerOption((option) => option.setName('right').setDescription('The right operand').setRequired(true))
+	)
+	public subtract(interaction: Command.ChatInputInteraction, { left, right }: MathOptions) {
+		return interaction.reply({ content: `${left} - ${right} = ${left - right}` });
+	}
+}
+
+interface MathOptions {
+	left: number;
+	right: number;
+}

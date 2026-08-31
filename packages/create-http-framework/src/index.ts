@@ -1,4 +1,4 @@
-import { cancel, confirm, intro, isCancel, log, outro, select, spinner, text } from '@clack/prompts';
+import { cancel, confirm, intro, isCancel, log, multiselect, outro, select, spinner, text } from '@clack/prompts';
 import { determineAgent } from '@vercel/detect-agent';
 import mri from 'mri';
 import { resolve } from 'node:path';
@@ -53,8 +53,12 @@ Options:
   --lint <linter>              none | eslint | oxlint (default: oxlint)
   --format <formatter>         none | prettier | oxfmt (default: oxfmt)
   --port <number>              HTTP port (default: 3000)
-  --i18n / --no-i18n           Toggle @wolfstar/http-framework-i18n (default: off)
+  --i18n / --no-i18n           Toggle @wolfstar/plugin-i18next (default: off)
+  --subcommands / --no-subcommands  Toggle the subcommands example command (default: off)
+  --subcommands-advanced / --no-subcommands-advanced  Toggle the subcommand groups example command (default: off; overrides --subcommands)
+  --testing / --no-testing     Toggle the testing setup (vitest) (default: off)
   --install / --no-install     Toggle dependency installation (default: on)
+  --ignore                     Write into an existing, non-empty directory without clearing it
   --help, -h                   Print this message and exit
 
 `);
@@ -72,7 +76,7 @@ function parseEnum<T extends string>(value: string | undefined, allowed: readonl
 
 async function main(): Promise<void> {
 	const argv = mri(process.argv.slice(2), {
-		boolean: ['overwrite', 'help'],
+		boolean: ['overwrite', 'ignore', 'help'],
 		string: ['package-manager', 'language', 'build', 'lint', 'format', 'port'],
 		alias: { h: 'help', i: 'interactive' },
 		default: { install: true }
@@ -85,6 +89,7 @@ async function main(): Promise<void> {
 
 	const argProjectName = argv._[0] as string | undefined;
 	const flagOverwrite = argv['overwrite'] as boolean;
+	const flagIgnore = argv['ignore'] as boolean;
 	const flagInteractive = argv['interactive'] as boolean | undefined;
 
 	const cliPackageManager = parseEnum(argv['package-manager'] as string | undefined, PACKAGE_MANAGERS, '--package-manager');
@@ -94,6 +99,9 @@ async function main(): Promise<void> {
 	const cliFormat = parseEnum(argv['format'] as string | undefined, FORMATTERS, '--format');
 	const cliPort = argv['port'] as string | undefined;
 	const cliI18n = argv['i18n'] as boolean | undefined;
+	const cliSubcommands = argv['subcommands'] as boolean | undefined;
+	const cliSubcommandsAdvanced = argv['subcommands-advanced'] as boolean | undefined;
+	const cliTesting = argv['testing'] as boolean | undefined;
 	const cliInstall = argv['install'] as boolean;
 
 	// Detect whether a known AI agent is driving this session
@@ -168,14 +176,17 @@ async function main(): Promise<void> {
 	if (directoryExists(targetDir) && !isEmpty(targetDir)) {
 		if (flagOverwrite) {
 			emptyDir(targetDir);
+		} else if (flagIgnore) {
+			// Write into the existing directory without clearing it first.
 		} else if (nonInteractive) {
-			cancel(`"${projectName}" already exists. Use --overwrite to overwrite it.`);
+			cancel(`"${projectName}" already exists. Use --overwrite to overwrite it, or --ignore to write into it without clearing it first.`);
 			process.exit(1);
 		} else {
 			const choice = await select({
 				message: `"${projectName}" already exists. What would you like to do?`,
 				options: [
-					{ value: 'overwrite', label: 'Overwrite the directory' },
+					{ value: 'overwrite', label: 'Overwrite the directory (empties it first)' },
+					{ value: 'ignore', label: 'Write into it without clearing existing files' },
 					{ value: 'cancel', label: 'Cancel' }
 				]
 			});
@@ -183,7 +194,7 @@ async function main(): Promise<void> {
 				cancel('Operation cancelled.');
 				process.exit(0);
 			}
-			emptyDir(targetDir);
+			if (choice === 'overwrite') emptyDir(targetDir);
 		}
 	}
 
@@ -310,21 +321,43 @@ async function main(): Promise<void> {
 		formatter = formatResult as Formatter;
 	}
 
-	// ── i18n ──────────────────────────────────────────────────────────────────
+	// ── Optional features ────────────────────────────────────────────────────
 	let wantsI18n: boolean;
+	let wantsSubcommands: boolean;
+	let wantsSubcommandsAdvanced: boolean;
+	let wantsTesting: boolean;
 
 	if (nonInteractive) {
 		wantsI18n = cliI18n ?? false;
+		wantsSubcommands = cliSubcommands ?? false;
+		wantsSubcommandsAdvanced = cliSubcommandsAdvanced ?? false;
+		wantsTesting = cliTesting ?? false;
 	} else {
-		const i18nResult = await confirm({
-			message: 'Would you like to add i18n support? (@wolfstar/http-framework-i18n)',
-			initialValue: false
+		const featuresResult = await multiselect({
+			message: 'Which optional features would you like to add?',
+			options: [
+				{ value: 'i18n', label: 'i18n support (@wolfstar/plugin-i18next)' },
+				{ value: 'subcommands', label: 'Subcommands example command' },
+				{ value: 'subcommands-advanced', label: 'Subcommands example command (with groups)' },
+				{ value: 'testing', label: 'Testing setup (vitest)' }
+			],
+			initialValues: [],
+			required: false
 		});
-		if (isCancel(i18nResult)) {
+		if (isCancel(featuresResult)) {
 			cancel('Operation cancelled.');
 			process.exit(0);
 		}
-		wantsI18n = Boolean(i18nResult);
+		const features = new Set(featuresResult as string[]);
+		wantsI18n = features.has('i18n');
+		wantsSubcommands = features.has('subcommands');
+		wantsSubcommandsAdvanced = features.has('subcommands-advanced');
+		wantsTesting = features.has('testing');
+	}
+
+	if (wantsSubcommands && wantsSubcommandsAdvanced) {
+		log.warn('Both --subcommands and --subcommands-advanced were selected; using the advanced example (with groups).');
+		wantsSubcommands = false;
 	}
 
 	// ── Install ───────────────────────────────────────────────────────────────
@@ -348,16 +381,36 @@ async function main(): Promise<void> {
 	const s = spinner();
 
 	s.start('Fetching latest dependency versions...');
-	const versions = await fetchDependencyVersions({ i18n: wantsI18n, language, buildTool, linter, formatter });
+	const versions = await fetchDependencyVersions({
+		i18n: wantsI18n,
+		subcommands: wantsSubcommands,
+		subcommandsAdvanced: wantsSubcommandsAdvanced,
+		testing: wantsTesting,
+		language,
+		buildTool,
+		linter,
+		formatter
+	});
 	s.stop('Versions fetched.');
 
 	// ── Generate files ────────────────────────────────────────────────────────
 	s.start('Generating project files...');
-	processTemplate(targetDir, { name: projectName, port, language });
+	const preservedFiles = await processTemplate(targetDir, {
+		name: projectName,
+		port,
+		language,
+		i18n: wantsI18n,
+		subcommands: wantsSubcommands,
+		subcommandsAdvanced: wantsSubcommandsAdvanced,
+		testing: wantsTesting
+	});
 	writeProjectFiles(targetDir, {
 		name: projectName,
 		port,
 		i18n: wantsI18n,
+		subcommands: wantsSubcommands,
+		subcommandsAdvanced: wantsSubcommandsAdvanced,
+		testing: wantsTesting,
 		packageManager,
 		language,
 		buildTool,
@@ -366,6 +419,20 @@ async function main(): Promise<void> {
 		versions
 	});
 	s.stop('Project files generated.');
+	for (const file of preservedFiles) {
+		log.warn(`Kept hand-edited "${file}" even though its feature is now disabled — remove it manually if it's no longer needed.`);
+	}
+
+	// ── Generate i18n types ───────────────────────────────────────────────────
+	if (wantsI18n) {
+		try {
+			s.start('Generating i18n types...');
+			runCommand('npx', ['--yes', '@wolfstar/i18next-type-generator', './src/locales/en-US', './src/@types/i18next.d.ts'], targetDir);
+			s.stop('i18n types generated.');
+		} catch {
+			s.stop('Skipped i18n type generation (run it manually once dependencies are installed).');
+		}
+	}
 
 	// ── Format generated files ────────────────────────────────────────────────
 	if (formatter !== 'none') {
@@ -386,8 +453,12 @@ async function main(): Promise<void> {
 		s.stop('Dependencies installed.');
 	}
 
+	const extraNotes: string[] = [];
+	if (wantsI18n) extraNotes.push(`  After editing locale files, regenerate i18next types with: ${getRunScript(packageManager, 'generate:i18n')}`);
+	if (wantsTesting) extraNotes.push(`  Run the test suite with: ${getRunScript(packageManager, 'test')}`);
+
 	outro(
-		`Done! To get started:\n\n  cd ${projectName}\n${wantsInstall ? '' : `  ${getInstallScript(packageManager)}\n`}  ${getRunScript(packageManager, 'dev')}`
+		`Done! To get started:\n\n  cd ${projectName}\n${wantsInstall ? '' : `  ${getInstallScript(packageManager)}\n`}  ${getRunScript(packageManager, 'dev')}${extraNotes.length ? `\n\n${extraNotes.join('\n')}` : ''}`
 	);
 }
 
