@@ -48,7 +48,7 @@
 	"scripts": {
 		"build": "tsdown --config-loader unrun",
 		"watch": "tsdown --config-loader unrun --watch",
-		"typecheck": "tsc -p ../../tsconfig.json",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
@@ -63,8 +63,9 @@
 	},
 	"devDependencies": {
 		"@influxdata/influxdb-client": "^1.35.0",
+		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
-		"typescript": "~5.8.3"
+		"typescript": "~7.0.2"
 	},
 	"engines": {
 		"node": ">=20"
