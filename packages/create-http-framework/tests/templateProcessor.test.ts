@@ -219,9 +219,8 @@ describe('processTemplate', () => {
 		const mainTs = join(outputDir, 'src', 'main.ts');
 		expect(await readFile(mainTs, 'utf8')).toContain("import '@wolfstar/plugin-i18next/register';");
 
-		// Comparing the stale file against an exact render of the *new* context (a different port)
-		// would make this untouched file look hand-edited and wrongly preserve it — the comparison
-		// must ignore the interpolated port instead of requiring it to match.
+		// The manifest from the first run records port 3000, so the stale file is compared against
+		// an exact render with *that* port, not this run's 4000 — otherwise it would look hand-edited.
 		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, port: 4000 }));
 
 		expect(preserved).toStrictEqual([]);
@@ -242,6 +241,32 @@ describe('processTemplate', () => {
 		const mainJs = await readFile(join(outputDir, 'src', 'main.js'), 'utf8');
 		expect(mainJs).not.toContain('@wolfstar/plugin-i18next');
 		expect(mainJs).toContain('4000');
+	});
+
+	test('GIVEN the port slot itself was hand-edited THEN preserves the file instead of deleting it', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, port: 3000 }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		// Only the interpolated port value changes — everything else stays byte-for-byte generated.
+		const original = await readFile(mainTs, 'utf8');
+		await writeFile(mainTs, original.replace('3000', '5000'), 'utf8');
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js', port: 4000 }));
+
+		expect(preserved).toContain('src/main.ts');
+		expect(existsSync(mainTs)).toBe(true);
+		expect(await readFile(mainTs, 'utf8')).toContain('5000');
+	});
+
+	test('GIVEN a legacy project with no manifest THEN a rerun still removes the pristine i18n entrypoint (best-effort)', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, language: 'ts', port: 3000 }));
+		await rm(join(outputDir, '.create-http-framework.json'), { force: true });
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js', port: 4000 }));
+
+		expect(preserved).toStrictEqual([]);
+		expect(existsSync(join(outputDir, 'src', 'main.ts'))).toBe(false);
+		const content = await readFile(join(outputDir, 'src', 'main.js'), 'utf8');
+		expect(content).not.toContain('@wolfstar/plugin-i18next');
 	});
 
 	test('GIVEN a rerun with i18n disabled THEN removes the generated i18next.d.ts declaration', async () => {
