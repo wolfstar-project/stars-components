@@ -1,4 +1,19 @@
-# `@wolfstar/create-http-framework`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/create-http-framework
+
+**Scaffold a new <a href="https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework">@wolfstar/http-framework</a> bot in seconds.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/create-http-framework)](https://npmx.dev/package/@wolfstar/create-http-framework)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/create-http-framework)](https://npmx.dev/package/@wolfstar/create-http-framework)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 A CLI scaffolding tool for creating new [WolfStar HTTP Framework](https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework) bot projects.
 

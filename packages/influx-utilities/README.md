@@ -1,6 +1,30 @@
-# `@wolfstar/influx-utilities`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/influx-utilities
+
+**A tiny opinionated abstraction layer for InfluxDB single-organization access.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/influx-utilities)](https://npmx.dev/package/@wolfstar/influx-utilities)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/influx-utilities)](https://npmx.dev/package/@wolfstar/influx-utilities)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 A tiny opinionated abstraction layer for InfluxDB for interacting with a single organization, based on [Wolfstar](https://wolfstar.rocks)'s internal tools.
+
+## Installation
+
+You can use the following command to install this package, or replace `npm install` with your package
+manager of choice.
+
+```sh
+npm install @wolfstar/influx-utilities
+```
 
 ## Usage
 

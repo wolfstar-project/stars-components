@@ -1,6 +1,30 @@
-# `@wolfstar/http-framework`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/http-framework
+
+**The HTTP-only Discord bot framework powering the Star Network.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework)](https://npmx.dev/package/@wolfstar/http-framework)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/http-framework)](https://npmx.dev/package/@wolfstar/http-framework)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 A powerful HTTP framework for building your Discord bots, powered by [`node:http`], [`@discordjs/rest`], and [`@sapphire/pieces`].
+
+## Installation
+
+You can use the following command to install this package, or replace `npm install` with your package
+manager of choice.
+
+```sh
+npm install @wolfstar/http-framework
+```
 
 ## Features
 
