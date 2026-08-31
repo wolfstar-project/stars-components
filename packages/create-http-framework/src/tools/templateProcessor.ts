@@ -9,6 +9,27 @@ const templateDir = join(fileURLToPath(import.meta.url), '../..', 'template');
 const baseDir = join(templateDir, 'base');
 const featuresDir = join(templateDir, 'features');
 
+/**
+ * Records the `TemplateContext` used for the last successful {@link processTemplate} run, so a
+ * later `--ignore` rerun can tell whether a stale file (e.g. from a disabled feature, or the
+ * previous `--language`) is pristine generator output — by rendering it with the context that
+ * actually produced it — instead of the *new* run's context, whose `name`/`port` may differ and
+ * would otherwise make an untouched file look hand-edited.
+ */
+const manifestFilename = '.create-http-framework.json';
+
+function readManifest(outputDir: string): TemplateContext | undefined {
+	try {
+		return JSON.parse(readFileSync(join(outputDir, manifestFilename), 'utf-8')) as TemplateContext;
+	} catch {
+		return undefined;
+	}
+}
+
+function writeManifest(outputDir: string, context: TemplateContext): void {
+	writeFile(join(outputDir, manifestFilename), `${JSON.stringify(context, null, '\t')}\n`);
+}
+
 /** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
 export interface TemplateContext {
 	name: string;
@@ -113,8 +134,13 @@ function collectCandidateSources(root: string): Map<string, string[]> {
  * run, but only when the file on disk still matches byte-for-byte what the generator would have
  * written for it — i.e. it wasn't hand-edited since. Hand-edited files are left in place (and their
  * paths returned) so the caller can warn instead of silently discarding user work.
+ *
+ * Stale candidates are rendered with `renderContext` — the *previous* run's context, from the
+ * manifest — rather than the current one, since fields like `name`/`port` may have changed and
+ * would otherwise make an untouched file look hand-edited (and so be wrongly preserved, left
+ * importing a package `package.json` no longer declares).
  */
-function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext): string[] {
+function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext, renderContext: TemplateContext): string[] {
 	const keepPaths = collectOutputPaths(baseDir, context.language);
 	for (const feature of resolveFeatureDirs(context)) {
 		for (const path of collectOutputPaths(join(featuresDir, feature), context.language)) keepPaths.add(path);
@@ -137,7 +163,7 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
 		if (!existsSync(target)) continue;
 
 		const actual = readFileSync(target, 'utf-8');
-		const isUnmodifiedGeneratorOutput = sources.some((source) => renderSource(source, context) === actual);
+		const isUnmodifiedGeneratorOutput = sources.some((source) => renderSource(source, renderContext) === actual);
 		if (isUnmodifiedGeneratorOutput) rmSync(target);
 		else preserved.push(path);
 	}
@@ -176,13 +202,16 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
  * language) but were left in place because they'd been hand-edited since the last run.
  */
 export async function processTemplate(outputDir: string, context: TemplateContext): Promise<string[]> {
-	const preserved = removeStaleGeneratedFiles(outputDir, context);
+	const renderContext = readManifest(outputDir) ?? context;
+	const preserved = removeStaleGeneratedFiles(outputDir, context, renderContext);
 
 	processDir(baseDir, outputDir, context);
 
 	for (const feature of resolveFeatureDirs(context)) {
 		processDir(join(featuresDir, feature), outputDir, context);
 	}
+
+	writeManifest(outputDir, context);
 
 	return preserved;
 }

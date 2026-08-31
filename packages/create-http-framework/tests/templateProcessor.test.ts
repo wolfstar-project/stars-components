@@ -213,4 +213,20 @@ describe('processTemplate', () => {
 		expect(existsSync(join(outputDir, 'src', 'main.js'))).toBe(true);
 		expect(preserved).toStrictEqual([]);
 	});
+
+	test('GIVEN a rerun with i18n disabled AND a different port THEN still removes the pristine i18n entrypoint', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, port: 3000 }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		expect(await readFile(mainTs, 'utf8')).toContain("import '@wolfstar/plugin-i18next/register';");
+
+		// Comparing the stale file against a render with the *new* context (a different port) would
+		// make this untouched file look hand-edited and wrongly preserve it — it must be compared
+		// against the context that actually produced it (from the manifest) instead.
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, port: 4000 }));
+
+		expect(preserved).toStrictEqual([]);
+		const content = await readFile(mainTs, 'utf8');
+		expect(content).not.toContain('@wolfstar/plugin-i18next');
+		expect(content).toContain('4000');
+	});
 });
