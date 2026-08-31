@@ -219,9 +219,9 @@ describe('processTemplate', () => {
 		const mainTs = join(outputDir, 'src', 'main.ts');
 		expect(await readFile(mainTs, 'utf8')).toContain("import '@wolfstar/plugin-i18next/register';");
 
-		// Comparing the stale file against a render with the *new* context (a different port) would
-		// make this untouched file look hand-edited and wrongly preserve it — it must be compared
-		// against the context that actually produced it (from the manifest) instead.
+		// Comparing the stale file against an exact render of the *new* context (a different port)
+		// would make this untouched file look hand-edited and wrongly preserve it — the comparison
+		// must ignore the interpolated port instead of requiring it to match.
 		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, port: 4000 }));
 
 		expect(preserved).toStrictEqual([]);
@@ -230,24 +230,26 @@ describe('processTemplate', () => {
 		expect(content).toContain('4000');
 	});
 
+	test('GIVEN a rerun with both language and port switched THEN still removes the pristine i18n entrypoint', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, language: 'ts', port: 3000 }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		expect(await readFile(mainTs, 'utf8')).toContain("import '@wolfstar/plugin-i18next/register';");
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js', port: 4000 }));
+
+		expect(preserved).toStrictEqual([]);
+		expect(existsSync(mainTs)).toBe(false);
+		const mainJs = await readFile(join(outputDir, 'src', 'main.js'), 'utf8');
+		expect(mainJs).not.toContain('@wolfstar/plugin-i18next');
+		expect(mainJs).toContain('4000');
+	});
+
 	test('GIVEN a rerun with i18n disabled THEN removes the generated i18next.d.ts declaration', async () => {
 		await processTemplate(outputDir, makeContext({ i18n: true }));
 		// `generate:i18n` (not processTemplate) writes this in real usage — simulate its output.
 		const declaration = join(outputDir, 'src', '@types', 'i18next.d.ts');
 		await mkdir(join(outputDir, 'src', '@types'), { recursive: true });
 		await writeFile(declaration, 'declare module "i18next" {}\n', 'utf8');
-
-		await processTemplate(outputDir, makeContext({ i18n: false }));
-
-		expect(existsSync(declaration)).toBe(false);
-	});
-
-	test('GIVEN a legacy project with no manifest THEN a rerun with i18n disabled still removes the i18next.d.ts declaration', async () => {
-		await processTemplate(outputDir, makeContext({ i18n: true }));
-		const declaration = join(outputDir, 'src', '@types', 'i18next.d.ts');
-		await mkdir(join(outputDir, 'src', '@types'), { recursive: true });
-		await writeFile(declaration, 'declare module "i18next" {}\n', 'utf8');
-		await rm(join(outputDir, '.create-http-framework.json'), { force: true });
 
 		await processTemplate(outputDir, makeContext({ i18n: false }));
 
