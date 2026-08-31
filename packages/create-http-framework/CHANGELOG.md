@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.2.0
+
+### Minor Changes
+
+- [#150](https://github.com/wolfstar-project/stars-components/pull/150) [`cdf6bf9`](https://github.com/wolfstar-project/stars-components/commit/cdf6bf9b91cef1ed50f9a788449e26bcbed2b647) - feat: revamp the generated project template to match the monorepo's `examples/basic` reference
+  (env/logger/banner setup, `@wolfstar/env-utilities` typed env augmentation), replace i18n
+  scaffolding with `@wolfstar/plugin-i18next` (dropping the deprecated
+  `@wolfstar/http-framework-i18n`), and add `--subcommands` / `--subcommands-advanced` / `--testing`
+  toggles for a subcommand example command (flat, or with subcommand groups) and a vitest +
+  `@wolfstar/http-framework-test-utils` testing setup.
+
+    BREAKING (for scripted `--i18n --no-interactive` callers): the i18n toggle now installs and
+    scaffolds against `@wolfstar/plugin-i18next` instead of the deprecated
+    `@wolfstar/http-framework-i18n`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#152](https://github.com/wolfstar-project/stars-components/pull/152) [`ce8f77a`](https://github.com/wolfstar-project/stars-components/commit/ce8f77a11a3eb825c77d021807827f400affa232) - fix: rerunning the generator with `--ignore` against an existing project (e.g. to toggle a feature
+  or switch `--language`) now removes stale files left behind by the previous run — e.g.
+  `src/commands/math.ts` after disabling `--subcommands`, or the previous language's `src/main.*`
+  after switching `--language` — instead of leaving them with imports for packages `package.json` no
+  longer declares. Hand-edited files are detected and left in place with a warning rather than being
+  deleted. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#151](https://github.com/wolfstar-project/stars-components/pull/151) [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8) - build: replace tsc with golar as typechecker, bump typescript to 7.0.2
+
+    `typecheck` scripts now run `golar tsc` instead of `tsc` directly. This is a dev-tooling-only change with no effect on published output. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.4
 
 ### Patch Changes

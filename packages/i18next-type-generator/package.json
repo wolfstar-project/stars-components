@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/i18next-type-generator",
-	"version": "3.0.1",
+	"version": "3.1.0",
 	"description": "A fast utility that generates the TypeScript augmentation for i18next.",
 	"keywords": [
 		"api",
