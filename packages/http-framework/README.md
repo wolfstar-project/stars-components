@@ -311,6 +311,56 @@ await client.load();
 await client.listen({ port: 3000 });
 ```
 
+### Client events
+
+The `Client` extends an event emitter typed by the `ClientEvents` interface. Every event name is also available as a
+member of the `Events` enum, which is the recommended way to reference them, as the plain strings remain valid:
+
+```typescript
+import { Events } from '@wolfstar/http-framework';
+
+client.on(Events.CommandError, (error, context) => {
+	console.error(`Failed to run ${context.command.name}`, error);
+});
+```
+
+| Enum member                            | Event name                      | Arguments                                     |
+| -------------------------------------- | ------------------------------- | --------------------------------------------- |
+| `Events.Error`                         | `error`                         | `error: unknown`                              |
+| `Events.PluginLoaded`                  | `pluginLoaded`                  | `hook: PluginHook, name: string \| undefined` |
+| `Events.CommandNameMissing`            | `commandNameMissing`            | `interaction, response`                       |
+| `Events.CommandNameUnknown`            | `commandNameUnknown`            | `interaction, response`                       |
+| `Events.CommandMethodUnknown`          | `commandMethodUnknown`          | `context`                                     |
+| `Events.CommandRun`                    | `commandRun`                    | `context`                                     |
+| `Events.CommandSuccess`                | `commandSuccess`                | `context, value: unknown`                     |
+| `Events.CommandError`                  | `commandError`                  | `error: unknown, context`                     |
+| `Events.CommandFinish`                 | `commandFinish`                 | `context`                                     |
+| `Events.AutocompleteRun`               | `autocompleteRun`               | `context`                                     |
+| `Events.AutocompleteSuccess`           | `autocompleteSuccess`           | `context, value: unknown`                     |
+| `Events.AutocompleteError`             | `autocompleteError`             | `error: unknown, context`                     |
+| `Events.AutocompleteFinish`            | `autocompleteFinish`            | `context`                                     |
+| `Events.InteractionHandlerNameInvalid` | `interactionHandlerNameInvalid` | `interaction, response`                       |
+| `Events.InteractionHandlerNameUnknown` | `interactionHandlerNameUnknown` | `interaction, response`                       |
+| `Events.InteractionHandlerRun`         | `interactionHandlerRun`         | `context`                                     |
+| `Events.InteractionHandlerSuccess`     | `interactionHandlerSuccess`     | `context, value: unknown`                     |
+| `Events.InteractionHandlerError`       | `interactionHandlerError`       | `error: unknown, context`                     |
+| `Events.InteractionHandlerFinish`      | `interactionHandlerFinish`      | `context`                                     |
+
+The Hot Module Reloading events are listed in [their own section](#hot-module-reloading).
+
+Listeners declared as pieces can use the enum too:
+
+```typescript
+import { ApplyOptions, Events, Listener } from '@wolfstar/http-framework';
+
+@ApplyOptions<Listener.Options>({ event: Events.CommandError })
+export class UserListener extends Listener {
+	public run(error: unknown, context: ClientEventCommandContext) {
+		console.error(`Failed to run ${context.command.name}`, error);
+	}
+}
+```
+
 ### Hot Module Reloading
 
 `@wolfstar/http-framework` ships with Hot Module Reloading (HMR) as a core feature, no plugin required. When enabled,
@@ -356,21 +406,21 @@ The client emits an event for every operation, which is useful to react to chang
 application commands to Discord while developing:
 
 ```typescript
-client.on('hmrPieceReloaded', async (piece) => {
+client.on(Events.HmrPieceReloaded, async (piece) => {
 	if (piece.store.name === 'commands') {
 		await client.registry.pushGlobalCommandsInGuild(process.env.DEVELOPMENT_GUILD_ID);
 	}
 });
 ```
 
-| Event              | Arguments               | Description                                          |
-| ------------------ | ----------------------- | ---------------------------------------------------- |
-| `hmrStart`         | `paths: string[]`       | The reloader started watching the given store paths. |
-| `hmrStop`          | —                       | The reloader stopped and closed all of its watchers. |
-| `hmrPiecesLoaded`  | `pieces: Piece[], path` | A new file was created and its pieces were loaded.   |
-| `hmrPieceReloaded` | `piece: Piece, path`    | An existing file changed and its piece was reloaded. |
-| `hmrPieceUnloaded` | `piece: Piece, path`    | A file was deleted and its piece was unloaded.       |
-| `hmrError`         | `error: unknown, path`  | An operation failed; saving the file again retries.  |
+| Enum member               | Event              | Arguments               | Description                                          |
+| ------------------------- | ------------------ | ----------------------- | ---------------------------------------------------- |
+| `Events.HmrStart`         | `hmrStart`         | `paths: string[]`       | The reloader started watching the given store paths. |
+| `Events.HmrStop`          | `hmrStop`          | —                       | The reloader stopped and closed all of its watchers. |
+| `Events.HmrPiecesLoaded`  | `hmrPiecesLoaded`  | `pieces: Piece[], path` | A new file was created and its pieces were loaded.   |
+| `Events.HmrPieceReloaded` | `hmrPieceReloaded` | `piece: Piece, path`    | An existing file changed and its piece was reloaded. |
+| `Events.HmrPieceUnloaded` | `hmrPieceUnloaded` | `piece: Piece, path`    | A file was deleted and its piece was unloaded.       |
+| `Events.HmrError`         | `hmrError`         | `error: unknown, path`  | An operation failed; saving the file again retries.  |
 
 > **Note**: unloading a command also removes its entry from the `ApplicationCommandRegistry`, so a reloaded command is
 > registered exactly once. HMR does not push the updated commands to Discord on its own, subscribe to the events above

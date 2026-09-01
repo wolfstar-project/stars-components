@@ -2,6 +2,7 @@ import { container, type Piece, type Store } from '@sapphire/pieces';
 import { Result } from '@sapphire/result';
 import type { ChokidarOptions, FSWatcher } from 'chokidar';
 import { relative } from 'node:path';
+import { Events } from '../ClientEvents.js';
 
 /**
  * Hot Module Reloading for every {@link Store} registered in {@link container.stores}.
@@ -84,7 +85,7 @@ export class HotModuleReloader {
 		this.#running = true;
 
 		if (!silent) console.info(`[HMR]: Enabled, watching ${watchedPaths.length} path(s) for piece changes.`);
-		container.client?.emit('hmrStart', watchedPaths);
+		container.client?.emit(Events.HmrStart, watchedPaths);
 
 		return this;
 	}
@@ -105,7 +106,7 @@ export class HotModuleReloader {
 		await Promise.all(watchers.map((watcher) => watcher.close()));
 
 		if (!this.options.silent) console.info('[HMR]: Disabled, no longer watching for piece changes.');
-		container.client?.emit('hmrStop');
+		container.client?.emit(Events.HmrStop);
 	}
 
 	/**
@@ -125,7 +126,7 @@ export class HotModuleReloader {
 				await piece.reload();
 
 				if (!this.options.silent) console.info(`[HMR]: Reloaded '${piece.name}' from the '${store.name}' store.`);
-				container.client?.emit('hmrPieceReloaded', piece, path);
+				container.client?.emit(Events.HmrPieceReloaded, piece, path);
 				return;
 			}
 
@@ -139,7 +140,7 @@ export class HotModuleReloader {
 				console.info(`[HMR]: Loaded ${pieces.length} piece(s) into the '${store.name}' store: ${names}.`);
 			}
 
-			container.client?.emit('hmrPiecesLoaded', pieces, path);
+			container.client?.emit(Events.HmrPiecesLoaded, pieces, path);
 		});
 
 		result.inspectErr((error) => this.handleError(error, path));
@@ -162,7 +163,7 @@ export class HotModuleReloader {
 			await piece.unload();
 
 			if (!this.options.silent) console.info(`[HMR]: Unloaded '${piece.name}' from the '${store.name}' store.`);
-			container.client?.emit('hmrPieceUnloaded', piece, path);
+			container.client?.emit(Events.HmrPieceUnloaded, piece, path);
 		});
 
 		result.inspectErr((error) => this.handleError(error, path));
@@ -179,7 +180,7 @@ export class HotModuleReloader {
 	 */
 	protected handleError(error: unknown, path: string): void {
 		if (!this.options.silent) console.error(`[HMR]: Failed to process '${path}'.`, error);
-		container.client?.emit('hmrError', error, path);
+		container.client?.emit(Events.HmrError, error, path);
 	}
 }
 

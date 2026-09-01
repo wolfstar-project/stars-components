@@ -9,6 +9,7 @@ import {
 	type APIPrimaryEntryPointCommandInteraction
 } from 'discord-api-types/v10';
 import type { ServerResponse } from 'node:http';
+import { Events } from '../ClientEvents.js';
 import { HttpCodes } from '../api/HttpCodes.js';
 import {
 	transformAutocompleteInteraction,
@@ -48,7 +49,7 @@ export class CommandStore extends Store<Command, 'commands'> {
 	): Promise<ServerResponse> {
 		const command = this.router.get(interaction);
 		if (!command) {
-			container.client.emit('commandNameUnknown', interaction, response);
+			container.client.emit(Events.CommandNameUnknown, interaction, response);
 			response.statusCode = HttpCodes.NotImplemented;
 			return response.end(ErrorMessages.UnknownCommandName);
 		}
@@ -56,18 +57,18 @@ export class CommandStore extends Store<Command, 'commands'> {
 		const context = { command, interaction, response };
 		const method = this.#routeCommandMethodName(command, interaction.data);
 		if (!method) {
-			container.client.emit('commandMethodUnknown', context);
+			container.client.emit(Events.CommandMethodUnknown, context);
 			response.statusCode = HttpCodes.NotImplemented;
 			return response.end(ErrorMessages.UnknownCommandHandler);
 		}
 
-		container.client.emit('commandRun', context);
+		container.client.emit(Events.CommandRun, context);
 		const result = await Result.fromAsync(() => this.#runCommandMethod(command, method, makeInteraction(response, interaction)));
 		result
-			.inspect((value) => container.client.emit('commandSuccess', context, value))
-			.inspectErr((error) => (container.client.emit('commandError', error, context), handleError(response, error)));
+			.inspect((value) => container.client.emit(Events.CommandSuccess, context, value))
+			.inspectErr((error) => (container.client.emit(Events.CommandError, error, context), handleError(response, error)));
 
-		container.client.emit('commandFinish', context);
+		container.client.emit(Events.CommandFinish, context);
 		return response;
 	}
 
@@ -84,14 +85,14 @@ export class CommandStore extends Store<Command, 'commands'> {
 		interaction: APIApplicationCommandAutocompleteInteraction
 	): Promise<ServerResponse> {
 		if (!interaction.data?.name) {
-			container.client.emit('commandNameMissing', interaction, response);
+			container.client.emit(Events.CommandNameMissing, interaction, response);
 			response.statusCode = HttpCodes.BadRequest;
 			return response.end(ErrorMessages.MissingCommandName);
 		}
 
 		const command = this.router.getChatInput(interaction.data.name);
 		if (!command) {
-			container.client.emit('commandNameUnknown', interaction, response);
+			container.client.emit(Events.CommandNameUnknown, interaction, response);
 			response.statusCode = HttpCodes.NotImplemented;
 			return response.end(ErrorMessages.UnknownCommandName);
 		}
@@ -99,13 +100,13 @@ export class CommandStore extends Store<Command, 'commands'> {
 		const context = { command, interaction, response };
 		const options = transformAutocompleteInteraction(interaction.data.resolved ?? {}, interaction.data.options);
 
-		container.client.emit('autocompleteRun', context);
+		container.client.emit(Events.AutocompleteRun, context);
 		const result = await Result.fromAsync(() => command.autocompleteRun(makeInteraction(response, interaction), options));
 		result
-			.inspect((value) => container.client.emit('autocompleteSuccess', context, value))
-			.inspectErr((error) => (container.client.emit('autocompleteError', error, context), handleError(response, error)));
+			.inspect((value) => container.client.emit(Events.AutocompleteSuccess, context, value))
+			.inspectErr((error) => (container.client.emit(Events.AutocompleteError, error, context), handleError(response, error)));
 
-		container.client.emit('autocompleteFinish', context);
+		container.client.emit(Events.AutocompleteFinish, context);
 		return response;
 	}
 
