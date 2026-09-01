@@ -5,7 +5,7 @@ import { AsyncEventEmitter } from '@vladfrangu/async_event_emitter';
 import { InteractionType, type APIInteraction, type APIPrimaryEntryPointCommandInteraction } from 'discord-api-types/v10';
 import { createServer, type IncomingMessage, type Server, type ServerOptions, type ServerResponse } from 'node:http';
 import type { ListenOptions as NetListenOptions } from 'node:net';
-import type { MappedClientEvents } from './ClientEvents.js';
+import { Events, type MappedClientEvents } from './ClientEvents.js';
 import { HttpCodes } from './api/HttpCodes.js';
 import { HotModuleReloader, type HMROptions } from './hmr/HotModuleReloader.js';
 import type { IIdParser } from './components/IIdParser.js';
@@ -54,12 +54,12 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 
 		for (const plugin of Client.plugins.values(PluginHook.PreGenericsInitialization)) {
 			plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
 		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
 			plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
 		this.bodySizeLimit = options.bodySizeLimit ?? 1024 * 1024;
@@ -86,7 +86,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 
 		for (const plugin of Client.plugins.values(PluginHook.PostInitialization)) {
 			plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 	}
 
@@ -125,7 +125,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public async load(options: LoadOptions = {}) {
 		for (const plugin of Client.plugins.values(PluginHook.PreLoad)) {
 			await plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
 		// Register the user directory if not null:
@@ -157,7 +157,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		try {
 			for (const plugin of Client.plugins.values(PluginHook.PostListen)) {
 				await plugin.hook.call(this, this.options);
-				this.emit('pluginLoaded', plugin.type, plugin.name);
+				this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 			}
 		} catch (error) {
 			// A postListen hook failed: close the server we just opened so it does not stay bound to the

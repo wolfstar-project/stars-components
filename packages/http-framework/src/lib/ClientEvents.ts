@@ -28,6 +28,48 @@ export interface ClientEventInteractionHandlerContext {
 	response: ServerResponse;
 }
 
+/**
+ * The name of every event emitted by the {@link Client}, mirroring the keys of {@link ClientEvents}.
+ *
+ * @remarks
+ * Each member's value is the plain event name, so they are interchangeable with the string literals
+ * accepted by `Client#on`, `Client#emit`, and {@link Listener.Options.event}.
+ *
+ * @example
+ * ```typescript
+ * client.on(Events.CommandError, (error, context) => console.error(context.command.name, error));
+ * ```
+ *
+ * @since 3.4.0
+ */
+export enum Events {
+	Error = 'error',
+	PluginLoaded = 'pluginLoaded',
+	CommandNameMissing = 'commandNameMissing',
+	CommandNameUnknown = 'commandNameUnknown',
+	CommandMethodUnknown = 'commandMethodUnknown',
+	CommandRun = 'commandRun',
+	CommandSuccess = 'commandSuccess',
+	CommandError = 'commandError',
+	CommandFinish = 'commandFinish',
+	AutocompleteRun = 'autocompleteRun',
+	AutocompleteSuccess = 'autocompleteSuccess',
+	AutocompleteError = 'autocompleteError',
+	AutocompleteFinish = 'autocompleteFinish',
+	InteractionHandlerNameInvalid = 'interactionHandlerNameInvalid',
+	InteractionHandlerNameUnknown = 'interactionHandlerNameUnknown',
+	InteractionHandlerRun = 'interactionHandlerRun',
+	InteractionHandlerSuccess = 'interactionHandlerSuccess',
+	InteractionHandlerError = 'interactionHandlerError',
+	InteractionHandlerFinish = 'interactionHandlerFinish',
+	HmrStart = 'hmrStart',
+	HmrStop = 'hmrStop',
+	HmrPiecesLoaded = 'hmrPiecesLoaded',
+	HmrPieceReloaded = 'hmrPieceReloaded',
+	HmrPieceUnloaded = 'hmrPieceUnloaded',
+	HmrError = 'hmrError'
+}
+
 export interface ClientEvents {
 	error: [error: unknown];
 	/**
@@ -98,5 +140,13 @@ export interface ClientEvents {
 	 */
 	hmrError: [error: unknown, path: string];
 }
+
+/**
+ * The name of any of the events emitted by the {@link Client}, either as a plain string literal or as an
+ * {@link Events} member.
+ *
+ * @since 3.4.0
+ */
+export type ClientEventName = keyof ClientEvents;
 
 export type MappedClientEvents = { [K in keyof ClientEvents]: ClientEvents[K] };
