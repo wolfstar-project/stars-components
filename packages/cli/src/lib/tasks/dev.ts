@@ -5,6 +5,7 @@ import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev-service.js';
 import { ExitCode } from '../errors.js';
 import { withResolvedLocalhost } from '../host.js';
+import { LogFileWriter } from '../log-file.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../output-mode.js';
 import { prepareAutoImports } from './prepare.js';
 
@@ -19,6 +20,8 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const color = shouldUseColor();
 
 	const service = new DevService(config, { builder: await createBuilder(config) });
+	const logFile = config.dev.logFile ? new LogFileWriter(config.dev.logFile, service.logs) : null;
+	logFile?.open();
 	const renderer =
 		mode === 'tui'
 			? (await import('../../renderers/tui.js')).createTuiRenderer(service, { color, reducedMotion: prefersReducedMotion() })
@@ -29,6 +32,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 		exiting ??= (async () => {
 			renderer.stop();
 			await service.stop();
+			logFile?.close();
 			process.exit(code);
 		})();
 		return exiting;

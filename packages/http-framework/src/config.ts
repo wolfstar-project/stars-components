@@ -35,6 +35,49 @@ export interface StarsBuildConfig {
 	tsconfig?: string;
 }
 
+/**
+ * The type checker `stars dev` runs next to the bot.
+ *
+ * - `tsc`: the project's own TypeScript, in watch mode.
+ * - `golar`: the project's `golar`, forwarding to TypeScript (`golar tsc`), in watch mode.
+ * - `tsz`: the project's `tsz` (or `try-tsz`). It has no watch mode, so it is re-run after every build instead.
+ * - `auto`: `golar` when the project depends on it, `tsc` otherwise (default).
+ */
+export type StarsTypechecker = 'tsc' | 'golar' | 'tsz';
+
+export interface StarsTypecheckConfig {
+	/**
+	 * The `tsconfig.json` the type checker runs against, relative to {@link StarsConfig.root}.
+	 * @default the build tool's tsconfig, 'src/tsconfig.json' or 'tsconfig.json'
+	 */
+	tsconfig?: string;
+	/**
+	 * Which type checker to run.
+	 * @default 'auto'
+	 */
+	checker?: StarsTypechecker | 'auto';
+}
+
+export interface StarsTunnelConfig {
+	/**
+	 * An https URL you already serve; when unset a `cloudflared` quick tunnel is opened instead.
+	 */
+	url?: string;
+	/**
+	 * Writes the tunnel's URL to the Discord application's `interactions_endpoint_url` when it changes.
+	 *
+	 * This edits a live Discord application, so it is opt-in: it needs `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID`
+	 * (or `APPLICATION_ID`) in the environment or the project's `.env`.
+	 * @default false
+	 */
+	updateEndpoint?: boolean;
+	/**
+	 * The path the interactions endpoint is served on, appended to the tunnel URL.
+	 * @default '/'
+	 */
+	path?: string;
+}
+
 export interface StarsDevConfig {
 	/**
 	 * Extra paths to watch, relative to {@link StarsConfig.root}. Only used when
@@ -86,6 +129,27 @@ export interface StarsDevConfig {
 	 * @default 5000
 	 */
 	killTimeout?: number;
+	/**
+	 * Runs a type checker next to the bot and reports type errors on the dev UI's `tsc` channel, without blocking
+	 * builds or restarts. `true` uses the project's own tsconfig and type checker, an object picks either
+	 * ({@link StarsTypecheckConfig.checker}).
+	 * @default false
+	 */
+	typecheck?: boolean | StarsTypecheckConfig;
+	/**
+	 * Exposes the bot's HTTP interactions endpoint publicly while `stars dev` runs, so Discord can reach it.
+	 *
+	 * `true` opens a `cloudflared` quick tunnel (its hostname changes on every run), a string is an https URL you
+	 * already serve yourself (named tunnel, reverse proxy, …) that the CLI only checks for reachability.
+	 * @default false
+	 */
+	tunnel?: boolean | string | StarsTunnelConfig;
+	/**
+	 * The file `stars dev` mirrors its logs into, relative to {@link StarsConfig.root}, so a session can be read back
+	 * after the terminal UI is gone. `false` disables it.
+	 * @default '.stars/dev.log'
+	 */
+	logFile?: string | false;
 }
 
 export interface StarsI18nCodegenConfig {

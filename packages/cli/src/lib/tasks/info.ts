@@ -28,6 +28,7 @@ export interface ProjectInfo {
 	build: ResolvedStarsConfig['build'];
 	dev: ResolvedStarsConfig['dev'];
 	codegen: ResolvedStarsConfig['codegen'];
+	imports: ResolvedStarsConfig['imports'];
 }
 
 export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
@@ -49,7 +50,8 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		},
 		build: config.build,
 		dev: config.dev,
-		codegen: config.codegen
+		codegen: config.codegen,
+		imports: config.imports
 	};
 }
 
@@ -98,12 +100,35 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('node args', info.dev.nodeArgs.join(' ') || colors.dim('none')),
 			row('args', info.dev.args.join(' ') || colors.dim('none')),
 			row('url', info.dev.url ?? colors.dim('unknown, set dev.url or HTTP_PORT')),
-			row('health', info.dev.health ?? colors.dim('none'))
+			row('health', info.dev.health ?? colors.dim('none')),
+			row(
+				'typecheck',
+				info.dev.typecheck.enabled ? `${info.dev.typecheck.checker} → ${show(info.dev.typecheck.tsconfig)}` : colors.dim('disabled')
+			),
+			row('tunnel', describeTunnel(info.dev.tunnel, colors)),
+			row('log file', info.dev.logFile ? show(info.dev.logFile) : colors.dim('disabled'))
 		]),
 		section('Codegen', [
 			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled'))
+		]),
+		section('Imports', [
+			row('auto', info.imports.enabled ? colors.green('enabled') : colors.dim('disabled')),
+			row('dirs', info.imports.dirs.map(show).join(', ')),
+			row('presets', info.imports.presets.join(', ') || colors.dim('none')),
+			row('dts', show(info.imports.dts))
 		])
 	].join('\n\n');
+}
+
+function describeTunnel(tunnel: ResolvedStarsConfig['dev']['tunnel'], colors: ReturnType<typeof createColors>): string {
+	switch (tunnel.mode) {
+		case 'quick':
+			return 'cloudflared quick tunnel';
+		case 'url':
+			return tunnel.url;
+		default:
+			return colors.dim('disabled');
+	}
 }
 
 export async function runInfo(options: InfoOptions): Promise<void> {

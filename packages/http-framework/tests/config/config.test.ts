@@ -67,6 +67,49 @@ describe('stars.config', () => {
 		});
 	});
 
+	test('resolves dev.typecheck, dev.tunnel and dev.logFile', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'stars.config.mjs':
+				"export default { build: { tool: 'tsc' }, dev: { typecheck: true, tunnel: { url: 'https://bot.example.com', path: '/interactions', updateEndpoint: true } } };"
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.dev.typecheck).toEqual({ enabled: true, tsconfig: join(fixture.root, 'tsconfig.json'), checker: 'tsc' });
+		expect(config.dev.tunnel).toEqual({ mode: 'url', url: 'https://bot.example.com', path: '/interactions', updateEndpoint: true });
+		expect(config.dev.logFile).toBe(join(fixture.root, '.stars', 'dev.log'));
+	});
+
+	test('defaults dev.typecheck and dev.tunnel off, and dev.logFile can be disabled', async () => {
+		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { tunnel: true, logFile: false } };' });
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(config.dev.typecheck).toEqual({ enabled: false, tsconfig: null, checker: 'tsc' });
+		expect(config.dev.tunnel).toEqual({ mode: 'quick', path: '/', updateEndpoint: false });
+		expect(config.dev.logFile).toBeNull();
+	});
+
+	test('picks the type checker: golar when the project depends on it, otherwise tsc', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'package.json': JSON.stringify({ name: 'bot', devDependencies: { golar: '^0.1.10' } }),
+			'stars.config.mjs': "export default { build: { tool: 'tsc' }, dev: { typecheck: true } };"
+		});
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.typecheck.checker).toBe('golar');
+		await fixture.cleanup();
+
+		// An explicit checker always wins over the detection. A fresh fixture avoids the config loader's module cache.
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'package.json': JSON.stringify({ name: 'bot', devDependencies: { golar: '^0.1.10' } }),
+			'stars.config.mjs': "export default { build: { tool: 'tsc' }, dev: { typecheck: { checker: 'tsz' } } };"
+		});
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.typecheck.checker).toBe('tsz');
+	});
+
 	test('disables auto imports with `imports: false`', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
@@ -211,6 +254,22 @@ describe('stars.config', () => {
 
 		test('rejects invalid urls', async () => {
 			expect((await expectConfigError("export default { dev: { url: 'localhost' } };")).code).toBe('INVALID_URL');
+		});
+
+		test('rejects a tunnel URL that is not https', async () => {
+			expect((await expectConfigError("export default { dev: { tunnel: 'http://bot.example.com' } };")).code).toBe('INVALID_URL');
+			expect((await expectConfigError("export default { dev: { tunnel: 'nope' } };")).code).toBe('INVALID_URL');
+		});
+
+		test('rejects an unknown type checker', async () => {
+			const error = await expectConfigError("export default { dev: { typecheck: { checker: 'tsgo' } } };");
+			expect(error).toMatchObject({ code: 'INVALID_TYPECHECKER', path: 'dev.typecheck.checker' });
+			expect(error.hint).toContain('golar');
+		});
+
+		test('rejects a typecheck tsconfig that does not exist', async () => {
+			const error = await expectConfigError("export default { dev: { typecheck: { tsconfig: 'nope.json' } } };");
+			expect(error).toMatchObject({ code: 'TSCONFIG_NOT_FOUND', path: 'dev.typecheck.tsconfig' });
 		});
 
 		test('rejects `imports: true` and `imports.enabled: true` without the tsdown build tool', async () => {

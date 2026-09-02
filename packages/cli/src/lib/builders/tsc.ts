@@ -1,11 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
 import { CliError } from '../errors.js';
 import { createLineSplitter } from '../process-supervisor.js';
-import { resolveFromProject } from '../project.js';
+import { resolveBinary } from '../project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
 const INSTALL_HINT = "Install it with `pnpm add -D typescript`, or set `build.tool` to 'tsdown' or 'none'.";
@@ -127,14 +125,5 @@ export class TscBuilder extends EventEmitter<BuilderEvents> implements Builder {
  * hides `lib/`).
  */
 export function resolveTscBinary(root: string): string | null {
-	const packageJsonPath = resolveFromProject(root, 'typescript/package.json');
-	if (!packageJsonPath) return null;
-
-	try {
-		const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as { bin?: string | Record<string, string> };
-		const bin = typeof packageJson.bin === 'string' ? packageJson.bin : packageJson.bin?.tsc;
-		return bin ? join(dirname(packageJsonPath), bin) : null;
-	} catch {
-		return null;
-	}
+	return resolveBinary(root, 'typescript', 'tsc');
 }

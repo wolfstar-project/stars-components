@@ -31,7 +31,7 @@ export { CONFIG_EXTENSIONS, CONFIG_FILE_NAMES, discoverConfigFile, loadConfigFil
 export type { LoadConfigFileOptions, LoadedConfigFile } from './load.js';
 export { ConfigError } from './errors.js';
 export type { ConfigErrorOptions } from './errors.js';
-export { displayPath, resolveStarsConfig } from './resolve.js';
+export { displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';
 export type {
 	PackageJsonLike,
 	ResolveConfigOptions,
@@ -40,5 +40,7 @@ export type {
 	ResolvedDevConfig,
 	ResolvedI18nCodegenConfig,
 	ResolvedImportsConfig,
-	ResolvedStarsConfig
+	ResolvedStarsConfig,
+	ResolvedTunnelConfig,
+	ResolvedTypecheckConfig
 } from './resolve.js';

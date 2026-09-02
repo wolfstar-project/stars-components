@@ -451,6 +451,27 @@ way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `.env.local`/`
 `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` explicitly only
 to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }`.
 
+`dev` also carries the three options that round out the dev loop:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	build: { tool: 'tsdown' },
+	dev: {
+		// A type checker next to the bot, reported on the dev UI's `tsc` channel. Never blocks a build.
+		// `checker` is 'tsc' | 'golar' | 'tsz' | 'auto' (default: golar when installed, tsc otherwise).
+		typecheck: { checker: 'golar' },
+		// A cloudflared quick tunnel so Discord can reach the interactions endpoint, or an https URL you serve.
+		tunnel: true,
+		// Where the session's logs are mirrored, so a run can be read after the terminal UI is gone.
+		logFile: '.stars/dev.log'
+	}
+});
+```
+
+`tunnel.updateEndpoint` writes the public URL to the Discord application's `interactions_endpoint_url`; it is opt-in
+because it edits a live application, and needs `DISCORD_TOKEN` in the environment or the project's `.env`.
+
 The resolved configuration is also available programmatically:
 
 ```typescript
@@ -462,7 +483,7 @@ console.log(config.entry, config.build.output);
 
 Invalid options raise a `ConfigError` with a stable `code`, the offending option `path`, the `file` it came from, and
 an actionable `hint`. See the [`@wolfstar/cli` README](../cli#configuration) for the full option reference and how the
-`stars` commands (`dev`, `build`, `info`, `codegen`) use it.
+`stars` commands (`dev`, `build`, `info`, `codegen`, `prepare`, `commands`) use it.
 
 ### ApplicationCommandRegistry
 

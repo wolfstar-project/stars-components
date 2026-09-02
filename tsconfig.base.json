@@ -10,6 +10,7 @@
 		"noEmit": true,
 		"incremental": false,
 		"skipLibCheck": true,
-		"types": ["node", "vitest/globals"]
+		"types": ["node", "vitest/globals"],
+		"jsx": "react-jsx"
 	}
 }

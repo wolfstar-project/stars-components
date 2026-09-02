@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-export type LogSource = 'stars' | 'build' | 'app';
+export type LogSource = 'stars' | 'build' | 'app' | 'tsc' | 'tunnel';
 export type LogLevel = 'debug' | 'info' | 'success' | 'warn' | 'error';
 
 export interface LogEntry {

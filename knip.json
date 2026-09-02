@@ -65,9 +65,14 @@
 			"ignoreDependencies": ["@types/handlebars", "@types/mri"]
 		},
 		"packages/http-framework": {
-			"entry": ["src/index.ts", "src/config.ts", "src/register.ts", "tests/**/*.ts"],
+			"entry": ["src/index.ts", "src/config.ts", "src/auto-imports.ts", "src/register.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignoreDependencies": ["@wolfstar/http-framework-test-utils"]
+			"ignoreDependencies": ["@wolfstar/http-framework-test-utils", "rolldown"]
+		},
+		"packages/cli": {
+			"entry": ["src/index.ts", "src/cli.ts", "tests/**/*.{ts,tsx}"],
+			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+			"ignoreBinaries": ["cloudflared"]
 		}
 	}
 }

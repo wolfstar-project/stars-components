@@ -1,8 +1,10 @@
 import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from './builders/types.js';
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-import { LogBuffer, type LogLevel } from './log-buffer.js';
+import { LogBuffer, type LogLevel, type LogSource } from './log-buffer.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from './process-supervisor.js';
+import { Tunnel, type TunnelState } from './tunnel.js';
+import { Typechecker, type TypecheckState } from './typechecker.js';
 
 export type BuildState = 'idle' | 'building' | 'ok' | 'failed';
 export type HealthState = 'unknown' | 'ok' | 'down';
@@ -19,6 +21,10 @@ export interface DevStatus {
 	readonly lastBuild: BuildOutcome | null;
 	readonly lastExit: ProcessExit | null;
 	readonly url: string | null;
+	readonly typecheck: TypecheckState;
+	readonly typeErrors: number;
+	readonly tunnel: TunnelState;
+	readonly tunnelUrl: string | null;
 }
 
 export interface DevServiceEvents {
@@ -30,6 +36,8 @@ export interface DevServiceOptions {
 	logs?: LogBuffer;
 	/** Overrides for tests. */
 	supervisor?: ProcessSupervisor;
+	typechecker?: Typechecker;
+	tunnel?: Tunnel;
 	healthInterval?: number;
 }
 
@@ -41,6 +49,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public readonly logs: LogBuffer;
 	public readonly builder: Builder;
 	public readonly supervisor: ProcessSupervisor;
+	public readonly typechecker: Typechecker;
+	public readonly tunnel: Tunnel;
 
 	#build: BuildState = 'idle';
 	#health: HealthState = 'unknown';
@@ -62,6 +72,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.logs = options.logs ?? new LogBuffer();
 		this.builder = options.builder;
 		this.supervisor = options.supervisor ?? createSupervisor(config);
+		this.typechecker = options.typechecker ?? new Typechecker(config);
+		this.tunnel = options.tunnel ?? new Tunnel(config);
 
 		this.builder.on('start', () => this.#setBuild('building'));
 		this.builder.on('success', (outcome) => this.#onBuildSuccess(outcome));
@@ -73,6 +85,11 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.supervisor.on('stderr', (line) => this.log('app', 'error', line));
 		this.supervisor.on('error', (error) => this.log('stars', 'error', `Failed to start the bot: ${error.message}`));
 		this.supervisor.on('exit', (exit) => this.#onExit(exit));
+
+		this.typechecker.on('log', (level, text) => this.log('tsc', level, text));
+		this.typechecker.on('state', () => this.#emitStatus());
+		this.tunnel.on('log', (level, text) => this.log('tunnel', level, text));
+		this.tunnel.on('state', () => this.#emitStatus());
 
 		if (config.dev.url && config.dev.health) {
 			const interval = options.healthInterval ?? 5000;
@@ -92,11 +109,15 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			lastRestartReason: this.#lastRestartReason,
 			lastBuild: this.#lastBuild,
 			lastExit: this.#lastExit,
-			url: this.config.dev.url
+			url: this.config.dev.url,
+			typecheck: this.typechecker.state,
+			typeErrors: this.typechecker.errors,
+			tunnel: this.tunnel.state,
+			tunnelUrl: this.tunnel.url
 		};
 	}
 
-	public log(source: 'stars' | 'build' | 'app', level: LogLevel, text: string): void {
+	public log(source: LogSource, level: LogLevel, text: string): void {
 		this.logs.push({ source, level, text });
 	}
 
@@ -110,6 +131,9 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			'info',
 			`Watching ${this.config.build.tool === 'none' ? 'sources' : `with ${this.config.build.tool}`}, entry ${this.config.entry}`
 		);
+		if (this.config.dev.typecheck.enabled) this.typechecker.start();
+		// The tunnel comes up next to the build: neither waits for the other, and a failed tunnel never stops the bot.
+		void this.tunnel.start();
 		await this.builder.watch();
 	}
 
@@ -145,7 +169,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		if (this.#healthTimer) clearInterval(this.#healthTimer);
 		this.#healthTimer = null;
 		await this.#enqueue(async () => {
-			await Promise.allSettled([this.builder.close(), this.supervisor.stop()]);
+			await Promise.allSettled([this.builder.close(), this.supervisor.stop(), this.typechecker.close(), this.tunnel.close()]);
 		});
 	}
 
@@ -157,6 +181,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#lastBuild = outcome;
 		this.#setBuild('ok');
 		if (this.#stopped) return;
+		// A checker without a watch mode (`tsz`) only knows about the change once the build is through.
+		this.typechecker.check();
 		this.log('stars', 'success', this.builder.tool === 'none' ? 'Sources changed' : `Build succeeded in ${outcome.durationMs}ms`);
 		this.#scheduleRestart(this.supervisor.state === 'idle' ? 'initial' : 'build');
 	}

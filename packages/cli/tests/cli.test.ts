@@ -67,7 +67,7 @@ describe('stars', () => {
 	test('--help lists the commands', async () => {
 		const result = await runCli(['--help']);
 		expect(result.code).toBe(0);
-		for (const command of ['dev', 'build', 'info', 'codegen']) expect(result.stdout).toContain(command);
+		for (const command of ['dev', 'build', 'info', 'codegen', 'prepare', 'commands']) expect(result.stdout).toContain(command);
 		expect(await runCli([])).toMatchObject({ code: 0 });
 	});
 
@@ -76,6 +76,21 @@ describe('stars', () => {
 		expect(result.code).toBe(0);
 		expect(result.stdout).toContain('--no-tui');
 		expect(result.stdout).toContain('--config');
+	});
+
+	test('<command> <subcommand> --help shows the subcommand usage, not its parent’s', async () => {
+		const result = await runCli(['commands', 'clean', '-h']);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain('--yes');
+		expect(result.stdout).toContain('--name');
+	});
+
+	test('commands fails with an actionable error when DISCORD_TOKEN is missing', async () => {
+		fixture = await createFixture({ 'src/main.js': '' });
+		const result = await runCli(['commands', 'list', '--cwd', fixture.root]);
+		expect(result.code).toBe(1);
+		expect(result.stderr).toContain('DISCORD_TOKEN is not set');
+		expect(result.stderr).toContain('hint:');
 	});
 
 	test('unknown commands fail with exit code 1 and no stack trace', async () => {

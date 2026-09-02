@@ -8,5 +8,5 @@
 	"trailingComma": "none",
 	"semi": true,
 	"endOfLine": "lf",
-	"ignorePatterns": ["packages/create-http-framework/template/**"]
+	"ignorePatterns": ["packages/create-http-framework/template/**", "**/.stars/**"]
 }

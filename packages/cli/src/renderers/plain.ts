@@ -27,6 +27,8 @@ export function createPlainRenderer(service: DevService, options: PlainRendererO
 	const prefixes = {
 		stars: colors.cyan('stars'),
 		build: colors.magenta('build'),
+		tsc: colors.blue('tsc'),
+		tunnel: colors.yellow('tunnel'),
 		app: null
 	} as const;
 

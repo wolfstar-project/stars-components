@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
-import type { StarsBuildTool, StarsConfig } from '../../config.js';
+import type { StarsBuildTool, StarsConfig, StarsDevConfig, StarsTypechecker } from '../../config.js';
 import { ConfigError } from './errors.js';
 
 export interface PackageJsonLike {
@@ -23,6 +23,21 @@ export interface ResolvedBuildConfig {
 	readonly output: string;
 }
 
+export interface ResolvedTypecheckConfig {
+	readonly enabled: boolean;
+	/** Absolute `tsconfig.json` the type checker runs against, `null` when it could not be found. */
+	readonly tsconfig: string | null;
+	/** The type checker to run, with `'auto'` already resolved. */
+	readonly checker: StarsTypechecker;
+}
+
+export type ResolvedTunnelConfig =
+	| { readonly mode: 'off' }
+	/** A `cloudflared` quick tunnel, whose hostname is only known once it is up. */
+	| { readonly mode: 'quick'; readonly path: string; readonly updateEndpoint: boolean }
+	/** An https URL the user already serves. */
+	| { readonly mode: 'url'; readonly url: string; readonly path: string; readonly updateEndpoint: boolean };
+
 export interface ResolvedDevConfig {
 	readonly watch: readonly string[];
 	readonly ignore: readonly string[];
@@ -33,6 +48,10 @@ export interface ResolvedDevConfig {
 	readonly url: string | null;
 	readonly health: string | null;
 	readonly killTimeout: number;
+	readonly typecheck: ResolvedTypecheckConfig;
+	readonly tunnel: ResolvedTunnelConfig;
+	/** Absolute path of the file the dev session's logs are mirrored into, `null` when disabled. */
+	readonly logFile: string | null;
 }
 
 export interface ResolvedImportsConfig {
@@ -88,8 +107,11 @@ export const DEFAULT_I18N_OUTPUT = 'src/@types/i18next.d.ts';
 export const DEFAULT_IMPORTS_DIRS = ['src/lib/**', 'src/utils/**'] as const;
 export const DEFAULT_IMPORTS_PRESETS = ['@wolfstar/http-framework', '@wolfstar/env-utilities'] as const;
 export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
+export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
+export const DEFAULT_TUNNEL_PATH = '/';
 
 const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'auto']);
+const TYPECHECKERS = new Set<string>(['tsc', 'golar', 'tsz', 'auto']);
 const TSDOWN_CONFIG_FILES = [
 	'tsdown.config.ts',
 	'tsdown.config.mts',
@@ -129,7 +151,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const packageJson = readPackageJson(root);
 	const entry = resolveEntry(root, validator.string(config.entry, 'entry'), validator);
 	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, validator);
-	const dev = resolveDev(root, entry, config.dev ?? {}, env, validator);
+	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, config.imports, validator);
 
@@ -252,12 +274,15 @@ const ENV_FILES = ['.env.local', '.env'] as const;
 const ENV_PORT_KEYS = ['HTTP_PORT', 'PORT'] as const;
 
 /**
- * Reads `HTTP_PORT`/`PORT` straight out of the project's `.env.local`/`.env`, the way `stars dev` needs it: these
- * files are only loaded into `process.env` by the bot itself once it starts (see `@wolfstar/env-utilities`), so by
- * the time the CLI resolves the configuration they are not there yet. This is a minimal, single-key line reader, not
- * a full dotenv implementation — quoting and interpolation are stripped, but expansion (`dotenv-expand`) is not.
+ * Reads the project's `.env.local`/`.env` into a plain object, the way `stars dev` and `stars commands` need it:
+ * these files are only loaded into `process.env` by the bot itself once it starts (see `@wolfstar/env-utilities`),
+ * so by the time the CLI runs they are not there yet. This is a minimal line reader, not a full dotenv
+ * implementation — quoting is stripped, but expansion (`dotenv-expand`) is not. Earlier files win, matching
+ * dotenv's own precedence.
  */
-function readDevPortFromEnvFile(root: string): string | null {
+export function readProjectEnvFiles(root: string): Record<string, string> {
+	const result: Record<string, string> = {};
+
 	for (const file of ENV_FILES) {
 		const path = join(root, file);
 		if (!isFile(path)) continue;
@@ -269,10 +294,23 @@ function readDevPortFromEnvFile(root: string): string | null {
 			continue;
 		}
 
-		for (const key of ENV_PORT_KEYS) {
-			const match = new RegExp(`^\\s*${key}\\s*=\\s*(.*)$`, 'm').exec(contents);
-			if (match) return match[1]!.trim().replace(/^['"]|['"]$/g, '');
+		for (const line of contents.split(/\r?\n/)) {
+			const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+			if (!match) continue;
+
+			const key = match[1]!;
+			if (key in result) continue;
+			result[key] = match[2]!.trim().replace(/^['"]|['"]$/g, '');
 		}
+	}
+
+	return result;
+}
+
+function readDevPortFromEnvFile(root: string): string | null {
+	const values = readProjectEnvFiles(root);
+	for (const key of ENV_PORT_KEYS) {
+		if (values[key]) return values[key];
 	}
 
 	return null;
@@ -281,11 +319,25 @@ function readDevPortFromEnvFile(root: string): string | null {
 function resolveDev(
 	root: string,
 	entry: string,
+	packageJson: PackageJsonLike | null,
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
 	validator: Validator
 ): ResolvedDevConfig {
-	validator.knownKeys(config, 'dev', ['watch', 'ignore', 'debounce', 'env', 'nodeArgs', 'args', 'url', 'health', 'killTimeout']);
+	validator.knownKeys(config, 'dev', [
+		'watch',
+		'ignore',
+		'debounce',
+		'env',
+		'nodeArgs',
+		'args',
+		'url',
+		'health',
+		'killTimeout',
+		'typecheck',
+		'tunnel',
+		'logFile'
+	]);
 
 	const watch = (validator.stringArray(config.watch, 'dev.watch') ?? [displayPath(root, dirname(entry))]).map((path) => resolve(root, path));
 	const ignore = validator.stringArray(config.ignore, 'dev.ignore') ?? [...DEFAULT_IGNORE];
@@ -310,7 +362,136 @@ function resolveDev(
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}
 
-	return { watch, ignore, debounce, env: devEnv, nodeArgs, args, url, health, killTimeout };
+	const typecheck = resolveTypecheck(root, packageJson, config.typecheck, validator);
+	const tunnel = resolveTunnel(config.tunnel, validator);
+	const logFile = config.logFile === false ? null : resolve(root, validator.string(config.logFile, 'dev.logFile') ?? DEFAULT_DEV_LOG_FILE);
+
+	return { watch, ignore, debounce, env: devEnv, nodeArgs, args, url, health, killTimeout, typecheck, tunnel, logFile };
+}
+
+/**
+ * Resolves `dev.typecheck`. The tsconfig is looked up the same way the `tsc` build tool looks up its own, so a
+ * project building with `tsdown` still gets `tsc --watch --noEmit` on the right project file.
+ */
+function resolveTypecheck(
+	root: string,
+	packageJson: PackageJsonLike | null,
+	config: StarsDevConfig['typecheck'],
+	validator: Validator
+): ResolvedTypecheckConfig {
+	if (config === undefined || config === false) return { enabled: false, tsconfig: null, checker: detectTypechecker(packageJson) };
+
+	let configured: string | undefined;
+	let requestedChecker = 'auto';
+	if (config !== true) {
+		if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+			throw validator.error(
+				'`dev.typecheck` must be a boolean or an object',
+				'dev.typecheck',
+				'INVALID_TYPE',
+				'Use `true` to type-check with the project tsconfig, `{ tsconfig }` to pick one, or `false` to disable it.'
+			);
+		}
+
+		validator.knownKeys(config, 'dev.typecheck', ['tsconfig', 'checker']);
+		configured = validator.string(config.tsconfig, 'dev.typecheck.tsconfig');
+		requestedChecker = validator.string(config.checker, 'dev.typecheck.checker') ?? 'auto';
+		if (!TYPECHECKERS.has(requestedChecker)) {
+			throw validator.error(
+				`Unknown type checker "${requestedChecker}"`,
+				'dev.typecheck.checker',
+				'INVALID_TYPECHECKER',
+				"Use one of 'tsc', 'golar', 'tsz' or 'auto'."
+			);
+		}
+	}
+
+	const checker: StarsTypechecker = requestedChecker === 'auto' ? detectTypechecker(packageJson) : (requestedChecker as StarsTypechecker);
+
+	if (configured !== undefined) {
+		const tsconfig = resolve(root, configured);
+		if (!isFile(tsconfig)) {
+			throw validator.error(
+				`The tsconfig file does not exist: ${tsconfig}`,
+				'dev.typecheck.tsconfig',
+				'TSCONFIG_NOT_FOUND',
+				'Point `dev.typecheck.tsconfig` to an existing tsconfig.json, relative to the project root.'
+			);
+		}
+		return { enabled: true, tsconfig, checker };
+	}
+
+	const found = [join(root, 'src', 'tsconfig.json'), join(root, 'tsconfig.json')].find((candidate) => isFile(candidate)) ?? null;
+	if (!found) {
+		throw validator.error(
+			`Could not find a tsconfig.json in ${root}`,
+			'dev.typecheck',
+			'TSCONFIG_NOT_FOUND',
+			'Create src/tsconfig.json or tsconfig.json, or set `dev.typecheck.tsconfig`.'
+		);
+	}
+
+	return { enabled: true, tsconfig: found, checker };
+}
+
+/**
+ * Picks the type checker when `dev.typecheck.checker` is `auto`: `golar` when the project already depends on it
+ * (it wraps TypeScript and is what this repository's own `typecheck` scripts run), `tsc` otherwise. `tsz` is never
+ * picked automatically — it is an early, tsc-compatible alternative a project opts into.
+ */
+function detectTypechecker(packageJson: PackageJsonLike | null): StarsTypechecker {
+	return hasDependency(packageJson, 'golar') ? 'golar' : 'tsc';
+}
+
+/**
+ * Resolves `dev.tunnel`: `true` (or `{}`) opens a `cloudflared` quick tunnel, a string (or `{ url }`) is an https
+ * URL the user already serves and the CLI only checks.
+ */
+function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): ResolvedTunnelConfig {
+	if (config === undefined || config === false) return { mode: 'off' };
+
+	let url: string | undefined;
+	let updateEndpoint = false;
+	let path = DEFAULT_TUNNEL_PATH;
+
+	if (typeof config === 'string') {
+		url = config;
+	} else if (config !== true) {
+		if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+			throw validator.error(
+				'`dev.tunnel` must be a boolean, an https URL or an object',
+				'dev.tunnel',
+				'INVALID_TYPE',
+				'Use `true` for a cloudflared quick tunnel, an https URL you already serve, or `false` to disable it.'
+			);
+		}
+
+		validator.knownKeys(config, 'dev.tunnel', ['url', 'updateEndpoint', 'path']);
+		url = validator.string(config.url, 'dev.tunnel.url');
+		updateEndpoint = validator.boolean(config.updateEndpoint, 'dev.tunnel.updateEndpoint') ?? false;
+		path = validator.string(config.path, 'dev.tunnel.path') ?? DEFAULT_TUNNEL_PATH;
+	}
+
+	if (url === undefined) return { mode: 'quick', path, updateEndpoint };
+
+	// Discord only accepts an https interactions endpoint.
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw validator.error(`Invalid URL "${url}"`, 'dev.tunnel', 'INVALID_URL', 'Use an absolute https URL such as https://bot.example.com.');
+	}
+
+	if (parsed.protocol !== 'https:') {
+		throw validator.error(
+			`The tunnel URL must be https, received "${url}"`,
+			'dev.tunnel',
+			'INVALID_URL',
+			'Discord only accepts an https interactions endpoint.'
+		);
+	}
+
+	return { mode: 'url', url, path, updateEndpoint };
 }
 
 function resolveCodegen(root: string, config: NonNullable<StarsConfig['codegen']>, validator: Validator): ResolvedCodegenConfig {

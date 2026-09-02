@@ -34,9 +34,9 @@ export function wait(milliseconds: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function waitFor(predicate: () => boolean, timeout = 5000): Promise<void> {
+export async function waitFor(predicate: () => boolean | Promise<boolean>, timeout = 5000): Promise<void> {
 	const deadline = Date.now() + timeout;
-	while (!predicate()) {
+	while (!(await predicate())) {
 		if (Date.now() > deadline) throw new Error('Timed out waiting for condition');
 		await wait(20);
 	}

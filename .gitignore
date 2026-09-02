@@ -17,6 +17,7 @@ examples/**/.env
 
 # Build Artifacts
 dist/
+.stars/
 build/
 test_out/
 .swc/

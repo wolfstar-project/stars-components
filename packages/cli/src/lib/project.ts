@@ -28,6 +28,25 @@ export async function importFromProject<T>(root: string, id: string, hint: strin
 }
 
 /**
+ * Resolves an executable a package declares in its `package.json#bin`, from the project's own `node_modules`.
+ *
+ * Going through `bin` rather than a hardcoded path is what makes this work across layouts: TypeScript 7 hides
+ * `lib/tsc.js` behind its `exports` map, and packages move their entry points between releases.
+ */
+export function resolveBinary(root: string, packageName: string, binName: string): string | null {
+	const packageJsonPath = resolveFromProject(root, `${packageName}/package.json`);
+	if (!packageJsonPath) return null;
+
+	try {
+		const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as { bin?: string | Record<string, string> };
+		const bin = typeof packageJson.bin === 'string' ? packageJson.bin : packageJson.bin?.[binName];
+		return bin ? join(dirname(packageJsonPath), bin) : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Finds the version of an installed package by walking `node_modules` up from `root`.
  */
 export function findInstalledVersion(root: string, name: string): string | null {
