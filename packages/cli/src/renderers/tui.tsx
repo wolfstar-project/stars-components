@@ -33,6 +33,12 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 		{
 			stdout,
 			stdin,
+			// `createTuiRenderer` only runs once `resolveOutputMode()` already picked 'tui' (never in CI or on a
+			// non-TTY stdout), so Ink is told to trust that instead of re-deriving it from `process.env.CI`: on a
+			// CI runner that env var is set even for this package's own test process, which would otherwise force
+			// Ink's non-interactive mode (no repaint until unmount) despite the fake stdin/stdout looking like a
+			// real TTY.
+			interactive: true,
 			alternateScreen: true,
 			// `stars dev` owns the shutdown: it stops the bot, then exits with the right code.
 			exitOnCtrlC: false,
