@@ -18,6 +18,7 @@
 Stars Components is a monorepo containing **16 publishable TypeScript packages** under the `@wolfstar` npm scope. These packages provide foundational utilities and frameworks for building HTTP-only Discord bots and related services within the Star Network ecosystem.
 
 **Technology Stack:**
+
 - **Language:** TypeScript (Node.js `^22.11 || ^24 || >=26`)
 - **Package Manager:** pnpm with workspaces
 - **Monorepo Runner:** Turbo
@@ -30,6 +31,7 @@ Stars Components is a monorepo containing **16 publishable TypeScript packages**
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js `^22.11`, `^24`, or `>=26`
 - pnpm (automatically pinned via corepack)
 
@@ -67,31 +69,32 @@ pnpm add @wolfstar/http-framework @wolfstar/env-utilities
 
 ## Packages
 
-| Package | Description | Version |
-|---------|-------------|---------|
-| **Core Framework** | | |
-| [`@wolfstar/http-framework`](./packages/http-framework) | The primary framework for Star Network's HTTP-only Discord bots | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework)](https://npmx.dev/package/@wolfstar/http-framework) |
-| **Framework Extensions** | | |
-| [`@wolfstar/http-framework-test-utils`](./packages/http-framework-test-utils) | Test utilities and helpers for @wolfstar/http-framework | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework-test-utils)](https://npmx.dev/package/@wolfstar/http-framework-test-utils) |
-| [`@wolfstar/http-framework-i18n`](./packages/http-framework-i18n) | **DEPRECATED:** Use @wolfstar/plugin-i18next instead. Legacy i18n layer for HTTP framework | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework-i18n)](https://npmx.dev/package/@wolfstar/http-framework-i18n) |
-| **Shared HTTP Services** | | |
-| [`@wolfstar/shared-http-pieces`](./packages/shared-http-pieces) | Common pieces and utilities for Star Network's HTTP-only bots | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/shared-http-pieces)](https://npmx.dev/package/@wolfstar/shared-http-pieces) |
-| [`@wolfstar/shared-influx-pieces`](./packages/shared-influx-pieces) | InfluxDB integration pieces for Star Network's HTTP bots | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/shared-influx-pieces)](https://npmx.dev/package/@wolfstar/shared-influx-pieces) |
-| **Internationalization (i18n)** | | |
-| [`@wolfstar/i18next-backend`](./packages/i18next-backend) | Fast filesystem-based i18next backend for Node.js | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/i18next-backend)](https://npmx.dev/package/@wolfstar/i18next-backend) |
-| [`@wolfstar/i18next-type-generator`](./packages/i18next-type-generator) | CLI utility to generate TypeScript augmentations for i18next | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/i18next-type-generator)](https://npmx.dev/package/@wolfstar/i18next-type-generator) |
-| **Utilities & Helpers** | | |
-| [`@wolfstar/env-utilities`](./packages/env-utilities) | Functional utilities for reading and parsing environment variables | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/env-utilities)](https://npmx.dev/package/@wolfstar/env-utilities) |
-| [`@wolfstar/influx-utilities`](./packages/influx-utilities) | Opinionated abstraction layer for InfluxDB single-organization access | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/influx-utilities)](https://npmx.dev/package/@wolfstar/influx-utilities) |
-| [`@wolfstar/logger`](./packages/logger) | Lightweight logger system with level-based filtering | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/logger)](https://npmx.dev/package/@wolfstar/logger) |
-| [`@wolfstar/safe-fetch`](./packages/safe-fetch) | Fetch wrapper implementing Rust-style Result types for error handling | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/safe-fetch)](https://npmx.dev/package/@wolfstar/safe-fetch) |
-| [`@wolfstar/start-banner`](./packages/start-banner) | CLI banner generator utility for startup messages | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/start-banner)](https://npmx.dev/package/@wolfstar/start-banner) |
-| **Third-Party Integrations** | | |
-| [`@wolfstar/reddit-helpers`](./packages/reddit-helpers) | Reddit helper functions for Star Network bots | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/reddit-helpers)](https://npmx.dev/package/@wolfstar/reddit-helpers) |
-| [`@wolfstar/twitch-helpers`](./packages/twitch-helpers) | Twitch helper functions for Star Network bots | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/twitch-helpers)](https://npmx.dev/package/@wolfstar/twitch-helpers) |
-| [`@wolfstar/weather-helpers`](./packages/weather-helpers) | Weather API helper functions for Star Network bots | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/weather-helpers)](https://npmx.dev/package/@wolfstar/weather-helpers) |
-| **Project Scaffolding** | | |
-| [`@wolfstar/create-http-framework`](./packages/create-http-framework) | CLI scaffolding tool to create new HTTP Framework bot projects | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/create-http-framework)](https://npmx.dev/package/@wolfstar/create-http-framework) |
+| Package                                                                       | Description                                                                                                         | Version                                                                                                                                                     |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core Framework**                                                            |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/http-framework`](./packages/http-framework)                       | The primary framework for Star Network's HTTP-only Discord bots                                                     | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework)](https://npmx.dev/package/@wolfstar/http-framework)                       |
+| **Framework Extensions**                                                      |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/http-framework-test-utils`](./packages/http-framework-test-utils) | Test utilities and helpers for @wolfstar/http-framework                                                             | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework-test-utils)](https://npmx.dev/package/@wolfstar/http-framework-test-utils) |
+| [`@wolfstar/http-framework-i18n`](./packages/http-framework-i18n)             | **DEPRECATED:** Use @wolfstar/plugin-i18next instead. Legacy i18n layer for HTTP framework                          | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework-i18n)](https://npmx.dev/package/@wolfstar/http-framework-i18n)             |
+| **Shared HTTP Services**                                                      |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/shared-http-pieces`](./packages/shared-http-pieces)               | Common pieces and utilities for Star Network's HTTP-only bots                                                       | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/shared-http-pieces)](https://npmx.dev/package/@wolfstar/shared-http-pieces)               |
+| [`@wolfstar/shared-influx-pieces`](./packages/shared-influx-pieces)           | InfluxDB integration pieces for Star Network's HTTP bots                                                            | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/shared-influx-pieces)](https://npmx.dev/package/@wolfstar/shared-influx-pieces)           |
+| **Internationalization (i18n)**                                               |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/i18next-backend`](./packages/i18next-backend)                     | Fast filesystem-based i18next backend for Node.js                                                                   | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/i18next-backend)](https://npmx.dev/package/@wolfstar/i18next-backend)                     |
+| [`@wolfstar/i18next-type-generator`](./packages/i18next-type-generator)       | CLI utility to generate TypeScript augmentations for i18next                                                        | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/i18next-type-generator)](https://npmx.dev/package/@wolfstar/i18next-type-generator)       |
+| **Utilities & Helpers**                                                       |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/env-utilities`](./packages/env-utilities)                         | Functional utilities for reading and parsing environment variables                                                  | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/env-utilities)](https://npmx.dev/package/@wolfstar/env-utilities)                         |
+| [`@wolfstar/influx-utilities`](./packages/influx-utilities)                   | Opinionated abstraction layer for InfluxDB single-organization access                                               | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/influx-utilities)](https://npmx.dev/package/@wolfstar/influx-utilities)                   |
+| [`@wolfstar/logger`](./packages/logger)                                       | Lightweight logger system with level-based filtering                                                                | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/logger)](https://npmx.dev/package/@wolfstar/logger)                                       |
+| [`@wolfstar/safe-fetch`](./packages/safe-fetch)                               | Fetch wrapper implementing Rust-style Result types for error handling                                               | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/safe-fetch)](https://npmx.dev/package/@wolfstar/safe-fetch)                               |
+| [`@wolfstar/start-banner`](./packages/start-banner)                           | CLI banner generator utility for startup messages                                                                   | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/start-banner)](https://npmx.dev/package/@wolfstar/start-banner)                           |
+| **Third-Party Integrations**                                                  |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/reddit-helpers`](./packages/reddit-helpers)                       | Reddit helper functions for Star Network bots                                                                       | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/reddit-helpers)](https://npmx.dev/package/@wolfstar/reddit-helpers)                       |
+| [`@wolfstar/twitch-helpers`](./packages/twitch-helpers)                       | Twitch helper functions for Star Network bots                                                                       | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/twitch-helpers)](https://npmx.dev/package/@wolfstar/twitch-helpers)                       |
+| [`@wolfstar/weather-helpers`](./packages/weather-helpers)                     | Weather API helper functions for Star Network bots                                                                  | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/weather-helpers)](https://npmx.dev/package/@wolfstar/weather-helpers)                     |
+| **Project Scaffolding**                                                       |                                                                                                                     |                                                                                                                                                             |
+| [`@wolfstar/cli`](./packages/cli)                                             | The `stars` CLI: typed `stars.config.ts`, `dev` with TUI, `build`, `info` and `codegen` for http-framework projects | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/cli)](https://npmx.dev/package/@wolfstar/cli)                                             |
+| [`@wolfstar/create-http-framework`](./packages/create-http-framework)         | CLI scaffolding tool to create new HTTP Framework bot projects                                                      | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/create-http-framework)](https://npmx.dev/package/@wolfstar/create-http-framework)         |
 
 ---
 
@@ -129,6 +132,7 @@ For a complete list of available examples, see [`examples/README.md`](./examples
 Contributions are welcome! Please read our [Contributing Guide](https://github.com/wolfstar-project/.github/blob/main/.github/CONTRIBUTING.md) before submitting a pull request.
 
 **Key Conventions:**
+
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) using `cz` (commitizen)
 - **Changes:** Use `pnpm changeset` to add changesets; **do not edit** `package.json#version` or `CHANGELOG.md` directly (these are managed by Changesets)
 - **Release Process:** Changesets automatically publishes independent versions for affected packages

@@ -36,7 +36,9 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 		'@wolfstar/env-utilities',
 		'@wolfstar/logger',
 		'@wolfstar/start-banner',
-		'gradient-string'
+		'gradient-string',
+		// Backs the dev/build scripts for every project kind.
+		'@wolfstar/cli'
 	]);
 
 	if (selections.i18n) names.add('@wolfstar/plugin-i18next').add('@wolfstar/i18next-type-generator');
@@ -47,11 +49,10 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 		names.add('@types/node');
 		switch (selections.buildTool) {
 			case 'tsc6':
-				names.add('typescript').add('tsc-watch');
+				names.add('typescript');
 				break;
 			case 'tsc7':
-				// typescript is pinned to the rc below; tsc-watch backs `watch:start`.
-				names.add('tsc-watch');
+				// typescript is pinned to the rc below.
 				break;
 			case 'tsdown':
 				names.add('tsdown').add('typescript');

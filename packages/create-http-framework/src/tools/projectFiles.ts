@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { writeFile } from './fileSystem.js';
 import type { DependencyVersions } from './npmHelpers.js';
 import type { BuildTool, Formatter, Language, Linter } from './options.js';
-import { getRunScript, type PackageManager } from './packageManager.js';
+import type { PackageManager } from './packageManager.js';
 
 export interface ProjectContext {
 	name: string;
@@ -31,33 +31,13 @@ function json(value: unknown): string {
 }
 
 export function buildScripts(ctx: ProjectContext): Record<string, string> {
-	const { packageManager: pm, buildTool } = ctx;
-	const start = 'node dist/main.js';
-
-	let scripts: Record<string, string>;
-	if (ctx.language === 'js') {
-		// Plain JavaScript runs directly — no compile step.
-		scripts = {
-			start: 'node src/main.js',
-			dev: 'node --watch src/main.js'
-		};
-	} else if (buildTool === 'tsdown') {
-		scripts = {
-			build: 'tsdown',
-			dev: getRunScript(pm, 'build', ['--onSuccess', getRunScript(pm, 'start')]),
-			watch: getRunScript(pm, 'build', ['--watch']),
-			'watch:start': getRunScript(pm, 'build', ['--watch', '--onSuccess', getRunScript(pm, 'start')]),
-			start
-		};
-	} else {
-		scripts = {
-			build: 'tsc -b src',
-			dev: `${getRunScript(pm, 'build')} && ${getRunScript(pm, 'start')}`,
-			watch: 'tsc -b src -w',
-			'watch:start': `tsc-watch -b src --onSuccess "${getRunScript(pm, 'start')}"`,
-			start
-		};
-	}
+	// `stars dev` / `stars build` (from @wolfstar/cli) read stars.config.* and drive the build tool chosen below, so
+	// the scripts are the same for every language and build tool.
+	const scripts: Record<string, string> = {
+		dev: 'stars dev',
+		...(ctx.language === 'js' ? {} : { build: 'stars build' }),
+		start: ctx.language === 'js' ? 'node src/main.js' : 'node dist/main.js'
+	};
 
 	if (ctx.linter === 'oxlint') {
 		scripts['lint'] = 'oxlint src';
@@ -75,7 +55,7 @@ export function buildScripts(ctx: ProjectContext): Record<string, string> {
 		scripts['format:check'] = 'prettier --check src';
 	}
 
-	if (ctx.i18n) scripts['generate:i18n'] = 'i18next-type-generator ./src/locales/en-US/ ./src/@types/i18next.d.ts';
+	if (ctx.i18n) scripts['generate:i18n'] = 'stars codegen';
 	if (ctx.testing) scripts['test'] = 'vitest run';
 
 	return scripts;
@@ -98,19 +78,17 @@ export function buildDependencies(ctx: ProjectContext): Record<string, string> {
 
 export function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
 	const v = ctx.versions;
-	const dev: Record<string, string> = {};
+	const dev: Record<string, string> = { '@wolfstar/cli': caret(v['@wolfstar/cli']!) };
 
 	if (ctx.language === 'ts') {
 		dev['@types/node'] = caret(v['@types/node']!);
 		switch (ctx.buildTool) {
 			case 'tsc6':
 				dev['typescript'] = caret(v['typescript']!);
-				dev['tsc-watch'] = caret(v['tsc-watch']!);
 				break;
 			case 'tsc7':
 				// rc prerelease — pin exactly rather than with a caret range.
 				dev['typescript'] = v['typescript']!;
-				dev['tsc-watch'] = caret(v['tsc-watch']!);
 				break;
 			case 'tsdown':
 				dev['tsdown'] = caret(v['tsdown']!);
@@ -228,6 +206,22 @@ function writeBuildConfig(targetDir: string, ctx: ProjectContext): void {
 	writeFile(join(targetDir, 'tsdown.config.ts'), content);
 }
 
+/** Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). */
+function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
+	const isJs = ctx.language === 'js';
+	const build = isJs ? "{ tool: 'none' }" : ctx.buildTool === 'tsdown' ? "{ tool: 'tsdown' }" : "{ tool: 'tsc', tsconfig: 'src/tsconfig.json' }";
+	const content = [
+		"import { defineConfig } from '@wolfstar/http-framework/config';",
+		'',
+		'export default defineConfig({',
+		`\tentry: 'src/main.${isJs ? 'js' : 'ts'}',`,
+		`\tbuild: ${build}`,
+		'});',
+		''
+	].join('\n');
+	writeFile(join(targetDir, isJs ? 'stars.config.js' : 'stars.config.ts'), content);
+}
+
 function writeLinterConfig(targetDir: string, ctx: ProjectContext): void {
 	if (ctx.linter === 'oxlint') {
 		writeFile(
@@ -286,6 +280,7 @@ export function writeProjectFiles(targetDir: string, ctx: ProjectContext): void 
 	writeFile(join(targetDir, 'package.json'), packageJson(ctx));
 	writeTsconfig(targetDir, ctx);
 	writeBuildConfig(targetDir, ctx);
+	writeStarsConfig(targetDir, ctx);
 	writeLinterConfig(targetDir, ctx);
 	writeFormatterConfig(targetDir, ctx);
 }

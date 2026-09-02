@@ -426,6 +426,44 @@ client.on(Events.HmrPieceReloaded, async (piece) => {
 > registered exactly once. HMR does not push the updated commands to Discord on its own, subscribe to the events above
 > if you want that behaviour.
 
+### Project configuration (`stars.config.*`)
+
+`@wolfstar/http-framework` owns the typed project configuration consumed by the [`stars` CLI](../cli) — the
+`defineConfig` helper and the config loader live here, not in the CLI, so any tool can resolve a project's
+configuration without pulling in `@wolfstar/cli`.
+
+```typescript
+// stars.config.ts
+import { defineConfig } from '@wolfstar/http-framework/config';
+
+export default defineConfig({
+	entry: 'src/main.ts',
+	build: { tool: 'tsdown' }
+});
+```
+
+`@wolfstar/http-framework/config` has no side effects — importing it (or a `stars.config.ts` that imports it) never
+starts the bot. `loadStarsConfig` discovers `stars.config.{ts,mts,cts,js,mjs,cjs}` from a directory, applies defaults,
+validates every option and resolves all paths to absolute ones.
+
+`dev.url`, the URL `stars dev` shows and health-checks the bot on, needs no configuration either: it is detected the
+way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `.env.local`/`.env`, or `dev.env`) or `3000`, and
+`localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` explicitly only
+to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }`.
+
+The resolved configuration is also available programmatically:
+
+```typescript
+import { loadStarsConfig } from '@wolfstar/http-framework/config';
+
+const config = await loadStarsConfig({ cwd: process.cwd() });
+console.log(config.entry, config.build.output);
+```
+
+Invalid options raise a `ConfigError` with a stable `code`, the offending option `path`, the `file` it came from, and
+an actionable `hint`. See the [`@wolfstar/cli` README](../cli#configuration) for the full option reference and how the
+`stars` commands (`dev`, `build`, `info`, `codegen`) use it.
+
 ### ApplicationCommandRegistry
 
 The `ApplicationCommandRegistry` is `@wolfstar/http-framework`'s centralized registry and uses [`@discordjs/rest`] to register them in Discord.
