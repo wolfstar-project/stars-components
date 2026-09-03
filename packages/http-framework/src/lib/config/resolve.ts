@@ -324,15 +324,14 @@ function resolveExperimental(config: StarsExperimentalConfig, validator: Validat
 			'`experimental` must be an object',
 			'experimental',
 			'INVALID_TYPE',
-			'Use `{ enableVite, enableExternalVite, enableNitro, nitroPreset }`.'
+			'Use `{ enableVite, enableExternalVite, enableNitro, nitro }`.'
 		);
 	}
 
-	validator.knownKeys(config, 'experimental', ['enableVite', 'enableExternalVite', 'enableNitro', 'nitroPreset']);
+	validator.knownKeys(config, 'experimental', ['enableVite', 'enableExternalVite', 'enableNitro', 'nitro']);
 	const enableVite = validator.boolean(config.enableVite, 'experimental.enableVite') ?? false;
 	const enableExternalVite = validator.boolean(config.enableExternalVite, 'experimental.enableExternalVite') ?? false;
 	const enableNitro = validator.boolean(config.enableNitro, 'experimental.enableNitro') ?? false;
-	const nitroPreset = validator.string(config.nitroPreset, 'experimental.nitroPreset') ?? 'node-server';
 
 	if (enableExternalVite && !enableVite) {
 		throw validator.error(
@@ -352,7 +351,22 @@ function resolveExperimental(config: StarsExperimentalConfig, validator: Validat
 		);
 	}
 
-	return { enableVite, enableExternalVite, enableNitro, nitroPreset };
+	const rawNitro = 'nitro' in config ? config.nitro : undefined;
+	if (rawNitro !== undefined && !enableNitro) {
+		throw validator.error(
+			'`experimental.nitro` needs `experimental.enableNitro`',
+			'experimental.nitro',
+			'EXPERIMENT_REQUIRED',
+			'Set `experimental.enableNitro` to true as well, or drop `nitro`.'
+		);
+	}
+	if (rawNitro !== undefined && (rawNitro === null || typeof rawNitro !== 'object' || Array.isArray(rawNitro))) {
+		throw validator.error('`experimental.nitro` must be an object', 'experimental.nitro', 'INVALID_TYPE', 'Use `{ preset }`.');
+	}
+	if (rawNitro) validator.knownKeys(rawNitro, 'experimental.nitro', ['preset']);
+	const preset = validator.string(rawNitro?.preset, 'experimental.nitro.preset') ?? 'node-server';
+
+	return { enableVite, enableExternalVite, enableNitro, nitro: { preset } };
 }
 
 function resolveBuildOutput(root: string, entry: string, outDir: string, packageJson: PackageJsonLike | null): string {
