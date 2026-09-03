@@ -46,6 +46,29 @@ describe('createBuilder', () => {
 		await expect(builder.build()).resolves.toMatchObject({ ok: true, durationMs: 0 });
 	});
 
+	test('ExternalBuilder.watch() reports the initial build and rebuilds when the output changes', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'vite.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { experimental: { enableVite: true, enableExternalVite: true } };'
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const builder = await createBuilder(config);
+		const successes: unknown[] = [];
+		builder.on('success', (outcome) => successes.push(outcome));
+
+		await mkdir(dirname(config.build.output), { recursive: true });
+		await builder.watch();
+		expect(successes).toHaveLength(1);
+
+		await writeFile(config.build.output, 'console.log("built");');
+		await waitFor(() => successes.length === 2);
+
+		await builder.close();
+	});
+
 	test('refuses nitro until the framework can serve it', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
