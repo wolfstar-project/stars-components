@@ -48,8 +48,7 @@ export function LogBrowser({ service, height, onClose }: LogBrowserProps) {
 				setLevelIndex((current) => (current + 1) % LEVEL_FILTERS.length);
 				return setScroll(0);
 			case 'c':
-				service.logs.clear();
-				return forceRender((value) => value + 1);
+				return service.logs.clear();
 			default:
 				break;
 		}
