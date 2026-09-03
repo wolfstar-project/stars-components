@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.3.0
+
+### Minor Changes
+
+- [#157](https://github.com/wolfstar-project/stars-components/pull/157) [`6364824`](https://github.com/wolfstar-project/stars-components/commit/63648244c6b422f43fb4a237936beea077c8f0ad) - feat: add an `Events` enum for the client event names
+
+    Every event emitted by the `Client` is now also available as a member of the new `Events` enum, mirroring discord.js'
+    `Events`, so `client.on(Events.CommandError, ...)` can be used instead of the `'commandError'` string literal. The
+    enum members hold the same names the client has always emitted, so existing string literals keep working and can be
+    mixed with the enum freely. The library itself now emits through the enum, and the new `ClientEventName` type aliases
+    `keyof ClientEvents` for typing event names. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#155](https://github.com/wolfstar-project/stars-components/pull/155) [`ce9496a`](https://github.com/wolfstar-project/stars-components/commit/ce9496a7aced1200d3b4b322d6a336e5a60debb3) - feat: add Hot Module Reloading as a core feature
+
+    `Client` now accepts an `hmr` option that starts a `HotModuleReloader` at the end of `Client#load()`. The reloader
+    watches every path registered in every store and loads, reloads, and unloads pieces in place as their files are
+    created, changed, and deleted, without restarting the process. It accepts all of chokidar's options plus `enabled`
+    (default `true`) and `silent` (default `false`), is exposed as `client.hmr`, can be used standalone, and reports every
+    operation through the new `hmrStart`, `hmrStop`, `hmrPiecesLoaded`, `hmrPieceReloaded`, `hmrPieceUnloaded`, and
+    `hmrError` client events.
+
+    Unloading a command now also deletes its entry from the `ApplicationCommandRegistry`, so reloading a command no longer
+    leaves the entry of the previous class behind, which would push the command to Discord twice. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 3.2.1
 
 ### Patch Changes
