@@ -1,6 +1,10 @@
 import { blue, gray, magenta, red, redBright, yellow, type Color } from 'colorette';
 import { format, inspect } from 'node:util';
 
+/**
+ * @deprecated Use `@wolfstar/plugin-logger` instead once available (see wolfstar-project/plugins). This package
+ * remains functional but will not receive new features.
+ */
 export class Logger {
 	/**
 	 * The depth of the inspect.
@@ -84,6 +88,10 @@ export class Logger {
 	}
 }
 
+/**
+ * @deprecated Use `@wolfstar/plugin-logger` instead once available (see wolfstar-project/plugins). This package
+ * remains functional but will not receive new features.
+ */
 export namespace Logger {
 	export interface Options {
 		level?: Level;

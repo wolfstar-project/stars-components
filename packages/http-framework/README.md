@@ -21,6 +21,7 @@ A powerful HTTP framework for building your Discord bots, powered by [`node:http
 
 - Support for reloading and unloading commands
 - Built-in Hot Module Reloading for every store
+- Built-in logger, extendable by plugins
 - Support for attachment responses
 - Seamless integration with low-level libraries
 - Thin wrapper on top of raw data for maximum performance
@@ -310,6 +311,39 @@ await client.load();
 // Start up the HTTP server;
 await client.listen({ port: 3000 });
 ```
+
+### Logger
+
+The framework ships a minimal logger, available as `container.logger` (and as `client.logger`) as soon as
+`@wolfstar/http-framework` is imported. It writes to the matching `console` method and filters entries by
+`LogLevel`, which defaults to `LogLevel.Info`:
+
+```typescript
+import { container, Client, LogLevel } from '@wolfstar/http-framework';
+
+const client = new Client({ logger: { level: LogLevel.Debug } });
+
+container.logger.info('Ready');
+container.logger.debug('Interaction received', interaction.id);
+```
+
+The built-in implementation is intentionally bare: it has no timestamps, colours, or transports. Those belong to a
+logger plugin, which replaces it by assigning an `ILogger` to `options.logger.instance` from a
+`preGenericsInitialization` hook:
+
+```typescript
+import { Plugin, preGenericsInitialization, type ClientOptions } from '@wolfstar/http-framework';
+
+export class LoggerPlugin extends Plugin {
+	public static [preGenericsInitialization](options: ClientOptions): void {
+		options.logger ??= {};
+		options.logger.instance = new MyLogger(options.logger);
+	}
+}
+```
+
+Because the plugin only has to satisfy the `ILogger` interface, the rest of the framework — including Hot Module
+Reloading and the command router — keeps logging through `container.logger` without any change.
 
 ### Client events
 

@@ -20,7 +20,6 @@
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
 		"@wolfstar/http-framework-i18n": "workspace:*",
-		"@wolfstar/logger": "workspace:*",
 		"@wolfstar/shared-http-pieces": "workspace:*",
 		"@wolfstar/start-banner": "workspace:*",
 		"discord-api-types": "^0.38.8",

@@ -32,7 +32,7 @@ export class CommandRouter<Options extends Command.Options = Command.Options> {
 
 		const entry = container.applicationCommandRegistry.get(command.constructor as typeof Command<Options>);
 		if (entry === null) {
-			console.warn(`CommandRouter: No entry found for command '${command.name}'`);
+			container.logger.warn(`CommandRouter: No entry found for command '${command.name}'`);
 		} else {
 			this.#populateChatInputRouter(entry.chatInput);
 			this.#populateContextMenuRouter(entry.contextMenu);

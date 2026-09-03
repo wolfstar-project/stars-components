@@ -115,9 +115,6 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
-      '@wolfstar/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@wolfstar/shared-http-pieces':
         specifier: workspace:*
         version: link:../../packages/shared-http-pieces
@@ -158,9 +155,6 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
-      '@wolfstar/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@wolfstar/shared-http-pieces':
         specifier: workspace:*
         version: link:../../packages/shared-http-pieces
@@ -188,9 +182,6 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
-      '@wolfstar/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@wolfstar/shared-http-pieces':
         specifier: workspace:*
         version: link:../../packages/shared-http-pieces
@@ -231,9 +222,6 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
-      '@wolfstar/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@wolfstar/shared-http-pieces':
         specifier: workspace:*
         version: link:../../packages/shared-http-pieces
@@ -261,9 +249,6 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
-      '@wolfstar/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@wolfstar/shared-http-pieces':
         specifier: workspace:*
         version: link:../../packages/shared-http-pieces
@@ -304,9 +289,6 @@ importers:
       '@wolfstar/http-framework-i18n':
         specifier: workspace:*
         version: link:../../packages/http-framework-i18n
-      '@wolfstar/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
       '@wolfstar/shared-http-pieces':
         specifier: workspace:*
         version: link:../../packages/shared-http-pieces

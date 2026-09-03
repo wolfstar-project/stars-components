@@ -5,7 +5,6 @@ const versions: ProjectContext['versions'] = {
 	'@wolfstar/http-framework': '1.0.0',
 	'discord-api-types': '1.0.0',
 	'@wolfstar/env-utilities': '1.0.0',
-	'@wolfstar/logger': '1.0.0',
 	'@wolfstar/start-banner': '1.0.0',
 	'gradient-string': '1.0.0',
 	'@wolfstar/plugin-i18next': '1.0.0',
@@ -75,7 +74,6 @@ describe('buildDependencies', () => {
 			const dependencies = buildDependencies(ctx);
 
 			expect(dependencies).toHaveProperty('@wolfstar/env-utilities');
-			expect(dependencies).toHaveProperty('@wolfstar/logger');
 			expect(dependencies).toHaveProperty('@wolfstar/start-banner');
 			expect(dependencies).toHaveProperty('gradient-string');
 		}
@@ -191,7 +189,6 @@ describe('packageJson', () => {
 		const parsed = JSON.parse(packageJson(makeContext()));
 
 		expect(parsed.dependencies).toHaveProperty('@wolfstar/env-utilities');
-		expect(parsed.dependencies).toHaveProperty('@wolfstar/logger');
 		expect(parsed.dependencies).toHaveProperty('@wolfstar/start-banner');
 		expect(parsed.dependencies).toHaveProperty('gradient-string');
 		expect(parsed.dependencies).not.toHaveProperty('@discordjs/builders');

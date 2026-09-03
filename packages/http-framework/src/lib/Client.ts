@@ -18,12 +18,15 @@ import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js
 import { ListenerStore } from './structures/ListenerStore.js';
 import { PluginHook } from './types/Enums.js';
 import { ErrorMessages, Payloads } from './utils/constants.js';
+import { LogLevel, type ILogger } from './utils/logger/ILogger.js';
+import { Logger } from './utils/logger/Logger.js';
 import { makeKey, verifyBody, type Key } from './utils/security.js';
 import { getSafeTextBody } from './utils/streams.js';
 
 container.stores.register(new CommandStore());
 container.stores.register(new InteractionHandlerStore());
 container.stores.register(new ListenerStore());
+container.logger ??= new Logger();
 
 export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public server!: Server;
@@ -35,6 +38,15 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	 * @since 3.3.0
 	 */
 	public hmr: HotModuleReloader | null = null;
+
+	/**
+	 * The logger the client and the framework internals write to. It defaults to a {@link Logger} writing to the
+	 * console, and can be replaced with any {@link ILogger} through {@link ClientLoggerOptions.instance}, which is
+	 * how a logger plugin swaps the built-in implementation for a richer one.
+	 *
+	 * @since 3.4.0
+	 */
+	public readonly logger: ILogger;
 
 	public readonly id: string;
 	public readonly options: ClientOptions;
@@ -56,6 +68,11 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			plugin.hook.call(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
+
+		// Resolve the logger right after the pre-generics hooks so plugins registering an `ILogger` through
+		// `options.logger.instance` are honoured, and every later hook already sees the final `container.logger`.
+		this.logger = this.options.logger?.instance ?? new Logger(this.options.logger?.level ?? LogLevel.Info);
+		container.logger = this.logger;
 
 		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
 			plugin.hook.call(this, this.options);
@@ -285,6 +302,33 @@ export interface ClientOptions {
 	 * @since 3.3.0
 	 */
 	hmr?: HMROptions;
+
+	/**
+	 * The options for {@link Client#logger}, which is also exposed as `container.logger`.
+	 *
+	 * @since 3.4.0
+	 */
+	logger?: ClientLoggerOptions;
+}
+
+export interface ClientLoggerOptions {
+	/**
+	 * The lowest {@link LogLevel} the built-in {@link Logger} writes. Ignored when
+	 * {@link ClientLoggerOptions.instance} is set.
+	 *
+	 * @default LogLevel.Info
+	 * @since 3.4.0
+	 */
+	level?: LogLevel;
+
+	/**
+	 * The {@link ILogger} to use instead of the built-in {@link Logger}. Plugins set this from a
+	 * {@link PluginHook.PreGenericsInitialization} hook to extend the framework's logging.
+	 *
+	 * @default undefined // a new Logger is created
+	 * @since 3.4.0
+	 */
+	instance?: ILogger;
 }
 
 export interface LoadOptions {
@@ -321,6 +365,7 @@ export interface ListenOptions extends Omit<NetListenOptions, 'path' | 'readable
 
 export namespace Client {
 	export type Options = ClientOptions;
+	export type LoggerOptions = ClientLoggerOptions;
 	export type PieceLoadOptions = LoadOptions;
 	export type ServerListenOptions = ListenOptions;
 }
@@ -337,5 +382,6 @@ declare module '@sapphire/pieces' {
 		idParser: IIdParser;
 		rest: REST;
 		applicationCommandRegistry: ApplicationCommandRegistry;
+		logger: ILogger;
 	}
 }

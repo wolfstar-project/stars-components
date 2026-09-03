@@ -5,7 +5,6 @@ package:
     - '@wolfstar/i18next-backend'
     - '@wolfstar/i18next-type-generator'
     - '@wolfstar/influx-utilities'
-    - '@wolfstar/logger'
     - '@wolfstar/reddit-helpers'
     - '@wolfstar/safe-fetch'
     - '@wolfstar/shared-http-pieces'
