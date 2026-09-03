@@ -55,7 +55,8 @@ describe('ViteBuilder', () => {
 		expect(stdout).toContain('bot ready on 3000');
 	});
 
-	test('watch() rebuilds on change and reports through the same events, close() stops it', async () => {
+	// Same libuv fs-event limitation as ExternalBuilder's watch test — see the comment there.
+	test.skipIf(process.platform === 'win32')('watch() rebuilds on change and reports through the same events, close() stops it', async () => {
 		fixture = await createViteFixture();
 		await writeFile(join(fixture.root, 'src', 'main.ts'), "console.log('v1');\n");
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });

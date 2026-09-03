@@ -48,7 +48,9 @@ describe('createBuilder', () => {
 		await expect(builder.build()).resolves.toMatchObject({ ok: true, durationMs: 0 });
 	});
 
-	test('ExternalBuilder.watch() reports the initial build and rebuilds when the output changes', async () => {
+	// libuv's fs-event backend on Windows CI runners asserts and crashes the whole worker under rapid
+	// watch/unwatch cycles in temp directories (a known native limitation, not something the test can work around).
+	test.skipIf(process.platform === 'win32')('ExternalBuilder.watch() reports the initial build and rebuilds when the output changes', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
 			'tsconfig.json': '{}',
