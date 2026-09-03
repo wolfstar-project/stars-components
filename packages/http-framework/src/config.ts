@@ -26,7 +26,7 @@ export interface StarsBuildConfig {
 	tool?: StarsBuildTool | 'auto';
 	/**
 	 * The directory, relative to {@link StarsConfig.root}, the build writes into.
-	 * @default 'dist'
+	 * @default 'dist', or '.output' when `experimental.enableNitro` is on (Nitro's own convention)
 	 */
 	outDir?: string;
 	/**
@@ -35,6 +35,18 @@ export interface StarsBuildConfig {
 	 */
 	tsconfig?: string;
 }
+
+/**
+ * Raw options merged into the project's own `vite.config.*`, the way `vite: {}` in a Nuxt config is merged into
+ * Nuxt's own Vite config. Kept as `unknown` here (the CLI, not the framework, depends on `vite`'s types) and passed
+ * to Vite's `mergeConfig` as-is.
+ */
+export type StarsViteConfig = Record<string, unknown>;
+
+/**
+ * Raw options merged into the project's own `tsdown.config.*`.
+ */
+export type StarsTsdownConfig = Record<string, unknown>;
 
 /**
  * The type checker `stars dev` runs next to the bot.
@@ -206,33 +218,69 @@ export interface StarsImportsConfig {
 }
 
 /**
+ * The [Nitro preset](https://nitro.build/deploy) `stars build` targets, only reachable once
+ * {@link StarsExperimentalConfig.enableNitro} (itself gated on {@link StarsExperimentalConfig.enableVite}) is `true`
+ * — see {@link StarsExperimentalConfig}.
+ */
+export interface StarsNitroConfig {
+	/**
+	 * `'node-server'` (the default, runs locally with plain `node`), `'cloudflare-module'`, `'aws-lambda'`,
+	 * `'vercel'`, `'netlify'`, `'bun'`, `'deno-deploy'`, and more — see Nitro's own preset list.
+	 * @default 'node-server'
+	 */
+	preset?: string;
+}
+
+/**
  * Opt-in flags for work that is still landing, in the shape Nuxt's own `experimental` block has: every flag is a
  * boolean, defaults to `false`, and is documented with what it changes and what it still needs. A flag stays here
  * until the behaviour it guards is the default (or is dropped), so enabling one is a statement that breakage is
  * acceptable in exchange for the feature.
+ *
+ * `enableExternalVite`, `enableNitro` and `nitro` build on `enableVite` (and `nitro` on `enableNitro` too): the type
+ * only accepts them once their prerequisite is `true`, so turning one on without the other is a type error here
+ * instead of a `ConfigError` at load time.
  */
-export interface StarsExperimentalConfig {
-	/**
-	 * Uses Vite as the project's build tool and HTTP server, in place of `tsdown` plus the framework's own
-	 * `node:http` listener. `build.tool` may then be set to `'vite'` (and `'auto'` detects a `vite.config.*`), and
-	 * the bot is expected to export a Fetch handler rather than call `client.listen()`.
-	 * @default false
-	 */
-	enableVite?: boolean;
-	/**
-	 * Builds and serves the bot through [Nitro](https://nitro.build), so a project can deploy to any of Nitro's
-	 * presets. Requires the framework's Fetch adapter.
-	 * @default false
-	 */
-	enableNitro?: boolean;
-	/**
-	 * Leaves Vite to the project: `stars dev` neither starts nor watches a build of its own, it only watches the
-	 * build output and restarts the bot, which is what a project already running `vite dev` (or `vite build
-	 * --watch`) in another process wants. Requires {@link StarsExperimentalConfig.enableVite}.
-	 * @default false
-	 */
-	enableExternalVite?: boolean;
-}
+export type StarsExperimentalConfig =
+	| { enableVite?: false; enableExternalVite?: false; enableNitro?: false }
+	| {
+			/**
+			 * Uses Vite as the project's build tool, in place of `tsdown`. `build.tool` may then be set to `'vite'`
+			 * (and `'auto'` detects a `vite.config.*`); the bot keeps calling `client.listen()` and running as a
+			 * plain `node:http` process, restarted on every change — this only swaps the bundler.
+			 */
+			enableVite: true;
+			/**
+			 * Runs the bot through Vite itself, the way `nuxt dev` runs on Vite's own dev server: instead of
+			 * building then restarting a child `node` process on every change, `stars dev` loads the entry through
+			 * Vite's SSR module graph and serves it — through `@wolfstar/http-framework/fetch`'s
+			 * `createFetchHandler` — from one long-lived process, invalidating and re-evaluating just the entry's
+			 * module graph on a change instead of restarting.
+			 *
+			 * With this on, the entry's default export must be the `Client` instance (already `load()`ed, not
+			 * `listen()`ed) rather than a script that calls `client.listen()` itself — `stars dev` owns the socket.
+			 * @default false
+			 */
+			enableExternalVite?: boolean;
+			enableNitro?: false;
+	  }
+	| {
+			enableVite: true;
+			enableExternalVite?: boolean;
+			/**
+			 * Builds the bot through [Nitro](https://nitro.build) instead of a `node:http` server, so `stars build`
+			 * produces a server deployable to any of Nitro's presets (`node-server` locally, `cloudflare-module`,
+			 * `aws-lambda`, `vercel`, `netlify`, `bun`, `deno-deploy`, and more) from the same
+			 * `@wolfstar/http-framework/fetch` handler `enableExternalVite` already runs in dev — no per-platform
+			 * adapter to maintain.
+			 *
+			 * Output goes to `.output/` (Nitro's own convention) instead of `build.outDir`. The entry's default
+			 * export must be the `Client` instance, the same as `enableExternalVite`.
+			 */
+			enableNitro: true;
+			/** Nitro-specific options, reachable only with `enableNitro: true`. */
+			nitro?: StarsNitroConfig;
+	  };
 
 export interface StarsConfig {
 	/**
@@ -255,6 +303,15 @@ export interface StarsConfig {
 	imports?: StarsImportsConfig | boolean;
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
+	/**
+	 * Raw options merged into `vite.config.*`, the way `vite: {}` in a Nuxt config is merged into Nuxt's own Vite
+	 * config. Only used with `build.tool: 'vite'` (see `experimental.enableVite`).
+	 */
+	vite?: StarsViteConfig;
+	/**
+	 * Raw options merged into `tsdown.config.*`. Only used with `build.tool: 'tsdown'`.
+	 */
+	tsdown?: StarsTsdownConfig;
 }
 
 /**

@@ -47,6 +47,12 @@
 				"types": "./dist/esm/auto-imports.d.ts",
 				"default": "./dist/esm/auto-imports.js"
 			}
+		},
+		"./fetch": {
+			"import": {
+				"types": "./dist/esm/fetch.d.ts",
+				"default": "./dist/esm/fetch.js"
+			}
 		}
 	},
 	"publishConfig": {

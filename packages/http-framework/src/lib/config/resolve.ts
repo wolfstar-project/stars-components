@@ -54,10 +54,15 @@ export interface ResolvedDevConfig {
 	readonly logFile: string | null;
 }
 
+export interface ResolvedNitroConfig {
+	readonly preset: string;
+}
+
 export interface ResolvedExperimentalConfig {
 	readonly enableVite: boolean;
-	readonly enableNitro: boolean;
 	readonly enableExternalVite: boolean;
+	readonly enableNitro: boolean;
+	readonly nitro: ResolvedNitroConfig;
 }
 
 export interface ResolvedImportsConfig {
@@ -94,6 +99,10 @@ export interface ResolvedStarsConfig {
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
 	readonly experimental: ResolvedExperimentalConfig;
+	/** Raw options merged into `vite.config.*`. */
+	readonly vite: Readonly<Record<string, unknown>>;
+	/** Raw options merged into `tsdown.config.*`. */
+	readonly tsdown: Readonly<Record<string, unknown>>;
 }
 
 export interface ResolveConfigOptions {
@@ -143,7 +152,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const config = options.config;
 	const validator = new Validator(file);
 
-	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental']);
+	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental', 'vite', 'tsdown']);
 	const baseDirectory = file ? dirname(file) : cwd;
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
@@ -163,8 +172,10 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, config.imports, validator);
+	const vite = validator.plainObject(config.vite, 'vite') ?? {};
+	const tsdown = validator.plainObject(config.tsdown, 'tsdown') ?? {};
 
-	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental };
+	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental, vite, tsdown };
 }
 
 /**
@@ -245,7 +256,9 @@ function resolveBuild(
 		);
 	}
 
-	const outDir = resolve(root, validator.string(config.outDir, 'build.outDir') ?? 'dist');
+	// Nitro owns its own output layout; anything else keeps the plain `dist` convention.
+	const defaultOutDir = experimental.enableNitro ? '.output' : 'dist';
+	const outDir = resolve(root, validator.string(config.outDir, 'build.outDir') ?? defaultOutDir);
 
 	let tsconfig: string | null = null;
 	const configuredTsconfig = validator.string(config.tsconfig, 'build.tsconfig');
@@ -271,7 +284,13 @@ function resolveBuild(
 		}
 	}
 
-	const output = tool === 'none' ? entry : resolveBuildOutput(root, entry, outDir, packageJson);
+	// Nitro always writes its server entry to `<outDir>/server/index.mjs`, regardless of the project's own entry
+	// file name or `package.json#main` — it is Nitro's output, not a build of the project's own entry file.
+	const output = experimental.enableNitro
+		? join(outDir, 'server', 'index.mjs')
+		: tool === 'none'
+			? entry
+			: resolveBuildOutput(root, entry, outDir, packageJson);
 	return { tool, outDir, tsconfig, output };
 }
 
@@ -305,14 +324,15 @@ function resolveExperimental(config: StarsExperimentalConfig, validator: Validat
 			'`experimental` must be an object',
 			'experimental',
 			'INVALID_TYPE',
-			'Use `{ enableVite, enableNitro, enableExternalVite }`, each a boolean.'
+			'Use `{ enableVite, enableExternalVite, enableNitro, nitroPreset }`.'
 		);
 	}
 
-	validator.knownKeys(config, 'experimental', ['enableVite', 'enableNitro', 'enableExternalVite']);
+	validator.knownKeys(config, 'experimental', ['enableVite', 'enableExternalVite', 'enableNitro', 'nitroPreset']);
 	const enableVite = validator.boolean(config.enableVite, 'experimental.enableVite') ?? false;
-	const enableNitro = validator.boolean(config.enableNitro, 'experimental.enableNitro') ?? false;
 	const enableExternalVite = validator.boolean(config.enableExternalVite, 'experimental.enableExternalVite') ?? false;
+	const enableNitro = validator.boolean(config.enableNitro, 'experimental.enableNitro') ?? false;
+	const nitroPreset = validator.string(config.nitroPreset, 'experimental.nitroPreset') ?? 'node-server';
 
 	if (enableExternalVite && !enableVite) {
 		throw validator.error(
@@ -323,7 +343,16 @@ function resolveExperimental(config: StarsExperimentalConfig, validator: Validat
 		);
 	}
 
-	return { enableVite, enableNitro, enableExternalVite };
+	if (enableNitro && !enableVite) {
+		throw validator.error(
+			'`experimental.enableNitro` needs `experimental.enableVite`',
+			'experimental.enableNitro',
+			'EXPERIMENT_REQUIRED',
+			'Set `experimental.enableVite` to true as well, or drop `enableNitro`.'
+		);
+	}
+
+	return { enableVite, enableExternalVite, enableNitro, nitroPreset };
 }
 
 function resolveBuildOutput(root: string, entry: string, outDir: string, packageJson: PackageJsonLike | null): string {
@@ -668,6 +697,13 @@ class Validator {
 		if (value === undefined) return undefined;
 		if (typeof value !== 'boolean') throw this.typeError(path, 'a boolean', value);
 		return value;
+	}
+
+	/** A plain object passed through as-is (e.g. raw `vite`/`tsdown` config merged into the project's own). */
+	public plainObject(value: unknown, path: string): Record<string, unknown> | undefined {
+		if (value === undefined) return undefined;
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) throw this.typeError(path, 'an object', value);
+		return value as Record<string, unknown>;
 	}
 
 	public stringArray(value: unknown, path: string): string[] | undefined {

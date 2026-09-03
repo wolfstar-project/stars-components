@@ -114,8 +114,9 @@ describe('stars.config', () => {
 		fixture = await createFixture({ 'src/main.js': '', 'package.json': '{ "name": "bot" }' });
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).experimental).toEqual({
 			enableVite: false,
+			enableExternalVite: false,
 			enableNitro: false,
-			enableExternalVite: false
+			nitroPreset: 'node-server'
 		});
 	});
 
@@ -134,6 +135,28 @@ describe('stars.config', () => {
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 		expect(config.build.tool).toBe('vite');
 		expect(config.experimental.enableVite).toBe(true);
+	});
+
+	test('enableNitro outputs to .output/server/index.mjs and needs enableVite', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'stars.config.mjs': "export default { experimental: { enableVite: true, enableNitro: true, nitroPreset: 'cloudflare-module' } };"
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.build.outDir).toBe(join(fixture.root, '.output'));
+		expect(config.build.output).toBe(join(fixture.root, '.output', 'server', 'index.mjs'));
+		expect(config.experimental.nitroPreset).toBe('cloudflare-module');
+	});
+
+	test('passes `vite`/`tsdown` through as plain objects', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'stars.config.mjs': "export default { vite: { define: { FOO: '1' } }, tsdown: { minify: true } };"
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.vite).toEqual({ define: { FOO: '1' } });
+		expect(config.tsdown).toEqual({ minify: true });
 	});
 
 	test('disables auto imports with `imports: false`', async () => {
