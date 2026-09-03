@@ -1,6 +1,8 @@
 import { loadStarsConfig } from '@wolfstar/http-framework/config';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { createBuilder } from '../src/lib/builders/index.js';
-import { createFixture, type Fixture } from './helpers.js';
+import { createFixture, waitFor, type Fixture } from './helpers.js';
 
 describe('createBuilder', () => {
 	let fixture: Fixture;
