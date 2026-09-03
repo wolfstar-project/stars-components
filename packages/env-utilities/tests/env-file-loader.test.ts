@@ -92,10 +92,10 @@ describe('Env file Loader', () => {
 		loadEnvFiles({ ...envLoaderConfig, debug: true });
 
 		expect(consoleLogSpy).toHaveBeenCalledTimes(4);
-		expect(consoleLogSpy.mock.calls[0][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env.development.local`');
-		expect(consoleLogSpy.mock.calls[1][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env.local`');
-		expect(consoleLogSpy.mock.calls[2][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env.development`');
-		expect(consoleLogSpy.mock.calls[3][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env`');
+		expect(consoleLogSpy.mock.calls[0][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.development.local`');
+		expect(consoleLogSpy.mock.calls[1][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.local`');
+		expect(consoleLogSpy.mock.calls[2][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.development`');
+		expect(consoleLogSpy.mock.calls[3][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env`');
 	});
 
 	test('should exclude .env.local when NODE_ENV set to test', () => {

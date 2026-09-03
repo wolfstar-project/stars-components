@@ -34,7 +34,6 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 		'@sapphire/pieces',
 		'discord-api-types',
 		'@wolfstar/env-utilities',
-		'@wolfstar/logger',
 		'@wolfstar/start-banner',
 		'gradient-string'
 	]);

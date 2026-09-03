@@ -1,11 +1,8 @@
 import { container, type Piece, type Store } from '@sapphire/pieces';
 import { Result } from '@sapphire/result';
-import { Logger } from '@wolfstar/logger';
 import type { ChokidarOptions, FSWatcher } from 'chokidar';
 import { relative } from 'node:path';
 import { Events } from '../ClientEvents.js';
-
-const logger = new Logger();
 
 /**
  * Hot Module Reloading for every {@link Store} registered in {@link container.stores}.
@@ -87,7 +84,7 @@ export class HotModuleReloader {
 
 		this.#running = true;
 
-		if (!silent) logger.info(`[HMR]: Enabled, watching ${watchedPaths.length} path(s) for piece changes.`);
+		if (!silent) container.logger.info(`[HMR]: Enabled, watching ${watchedPaths.length} path(s) for piece changes.`);
 		container.client?.emit(Events.HmrStart, watchedPaths);
 
 		return this;
@@ -108,7 +105,7 @@ export class HotModuleReloader {
 
 		await Promise.all(watchers.map((watcher) => watcher.close()));
 
-		if (!this.options.silent) logger.info('[HMR]: Disabled, no longer watching for piece changes.');
+		if (!this.options.silent) container.logger.info('[HMR]: Disabled, no longer watching for piece changes.');
 		container.client?.emit(Events.HmrStop);
 	}
 
@@ -128,7 +125,7 @@ export class HotModuleReloader {
 			if (piece) {
 				await piece.reload();
 
-				if (!this.options.silent) logger.info(`[HMR]: Reloaded '${piece.name}' from the '${store.name}' store.`);
+				if (!this.options.silent) container.logger.info(`[HMR]: Reloaded '${piece.name}' from the '${store.name}' store.`);
 				container.client?.emit(Events.HmrPieceReloaded, piece, path);
 				return;
 			}
@@ -140,7 +137,7 @@ export class HotModuleReloader {
 
 			if (!this.options.silent) {
 				const names = pieces.map((entry) => `'${entry.name}'`).join(', ');
-				logger.info(`[HMR]: Loaded ${pieces.length} piece(s) into the '${store.name}' store: ${names}.`);
+				container.logger.info(`[HMR]: Loaded ${pieces.length} piece(s) into the '${store.name}' store: ${names}.`);
 			}
 
 			container.client?.emit(Events.HmrPiecesLoaded, pieces, path);
@@ -165,7 +162,7 @@ export class HotModuleReloader {
 		const result = await Result.fromAsync(async () => {
 			await piece.unload();
 
-			if (!this.options.silent) logger.info(`[HMR]: Unloaded '${piece.name}' from the '${store.name}' store.`);
+			if (!this.options.silent) container.logger.info(`[HMR]: Unloaded '${piece.name}' from the '${store.name}' store.`);
 			container.client?.emit(Events.HmrPieceUnloaded, piece, path);
 		});
 
@@ -182,7 +179,7 @@ export class HotModuleReloader {
 	 * @param path - The full path of the file that was being processed.
 	 */
 	protected handleError(error: unknown, path: string): void {
-		if (!this.options.silent) logger.error(`[HMR]: Failed to process '${path}'.`, error);
+		if (!this.options.silent) container.logger.error(`[HMR]: Failed to process '${path}'.`, error);
 		container.client?.emit(Events.HmrError, error, path);
 	}
 }
