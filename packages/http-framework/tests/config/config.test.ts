@@ -116,7 +116,7 @@ describe('stars.config', () => {
 			enableVite: false,
 			enableExternalVite: false,
 			enableNitro: false,
-			nitroPreset: 'node-server'
+			nitro: { preset: 'node-server' }
 		});
 	});
 
@@ -141,12 +141,12 @@ describe('stars.config', () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
 			'tsconfig.json': '{}',
-			'stars.config.mjs': "export default { experimental: { enableVite: true, enableNitro: true, nitroPreset: 'cloudflare-module' } };"
+			'stars.config.mjs': "export default { experimental: { enableVite: true, enableNitro: true, nitro: { preset: 'cloudflare-module' } } };"
 		});
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 		expect(config.build.outDir).toBe(join(fixture.root, '.output'));
 		expect(config.build.output).toBe(join(fixture.root, '.output', 'server', 'index.mjs'));
-		expect(config.experimental.nitroPreset).toBe('cloudflare-module');
+		expect(config.experimental.nitro.preset).toBe('cloudflare-module');
 	});
 
 	test('passes `vite`/`tsdown` through as plain objects', async () => {
@@ -319,9 +319,14 @@ describe('stars.config', () => {
 			expect((await expectConfigError("export default { experimental: { enableVite: 'yes' } };")).code).toBe('INVALID_TYPE');
 		});
 
-		test('rejects `enableExternalVite` without `enableVite`', async () => {
-			const error = await expectConfigError('export default { experimental: { enableExternalVite: true } };');
-			expect(error).toMatchObject({ code: 'EXPERIMENT_REQUIRED', path: 'experimental.enableExternalVite' });
+		test('rejects `enableExternalVite`/`enableNitro`/`nitro` without their prerequisite', async () => {
+			expect((await expectConfigError('export default { experimental: { enableExternalVite: true } };')).path).toBe(
+				'experimental.enableExternalVite'
+			);
+			expect((await expectConfigError('export default { experimental: { enableNitro: true } };')).path).toBe('experimental.enableNitro');
+			expect((await expectConfigError("export default { experimental: { enableVite: true, nitro: { preset: 'bun' } } };")).path).toBe(
+				'experimental.nitro'
+			);
 		});
 
 		test('rejects an unknown type checker', async () => {

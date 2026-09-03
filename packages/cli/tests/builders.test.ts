@@ -50,7 +50,7 @@ describe('createBuilder', () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
 			'tsconfig.json': '{}',
-			'stars.config.mjs': 'export default { experimental: { enableNitro: true } };'
+			'stars.config.mjs': 'export default { experimental: { enableVite: true, enableNitro: true } };'
 		});
 
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
