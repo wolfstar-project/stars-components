@@ -67,6 +67,7 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
+		"@wolfstar/logger": "workspace:^",
 		"dotenv": "^17.4.2",
 		"dotenv-expand": "^13.0.0"
 	},

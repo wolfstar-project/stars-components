@@ -326,7 +326,7 @@ describe('CommandRouter', () => {
 		const warn = vi.spyOn(console, 'warn');
 		const command = makeCommand(UserCommand);
 		expect(warn).toHaveBeenCalledTimes(1);
-		expect(warn).toHaveBeenCalledWith(`CommandRouter: No entry found for command '${command.name}'`);
+		expect(warn.mock.calls[0][0]).toContain(`CommandRouter: No entry found for command '${command.name}'`);
 		expect(command.registry).toBeNull();
 		expect(command.router.chatInputName).toBeNull();
 		expect(command.router.contextMenuNames).toEqual([]);

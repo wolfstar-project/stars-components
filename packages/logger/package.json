@@ -1,7 +1,7 @@
 {
 	"name": "@wolfstar/logger",
 	"version": "2.1.6",
-	"description": "A lightweight logger system with level support",
+	"description": "DEPRECATED: use @wolfstar/plugin-logger instead. A lightweight logger system with level support",
 	"keywords": [
 		"api",
 		"discord",

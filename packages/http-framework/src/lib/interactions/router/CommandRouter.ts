@@ -1,6 +1,7 @@
 import { Collection } from '@discordjs/collection';
 import { container } from '@sapphire/pieces';
 import { isFunction } from '@sapphire/utilities';
+import { Logger } from '@wolfstar/logger';
 import {
 	ApplicationCommandOptionType,
 	ApplicationCommandType,
@@ -13,6 +14,8 @@ import type { ContextMenuCommandResolver } from '../resolvers/ContextMenuCommand
 import { getLinkedMethod } from '../shared/link.js';
 import { CommandRouterSubcommand } from './CommandRouterSubcommand.js';
 import { CommandRouterSubcommandGroup } from './CommandRouterSubcommandGroup.js';
+
+const logger = new Logger();
 
 /**
  * Represents a command router that handles routing of interactions for a specific command.
@@ -32,7 +35,7 @@ export class CommandRouter<Options extends Command.Options = Command.Options> {
 
 		const entry = container.applicationCommandRegistry.get(command.constructor as typeof Command<Options>);
 		if (entry === null) {
-			console.warn(`CommandRouter: No entry found for command '${command.name}'`);
+			logger.warn(`CommandRouter: No entry found for command '${command.name}'`);
 		} else {
 			this.#populateChatInputRouter(entry.chatInput);
 			this.#populateContextMenuRouter(entry.contextMenu);

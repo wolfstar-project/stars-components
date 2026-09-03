@@ -412,6 +412,9 @@ importers:
 
   packages/env-utilities:
     dependencies:
+      '@wolfstar/logger':
+        specifier: workspace:^
+        version: link:../logger
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -464,6 +467,9 @@ importers:
       '@vladfrangu/async_event_emitter':
         specifier: ^2.4.7
         version: 2.4.7
+      '@wolfstar/logger':
+        specifier: workspace:^
+        version: link:../logger
       chokidar:
         specifier: ^4.0.3
         version: 4.0.3
