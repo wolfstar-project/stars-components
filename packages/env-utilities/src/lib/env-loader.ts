@@ -1,3 +1,4 @@
+import { Logger } from '@wolfstar/logger';
 import { config, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
 import { basename, resolve } from 'node:path';
@@ -35,9 +36,11 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 
 const packageVersion: string = '[VI]{{inject}}[/VI]';
 
+const logger = new Logger({ level: Logger.Level.Debug });
+
 export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	const log = options?.debug
-		? (message: string) => console.debug(`[@wolfstar/env-utilities@${packageVersion}][DEBUG] ${message}`)
+		? (message: string) => logger.debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`)
 		: (_: string) => undefined;
 
 	/**
