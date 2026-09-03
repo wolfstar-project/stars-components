@@ -110,6 +110,32 @@ describe('stars.config', () => {
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.typecheck.checker).toBe('tsz');
 	});
 
+	test('defaults every experimental flag to false', async () => {
+		fixture = await createFixture({ 'src/main.js': '', 'package.json': '{ "name": "bot" }' });
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).experimental).toEqual({
+			enableVite: false,
+			enableNitro: false,
+			enableExternalVite: false
+		});
+	});
+
+	test('detects vite as the build tool only once `experimental.enableVite` is on', async () => {
+		fixture = await createFixture({ 'src/main.ts': '', 'tsconfig.json': '{}', 'vite.config.ts': 'export default {};' });
+		// Without the flag a vite.config.* belongs to something else in the project and must not take the build over.
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).build.tool).toBe('tsc');
+		await fixture.cleanup();
+
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'vite.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { experimental: { enableVite: true } };'
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.build.tool).toBe('vite');
+		expect(config.experimental.enableVite).toBe(true);
+	});
+
 	test('disables auto imports with `imports: false`', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
@@ -259,6 +285,20 @@ describe('stars.config', () => {
 		test('rejects a tunnel URL that is not https', async () => {
 			expect((await expectConfigError("export default { dev: { tunnel: 'http://bot.example.com' } };")).code).toBe('INVALID_URL');
 			expect((await expectConfigError("export default { dev: { tunnel: 'nope' } };")).code).toBe('INVALID_URL');
+		});
+
+		test('rejects `build.tool: vite` without the experiment, and unknown experiments', async () => {
+			const error = await expectConfigError("export default { build: { tool: 'vite' } };");
+			expect(error).toMatchObject({ code: 'EXPERIMENT_REQUIRED', path: 'build.tool' });
+			expect(error.hint).toContain('experimental.enableVite');
+
+			expect((await expectConfigError('export default { experimental: { enableTurbo: true } };')).code).toBe('UNKNOWN_OPTION');
+			expect((await expectConfigError("export default { experimental: { enableVite: 'yes' } };")).code).toBe('INVALID_TYPE');
+		});
+
+		test('rejects `enableExternalVite` without `enableVite`', async () => {
+			const error = await expectConfigError('export default { experimental: { enableExternalVite: true } };');
+			expect(error).toMatchObject({ code: 'EXPERIMENT_REQUIRED', path: 'experimental.enableExternalVite' });
 		});
 
 		test('rejects an unknown type checker', async () => {

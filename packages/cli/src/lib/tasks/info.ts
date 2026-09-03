@@ -29,6 +29,7 @@ export interface ProjectInfo {
 	dev: ResolvedStarsConfig['dev'];
 	codegen: ResolvedStarsConfig['codegen'];
 	imports: ResolvedStarsConfig['imports'];
+	experimental: ResolvedStarsConfig['experimental'];
 }
 
 export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
@@ -51,7 +52,8 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		build: config.build,
 		dev: config.dev,
 		codegen: config.codegen,
-		imports: config.imports
+		imports: config.imports,
+		experimental: config.experimental
 	};
 }
 
@@ -111,6 +113,11 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Codegen', [
 			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled'))
 		]),
+		section('Experimental', [
+			row('vite', flag(info.experimental.enableVite, colors)),
+			row('nitro', flag(info.experimental.enableNitro, colors)),
+			row('external', flag(info.experimental.enableExternalVite, colors))
+		]),
 		section('Imports', [
 			row('auto', info.imports.enabled ? colors.green('enabled') : colors.dim('disabled')),
 			row('dirs', info.imports.dirs.map(show).join(', ')),
@@ -118,6 +125,10 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('dts', show(info.imports.dts))
 		])
 	].join('\n\n');
+}
+
+function flag(enabled: boolean, colors: ReturnType<typeof createColors>): string {
+	return enabled ? colors.green('enabled') : colors.dim('disabled');
 }
 
 function describeTunnel(tunnel: ResolvedStarsConfig['dev']['tunnel'], colors: ReturnType<typeof createColors>): string {

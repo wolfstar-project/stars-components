@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
-import type { StarsBuildTool, StarsConfig, StarsDevConfig, StarsTypechecker } from '../../config.js';
+import type { StarsBuildTool, StarsConfig, StarsDevConfig, StarsExperimentalConfig, StarsTypechecker } from '../../config.js';
 import { ConfigError } from './errors.js';
 
 export interface PackageJsonLike {
@@ -54,6 +54,12 @@ export interface ResolvedDevConfig {
 	readonly logFile: string | null;
 }
 
+export interface ResolvedExperimentalConfig {
+	readonly enableVite: boolean;
+	readonly enableNitro: boolean;
+	readonly enableExternalVite: boolean;
+}
+
 export interface ResolvedImportsConfig {
 	readonly enabled: boolean;
 	/** Directory glob patterns, relative to the project root (the way `unimport` scans them). */
@@ -87,6 +93,7 @@ export interface ResolvedStarsConfig {
 	readonly dev: ResolvedDevConfig;
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
+	readonly experimental: ResolvedExperimentalConfig;
 }
 
 export interface ResolveConfigOptions {
@@ -110,8 +117,9 @@ export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
 export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
 export const DEFAULT_TUNNEL_PATH = '/';
 
-const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'auto']);
+const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'vite', 'auto']);
 const TYPECHECKERS = new Set<string>(['tsc', 'golar', 'tsz', 'auto']);
+const VITE_CONFIG_FILES = ['vite.config.ts', 'vite.config.mts', 'vite.config.cts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs'];
 const TSDOWN_CONFIG_FILES = [
 	'tsdown.config.ts',
 	'tsdown.config.mts',
@@ -135,7 +143,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const config = options.config;
 	const validator = new Validator(file);
 
-	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports']);
+	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental']);
 	const baseDirectory = file ? dirname(file) : cwd;
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
@@ -149,13 +157,14 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	}
 
 	const packageJson = readPackageJson(root);
+	const experimental = resolveExperimental(config.experimental ?? {}, validator);
 	const entry = resolveEntry(root, validator.string(config.entry, 'entry'), validator);
-	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, validator);
+	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, validator);
 	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, config.imports, validator);
 
-	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports };
+	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental };
 }
 
 /**
@@ -199,6 +208,7 @@ function resolveBuild(
 	entry: string,
 	packageJson: PackageJsonLike | null,
 	config: NonNullable<StarsConfig['build']>,
+	experimental: ResolvedExperimentalConfig,
 	validator: Validator
 ): ResolvedBuildConfig {
 	validator.knownKeys(config, 'build', ['tool', 'outDir', 'tsconfig']);
@@ -209,12 +219,22 @@ function resolveBuild(
 			`Unknown build tool "${requested}"`,
 			'build.tool',
 			'INVALID_BUILD_TOOL',
-			"Use one of 'tsdown', 'tsc', 'none' or 'auto'."
+			"Use one of 'tsdown', 'tsc', 'vite', 'none' or 'auto'."
+		);
+	}
+
+	if (requested === 'vite' && !experimental.enableVite) {
+		throw validator.error(
+			"The 'vite' build tool is experimental",
+			'build.tool',
+			'EXPERIMENT_REQUIRED',
+			'Set `experimental.enableVite` to true to use it.'
 		);
 	}
 
 	const isTypeScriptEntry = TYPESCRIPT_EXTENSIONS.has(extname(entry));
-	const tool: StarsBuildTool = requested === 'auto' ? detectBuildTool(root, packageJson, isTypeScriptEntry) : (requested as StarsBuildTool);
+	const tool: StarsBuildTool =
+		requested === 'auto' ? detectBuildTool(root, packageJson, isTypeScriptEntry, experimental) : (requested as StarsBuildTool);
 
 	if (tool === 'none' && isTypeScriptEntry) {
 		throw validator.error(
@@ -255,11 +275,55 @@ function resolveBuild(
 	return { tool, outDir, tsconfig, output };
 }
 
-function detectBuildTool(root: string, packageJson: PackageJsonLike | null, isTypeScriptEntry: boolean): StarsBuildTool {
+function detectBuildTool(
+	root: string,
+	packageJson: PackageJsonLike | null,
+	isTypeScriptEntry: boolean,
+	experimental: ResolvedExperimentalConfig
+): StarsBuildTool {
+	// Vite only wins the detection once the project opted into it; without the flag a `vite.config.*` is somebody
+	// else's (a dashboard, a docs site) and must not take the bot's build over.
+	if (experimental.enableVite) {
+		const hasVite = VITE_CONFIG_FILES.some((name) => isFile(join(root, name))) || hasDependency(packageJson, 'vite');
+		if (hasVite) return 'vite';
+	}
+
 	const hasTsdown = TSDOWN_CONFIG_FILES.some((name) => isFile(join(root, name))) || hasDependency(packageJson, 'tsdown');
 	if (hasTsdown) return 'tsdown';
 	if (isTypeScriptEntry) return 'tsc';
 	return 'none';
+}
+
+/**
+ * Resolves the `experimental` block. Every flag is a boolean defaulting to `false`, the way Nuxt's own experimental
+ * flags are declared, and the ones that build on each other are checked here rather than surfacing later as a
+ * confusing runtime failure.
+ */
+function resolveExperimental(config: StarsExperimentalConfig, validator: Validator): ResolvedExperimentalConfig {
+	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+		throw validator.error(
+			'`experimental` must be an object',
+			'experimental',
+			'INVALID_TYPE',
+			'Use `{ enableVite, enableNitro, enableExternalVite }`, each a boolean.'
+		);
+	}
+
+	validator.knownKeys(config, 'experimental', ['enableVite', 'enableNitro', 'enableExternalVite']);
+	const enableVite = validator.boolean(config.enableVite, 'experimental.enableVite') ?? false;
+	const enableNitro = validator.boolean(config.enableNitro, 'experimental.enableNitro') ?? false;
+	const enableExternalVite = validator.boolean(config.enableExternalVite, 'experimental.enableExternalVite') ?? false;
+
+	if (enableExternalVite && !enableVite) {
+		throw validator.error(
+			'`experimental.enableExternalVite` needs `experimental.enableVite`',
+			'experimental.enableExternalVite',
+			'EXPERIMENT_REQUIRED',
+			'Set `experimental.enableVite` to true as well, or drop `enableExternalVite`.'
+		);
+	}
+
+	return { enableVite, enableNitro, enableExternalVite };
 }
 
 function resolveBuildOutput(root: string, entry: string, outDir: string, packageJson: PackageJsonLike | null): string {

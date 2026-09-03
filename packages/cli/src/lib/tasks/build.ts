@@ -1,7 +1,7 @@
 import { createColors } from 'colorette';
 import type { ProjectArgs } from '../args.js';
 import { resolveCwd } from '../args.js';
-import { createBuilder } from '../builders/index.js';
+import { assertSupportedExperiments, createBuilder } from '../builders/index.js';
 import { loadStarsConfig } from '@wolfstar/http-framework/config';
 import { displayPath } from '@wolfstar/http-framework/config';
 import { CliError, ExitCode } from '../errors.js';
@@ -16,6 +16,7 @@ export async function runBuild(options: BuildTaskOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: shouldUseColor() });
 	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
+	assertSupportedExperiments(config);
 	await prepareAutoImports(config);
 
 	if (config.build.tool === 'none') {

@@ -126,6 +126,19 @@ Three `dev` options round out the dev loop (all documented in
 - `dev.logFile` (default `.stars/dev.log`) mirrors the session's logs to disk, so a run can be read back after the
   terminal UI is gone. Set it to `false` to disable it.
 
+### Experimental flags
+
+`experimental` in `stars.config.*` turns on work that is still landing (see the
+[framework README](../http-framework#experimental-flags) for the full reference):
+
+| Flag                 | What it changes                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `enableVite`         | Builds through the project's own `vite` (and allows `build.tool: 'vite'`) instead of `tsdown`          |
+| `enableExternalVite` | The project runs Vite itself; `stars dev` only watches the build output and restarts the bot           |
+| `enableNitro`        | Declared, not implemented: `stars dev`/`stars build` fail with `EXPERIMENT_UNAVAILABLE` until it lands |
+
+`stars info` prints which flags are on.
+
 ### Exit codes
 
 | Code  | Meaning                                              |

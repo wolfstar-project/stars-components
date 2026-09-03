@@ -1,7 +1,7 @@
 import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
 import type { ProjectArgs } from '../args.js';
 import { resolveCwd } from '../args.js';
-import { createBuilder } from '../builders/index.js';
+import { assertSupportedExperiments, createBuilder } from '../builders/index.js';
 import { DevService } from '../dev-service.js';
 import { ExitCode } from '../errors.js';
 import { withResolvedLocalhost } from '../host.js';
@@ -15,6 +15,7 @@ export interface DevTaskOptions extends ProjectArgs {
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
 	const config = await resolveDevConfig(await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config }));
+	assertSupportedExperiments(config);
 	await prepareAutoImports(config);
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();

@@ -38,6 +38,7 @@ export type {
 	ResolvedBuildConfig,
 	ResolvedCodegenConfig,
 	ResolvedDevConfig,
+	ResolvedExperimentalConfig,
 	ResolvedI18nCodegenConfig,
 	ResolvedImportsConfig,
 	ResolvedStarsConfig,

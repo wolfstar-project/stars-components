@@ -472,6 +472,28 @@ export default defineConfig({
 `tunnel.updateEndpoint` writes the public URL to the Discord application's `interactions_endpoint_url`; it is opt-in
 because it edits a live application, and needs `DISCORD_TOKEN` in the environment or the project's `.env`.
 
+### Experimental flags
+
+`experimental` is the same kind of block Nuxt's own `experimental` is: opt-in booleans, all `false` by default, each
+guarding work that is still landing.
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	// `build.tool: 'vite'` is only accepted with `enableVite`, and `'auto'` only then detects a vite.config.*
+	build: { tool: 'vite' },
+	experimental: {
+		// Vite as the build tool and the HTTP server, in place of tsdown plus the framework's node:http listener.
+		enableVite: true,
+		// The project runs Vite itself: `stars dev` only watches the output and restarts the bot.
+		enableExternalVite: false,
+		// Build and serve through Nitro. Needs the framework's Fetch adapter, so `stars dev`/`stars build` still
+		// refuse it with an actionable error for now.
+		enableNitro: false
+	}
+});
+```
+
 The resolved configuration is also available programmatically:
 
 ```typescript

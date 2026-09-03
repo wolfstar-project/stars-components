@@ -12,10 +12,11 @@
  *
  * - `tsdown`: run the project's own `tsdown` (configuration file included) programmatically.
  * - `tsc`: run the project's `tsc -b` on the configured `tsconfig`.
+ * - `vite`: run the project's own `vite` (configuration file included), requires `experimental.enableVite`.
  * - `none`: the entry is runnable as-is (JavaScript projects), no build step.
  * - `auto`: detect from the project (default).
  */
-export type StarsBuildTool = 'tsdown' | 'tsc' | 'none';
+export type StarsBuildTool = 'tsdown' | 'tsc' | 'none' | 'vite';
 
 export interface StarsBuildConfig {
 	/**
@@ -204,6 +205,35 @@ export interface StarsImportsConfig {
 	dts?: string;
 }
 
+/**
+ * Opt-in flags for work that is still landing, in the shape Nuxt's own `experimental` block has: every flag is a
+ * boolean, defaults to `false`, and is documented with what it changes and what it still needs. A flag stays here
+ * until the behaviour it guards is the default (or is dropped), so enabling one is a statement that breakage is
+ * acceptable in exchange for the feature.
+ */
+export interface StarsExperimentalConfig {
+	/**
+	 * Uses Vite as the project's build tool and HTTP server, in place of `tsdown` plus the framework's own
+	 * `node:http` listener. `build.tool` may then be set to `'vite'` (and `'auto'` detects a `vite.config.*`), and
+	 * the bot is expected to export a Fetch handler rather than call `client.listen()`.
+	 * @default false
+	 */
+	enableVite?: boolean;
+	/**
+	 * Builds and serves the bot through [Nitro](https://nitro.build), so a project can deploy to any of Nitro's
+	 * presets. Requires the framework's Fetch adapter.
+	 * @default false
+	 */
+	enableNitro?: boolean;
+	/**
+	 * Leaves Vite to the project: `stars dev` neither starts nor watches a build of its own, it only watches the
+	 * build output and restarts the bot, which is what a project already running `vite dev` (or `vite build
+	 * --watch`) in another process wants. Requires {@link StarsExperimentalConfig.enableVite}.
+	 * @default false
+	 */
+	enableExternalVite?: boolean;
+}
+
 export interface StarsConfig {
 	/**
 	 * The project root. Relative paths are resolved from the configuration file.
@@ -223,6 +253,8 @@ export interface StarsConfig {
 	 * `false` disables them, `true` forces them on (requires the `tsdown` build tool).
 	 */
 	imports?: StarsImportsConfig | boolean;
+	/** Opt-in flags for behaviour that is still landing. */
+	experimental?: StarsExperimentalConfig;
 }
 
 /**
