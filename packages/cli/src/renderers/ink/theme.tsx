@@ -11,7 +11,7 @@ export function ColorProvider({ color, children }: { color: boolean; children: R
 }
 
 /**
- * Returns a colour name only when colour is enabled, so `<Text color={useColor('green')}>` degrades to plain text.
+ * Returns a colour name only when colour is enabled, so `<Text color={useColor()('green')}>` degrades to plain text.
  */
 export function useColor(): (name: string) => string | undefined {
 	const enabled = useContext(ColorContext);
