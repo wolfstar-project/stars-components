@@ -30,9 +30,29 @@
 	"module": "dist/esm/index.js",
 	"types": "dist/esm/index.d.ts",
 	"exports": {
-		"import": {
-			"types": "./dist/esm/index.d.ts",
-			"default": "./dist/esm/index.js"
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./config": {
+			"import": {
+				"types": "./dist/esm/config.d.ts",
+				"default": "./dist/esm/config.js"
+			}
+		},
+		"./auto-imports": {
+			"import": {
+				"types": "./dist/esm/auto-imports.d.ts",
+				"default": "./dist/esm/auto-imports.js"
+			}
+		},
+		"./fetch": {
+			"import": {
+				"types": "./dist/esm/fetch.d.ts",
+				"default": "./dist/esm/fetch.js"
+			}
 		}
 	},
 	"publishConfig": {
@@ -56,8 +76,11 @@
 		"@sapphire/result": "^2.8.0",
 		"@sapphire/utilities": "^3.18.2",
 		"@vladfrangu/async_event_emitter": "^2.4.7",
+		"c12": "^3.3.4",
 		"chokidar": "^4.0.3",
-		"discord-api-types": "^0.38.8"
+		"discord-api-types": "^0.38.8",
+		"mlly": "^1.8.2",
+		"unimport": "^6.4.0"
 	},
 	"devDependencies": {
 		"@vitest/coverage-v8": "^4.1.11",

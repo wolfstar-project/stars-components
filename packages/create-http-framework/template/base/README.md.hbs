@@ -13,9 +13,12 @@ A Discord bot built with [`@wolfstar/http-framework`](https://www.npmjs.com/pack
 
 ## Scripts
 
-- `npm run dev` — run the bot in watch mode.
+The `dev` and `build` scripts are powered by the [`stars`](https://www.npmjs.com/package/@wolfstar/cli) CLI and read the `stars.config` file at the project root.
+
+- `npm run dev` — build, run and restart the bot on changes, with an interactive terminal UI (`npm run dev -- --no-tui` for plain logs).
 - `npm run build` — compile the project (TypeScript projects only).
 - `npm start` — run the bot.
+- `npx stars info` — print the resolved configuration.
 {{#if testing}}
 - `npm test` — run the test suite with vitest.
 {{/if}}

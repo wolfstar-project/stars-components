@@ -11,5 +11,12 @@
 		"typescript/no-redundant-type-constituents": "off",
 		"typescript/no-misused-spread": "off"
 	},
-	"ignorePatterns": ["**/dist/**", "**/.turbo/**", "**/coverage/**", "**/node_modules/**", "packages/create-http-framework/template/**"]
+	"ignorePatterns": [
+		"**/dist/**",
+		"**/.turbo/**",
+		"**/coverage/**",
+		"**/node_modules/**",
+		"packages/create-http-framework/template/**",
+		"**/.stars/**"
+	]
 }

@@ -97,7 +97,17 @@ describe('fetchDependencyVersions', () => {
 		const names = requestedPackageNames(fetchMock);
 
 		expect(names).not.toContain('typescript');
-		expect(names).toContain('tsc-watch');
+		expect(names).not.toContain('tsc-watch');
 		expect(versions['typescript']).toBe('7.0.1-rc');
+	});
+
+	test.each([
+		makeSelections({ language: 'js' }),
+		makeSelections({ language: 'ts', buildTool: 'tsdown' }),
+		makeSelections({ language: 'ts', buildTool: 'tsc6' })
+	])('GIVEN any project kind THEN requests @wolfstar/cli for the dev/build scripts', async (selections) => {
+		await fetchDependencyVersions(selections);
+
+		expect(requestedPackageNames(fetchMock)).toContain('@wolfstar/cli');
 	});
 });

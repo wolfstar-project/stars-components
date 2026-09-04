@@ -460,6 +460,87 @@ client.on(Events.HmrPieceReloaded, async (piece) => {
 > registered exactly once. HMR does not push the updated commands to Discord on its own, subscribe to the events above
 > if you want that behaviour.
 
+### Project configuration (`stars.config.*`)
+
+`@wolfstar/http-framework` owns the typed project configuration consumed by the [`stars` CLI](../cli) — the
+`defineConfig` helper and the config loader live here, not in the CLI, so any tool can resolve a project's
+configuration without pulling in `@wolfstar/cli`.
+
+```typescript
+// stars.config.ts
+import { defineConfig } from '@wolfstar/http-framework/config';
+
+export default defineConfig({
+	entry: 'src/main.ts',
+	build: { tool: 'tsdown' }
+});
+```
+
+`@wolfstar/http-framework/config` has no side effects — importing it (or a `stars.config.ts` that imports it) never
+starts the bot. `loadStarsConfig` discovers `stars.config.{ts,mts,cts,js,mjs,cjs}` from a directory, applies defaults,
+validates every option and resolves all paths to absolute ones.
+
+`dev.url`, the URL `stars dev` shows and health-checks the bot on, needs no configuration either: it is detected the
+way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `.env.local`/`.env`, or `dev.env`) or `3000`, and
+`localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` explicitly only
+to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }`.
+
+`dev` also carries the three options that round out the dev loop:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	build: { tool: 'tsdown' },
+	dev: {
+		// A type checker next to the bot, reported on the dev UI's `tsc` channel. Never blocks a build.
+		// `checker` is 'tsc' | 'golar' | 'tsz' | 'auto' (default: golar when installed, tsc otherwise).
+		typecheck: { checker: 'golar' },
+		// A cloudflared quick tunnel so Discord can reach the interactions endpoint, or an https URL you serve.
+		tunnel: true,
+		// Where the session's logs are mirrored, so a run can be read after the terminal UI is gone.
+		logFile: '.stars/dev.log'
+	}
+});
+```
+
+`tunnel.updateEndpoint` writes the public URL to the Discord application's `interactions_endpoint_url`; it is opt-in
+because it edits a live application, and needs `DISCORD_TOKEN` in the environment or the project's `.env`.
+
+### Experimental flags
+
+`experimental` is the same kind of block Nuxt's own `experimental` is: opt-in booleans, all `false` by default, each
+guarding work that is still landing.
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	// `build.tool: 'vite'` is only accepted with `enableVite`, and `'auto'` only then detects a vite.config.*
+	build: { tool: 'vite' },
+	experimental: {
+		// Vite as the build tool and the HTTP server, in place of tsdown plus the framework's node:http listener.
+		enableVite: true,
+		// The project runs Vite itself: `stars dev` only watches the output and restarts the bot.
+		enableExternalVite: false,
+		// Build and serve through Nitro. Needs the framework's Fetch adapter, so `stars dev`/`stars build` still
+		// refuse it with an actionable error for now.
+		enableNitro: false
+	}
+});
+```
+
+The resolved configuration is also available programmatically:
+
+```typescript
+import { loadStarsConfig } from '@wolfstar/http-framework/config';
+
+const config = await loadStarsConfig({ cwd: process.cwd() });
+console.log(config.entry, config.build.output);
+```
+
+Invalid options raise a `ConfigError` with a stable `code`, the offending option `path`, the `file` it came from, and
+an actionable `hint`. See the [`@wolfstar/cli` README](../cli#configuration) for the full option reference and how the
+`stars` commands (`dev`, `build`, `info`, `codegen`, `prepare`, `commands`) use it.
+
 ### ApplicationCommandRegistry
 
 The `ApplicationCommandRegistry` is `@wolfstar/http-framework`'s centralized registry and uses [`@discordjs/rest`] to register them in Discord.
