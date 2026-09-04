@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.3.0
+
+### Minor Changes
+
+- [#158](https://github.com/wolfstar-project/stars-components/pull/158) [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c) - feat: scaffold projects on top of the `stars` CLI
+
+    Generated projects now depend on `@wolfstar/cli`, ship a `stars.config.ts` (or `stars.config.js`) file that imports
+    `defineConfig` from `@wolfstar/http-framework/config`, and use `stars dev` / `stars build` as their `dev` and `build`
+    scripts for every language and build tool, replacing the per-tool `watch`, `watch:start` and `tsc-watch` wiring. The
+    `generate:i18n` script now runs `stars codegen`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#159](https://github.com/wolfstar-project/stars-components/pull/159) [`214a6aa`](https://github.com/wolfstar-project/stars-components/commit/214a6aa40aa1925baa149924612c499d9bffba50) - Drop the generated `src/lib/setup/logger` module and the `@wolfstar/logger` dependency from scaffolded projects: `container.logger` is now provided by `@wolfstar/http-framework` out of the box. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.2.0
 
 ### Minor Changes

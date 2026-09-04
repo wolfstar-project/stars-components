@@ -1,6 +1,6 @@
 {
 	"name": "with-testing",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"private": true,
 	"description": "Test a WolfStar HTTP command with http-framework-test-utils",
 	"type": "module",
