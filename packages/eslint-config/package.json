@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/eslint-config",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Shareable ESLint flat configuration for Star Network projects",
 	"keywords": [
 		"config",

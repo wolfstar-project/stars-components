@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/oxlint-config",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Shareable oxlint base configuration for Star Network packages",
 	"keywords": [
 		"config",
