@@ -506,6 +506,110 @@ export default defineConfig({
 `tunnel.updateEndpoint` writes the public URL to the Discord application's `interactions_endpoint_url`; it is opt-in
 because it edits a live application, and needs `DISCORD_TOKEN` in the environment or the project's `.env`.
 
+### The build (`tsdown`)
+
+`tsdown` is the bundler `stars build` and `stars dev` use, and it is configured from `stars.config` itself. A base
+project configures nothing at all — this is a complete build:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: { compatibilityVersion: 4 }
+});
+```
+
+The defaults are the configuration a bot would otherwise write out by hand:
+
+| Option                       | Default                                                        | Why                                                                         |
+| ---------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `entry`                      | every source file next to `entry`, minus `*.test.*`/`*.spec.*` | pieces are found by the stores, not imported by the entry                   |
+| `unbundle`                   | `true`                                                         | keeps `dist/commands/…` loadable one file at a time at runtime              |
+| `format` / `platform`        | `'esm'` / `'node'`                                             | what the framework and `node dist/…` expect                                 |
+| `outDir` / `outExtensions`   | `build.outDir` / the extension of `build.output`               | so `stars dev`, `package.json#main` and `node dist/…` agree                 |
+| `tsconfig`                   | `build.tsconfig` (`src/tsconfig.json`, else `tsconfig.json`)   | `tsdown` alone looks only next to the root, missing the `src/` layout       |
+| `sourcemap` / `treeshake`    | `true`                                                         | a deployed bot needs readable stack traces                                  |
+| `minify`                     | `false`                                                        | nothing is shipped over a wire, so bytes buy nothing here                   |
+| `deps.skipNodeModulesBundle` | `true`                                                         | dependencies stay in `node_modules` instead of being copied into `dist`     |
+| `alias`                      | `~`/`@` → the entry's directory, `~~`/`@@` → the project root  | the prefixes Nuxt gives every project                                       |
+| `dts`                        | `false`                                                        | nothing consumes a bot's `dist/`; set `tsdown: { dts: true }` if yours does |
+
+#### Aliases
+
+The four prefixes Nuxt gives every project work out of the box, pointing at the same two places its own do:
+
+```typescript
+import { Greeting } from '~/lib/greeting'; // and '@/lib/greeting' — the entry's directory
+import pkg from '~~/package.json'; // and '@@/package.json' — the project root
+```
+
+The build resolves them on its own; TypeScript needs the matching `paths` (the scaffold writes them, and
+`examples/basic` shows them):
+
+```jsonc
+{
+	"compilerOptions": {
+		"paths": {
+			"~/*": ["./src/*"],
+			"@/*": ["./src/*"],
+			"~~/*": ["./*"],
+			"@@/*": ["./*"]
+		}
+	}
+}
+```
+
+A project's own `tsdown.alias` is added to these rather than replacing them, and a target written as a relative path
+(`'./src/lib'`) is resolved against the project root, the way every other path in `stars.config` is — a module id
+(`'preact/compat'`) is left alone.
+
+So the block is for what the defaults cannot know — a plugin that copies assets, an extra alias, a target:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: { compatibilityVersion: 4 },
+	tsdown: { plugins: [alias({ entries: aliasEntries }), copyLocales()] }
+});
+```
+
+Anything in `tsdown` wins over the defaults, and `plugins` are appended rather than replaced.
+
+With `future.compatibilityVersion: 3` (today's default) a `tsdown.config.*` in the project root is still loaded and
+`tsdown` is merged over it, so a project can move its options across one at a time. With `4` the block is the whole
+configuration, and a leftover `tsdown.config.*` is reported instead of being silently ignored.
+
+`vite: {}` works the same way for `build.tool: 'vite'` (see [experimental flags](#experimental-flags)): it is merged
+into the project's own `vite.config.*`, the way `vite: {}` in a Nuxt config is.
+
+### Compatibility version
+
+`future` carries the defaults of the next major, the way Nuxt's own `future.compatibilityVersion` does: a project
+opts into them one major early, and they become the default when that major ships. Where `experimental` guards work
+that is still landing, everything here is already decided.
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: {
+		// 3 (the default today) or 4 (the next major's defaults).
+		compatibilityVersion: 4
+	}
+});
+```
+
+`4` changes three things:
+
+- **Auto imports are on** with the `tsdown` build tool, and the `autoImports()` plugin is wired into the build by
+  `stars` itself instead of by the project's own configuration file — the framework's exports and the project's
+  `src/lib/**`, `src/utils/**` are usable without an `import` statement, the same way Nuxt's own are.
+- **`tsdown` is configured from `stars.config` alone.** A `tsdown.config.*` (or a `package.json#tsdown` field) raises
+  `TSDOWN_CONFIG_FILE_UNSUPPORTED`, because a build that quietly dropped the plugins such a file declares would be
+  far harder to diagnose than an error naming it.
+- **`build.tool: 'auto'` resolves to `tsdown`** for any TypeScript entry, rather than looking for a `tsdown.config.*`
+  or a `tsdown` dependency first. `tsc` stays available as an explicit choice.
+
+`stars info` prints the version in effect.
+
 ### Experimental flags
 
 `experimental` is the same kind of block Nuxt's own `experimental` is: opt-in booleans, all `false` by default, each

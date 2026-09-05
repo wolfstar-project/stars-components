@@ -20,6 +20,18 @@ describe('createBuilder', () => {
 		expect((await createBuilder(await loadStarsConfig({ cwd: fixture.root, env: {} }))).tool).toBe('tsdown');
 	});
 
+	test('picks tsdown for a TypeScript entry at compatibility version 4, with no tsdown.config.*', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 4 } };'
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.build.configFile).toBeNull();
+		expect((await createBuilder(config)).tool).toBe('tsdown');
+	});
+
 	test('uses vite when the experiment is on', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',

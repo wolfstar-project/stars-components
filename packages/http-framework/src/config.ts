@@ -10,7 +10,8 @@
 /**
  * The build tool used to turn the project sources into runnable JavaScript.
  *
- * - `tsdown`: run the project's own `tsdown` (configuration file included) programmatically.
+ * - `tsdown`: run the project's own `tsdown` programmatically, configured from {@link StarsConfig.tsdown} (and, with
+ *   {@link StarsFutureConfig.compatibilityVersion} `3`, from the project's `tsdown.config.*` too).
  * - `tsc`: run the project's `tsc -b` on the configured `tsconfig`.
  * - `vite`: run the project's own `vite` (configuration file included), requires `experimental.enableVite`.
  * - `none`: the entry is runnable as-is (JavaScript projects), no build step.
@@ -30,7 +31,7 @@ export interface StarsBuildConfig {
 	 */
 	outDir?: string;
 	/**
-	 * The `tsconfig.json` used by the `tsc` build tool, relative to {@link StarsConfig.root}.
+	 * The `tsconfig.json` the `tsc` and `tsdown` build tools use, relative to {@link StarsConfig.root}.
 	 * @default 'src/tsconfig.json' when it exists, 'tsconfig.json' otherwise
 	 */
 	tsconfig?: string;
@@ -44,9 +45,83 @@ export interface StarsBuildConfig {
 export type StarsViteConfig = Record<string, unknown>;
 
 /**
- * Raw options merged into the project's own `tsdown.config.*`.
+ * Options for `tsdown`, the bundler `stars build` uses by default.
+ *
+ * With {@link StarsFutureConfig.compatibilityVersion} `4` these replace `tsdown.config.*` outright: the build is
+ * derived from `stars.config` (the entry's directory, `build.outDir`, `build.tsconfig`) and these options are layered
+ * on top, so a project keeps one configuration file instead of two. With `3` the project's own `tsdown.config.*` is
+ * still loaded and these are merged over it, the way `vite: {}` in a Nuxt config is merged into the project's own
+ * Vite config: values here win, and `plugins` are appended rather than replaced.
+ *
+ * The options named below are the ones a bot usually reaches for. Every other `tsdown` option is accepted as-is —
+ * the framework does not depend on `tsdown`, so they stay loosely typed here and `tsdown`'s own `UserConfig` is the
+ * reference.
  */
-export type StarsTsdownConfig = Record<string, unknown>;
+export interface StarsTsdownConfig {
+	/** Entry files or glob patterns, relative to the project root. Defaults to every source file next to `entry`. */
+	entry?: string | readonly string[] | Record<string, string>;
+	/** @default 'esm' */
+	format?: 'esm' | 'cjs' | 'iife' | 'umd' | readonly string[] | Record<string, unknown>;
+	/** @default 'node' */
+	platform?: 'node' | 'neutral' | 'browser';
+	target?: string | readonly string[] | false;
+	/**
+	 * Emits one output file per source file instead of a single bundle, so pieces stay loadable from `dist/commands`
+	 * and friends at runtime.
+	 * @default true
+	 */
+	unbundle?: boolean;
+	/** Rolldown plugins. Appended to the ones `stars` adds (auto imports) and to those of a `tsdown.config.*`. */
+	plugins?: readonly unknown[];
+	alias?: Record<string, string>;
+	define?: Record<string, string>;
+	external?: unknown;
+	noExternal?: unknown;
+	deps?: Record<string, unknown>;
+	/** @default () => ({ js: extname(build.output) }) */
+	outExtensions?: unknown;
+	/** @default true */
+	sourcemap?: boolean | 'inline' | 'hidden';
+	minify?: unknown;
+	/** @default false — a bot is not a library, so no declaration files are emitted. */
+	dts?: boolean | Record<string, unknown>;
+	/** @default true */
+	clean?: boolean | readonly string[];
+	treeshake?: boolean;
+	copy?: unknown;
+	hooks?: Record<string, unknown>;
+	[option: string]: unknown;
+}
+
+/**
+ * The `stars` major version whose defaults the project runs on, the way Nuxt's own `future.compatibilityVersion`
+ * makes the next major's defaults available one major early.
+ */
+export type StarsCompatibilityVersion = 3 | 4;
+
+/**
+ * Nuxt-style `future` block: defaults that are already decided for the next major, available today. Where
+ * `experimental` guards work that is still landing and may change shape, everything here is settled — it only waits
+ * for a major to become the default.
+ */
+export interface StarsFutureConfig {
+	/**
+	 * The major whose defaults apply.
+	 *
+	 * `4` turns on the next major's build pipeline:
+	 * - auto imports are on by default with the `tsdown` build tool ({@link StarsImportsConfig}), and the
+	 *   `autoImports()` plugin is wired into the build by `stars` itself.
+	 * - `tsdown` is configured from {@link StarsConfig.tsdown} only. A `tsdown.config.*` in the project root is
+	 *   rejected rather than silently ignored, so a build never loses the plugins it declares.
+	 * - `build.tool: 'auto'` resolves to `tsdown` for any TypeScript entry, without looking for a `tsdown.config.*`
+	 *   or a `tsdown` dependency first.
+	 *
+	 * `3` keeps today's behaviour: auto imports off unless asked for, and a `tsdown.config.*` loaded and merged with
+	 * {@link StarsConfig.tsdown}.
+	 * @default 3
+	 */
+	compatibilityVersion?: StarsCompatibilityVersion;
+}
 
 /**
  * The type checker `stars dev` runs next to the bot.
@@ -298,18 +373,22 @@ export interface StarsConfig {
 	codegen?: StarsCodegenConfig;
 	/**
 	 * Nuxt-style auto imports of the framework's exports and the project's own modules.
-	 * `false` disables them, `true` forces them on (requires the `tsdown` build tool).
+	 * `false` disables them, `true` forces them on (requires the `tsdown` build tool). On by default with
+	 * `future.compatibilityVersion: 4`.
 	 */
 	imports?: StarsImportsConfig | boolean;
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
+	/** The next major's defaults, available today. */
+	future?: StarsFutureConfig;
 	/**
 	 * Raw options merged into `vite.config.*`, the way `vite: {}` in a Nuxt config is merged into Nuxt's own Vite
 	 * config. Only used with `build.tool: 'vite'` (see `experimental.enableVite`).
 	 */
 	vite?: StarsViteConfig;
 	/**
-	 * Raw options merged into `tsdown.config.*`. Only used with `build.tool: 'tsdown'`.
+	 * The project's `tsdown` build. Replaces `tsdown.config.*` with `future.compatibilityVersion: 4`, and is merged
+	 * over it with `3`. Only used with `build.tool: 'tsdown'`.
 	 */
 	tsdown?: StarsTsdownConfig;
 }

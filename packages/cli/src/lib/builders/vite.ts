@@ -34,7 +34,7 @@ export class ViteBuilder extends EventEmitter<BuilderEvents> implements Builder 
 		this.#begin();
 
 		try {
-			await vite.build({ root: this.config.root, logLevel: 'warn', customLogger: this.#logger(vite) });
+			await vite.build(this.#options(vite));
 			return this.#finish(null);
 		} catch (error) {
 			return this.#finish(error instanceof Error ? error.message : String(error));
@@ -47,12 +47,8 @@ export class ViteBuilder extends EventEmitter<BuilderEvents> implements Builder 
 
 		// `build.watch` makes Vite return a rollup watcher instead of resolving once, which is what keeps the bot
 		// rebuilding on change; every rebuild reports through the same events the other builders use.
-		const result = (await vite.build({
-			root: this.config.root,
-			logLevel: 'warn',
-			customLogger: this.#logger(vite),
-			build: { watch: {} }
-		})) as unknown as RollupWatcher;
+		const options = this.#options(vite);
+		const result = (await vite.build({ ...options, build: { ...options?.build, watch: {} } })) as unknown as RollupWatcher;
 
 		this.#watcher = result;
 		result.on(
@@ -80,6 +76,19 @@ export class ViteBuilder extends EventEmitter<BuilderEvents> implements Builder 
 
 	async #load(): Promise<ViteModule> {
 		return importFromProject<ViteModule>(this.config.root, 'vite', INSTALL_HINT);
+	}
+
+	/**
+	 * The inline config Vite merges into the project's own `vite.config.*`, with the `vite` block of `stars.config`
+	 * layered on top — the way `vite: {}` in a Nuxt config is merged into Nuxt's own.
+	 */
+	#options(vite: ViteModule): Parameters<ViteModule['build']>[0] {
+		return {
+			root: this.config.root,
+			logLevel: 'warn',
+			customLogger: this.#logger(vite),
+			...this.config.vite
+		} as Parameters<ViteModule['build']>[0];
 	}
 
 	#logger(vite: ViteModule) {

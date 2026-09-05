@@ -1,10 +1,20 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
-import type { StarsBuildTool, StarsConfig, StarsDevConfig, StarsExperimentalConfig, StarsTypechecker } from '../../config.js';
+import type {
+	StarsBuildTool,
+	StarsCompatibilityVersion,
+	StarsConfig,
+	StarsDevConfig,
+	StarsExperimentalConfig,
+	StarsFutureConfig,
+	StarsTypechecker
+} from '../../config.js';
 import { ConfigError } from './errors.js';
 
 export interface PackageJsonLike {
 	name?: string;
+	/** `tsdown` reads its options from here as well as from a `tsdown.config.*`. */
+	tsdown?: unknown;
 	version?: string;
 	main?: string;
 	type?: string;
@@ -21,6 +31,12 @@ export interface ResolvedBuildConfig {
 	readonly tsconfig: string | null;
 	/** Absolute path of the file `node` runs, i.e. the built entry (or the entry itself when `tool` is `none`). */
 	readonly output: string;
+	/**
+	 * Absolute path of the build tool's own configuration file (`tsdown.config.*`, `vite.config.*`), `null` when the
+	 * tool has none — which is always the case for `tsdown` with `future.compatibilityVersion` 4, where the build is
+	 * configured from `stars.config` alone.
+	 */
+	readonly configFile: string | null;
 }
 
 export interface ResolvedTypecheckConfig {
@@ -65,6 +81,10 @@ export interface ResolvedExperimentalConfig {
 	readonly nitro: ResolvedNitroConfig;
 }
 
+export interface ResolvedFutureConfig {
+	readonly compatibilityVersion: StarsCompatibilityVersion;
+}
+
 export interface ResolvedImportsConfig {
 	readonly enabled: boolean;
 	/** Directory glob patterns, relative to the project root (the way `unimport` scans them). */
@@ -99,9 +119,10 @@ export interface ResolvedStarsConfig {
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
 	readonly experimental: ResolvedExperimentalConfig;
+	readonly future: ResolvedFutureConfig;
 	/** Raw options merged into `vite.config.*`. */
 	readonly vite: Readonly<Record<string, unknown>>;
-	/** Raw options merged into `tsdown.config.*`. */
+	/** The `tsdown` build's options: merged over `tsdown.config.*` at compatibility version 3, the whole build at 4. */
 	readonly tsdown: Readonly<Record<string, unknown>>;
 }
 
@@ -126,6 +147,10 @@ export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
 export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
 export const DEFAULT_TUNNEL_PATH = '/';
 
+export const DEFAULT_COMPATIBILITY_VERSION = 3;
+export const LATEST_COMPATIBILITY_VERSION = 4;
+
+const COMPATIBILITY_VERSIONS = new Set<number>([DEFAULT_COMPATIBILITY_VERSION, LATEST_COMPATIBILITY_VERSION]);
 const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'vite', 'auto']);
 const TYPECHECKERS = new Set<string>(['tsc', 'golar', 'tsz', 'auto']);
 const VITE_CONFIG_FILES = ['vite.config.ts', 'vite.config.mts', 'vite.config.cts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs'];
@@ -152,7 +177,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const config = options.config;
 	const validator = new Validator(file);
 
-	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental', 'vite', 'tsdown']);
+	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental', 'future', 'vite', 'tsdown']);
 	const baseDirectory = file ? dirname(file) : cwd;
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
@@ -167,15 +192,36 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 
 	const packageJson = readPackageJson(root);
 	const experimental = resolveExperimental(config.experimental ?? {}, validator);
+	const future = resolveFuture(config.future ?? {}, validator);
 	const entry = resolveEntry(root, validator.string(config.entry, 'entry'), validator);
-	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, validator);
-	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
-	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
-	const imports = resolveImports(root, build.tool, config.imports, validator);
+	// The tool-specific blocks are read before the build so a project that only declares `tsdown: {}` still resolves
+	// `build.tool: 'auto'` to `tsdown`: configuring a tool is as clear a signal as depending on it.
 	const vite = validator.plainObject(config.vite, 'vite') ?? {};
 	const tsdown = validator.plainObject(config.tsdown, 'tsdown') ?? {};
+	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, future, Object.keys(tsdown).length > 0, validator);
+	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
+	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
+	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
-	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental, vite, tsdown };
+	if (Object.keys(tsdown).length > 0 && build.tool !== 'tsdown') {
+		throw validator.error(
+			'`tsdown` options need the `tsdown` build tool',
+			'tsdown',
+			'TSDOWN_OPTIONS_REQUIRE_TSDOWN',
+			`Set \`build.tool\` to 'tsdown', or remove \`tsdown\` (the build tool is '${build.tool}').`
+		);
+	}
+
+	if (Object.keys(vite).length > 0 && build.tool !== 'vite') {
+		throw validator.error(
+			'`vite` options need the `vite` build tool',
+			'vite',
+			'VITE_OPTIONS_REQUIRE_VITE',
+			`Set \`build.tool\` to 'vite' with \`experimental.enableVite\`, or remove \`vite\` (the build tool is '${build.tool}').`
+		);
+	}
+
+	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental, future, vite, tsdown };
 }
 
 /**
@@ -220,6 +266,8 @@ function resolveBuild(
 	packageJson: PackageJsonLike | null,
 	config: NonNullable<StarsConfig['build']>,
 	experimental: ResolvedExperimentalConfig,
+	future: ResolvedFutureConfig,
+	hasTsdownOptions: boolean,
 	validator: Validator
 ): ResolvedBuildConfig {
 	validator.knownKeys(config, 'build', ['tool', 'outDir', 'tsconfig']);
@@ -245,7 +293,9 @@ function resolveBuild(
 
 	const isTypeScriptEntry = TYPESCRIPT_EXTENSIONS.has(extname(entry));
 	const tool: StarsBuildTool =
-		requested === 'auto' ? detectBuildTool(root, packageJson, isTypeScriptEntry, experimental) : (requested as StarsBuildTool);
+		requested === 'auto'
+			? detectBuildTool(root, packageJson, isTypeScriptEntry, experimental, future, hasTsdownOptions)
+			: (requested as StarsBuildTool);
 
 	if (tool === 'none' && isTypeScriptEntry) {
 		throw validator.error(
@@ -272,9 +322,12 @@ function resolveBuild(
 				'Point `build.tsconfig` to an existing tsconfig.json, relative to the project root.'
 			);
 		}
-	} else if (tool === 'tsc') {
+	} else if (tool === 'tsc' || tool === 'tsdown') {
+		// `tsdown` only looks for a `tsconfig.json` next to the project root, so a bot keeping its sources' one in
+		// `src/` (the layout both the scaffold and the examples use) would silently build without its paths and
+		// target. Resolving it here is what makes the `tsdown` build need no configuration of its own.
 		tsconfig = [join(root, 'src', 'tsconfig.json'), join(root, 'tsconfig.json')].find((candidate) => isFile(candidate)) ?? null;
-		if (!tsconfig) {
+		if (!tsconfig && tool === 'tsc') {
 			throw validator.error(
 				`Could not find a tsconfig.json in ${root}`,
 				'build.tsconfig',
@@ -291,14 +344,41 @@ function resolveBuild(
 		: tool === 'none'
 			? entry
 			: resolveBuildOutput(root, entry, outDir, packageJson);
-	return { tool, outDir, tsconfig, output };
+
+	let configFile = findConfigFile(root, tool === 'tsdown' ? TSDOWN_CONFIG_FILES : tool === 'vite' ? VITE_CONFIG_FILES : []);
+	// `tsdown` reads `package.json#tsdown` when no configuration file is around, so it counts as one here.
+	if (tool === 'tsdown' && configFile === null && packageJson?.tsdown !== undefined) configFile = join(root, 'package.json');
+
+	// Compatibility version 4 builds `tsdown` from this file alone. A `tsdown.config.*` left behind would keep the
+	// plugins and entry points it declares out of the build, so it is reported rather than quietly ignored.
+	if (tool === 'tsdown' && configFile !== null && future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION) {
+		throw validator.error(
+			`\`${displayPath(root, configFile)}\` is not used with compatibility version ${future.compatibilityVersion}`,
+			'tsdown',
+			'TSDOWN_CONFIG_FILE_UNSUPPORTED',
+			`Move its options into \`tsdown\` here, drop the ${displayPath(root, configFile)} configuration, or set \`future.compatibilityVersion\` to ${DEFAULT_COMPATIBILITY_VERSION}.`
+		);
+	}
+
+	return { tool, outDir, tsconfig, output, configFile };
+}
+
+function findConfigFile(root: string, names: readonly string[]): string | null {
+	for (const name of names) {
+		const candidate = join(root, name);
+		if (isFile(candidate)) return candidate;
+	}
+
+	return null;
 }
 
 function detectBuildTool(
 	root: string,
 	packageJson: PackageJsonLike | null,
 	isTypeScriptEntry: boolean,
-	experimental: ResolvedExperimentalConfig
+	experimental: ResolvedExperimentalConfig,
+	future: ResolvedFutureConfig,
+	hasTsdownOptions: boolean
 ): StarsBuildTool {
 	// Vite only wins the detection once the project opted into it; without the flag a `vite.config.*` is somebody
 	// else's (a dashboard, a docs site) and must not take the bot's build over.
@@ -307,10 +387,43 @@ function detectBuildTool(
 		if (hasVite) return 'vite';
 	}
 
+	if (hasTsdownOptions) return 'tsdown';
+
+	// From compatibility version 4 on, `tsdown` is the build of a TypeScript project rather than one of the options:
+	// there is no `tsdown.config.*` left to detect it from, and a missing dependency is reported by the builder with
+	// an install hint instead of silently falling back to `tsc`.
+	if (future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION) return isTypeScriptEntry ? 'tsdown' : 'none';
+
 	const hasTsdown = TSDOWN_CONFIG_FILES.some((name) => isFile(join(root, name))) || hasDependency(packageJson, 'tsdown');
 	if (hasTsdown) return 'tsdown';
 	if (isTypeScriptEntry) return 'tsc';
 	return 'none';
+}
+
+/**
+ * Resolves the `future` block. It carries the defaults of the next major, the way Nuxt's own
+ * `future.compatibilityVersion` does: a project opts into them one major early, and they become the default when
+ * that major ships.
+ */
+function resolveFuture(config: StarsFutureConfig, validator: Validator): ResolvedFutureConfig {
+	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+		throw validator.error('`future` must be an object', 'future', 'INVALID_TYPE', 'Use `{ compatibilityVersion }`.');
+	}
+
+	validator.knownKeys(config, 'future', ['compatibilityVersion']);
+	const version = config.compatibilityVersion;
+	if (version === undefined) return { compatibilityVersion: DEFAULT_COMPATIBILITY_VERSION };
+
+	if (typeof version !== 'number' || !COMPATIBILITY_VERSIONS.has(version)) {
+		throw validator.error(
+			`Unknown compatibility version ${describe(version)}`,
+			'future.compatibilityVersion',
+			'INVALID_COMPATIBILITY_VERSION',
+			`Use ${DEFAULT_COMPATIBILITY_VERSION} (today's defaults) or ${LATEST_COMPATIBILITY_VERSION} (the next major's).`
+		);
+	}
+
+	return { compatibilityVersion: version as StarsCompatibilityVersion };
 }
 
 /**
@@ -640,8 +753,17 @@ function resolveCodegen(root: string, config: NonNullable<StarsConfig['codegen']
  * rolldown pipeline, the same way Nuxt's own auto imports only run through its Vite/webpack build: `tsc` and `none`
  * have no transform step to hook into. `tsdown` is picked as `build.tool` first (see {@link detectBuildTool}) for the
  * same reason — it is the only tool this feature, and this build config in general, treats as the default choice.
+ *
+ * They are on by default from compatibility version 4 on, where `stars` wires the plugin into the build itself. At 3
+ * the plugin is the project's to add, so defaulting them on would promise imports that never get injected.
  */
-function resolveImports(root: string, buildTool: StarsBuildTool, config: StarsConfig['imports'], validator: Validator): ResolvedImportsConfig {
+function resolveImports(
+	root: string,
+	buildTool: StarsBuildTool,
+	future: ResolvedFutureConfig,
+	config: StarsConfig['imports'],
+	validator: Validator
+): ResolvedImportsConfig {
 	const defaultDirs = DEFAULT_IMPORTS_DIRS.map((dir) => resolve(root, dir));
 	const defaultPresets = [...DEFAULT_IMPORTS_PRESETS];
 	const defaultDts = resolve(root, DEFAULT_IMPORTS_DTS);
@@ -678,7 +800,8 @@ function resolveImports(root: string, buildTool: StarsBuildTool, config: StarsCo
 	const exclude = validator.stringArray(options.exclude, 'imports.exclude') ?? [];
 	const dts = resolve(root, validator.string(options.dts, 'imports.dts') ?? DEFAULT_IMPORTS_DTS);
 
-	return { enabled: requestedOn ?? buildTool === 'tsdown', dirs, presets, exclude, dts };
+	const enabledByDefault = buildTool === 'tsdown' && future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION;
+	return { enabled: requestedOn ?? enabledByDefault, dirs, presets, exclude, dts };
 }
 
 class Validator {

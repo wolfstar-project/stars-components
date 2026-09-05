@@ -35,6 +35,17 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   Discord locale folders (en-US, es-ES, …) map to shorter Tolgee tags (en, es, …); see `LOCALE_MAP` in `.tolgeerc.cjs`.
   Project **Shared HTTP Pieces** (`33773`) has Tolgee namespaces disabled — keys live in the default namespace and remap into `commands/shared.json`.
 
+## The `stars` CLI configuration
+
+- A project's build lives in `stars.config.*`, not in a separate `tsdown.config.ts`: `tsdown: {}` (and `vite: {}` for
+  `build.tool: 'vite'`) is merged into what the CLI derives from `entry`/`build`. The packages of this repository are
+  libraries and keep their own `tsdown.config.ts` — this is about the bot projects the CLI builds.
+- `future: { compatibilityVersion: 3 | 4 }` mirrors Nuxt's own: `3` is today's default, `4` turns on the next major's
+  build (auto imports on and wired in, `stars.config` as the only `tsdown` configuration, `'auto'` picking `tsdown`
+  for TypeScript entries). When `@wolfstar/http-framework` v4 is cut: default `compatibilityVersion` to `4`, drop `3`
+  from `COMPATIBILITY_VERSIONS` in `packages/http-framework/src/lib/config/resolve.ts` with a migration hint, and
+  remove the `build.configFile` branch (compatibility version 3's file mode) from `TsdownBuilder` and its test.
+
 ## Branding (target state after rebrand)
 
 - **npm scope:** `@wolfstar`

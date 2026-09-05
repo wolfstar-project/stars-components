@@ -22,9 +22,9 @@
 			"ignoreDependencies": ["@sapphire/pieces"]
 		},
 		"examples/basic": {
-			"entry": ["src/**/*.ts"],
-			"project": ["src/**/*.ts", "tsdown.config.ts"],
-			"ignoreDependencies": ["@sapphire/pieces"]
+			"entry": ["src/**/*.ts", "stars.config.ts"],
+			"project": ["src/**/*.ts", "stars.config.ts"],
+			"ignoreDependencies": ["@sapphire/pieces", "@wolfstar/cli", "tsdown"]
 		},
 		"examples/with-subcommands": {
 			"entry": ["src/**/*.ts"],
