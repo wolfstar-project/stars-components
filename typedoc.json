@@ -2,7 +2,13 @@
 	"$schema": "https://typedoc.org/schema.json",
 	"entryPoints": ["packages/*"],
 	"entryPointStrategy": "packages",
-	"exclude": ["packages/create-http-framework"],
+	"exclude": [
+		"packages/cli",
+		"packages/create-http-framework",
+		"packages/i18next-type-generator",
+		"packages/oxlint-config",
+		"packages/oxfmt-config"
+	],
 	"out": "docs-output/html",
 	"readme": "none",
 	"cleanOutputDir": true,

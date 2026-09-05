@@ -1,0 +1,61 @@
+{
+	"name": "@wolfstar/prettier-config",
+	"version": "0.1.0",
+	"description": "Shareable Prettier configuration for Star Network projects",
+	"keywords": [
+		"config",
+		"format",
+		"prettier",
+		"prettier-config",
+		"typescript",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/prettier-config#readme",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/prettier-config"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		}
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"devDependencies": {
+		"golar": "^0.1.10",
+		"prettier": "^3.9.6",
+		"tsdown": "^0.22.14",
+		"typescript": "~7.0.2"
+	},
+	"peerDependencies": {
+		"prettier": "^3.0.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

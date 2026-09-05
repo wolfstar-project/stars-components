@@ -1,0 +1,37 @@
+import '@wolfstar/plugin-i18next/register';
+import { setup } from './lib/setup/all.js';
+import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
+import { Client, container } from '@wolfstar/http-framework';
+import { createBanner } from '@wolfstar/start-banner';
+import { morning } from 'gradient-string';
+
+await setup();
+
+const client = new Client({
+	i18n: {
+		defaultLanguageDirectory: new URL('locales', import.meta.url).pathname,
+		defaultName: 'en-US'
+	}
+});
+await client.load();
+
+const address = envParseString('HTTP_ADDRESS', '0.0.0.0');
+const port = envParseInteger('HTTP_PORT', {{port}});
+await client.listen({ address, port });
+
+console.log(
+	morning.multiline(
+		createBanner({
+			logo: ['   *  .  *', ' .  ★  . ', '*  .  *  .'],
+			name: ['{{name}}'],
+			extra: [
+				'',
+				`Loaded: ${container.stores.get('commands').size} commands`,
+				`      : ${container.stores.get('interaction-handlers').size} interaction handlers`,
+				`Listening: ${address}:${port}`
+			]
+		})
+	)
+);
+
+container.logger.info('Ready');

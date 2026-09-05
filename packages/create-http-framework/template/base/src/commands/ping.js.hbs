@@ -1,0 +1,18 @@
+import { Command } from '@wolfstar/http-framework';
+import { ApplicationIntegrationType, InteractionContextType, MessageFlags } from 'discord-api-types/v10';
+
+export class PingCommand extends Command {
+	registerApplicationCommands(registry) {
+		registry.registerChatInputCommand((builder) =>
+			builder
+				.setName('ping')
+				.setDescription('Replies with pong!')
+				.setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+				.setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+		);
+	}
+
+	chatInputRun(interaction) {
+		return interaction.reply({ content: 'Pong!', flags: MessageFlags.Ephemeral });
+	}
+}

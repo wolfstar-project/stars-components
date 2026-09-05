@@ -2,6 +2,7 @@ import { container, Store } from '@sapphire/pieces';
 import { Result } from '@sapphire/result';
 import type { APIMessageComponentInteraction, APIModalSubmitInteraction } from 'discord-api-types/v10';
 import type { ServerResponse } from 'node:http';
+import { Events } from '../ClientEvents.js';
 import { HttpCodes } from '../api/HttpCodes.js';
 import { handleError, makeInteraction } from '../interactions/utils/util.js';
 import { ErrorMessages } from '../utils/constants.js';
@@ -18,26 +19,26 @@ export class InteractionHandlerStore extends Store<InteractionHandler, 'interact
 	): Promise<ServerResponse> {
 		const parsed = container.idParser.run(interaction.data.custom_id);
 		if (parsed === null) {
-			container.client.emit('interactionHandlerNameInvalid', interaction, response);
+			container.client.emit(Events.InteractionHandlerNameInvalid, interaction, response);
 			response.statusCode = HttpCodes.BadRequest;
 			return response.end(ErrorMessages.InvalidCustomId);
 		}
 
 		const handler = this.get(parsed.name);
 		if (!handler) {
-			container.client.emit('interactionHandlerNameUnknown', interaction, response);
+			container.client.emit(Events.InteractionHandlerNameUnknown, interaction, response);
 			response.statusCode = HttpCodes.NotImplemented;
 			return response.end(ErrorMessages.UnknownHandlerName);
 		}
 
 		const context = { handler, interaction, response };
-		container.client.emit('interactionHandlerRun', context);
+		container.client.emit(Events.InteractionHandlerRun, context);
 		const result = await Result.fromAsync(() => handler.run(makeInteraction(response, interaction), parsed.content));
 		result
-			.inspect((value) => container.client.emit('interactionHandlerSuccess', context, value))
-			.inspectErr((error) => (container.client.emit('interactionHandlerError', error, context), handleError(response, error)));
+			.inspect((value) => container.client.emit(Events.InteractionHandlerSuccess, context, value))
+			.inspectErr((error) => (container.client.emit(Events.InteractionHandlerError, error, context), handleError(response, error)));
 
-		container.client.emit('interactionHandlerFinish', context);
+		container.client.emit(Events.InteractionHandlerFinish, context);
 		return response;
 	}
 }

@@ -40,6 +40,8 @@ jobs:
                       chore
                       revert
                   scopes: |
+                      cli
+                      create-http-framework
                       env-utilities
                       http-framework
                       http-framework-i18n

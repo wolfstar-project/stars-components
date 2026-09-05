@@ -1,0 +1,15 @@
+import { Command, RegisterCommand } from '@wolfstar/http-framework';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
+import { ApplicationIntegrationType, InteractionContextType, MessageFlags } from 'discord-api-types/v10';
+
+@RegisterCommand((builder) =>
+	applyLocalizedBuilder(builder, 'commands/ping:name', 'commands/ping:description') //
+		.setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+		.setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+)
+export class PingCommand extends Command {
+	public override chatInputRun(interaction: Command.ChatInputInteraction) {
+		const t = getSupportedUserLanguageT(interaction);
+		return interaction.reply({ content: t('commands/ping:reply'), flags: MessageFlags.Ephemeral });
+	}
+}

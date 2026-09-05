@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/create-http-framework",
-	"version": "2.1.4",
+	"version": "2.4.0",
 	"description": "Create a new WolfStar HTTP Framework bot project",
 	"keywords": [
 		"cli",
@@ -34,8 +34,9 @@
 		"provenance": true
 	},
 	"scripts": {
+		"test": "vitest run",
 		"build": "tsdown --config-loader unrun",
-		"typecheck": "tsc -p ../../tsconfig.json",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
@@ -52,8 +53,11 @@
 		"@types/handlebars": "^4.1.0",
 		"@types/mri": "^1.2.0",
 		"@types/node": "22.15.21",
+		"@vitest/coverage-v8": "^4.1.8",
+		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
-		"typescript": "~5.8.3"
+		"typescript": "~7.0.2",
+		"vitest": "^4.1.8"
 	},
 	"engines": {
 		"node": ">=20"

@@ -1,0 +1,22 @@
+{
+	"name": "settings",
+	"description": "Manage your settings",
+	"profileName": "profile",
+	"profileDescription": "Manage your profile settings",
+	"profileGetName": "get",
+	"profileGetDescription": "View your current profile name",
+	"profileGetResult": "Your profile name is not set yet.",
+	"profileSetName": "set",
+	"profileSetDescription": "Set your profile name",
+	"profileSetResult": "Your profile name is now \"{{name}}\".",
+	"notificationsName": "notifications",
+	"notificationsDescription": "Manage your notification settings",
+	"notificationsEnableName": "enable",
+	"notificationsEnableDescription": "Enable notifications",
+	"notificationsEnableResult": "Notifications enabled.",
+	"notificationsDisableName": "disable",
+	"notificationsDisableDescription": "Disable notifications",
+	"notificationsDisableResult": "Notifications disabled.",
+	"optionsNameName": "name",
+	"optionsNameDescription": "The new profile name"
+}

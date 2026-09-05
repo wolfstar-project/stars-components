@@ -1,12 +1,12 @@
 {
 	"name": "with-testing",
-	"version": "0.0.5",
+	"version": "0.0.9",
 	"private": true,
 	"description": "Test a WolfStar HTTP command with http-framework-test-utils",
 	"type": "module",
 	"scripts": {
 		"test": "vitest run",
-		"typecheck": "tsc -p tsconfig.json --noEmit"
+		"typecheck": "golar tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
 		"@wolfstar/http-framework": "workspace:*",
@@ -15,7 +15,8 @@
 	"devDependencies": {
 		"@types/node": "22.15.21",
 		"@wolfstar/http-framework-test-utils": "workspace:*",
-		"typescript": "~5.8.3",
+		"golar": "^0.1.10",
+		"typescript": "~7.0.2",
 		"vitest": "^4.1.10"
 	},
 	"engines": {

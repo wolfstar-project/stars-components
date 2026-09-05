@@ -36,6 +36,7 @@
 		"@types/ws": "^8.18.1",
 		"@vitest/coverage-v8": "^4.1.11",
 		"cz-conventional-changelog": "^3.3.0",
+		"golar": "^0.1.10",
 		"husky": "9.1.7",
 		"knip": "6.32.3",
 		"nano-staged": "1.0.2",

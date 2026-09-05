@@ -1,6 +1,6 @@
 {
 	"name": "basic-js",
-	"version": "0.0.5",
+	"version": "0.0.9",
 	"private": true,
 	"description": "Minimal WolfStar HTTP Discord bot example in plain JavaScript (ESM)",
 	"type": "module",
@@ -17,7 +17,6 @@
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
 		"@wolfstar/http-framework-i18n": "workspace:*",
-		"@wolfstar/logger": "workspace:*",
 		"@wolfstar/shared-http-pieces": "workspace:*",
 		"@wolfstar/start-banner": "workspace:*",
 		"discord-api-types": "^0.38.8",

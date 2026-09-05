@@ -1,0 +1,43 @@
+{
+	"name": "@wolfstar/oxfmt-config",
+	"version": "0.1.0",
+	"description": "Shareable oxfmt base configuration for Star Network packages",
+	"keywords": [
+		"config",
+		"format",
+		"oxc",
+		"oxfmt",
+		"typescript",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/oxfmt-config#readme",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/oxfmt-config"
+	},
+	"files": [
+		"index.json"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "index.json",
+	"exports": {
+		".": "./index.json"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"peerDependencies": {
+		"oxfmt": ">=0.60.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

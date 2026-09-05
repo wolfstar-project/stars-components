@@ -1,0 +1,36 @@
+# {{name}}
+
+A Discord bot built with [`@wolfstar/http-framework`](https://www.npmjs.com/package/@wolfstar/http-framework), an HTTP-interactions framework for Discord bots.
+
+## Setup
+
+1. Install dependencies (skip this if the generator already installed them for you).
+
+2. This project was generated with a `.env` file already in place — it's written with placeholder values directly as `.env` (there is no separate `.env.example`), and `.gitignore` keeps it out of version control. Open `.env` and replace the placeholders with your bot's real `DISCORD_TOKEN`, `DISCORD_PUBLIC_KEY`, and `DISCORD_CLIENT_ID`.
+{{#if i18n}}
+3. This project uses [`@wolfstar/plugin-i18next`](https://www.npmjs.com/package/@wolfstar/plugin-i18next). Locale resources live under `src/locales/`; after editing them, regenerate the typed i18next resources with `npm run generate:i18n`.
+{{/if}}
+
+## Scripts
+
+The `dev` and `build` scripts are powered by the [`stars`](https://www.npmjs.com/package/@wolfstar/cli) CLI and read the `stars.config` file at the project root.
+
+- `npm run dev` — build, run and restart the bot on changes, with an interactive terminal UI (`npm run dev -- --no-tui` for plain logs).
+- `npm run build` — compile the project (TypeScript projects only).
+- `npm start` — run the bot.
+- `npx stars info` — print the resolved configuration.
+{{#if testing}}
+- `npm test` — run the test suite with vitest.
+{{/if}}
+
+## Commands
+
+- `/ping` — replies with `Pong!`.
+{{#if subcommands}}
+- `/math add` / `/math subtract` — basic arithmetic on two integers.
+{{/if}}
+{{#if subcommandsAdvanced}}
+- `/settings profile get` / `/settings profile set` / `/settings notifications enable` / `/settings notifications disable` — subcommand groups example.
+{{/if}}
+
+The HTTP server listens on `HTTP_ADDRESS`:`HTTP_PORT` from `.env` — `{{port}}` by default.

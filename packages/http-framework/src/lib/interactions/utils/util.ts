@@ -10,6 +10,7 @@ import {
 	type APIUserApplicationCommandInteraction
 } from 'discord-api-types/v10';
 import type { ServerResponse } from 'node:http';
+import { Events } from '../../ClientEvents.js';
 import { HttpCodes } from '../../api/HttpCodes.js';
 import { ErrorMessages } from '../../utils/constants.js';
 import {
@@ -106,7 +107,7 @@ export type TransformRaw<T extends BaseInteractionType> = T extends Autocomplete
  * @returns The response object.
  */
 export function handleError(response: ServerResponse, error: unknown): ServerResponse {
-	container.client.emit('error', error);
+	container.client.emit(Events.Error, error);
 
 	if (!container.client.httpReplyOnError || response.closed) return response;
 

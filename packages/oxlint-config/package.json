@@ -1,0 +1,46 @@
+{
+	"name": "@wolfstar/oxlint-config",
+	"version": "0.1.0",
+	"description": "Shareable oxlint base configuration for Star Network packages",
+	"keywords": [
+		"config",
+		"lint",
+		"oxc",
+		"oxlint",
+		"typescript",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/oxlint-config#readme",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/oxlint-config"
+	},
+	"files": [
+		".oxlintrc.json"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./.oxlintrc.json",
+		"./.oxlintrc.json": "./.oxlintrc.json"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"dependencies": {
+		"@wolfstar/eslint-plugin-http-framework": "workspace:*"
+	},
+	"peerDependencies": {
+		"oxlint": ">=1.0.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

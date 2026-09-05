@@ -12,9 +12,13 @@
 		"resolvePackageJsonImports": true,
 		"types": ["node"],
 		"paths": {
-			"#lib/*": ["./src/lib/*"]
+			"#lib/*": ["./src/lib/*"],
+			"~/*": ["./src/*"],
+			"@/*": ["./src/*"],
+			"~~/*": ["./*"],
+			"@@/*": ["./*"]
 		}
 	},
-	"include": ["src/**/*.ts"],
+	"include": ["src/**/*.ts", ".stars/*.d.ts"],
 	"exclude": ["node_modules", "dist"]
 }

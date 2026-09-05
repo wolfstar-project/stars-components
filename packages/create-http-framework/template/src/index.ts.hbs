@@ -1,8 +1,0 @@
-import { Client } from '@wolfstar/http-framework';
-
-const client = new Client();
-
-await client.load();
-await client.listen({ port: {{port}} });
-
-console.log('Bot is running on port {{port}}');

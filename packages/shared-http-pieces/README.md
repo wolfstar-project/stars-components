@@ -1,4 +1,20 @@
-# `@wolfstar/shared-http-pieces` [![Tolgee](https://img.shields.io/badge/Localization-Tolgee-1D2A3A?logo=tolgee&logoColor=white)](https://app.tolgee.io/projects/33773)
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/shared-http-pieces
+
+**The shared commands and pieces used by Star Network's HTTP-only bots.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/shared-http-pieces)](https://npmx.dev/package/@wolfstar/shared-http-pieces)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/shared-http-pieces)](https://npmx.dev/package/@wolfstar/shared-http-pieces)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+[![Tolgee](https://img.shields.io/badge/Localization-Tolgee-1D2A3A?style=flat-square&logo=tolgee&logoColor=white)](https://app.tolgee.io/projects/33773)
+
+</div>
+
+## Description
 
 The shared commands used for Star Network's HTTP-only bots.
 

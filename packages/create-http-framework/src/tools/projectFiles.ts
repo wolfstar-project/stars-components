@@ -2,12 +2,15 @@ import { join } from 'node:path';
 import { writeFile } from './fileSystem.js';
 import type { DependencyVersions } from './npmHelpers.js';
 import type { BuildTool, Formatter, Language, Linter } from './options.js';
-import { getRunScript, type PackageManager } from './packageManager.js';
+import type { PackageManager } from './packageManager.js';
 
 export interface ProjectContext {
 	name: string;
 	port: number;
 	i18n: boolean;
+	subcommands: boolean;
+	subcommandsAdvanced: boolean;
+	testing: boolean;
 	packageManager: PackageManager;
 	language: Language;
 	/** Only meaningful when `language === 'ts'`. */
@@ -27,34 +30,14 @@ function json(value: unknown): string {
 	return `${JSON.stringify(value, null, '\t')}\n`;
 }
 
-function buildScripts(ctx: ProjectContext): Record<string, string> {
-	const { packageManager: pm, buildTool } = ctx;
-	const start = 'node dist/index.js';
-
-	let scripts: Record<string, string>;
-	if (ctx.language === 'js') {
-		// Plain JavaScript runs directly — no compile step.
-		scripts = {
-			start: 'node src/index.js',
-			dev: 'node --watch src/index.js'
-		};
-	} else if (buildTool === 'tsdown') {
-		scripts = {
-			build: 'tsdown',
-			dev: getRunScript(pm, 'build', ['--onSuccess', getRunScript(pm, 'start')]),
-			watch: getRunScript(pm, 'build', ['--watch']),
-			'watch:start': getRunScript(pm, 'build', ['--watch', '--onSuccess', getRunScript(pm, 'start')]),
-			start
-		};
-	} else {
-		scripts = {
-			build: 'tsc -b src',
-			dev: `${getRunScript(pm, 'build')} && ${getRunScript(pm, 'start')}`,
-			watch: 'tsc -b src -w',
-			'watch:start': `tsc-watch -b src --onSuccess "${getRunScript(pm, 'start')}"`,
-			start
-		};
-	}
+export function buildScripts(ctx: ProjectContext): Record<string, string> {
+	// `stars dev` / `stars build` (from @wolfstar/cli) read stars.config.* and drive the build tool chosen below, so
+	// the scripts are the same for every language and build tool.
+	const scripts: Record<string, string> = {
+		dev: 'stars dev',
+		...(ctx.language === 'js' ? {} : { build: 'stars build' }),
+		start: ctx.language === 'js' ? 'node src/main.js' : 'node dist/main.js'
+	};
 
 	if (ctx.linter === 'oxlint') {
 		scripts['lint'] = 'oxlint src';
@@ -72,35 +55,39 @@ function buildScripts(ctx: ProjectContext): Record<string, string> {
 		scripts['format:check'] = 'prettier --check src';
 	}
 
+	if (ctx.i18n) scripts['generate:i18n'] = 'stars codegen';
+	if (ctx.testing) scripts['test'] = 'vitest run';
+
 	return scripts;
 }
 
-function buildDependencies(ctx: ProjectContext): Record<string, string> {
+export function buildDependencies(ctx: ProjectContext): Record<string, string> {
 	const v = ctx.versions;
 	const dependencies: Record<string, string> = {
-		'@discordjs/builders': caret(v['@discordjs/builders']!),
 		'@wolfstar/http-framework': caret(v['@wolfstar/http-framework']!),
-		'discord-api-types': caret(v['discord-api-types']!)
+		'@sapphire/pieces': caret(v['@sapphire/pieces']!),
+		'discord-api-types': caret(v['discord-api-types']!),
+		'@wolfstar/env-utilities': caret(v['@wolfstar/env-utilities']!),
+		'@wolfstar/start-banner': caret(v['@wolfstar/start-banner']!),
+		'gradient-string': caret(v['gradient-string']!)
 	};
-	if (ctx.i18n) dependencies['@wolfstar/http-framework-i18n'] = caret(v['@wolfstar/http-framework-i18n']!);
+	if (ctx.i18n) dependencies['@wolfstar/plugin-i18next'] = caret(v['@wolfstar/plugin-i18next']!);
 	return sortKeys(dependencies);
 }
 
-function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
+export function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
 	const v = ctx.versions;
-	const dev: Record<string, string> = {};
+	const dev: Record<string, string> = { '@wolfstar/cli': caret(v['@wolfstar/cli']!) };
 
 	if (ctx.language === 'ts') {
 		dev['@types/node'] = caret(v['@types/node']!);
 		switch (ctx.buildTool) {
 			case 'tsc6':
 				dev['typescript'] = caret(v['typescript']!);
-				dev['tsc-watch'] = caret(v['tsc-watch']!);
 				break;
 			case 'tsc7':
 				// rc prerelease — pin exactly rather than with a caret range.
 				dev['typescript'] = v['typescript']!;
-				dev['tsc-watch'] = caret(v['tsc-watch']!);
 				break;
 			case 'tsdown':
 				dev['tsdown'] = caret(v['tsdown']!);
@@ -123,14 +110,21 @@ function buildDevDependencies(ctx: ProjectContext): Record<string, string> {
 		dev['oxfmt'] = caret(v['oxfmt']!);
 	}
 
+	if (ctx.i18n) dev['@wolfstar/i18next-type-generator'] = caret(v['@wolfstar/i18next-type-generator']!);
+
+	if (ctx.testing) {
+		dev['vitest'] = caret(v['vitest']!);
+		dev['@wolfstar/http-framework-test-utils'] = caret(v['@wolfstar/http-framework-test-utils']!);
+	}
+
 	return sortKeys(dev);
 }
 
-function packageJson(ctx: ProjectContext): string {
+export function packageJson(ctx: ProjectContext): string {
 	const devDependencies = buildDevDependencies(ctx);
 	// client.load() locates the commands directory relative to this field (dirname(main) + 'commands'), not relative
 	// to the running file, so it must point at whichever file `start` actually runs.
-	const main = ctx.language === 'js' ? 'src/index.js' : 'dist/index.js';
+	const main = ctx.language === 'js' ? 'src/main.js' : 'dist/main.js';
 	return json({
 		name: ctx.name,
 		version: '1.0.0',
@@ -158,6 +152,17 @@ const sharedCompilerOptions = {
 	emitDecoratorMetadata: true
 } as const;
 
+/**
+ * The `paths` that make `stars`' built-in aliases type-check. Only the `tsdown` build resolves them, so only its
+ * tsconfig declares them: `tsc` emits imports untouched and would leave `~/lib/…` in the output.
+ */
+const STARS_ALIAS_PATHS = {
+	'~/*': ['./src/*'],
+	'@/*': ['./src/*'],
+	'~~/*': ['./*'],
+	'@@/*': ['./*']
+} as const;
+
 /** Writes the tsconfig(s). The tsc branches use a composite build so `tsc -b src` resolves `src/tsconfig.json`. */
 function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 	if (ctx.language === 'js') return;
@@ -166,8 +171,15 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 		writeFile(
 			join(targetDir, 'tsconfig.json'),
 			json({
-				compilerOptions: { ...sharedCompilerOptions, outDir: './dist', rootDir: './src' },
-				include: ['src/**/*.ts'],
+				compilerOptions: {
+					...sharedCompilerOptions,
+					outDir: './dist',
+					rootDir: './src',
+					// The alias prefixes the build resolves on its own (`~`/`@` → src, `~~`/`@@` → the root).
+					paths: STARS_ALIAS_PATHS
+				},
+				// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
+				include: ['src/**/*.ts', '.stars/*.d.ts'],
 				exclude: ['node_modules', 'dist']
 			})
 		);
@@ -190,25 +202,33 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 	);
 }
 
-function writeBuildConfig(targetDir: string, ctx: ProjectContext): void {
-	if (ctx.language === 'js' || ctx.buildTool !== 'tsdown') return;
+/**
+ * Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). It carries
+ * the build too: `tsdown` projects are configured here rather than in a `tsdown.config.ts` of their own, which is
+ * what `future.compatibilityVersion: 4` means for a generated project.
+ */
+function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
+	const isJs = ctx.language === 'js';
+	const isTsdown = !isJs && ctx.buildTool === 'tsdown';
+	const build = isJs ? "{ tool: 'none' }" : isTsdown ? "{ tool: 'tsdown' }" : "{ tool: 'tsc', tsconfig: 'src/tsconfig.json' }";
 	const content = [
-		"import { defineConfig } from 'tsdown';",
+		"import { defineConfig } from '@wolfstar/http-framework/config';",
 		'',
 		'export default defineConfig({',
-		"\tentry: ['src/**/*.ts'],",
-		"\tformat: ['esm'],",
-		"\ttarget: 'node20',",
-		'\t// Mirror the src/ structure so the framework can load command pieces from dist/commands at runtime.',
-		'\tunbundle: true,',
-		'\t// Emit dist/index.js so the shared `start` script (node dist/index.js) works.',
-		"\toutExtensions: () => ({ js: '.js' }),",
-		'\tclean: true,',
-		'\tsourcemap: true',
+		`\tentry: 'src/main.${isJs ? 'js' : 'ts'}',`,
+		`\tbuild: ${build},`,
+		"\t// The next major's defaults: auto imports wired into the build, and `tsdown` configured from this file.",
+		'\tfuture: { compatibilityVersion: 4 }',
+		...(isTsdown
+			? [
+					'\t// The build needs nothing else. Add a `tsdown` block for what the defaults cannot know,',
+					'\t// such as a plugin that copies assets into dist/.'
+				]
+			: []),
 		'});',
 		''
 	].join('\n');
-	writeFile(join(targetDir, 'tsdown.config.ts'), content);
+	writeFile(join(targetDir, isJs ? 'stars.config.js' : 'stars.config.ts'), content);
 }
 
 function writeLinterConfig(targetDir: string, ctx: ProjectContext): void {
@@ -268,7 +288,7 @@ function writeFormatterConfig(targetDir: string, ctx: ProjectContext): void {
 export function writeProjectFiles(targetDir: string, ctx: ProjectContext): void {
 	writeFile(join(targetDir, 'package.json'), packageJson(ctx));
 	writeTsconfig(targetDir, ctx);
-	writeBuildConfig(targetDir, ctx);
+	writeStarsConfig(targetDir, ctx);
 	writeLinterConfig(targetDir, ctx);
 	writeFormatterConfig(targetDir, ctx);
 }

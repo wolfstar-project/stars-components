@@ -1,5 +1,37 @@
 # with-testing
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0), [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0)]:
+    - @wolfstar/http-framework@3.5.0
+
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`214a6aa`](https://github.com/wolfstar-project/stars-components/commit/214a6aa40aa1925baa149924612c499d9bffba50), [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c), [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c), [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c)]:
+    - @wolfstar/http-framework@3.4.0
+
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`6364824`](https://github.com/wolfstar-project/stars-components/commit/63648244c6b422f43fb4a237936beea077c8f0ad), [`ce9496a`](https://github.com/wolfstar-project/stars-components/commit/ce9496a7aced1200d3b4b322d6a336e5a60debb3)]:
+    - @wolfstar/http-framework@3.3.0
+
+## 0.0.6
+
+### Patch Changes
+
+- [#151](https://github.com/wolfstar-project/stars-components/pull/151) [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8) - build: replace tsc with golar as typechecker, bump typescript to 7.0.2
+
+    `typecheck` scripts now run `golar tsc` instead of `tsc` directly. This is a dev-tooling-only change with no effect on published output. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- Updated dependencies [[`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8)]:
+    - @wolfstar/http-framework@3.2.1
+
 ## 0.0.5
 
 ### Patch Changes

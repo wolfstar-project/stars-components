@@ -1,10 +1,27 @@
-# `@wolfstar/http-framework`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/http-framework
+
+**The HTTP-only Discord bot framework powering the Star Network.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/http-framework)](https://npmx.dev/package/@wolfstar/http-framework)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/http-framework)](https://npmx.dev/package/@wolfstar/http-framework)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 A powerful HTTP framework for building your Discord bots, powered by [`node:http`], [`@discordjs/rest`], and [`@sapphire/pieces`].
 
 ## Features
 
 - Support for reloading and unloading commands
+- Built-in Hot Module Reloading for every store
+- Built-in logger, extendable by plugins
 - Support for attachment responses
 - Seamless integration with low-level libraries
 - Thin wrapper on top of raw data for maximum performance
@@ -295,6 +312,339 @@ await client.load();
 await client.listen({ port: 3000 });
 ```
 
+### Logger
+
+The framework ships a minimal logger, available as `container.logger` (and as `client.logger`) as soon as
+`@wolfstar/http-framework` is imported. It writes to the matching `console` method and filters entries by
+`LogLevel`, which defaults to `LogLevel.Info`:
+
+```typescript
+import { container, Client, LogLevel } from '@wolfstar/http-framework';
+
+const client = new Client({ logger: { level: LogLevel.Debug } });
+
+container.logger.info('Ready');
+container.logger.debug('Interaction received', interaction.id);
+```
+
+The built-in implementation is intentionally bare: it has no timestamps, colours, or transports. Those belong to a
+logger plugin, which replaces it by assigning an `ILogger` to `options.logger.instance` from a
+`preGenericsInitialization` hook:
+
+```typescript
+import { Plugin, preGenericsInitialization, type ClientOptions } from '@wolfstar/http-framework';
+
+export class LoggerPlugin extends Plugin {
+	public static [preGenericsInitialization](options: ClientOptions): void {
+		options.logger ??= {};
+		options.logger.instance = new MyLogger(options.logger);
+	}
+}
+```
+
+Because the plugin only has to satisfy the `ILogger` interface, the rest of the framework — including Hot Module
+Reloading and the command router — keeps logging through `container.logger` without any change.
+
+### Client events
+
+The `Client` extends an event emitter typed by the `ClientEvents` interface. Every event name is also available as a
+member of the `Events` enum, which is the recommended way to reference them, as the plain strings remain valid:
+
+```typescript
+import { Events } from '@wolfstar/http-framework';
+
+client.on(Events.CommandError, (error, context) => {
+	console.error(`Failed to run ${context.command.name}`, error);
+});
+```
+
+| Enum member                            | Event name                      | Arguments                                     |
+| -------------------------------------- | ------------------------------- | --------------------------------------------- |
+| `Events.Error`                         | `error`                         | `error: unknown`                              |
+| `Events.PluginLoaded`                  | `pluginLoaded`                  | `hook: PluginHook, name: string \| undefined` |
+| `Events.CommandNameMissing`            | `commandNameMissing`            | `interaction, response`                       |
+| `Events.CommandNameUnknown`            | `commandNameUnknown`            | `interaction, response`                       |
+| `Events.CommandMethodUnknown`          | `commandMethodUnknown`          | `context`                                     |
+| `Events.CommandRun`                    | `commandRun`                    | `context`                                     |
+| `Events.CommandSuccess`                | `commandSuccess`                | `context, value: unknown`                     |
+| `Events.CommandError`                  | `commandError`                  | `error: unknown, context`                     |
+| `Events.CommandFinish`                 | `commandFinish`                 | `context`                                     |
+| `Events.AutocompleteRun`               | `autocompleteRun`               | `context`                                     |
+| `Events.AutocompleteSuccess`           | `autocompleteSuccess`           | `context, value: unknown`                     |
+| `Events.AutocompleteError`             | `autocompleteError`             | `error: unknown, context`                     |
+| `Events.AutocompleteFinish`            | `autocompleteFinish`            | `context`                                     |
+| `Events.InteractionHandlerNameInvalid` | `interactionHandlerNameInvalid` | `interaction, response`                       |
+| `Events.InteractionHandlerNameUnknown` | `interactionHandlerNameUnknown` | `interaction, response`                       |
+| `Events.InteractionHandlerRun`         | `interactionHandlerRun`         | `context`                                     |
+| `Events.InteractionHandlerSuccess`     | `interactionHandlerSuccess`     | `context, value: unknown`                     |
+| `Events.InteractionHandlerError`       | `interactionHandlerError`       | `error: unknown, context`                     |
+| `Events.InteractionHandlerFinish`      | `interactionHandlerFinish`      | `context`                                     |
+
+The Hot Module Reloading events are listed in [their own section](#hot-module-reloading).
+
+Listeners declared as pieces can use the enum too:
+
+```typescript
+import { ApplyOptions, Events, Listener } from '@wolfstar/http-framework';
+
+@ApplyOptions<Listener.Options>({ event: Events.CommandError })
+export class UserListener extends Listener {
+	public run(error: unknown, context: ClientEventCommandContext) {
+		console.error(`Failed to run ${context.command.name}`, error);
+	}
+}
+```
+
+### Hot Module Reloading
+
+`@wolfstar/http-framework` ships with Hot Module Reloading (HMR) as a core feature, no plugin required. When enabled,
+every path registered in every store is watched, and pieces are loaded, reloaded, and unloaded in place as their files
+are created, changed, and deleted, without restarting the process.
+
+```typescript
+import { Client } from '@wolfstar/http-framework';
+
+const client = new Client({
+	discordToken: process.env.DISCORD_TOKEN,
+	discordPublicKey: process.env.DISCORD_PUBLIC_KEY,
+	// Development only, do not enable this in production:
+	hmr: { enabled: process.env.NODE_ENV !== 'production' }
+});
+
+// `load` starts the reloader once the stores have been loaded:
+await client.load();
+```
+
+The `hmr` option accepts [all of chokidar's options], plus:
+
+| Option    | Default | Description                                                                                |
+| --------- | ------- | ------------------------------------------------------------------------------------------ |
+| `enabled` | `true`  | Whether HMR is started. Omitting the `hmr` option entirely also leaves the reloader unset. |
+| `silent`  | `false` | Whether the reloader refrains from writing to the console. Events are always emitted.      |
+
+The reloader is exposed as `client.hmr`, which is `null` when HMR is disabled, and can be stopped at any time:
+
+```typescript
+await client.hmr?.stop();
+```
+
+It can also be used standalone, without a `Client`, as long as the stores are registered in the container:
+
+```typescript
+import { HotModuleReloader } from '@wolfstar/http-framework';
+
+const reloader = await new HotModuleReloader({ silent: true }).start();
+```
+
+The client emits an event for every operation, which is useful to react to changes, for example to push the updated
+application commands to Discord while developing:
+
+```typescript
+client.on(Events.HmrPieceReloaded, async (piece) => {
+	if (piece.store.name === 'commands') {
+		await client.registry.pushGlobalCommandsInGuild(process.env.DEVELOPMENT_GUILD_ID);
+	}
+});
+```
+
+| Enum member               | Event              | Arguments               | Description                                          |
+| ------------------------- | ------------------ | ----------------------- | ---------------------------------------------------- |
+| `Events.HmrStart`         | `hmrStart`         | `paths: string[]`       | The reloader started watching the given store paths. |
+| `Events.HmrStop`          | `hmrStop`          | —                       | The reloader stopped and closed all of its watchers. |
+| `Events.HmrPiecesLoaded`  | `hmrPiecesLoaded`  | `pieces: Piece[], path` | A new file was created and its pieces were loaded.   |
+| `Events.HmrPieceReloaded` | `hmrPieceReloaded` | `piece: Piece, path`    | An existing file changed and its piece was reloaded. |
+| `Events.HmrPieceUnloaded` | `hmrPieceUnloaded` | `piece: Piece, path`    | A file was deleted and its piece was unloaded.       |
+| `Events.HmrError`         | `hmrError`         | `error: unknown, path`  | An operation failed; saving the file again retries.  |
+
+> **Note**: unloading a command also removes its entry from the `ApplicationCommandRegistry`, so a reloaded command is
+> registered exactly once. HMR does not push the updated commands to Discord on its own, subscribe to the events above
+> if you want that behaviour.
+
+### Project configuration (`stars.config.*`)
+
+`@wolfstar/http-framework` owns the typed project configuration consumed by the [`stars` CLI](../cli) — the
+`defineConfig` helper and the config loader live here, not in the CLI, so any tool can resolve a project's
+configuration without pulling in `@wolfstar/cli`.
+
+```typescript
+// stars.config.ts
+import { defineConfig } from '@wolfstar/http-framework/config';
+
+export default defineConfig({
+	entry: 'src/main.ts',
+	build: { tool: 'tsdown' }
+});
+```
+
+`@wolfstar/http-framework/config` has no side effects — importing it (or a `stars.config.ts` that imports it) never
+starts the bot. `loadStarsConfig` discovers `stars.config.{ts,mts,cts,js,mjs,cjs}` from a directory, applies defaults,
+validates every option and resolves all paths to absolute ones.
+
+`dev.url`, the URL `stars dev` shows and health-checks the bot on, needs no configuration either: it is detected the
+way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `.env.local`/`.env`, or `dev.env`) or `3000`, and
+`localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` explicitly only
+to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }`.
+
+`dev` also carries the three options that round out the dev loop:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	build: { tool: 'tsdown' },
+	dev: {
+		// A type checker next to the bot, reported on the dev UI's `tsc` channel. Never blocks a build.
+		// `checker` is 'tsc' | 'golar' | 'tsz' | 'auto' (default: golar when installed, tsc otherwise).
+		typecheck: { checker: 'golar' },
+		// A cloudflared quick tunnel so Discord can reach the interactions endpoint, or an https URL you serve.
+		tunnel: true,
+		// Where the session's logs are mirrored, so a run can be read after the terminal UI is gone.
+		logFile: '.stars/dev.log'
+	}
+});
+```
+
+`tunnel.updateEndpoint` writes the public URL to the Discord application's `interactions_endpoint_url`; it is opt-in
+because it edits a live application, and needs `DISCORD_TOKEN` in the environment or the project's `.env`.
+
+### The build (`tsdown`)
+
+`tsdown` is the bundler `stars build` and `stars dev` use, and it is configured from `stars.config` itself. A base
+project configures nothing at all — this is a complete build:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: { compatibilityVersion: 4 }
+});
+```
+
+The defaults are the configuration a bot would otherwise write out by hand:
+
+| Option                       | Default                                                        | Why                                                                         |
+| ---------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `entry`                      | every source file next to `entry`, minus `*.test.*`/`*.spec.*` | pieces are found by the stores, not imported by the entry                   |
+| `unbundle`                   | `true`                                                         | keeps `dist/commands/…` loadable one file at a time at runtime              |
+| `format` / `platform`        | `'esm'` / `'node'`                                             | what the framework and `node dist/…` expect                                 |
+| `outDir` / `outExtensions`   | `build.outDir` / the extension of `build.output`               | so `stars dev`, `package.json#main` and `node dist/…` agree                 |
+| `tsconfig`                   | `build.tsconfig` (`src/tsconfig.json`, else `tsconfig.json`)   | `tsdown` alone looks only next to the root, missing the `src/` layout       |
+| `sourcemap` / `treeshake`    | `true`                                                         | a deployed bot needs readable stack traces                                  |
+| `minify`                     | `false`                                                        | nothing is shipped over a wire, so bytes buy nothing here                   |
+| `deps.skipNodeModulesBundle` | `true`                                                         | dependencies stay in `node_modules` instead of being copied into `dist`     |
+| `alias`                      | `~`/`@` → the entry's directory, `~~`/`@@` → the project root  | the prefixes Nuxt gives every project                                       |
+| `dts`                        | `false`                                                        | nothing consumes a bot's `dist/`; set `tsdown: { dts: true }` if yours does |
+
+#### Aliases
+
+The four prefixes Nuxt gives every project work out of the box, pointing at the same two places its own do:
+
+```typescript
+import { Greeting } from '~/lib/greeting'; // and '@/lib/greeting' — the entry's directory
+import pkg from '~~/package.json'; // and '@@/package.json' — the project root
+```
+
+The build resolves them on its own; TypeScript needs the matching `paths` (the scaffold writes them, and
+`examples/basic` shows them):
+
+```jsonc
+{
+	"compilerOptions": {
+		"paths": {
+			"~/*": ["./src/*"],
+			"@/*": ["./src/*"],
+			"~~/*": ["./*"],
+			"@@/*": ["./*"]
+		}
+	}
+}
+```
+
+A project's own `tsdown.alias` is added to these rather than replacing them, and a target written as a relative path
+(`'./src/lib'`) is resolved against the project root, the way every other path in `stars.config` is — a module id
+(`'preact/compat'`) is left alone.
+
+So the block is for what the defaults cannot know — a plugin that copies assets, an extra alias, a target:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: { compatibilityVersion: 4 },
+	tsdown: { plugins: [alias({ entries: aliasEntries }), copyLocales()] }
+});
+```
+
+Anything in `tsdown` wins over the defaults, and `plugins` are appended rather than replaced.
+
+With `future.compatibilityVersion: 3` (today's default) a `tsdown.config.*` in the project root is still loaded and
+`tsdown` is merged over it, so a project can move its options across one at a time. With `4` the block is the whole
+configuration, and a leftover `tsdown.config.*` is reported instead of being silently ignored.
+
+`vite: {}` works the same way for `build.tool: 'vite'` (see [experimental flags](#experimental-flags)): it is merged
+into the project's own `vite.config.*`, the way `vite: {}` in a Nuxt config is.
+
+### Compatibility version
+
+`future` carries the defaults of the next major, the way Nuxt's own `future.compatibilityVersion` does: a project
+opts into them one major early, and they become the default when that major ships. Where `experimental` guards work
+that is still landing, everything here is already decided.
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: {
+		// 3 (the default today) or 4 (the next major's defaults).
+		compatibilityVersion: 4
+	}
+});
+```
+
+`4` changes three things:
+
+- **Auto imports are on** with the `tsdown` build tool, and the `autoImports()` plugin is wired into the build by
+  `stars` itself instead of by the project's own configuration file — the framework's exports and the project's
+  `src/lib/**`, `src/utils/**` are usable without an `import` statement, the same way Nuxt's own are.
+- **`tsdown` is configured from `stars.config` alone.** A `tsdown.config.*` (or a `package.json#tsdown` field) raises
+  `TSDOWN_CONFIG_FILE_UNSUPPORTED`, because a build that quietly dropped the plugins such a file declares would be
+  far harder to diagnose than an error naming it.
+- **`build.tool: 'auto'` resolves to `tsdown`** for any TypeScript entry, rather than looking for a `tsdown.config.*`
+  or a `tsdown` dependency first. `tsc` stays available as an explicit choice.
+
+`stars info` prints the version in effect.
+
+### Experimental flags
+
+`experimental` is the same kind of block Nuxt's own `experimental` is: opt-in booleans, all `false` by default, each
+guarding work that is still landing.
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	// `build.tool: 'vite'` is only accepted with `enableVite`, and `'auto'` only then detects a vite.config.*
+	build: { tool: 'vite' },
+	experimental: {
+		// Vite as the build tool and the HTTP server, in place of tsdown plus the framework's node:http listener.
+		enableVite: true,
+		// The project runs Vite itself: `stars dev` only watches the output and restarts the bot.
+		enableExternalVite: false,
+		// Build and serve through Nitro. Needs the framework's Fetch adapter, so `stars dev`/`stars build` still
+		// refuse it with an actionable error for now.
+		enableNitro: false
+	}
+});
+```
+
+The resolved configuration is also available programmatically:
+
+```typescript
+import { loadStarsConfig } from '@wolfstar/http-framework/config';
+
+const config = await loadStarsConfig({ cwd: process.cwd() });
+console.log(config.entry, config.build.output);
+```
+
+Invalid options raise a `ConfigError` with a stable `code`, the offending option `path`, the `file` it came from, and
+an actionable `hint`. See the [`@wolfstar/cli` README](../cli#configuration) for the full option reference and how the
+`stars` commands (`dev`, `build`, `info`, `codegen`, `prepare`, `commands`) use it.
+
 ### ApplicationCommandRegistry
 
 The `ApplicationCommandRegistry` is `@wolfstar/http-framework`'s centralized registry and uses [`@discordjs/rest`] to register them in Discord.
@@ -333,6 +683,7 @@ await applicationCommandRegistry.pushGuildRestrictedCommands();
 > **Note**: calling `applicationCommandRegistry.setup()` is not needed if you are using the `Client` class because it is
 > already called automatically for you.
 
+[all of chokidar's options]: https://github.com/paulmillr/chokidar#api
 [`node:http`]: https://nodejs.org/api/http.html
 [`@discordjs/rest`]: https://www.npmjs.com/package/@discordjs/rest
 [`@sapphire/pieces`]: https://www.npmjs.com/package/@sapphire/pieces

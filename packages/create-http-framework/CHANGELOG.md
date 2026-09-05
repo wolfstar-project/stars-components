@@ -1,5 +1,61 @@
 # Changelog
 
+## 2.4.0
+
+### Minor Changes
+
+- [#164](https://github.com/wolfstar-project/stars-components/pull/164) [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0) - feat: scaffold the build inside `stars.config`
+
+    Generated TypeScript projects no longer ship a `tsdown.config.ts`: the build lives in `stars.config.ts` alongside
+    everything else the `stars` CLI reads, and `future: { compatibilityVersion: 4 }` opts them into the next major's
+    defaults — auto imports wired into the build, and `stars.config` as the only build configuration.
+
+    The generated `tsconfig.json` includes `.stars/*.d.ts` so the auto imports are typed and declares the `paths` for the
+    built-in `~`/`@`/`~~`/`@@` aliases, and the generated `.gitignore` covers `.stars/`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 2.3.0
+
+### Minor Changes
+
+- [#158](https://github.com/wolfstar-project/stars-components/pull/158) [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c) - feat: scaffold projects on top of the `stars` CLI
+
+    Generated projects now depend on `@wolfstar/cli`, ship a `stars.config.ts` (or `stars.config.js`) file that imports
+    `defineConfig` from `@wolfstar/http-framework/config`, and use `stars dev` / `stars build` as their `dev` and `build`
+    scripts for every language and build tool, replacing the per-tool `watch`, `watch:start` and `tsc-watch` wiring. The
+    `generate:i18n` script now runs `stars codegen`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#159](https://github.com/wolfstar-project/stars-components/pull/159) [`214a6aa`](https://github.com/wolfstar-project/stars-components/commit/214a6aa40aa1925baa149924612c499d9bffba50) - Drop the generated `src/lib/setup/logger` module and the `@wolfstar/logger` dependency from scaffolded projects: `container.logger` is now provided by `@wolfstar/http-framework` out of the box. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 2.2.0
+
+### Minor Changes
+
+- [#150](https://github.com/wolfstar-project/stars-components/pull/150) [`cdf6bf9`](https://github.com/wolfstar-project/stars-components/commit/cdf6bf9b91cef1ed50f9a788449e26bcbed2b647) - feat: revamp the generated project template to match the monorepo's `examples/basic` reference
+  (env/logger/banner setup, `@wolfstar/env-utilities` typed env augmentation), replace i18n
+  scaffolding with `@wolfstar/plugin-i18next` (dropping the deprecated
+  `@wolfstar/http-framework-i18n`), and add `--subcommands` / `--subcommands-advanced` / `--testing`
+  toggles for a subcommand example command (flat, or with subcommand groups) and a vitest +
+  `@wolfstar/http-framework-test-utils` testing setup.
+
+    BREAKING (for scripted `--i18n --no-interactive` callers): the i18n toggle now installs and
+    scaffolds against `@wolfstar/plugin-i18next` instead of the deprecated
+    `@wolfstar/http-framework-i18n`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#152](https://github.com/wolfstar-project/stars-components/pull/152) [`ce8f77a`](https://github.com/wolfstar-project/stars-components/commit/ce8f77a11a3eb825c77d021807827f400affa232) - fix: rerunning the generator with `--ignore` against an existing project (e.g. to toggle a feature
+  or switch `--language`) now removes stale files left behind by the previous run — e.g.
+  `src/commands/math.ts` after disabling `--subcommands`, or the previous language's `src/main.*`
+  after switching `--language` — instead of leaving them with imports for packages `package.json` no
+  longer declares. Hand-edited files are detected and left in place with a warning rather than being
+  deleted. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#151](https://github.com/wolfstar-project/stars-components/pull/151) [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8) - build: replace tsc with golar as typechecker, bump typescript to 7.0.2
+
+    `typecheck` scripts now run `golar tsc` instead of `tsc` directly. This is a dev-tooling-only change with no effect on published output. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.4
 
 ### Patch Changes

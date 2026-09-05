@@ -1,4 +1,19 @@
-# `@wolfstar/env-utilities`
+<div align="center">
+  <picture>
+    <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
+  </picture>
+
+# @wolfstar/env-utilities
+
+**Functional utilities for reading and parsing environment variables.**
+
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/env-utilities)](https://npmx.dev/package/@wolfstar/env-utilities)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/env-utilities)](https://npmx.dev/package/@wolfstar/env-utilities)
+[![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
+
+</div>
+
+## Description
 
 Functional utilities for reading and parsing environmental variables, based on [Wolfstar](https://wolfstar.rocks)'s internal tools.
 

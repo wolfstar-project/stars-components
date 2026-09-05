@@ -5,8 +5,9 @@ import { AsyncEventEmitter } from '@vladfrangu/async_event_emitter';
 import { InteractionType, type APIInteraction, type APIPrimaryEntryPointCommandInteraction } from 'discord-api-types/v10';
 import { createServer, type IncomingMessage, type Server, type ServerOptions, type ServerResponse } from 'node:http';
 import type { ListenOptions as NetListenOptions } from 'node:net';
-import type { MappedClientEvents } from './ClientEvents.js';
+import { Events, type MappedClientEvents } from './ClientEvents.js';
 import { HttpCodes } from './api/HttpCodes.js';
+import { HotModuleReloader, type HMROptions } from './hmr/HotModuleReloader.js';
 import type { IIdParser } from './components/IIdParser.js';
 import { StringIdParser } from './components/StringIdParser.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
@@ -17,15 +18,36 @@ import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js
 import { ListenerStore } from './structures/ListenerStore.js';
 import { PluginHook } from './types/Enums.js';
 import { ErrorMessages, Payloads } from './utils/constants.js';
+import { LogLevel, type ILogger } from './utils/logger/ILogger.js';
+import { Logger } from './utils/logger/Logger.js';
 import { makeKey, verifyBody, type Key } from './utils/security.js';
 import { getSafeTextBody } from './utils/streams.js';
 
 container.stores.register(new CommandStore());
 container.stores.register(new InteractionHandlerStore());
 container.stores.register(new ListenerStore());
+container.logger ??= new Logger();
 
 export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public server!: Server;
+
+	/**
+	 * The Hot Module Reloader, set by {@link Client#load} when {@link ClientOptions.hmr} is enabled, and `null`
+	 * otherwise.
+	 *
+	 * @since 3.3.0
+	 */
+	public hmr: HotModuleReloader | null = null;
+
+	/**
+	 * The logger the client and the framework internals write to. It defaults to a {@link Logger} writing to the
+	 * console, and can be replaced with any {@link ILogger} through {@link ClientLoggerOptions.instance}, which is
+	 * how a logger plugin swaps the built-in implementation for a richer one.
+	 *
+	 * @since 3.4.0
+	 */
+	public readonly logger: ILogger;
+
 	public readonly id: string;
 	public readonly options: ClientOptions;
 	public readonly bodySizeLimit: number;
@@ -44,12 +66,17 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 
 		for (const plugin of Client.plugins.values(PluginHook.PreGenericsInitialization)) {
 			plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
+
+		// Resolve the logger right after the pre-generics hooks so plugins registering an `ILogger` through
+		// `options.logger.instance` are honoured, and every later hook already sees the final `container.logger`.
+		this.logger = this.options.logger?.instance ?? new Logger(this.options.logger?.level ?? LogLevel.Info);
+		container.logger = this.logger;
 
 		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
 			plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
 		this.bodySizeLimit = options.bodySizeLimit ?? 1024 * 1024;
@@ -76,7 +103,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 
 		for (const plugin of Client.plugins.values(PluginHook.PostInitialization)) {
 			plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 	}
 
@@ -115,7 +142,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public async load(options: LoadOptions = {}) {
 		for (const plugin of Client.plugins.values(PluginHook.PreLoad)) {
 			await plugin.hook.call(this, this.options);
-			this.emit('pluginLoaded', plugin.type, plugin.name);
+			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
 		// Register the user directory if not null:
@@ -124,6 +151,11 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		}
 
 		await container.stores.load();
+
+		if (this.options.hmr && (this.options.hmr.enabled ?? true)) {
+			this.hmr = new HotModuleReloader(this.options.hmr);
+			await this.hmr.start();
+		}
 	}
 
 	/**
@@ -142,7 +174,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		try {
 			for (const plugin of Client.plugins.values(PluginHook.PostListen)) {
 				await plugin.hook.call(this, this.options);
-				this.emit('pluginLoaded', plugin.type, plugin.name);
+				this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 			}
 		} catch (error) {
 			// A postListen hook failed: close the server we just opened so it does not stay bound to the
@@ -260,6 +292,43 @@ export interface ClientOptions {
 	 * @since 2.0.0
 	 */
 	authPrefix?: RequestAuthPrefix;
+
+	/**
+	 * The Hot Module Reloading options. When {@link HMROptions.enabled} is `true`, {@link Client#load} starts a
+	 * {@link HotModuleReloader} that watches every store path and reloads pieces as their files change.
+	 *
+	 * @remarks HMR is meant for development only, keep it disabled in production.
+	 * @default undefined // HMR is not started
+	 * @since 3.3.0
+	 */
+	hmr?: HMROptions;
+
+	/**
+	 * The options for {@link Client#logger}, which is also exposed as `container.logger`.
+	 *
+	 * @since 3.4.0
+	 */
+	logger?: ClientLoggerOptions;
+}
+
+export interface ClientLoggerOptions {
+	/**
+	 * The lowest {@link LogLevel} the built-in {@link Logger} writes. Ignored when
+	 * {@link ClientLoggerOptions.instance} is set.
+	 *
+	 * @default LogLevel.Info
+	 * @since 3.4.0
+	 */
+	level?: LogLevel;
+
+	/**
+	 * The {@link ILogger} to use instead of the built-in {@link Logger}. Plugins set this from a
+	 * {@link PluginHook.PreGenericsInitialization} hook to extend the framework's logging.
+	 *
+	 * @default undefined // a new Logger is created
+	 * @since 3.4.0
+	 */
+	instance?: ILogger;
 }
 
 export interface LoadOptions {
@@ -296,6 +365,7 @@ export interface ListenOptions extends Omit<NetListenOptions, 'path' | 'readable
 
 export namespace Client {
 	export type Options = ClientOptions;
+	export type LoggerOptions = ClientLoggerOptions;
 	export type PieceLoadOptions = LoadOptions;
 	export type ServerListenOptions = ListenOptions;
 }
@@ -312,5 +382,6 @@ declare module '@sapphire/pieces' {
 		idParser: IIdParser;
 		rest: REST;
 		applicationCommandRegistry: ApplicationCommandRegistry;
+		logger: ILogger;
 	}
 }

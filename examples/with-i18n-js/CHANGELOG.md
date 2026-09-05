@@ -1,5 +1,38 @@
 # with-i18n-js
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0), [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0)]:
+    - @wolfstar/http-framework@3.5.0
+
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`214a6aa`](https://github.com/wolfstar-project/stars-components/commit/214a6aa40aa1925baa149924612c499d9bffba50), [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c), [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c), [`f513392`](https://github.com/wolfstar-project/stars-components/commit/f51339281ad17ae83ef779a4fe97d4502551f59c)]:
+    - @wolfstar/http-framework@3.4.0
+
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`6364824`](https://github.com/wolfstar-project/stars-components/commit/63648244c6b422f43fb4a237936beea077c8f0ad), [`ce9496a`](https://github.com/wolfstar-project/stars-components/commit/ce9496a7aced1200d3b4b322d6a336e5a60debb3)]:
+    - @wolfstar/http-framework@3.3.0
+
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55), [`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55), [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8), [`170156a`](https://github.com/wolfstar-project/stars-components/commit/170156aed32c73c4b2d355e727f1136df7cfac55), [`d3209cd`](https://github.com/wolfstar-project/stars-components/commit/d3209cd08a5148d0d0d5dc0b79d80a07ffd529d6)]:
+    - @wolfstar/http-framework-i18n@2.0.0
+    - @wolfstar/env-utilities@2.0.8
+    - @wolfstar/http-framework@3.2.1
+    - @wolfstar/logger@2.1.6
+    - @wolfstar/shared-http-pieces@2.0.0
+    - @wolfstar/start-banner@2.0.9
+
 ## 0.0.5
 
 ### Patch Changes

@@ -1,3 +1,4 @@
+import type { Piece } from '@sapphire/pieces';
 import type {
 	APIApplicationCommandAutocompleteInteraction,
 	APIApplicationCommandInteraction,
@@ -25,6 +26,48 @@ export interface ClientEventInteractionHandlerContext {
 	handler: InteractionHandler;
 	interaction: APIMessageComponentInteraction | APIModalSubmitInteraction;
 	response: ServerResponse;
+}
+
+/**
+ * The name of every event emitted by the {@link Client}, mirroring the keys of {@link ClientEvents}.
+ *
+ * @remarks
+ * Each member's value is the plain event name, so they are interchangeable with the string literals
+ * accepted by `Client#on`, `Client#emit`, and {@link Listener.Options.event}.
+ *
+ * @example
+ * ```typescript
+ * client.on(Events.CommandError, (error, context) => console.error(context.command.name, error));
+ * ```
+ *
+ * @since 3.4.0
+ */
+export enum Events {
+	Error = 'error',
+	PluginLoaded = 'pluginLoaded',
+	CommandNameMissing = 'commandNameMissing',
+	CommandNameUnknown = 'commandNameUnknown',
+	CommandMethodUnknown = 'commandMethodUnknown',
+	CommandRun = 'commandRun',
+	CommandSuccess = 'commandSuccess',
+	CommandError = 'commandError',
+	CommandFinish = 'commandFinish',
+	AutocompleteRun = 'autocompleteRun',
+	AutocompleteSuccess = 'autocompleteSuccess',
+	AutocompleteError = 'autocompleteError',
+	AutocompleteFinish = 'autocompleteFinish',
+	InteractionHandlerNameInvalid = 'interactionHandlerNameInvalid',
+	InteractionHandlerNameUnknown = 'interactionHandlerNameUnknown',
+	InteractionHandlerRun = 'interactionHandlerRun',
+	InteractionHandlerSuccess = 'interactionHandlerSuccess',
+	InteractionHandlerError = 'interactionHandlerError',
+	InteractionHandlerFinish = 'interactionHandlerFinish',
+	HmrStart = 'hmrStart',
+	HmrStop = 'hmrStop',
+	HmrPiecesLoaded = 'hmrPiecesLoaded',
+	HmrPieceReloaded = 'hmrPieceReloaded',
+	HmrPieceUnloaded = 'hmrPieceUnloaded',
+	HmrError = 'hmrError'
 }
 
 export interface ClientEvents {
@@ -59,6 +102,51 @@ export interface ClientEvents {
 	interactionHandlerSuccess: [context: ClientEventInteractionHandlerContext, value: unknown];
 	interactionHandlerError: [error: unknown, context: ClientEventInteractionHandlerContext];
 	interactionHandlerFinish: [context: ClientEventInteractionHandlerContext];
+	/**
+	 * Emitted when the Hot Module Reloader starts watching, with the list of watched store paths.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrStart: [paths: string[]];
+	/**
+	 * Emitted when the Hot Module Reloader stops watching and all of its watchers have been closed.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrStop: [];
+	/**
+	 * Emitted when the Hot Module Reloader loads the pieces of a newly created file.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrPiecesLoaded: [pieces: Piece[], path: string];
+	/**
+	 * Emitted when the Hot Module Reloader reloads an already loaded piece after its file changed.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrPieceReloaded: [piece: Piece, path: string];
+	/**
+	 * Emitted when the Hot Module Reloader unloads a piece after its file was deleted.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrPieceUnloaded: [piece: Piece, path: string];
+	/**
+	 * Emitted when the Hot Module Reloader fails to load, reload, or unload the pieces of a file. The error is not
+	 * rethrown: saving the file again retries the operation.
+	 *
+	 * @since 3.3.0
+	 */
+	hmrError: [error: unknown, path: string];
 }
+
+/**
+ * The name of any of the events emitted by the {@link Client}, either as a plain string literal or as an
+ * {@link Events} member.
+ *
+ * @since 3.4.0
+ */
+export type ClientEventName = keyof ClientEvents;
 
 export type MappedClientEvents = { [K in keyof ClientEvents]: ClientEvents[K] };

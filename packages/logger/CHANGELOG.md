@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.7
+
+### Patch Changes
+
+- [#159](https://github.com/wolfstar-project/stars-components/pull/159) [`214a6aa`](https://github.com/wolfstar-project/stars-components/commit/214a6aa40aa1925baa149924612c499d9bffba50) - Deprecate this package in favor of the upcoming `@wolfstar/plugin-logger` (see wolfstar-project/plugins). `@wolfstar/logger` continues to work and is not removed, but will not receive new features going forward. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 2.1.6
+
+### Patch Changes
+
+- [#151](https://github.com/wolfstar-project/stars-components/pull/151) [`e32aea1`](https://github.com/wolfstar-project/stars-components/commit/e32aea17e3b2bd29fdfeacd4efe169ed901ff5c8) - build: replace tsc with golar as typechecker, bump typescript to 7.0.2
+
+    `typecheck` scripts now run `golar tsc` instead of `tsc` directly. This is a dev-tooling-only change with no effect on published output. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.5
 
 ### Patch Changes

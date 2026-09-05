@@ -1,6 +1,6 @@
 {
 	"name": "basic",
-	"version": "0.0.5",
+	"version": "0.0.9",
 	"private": true,
 	"description": "Minimal WolfStar HTTP Discord bot example",
 	"type": "module",
@@ -9,18 +9,16 @@
 		"#lib/*": "./dist/lib/*.js"
 	},
 	"scripts": {
-		"build": "tsdown --config-loader unrun",
-		"dev": "pnpm build && pnpm start",
+		"build": "node ../../packages/cli/dist/cli.js build",
+		"dev": "node ../../packages/cli/dist/cli.js dev",
 		"start": "node --enable-source-maps dist/main.js",
-		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"watch": "tsdown --config-loader unrun --watch --onSuccess \"node --enable-source-maps dist/main.js\""
+		"typecheck": "golar tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
 		"@sapphire/pieces": "^4.4.1",
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
 		"@wolfstar/http-framework-i18n": "workspace:*",
-		"@wolfstar/logger": "workspace:*",
 		"@wolfstar/shared-http-pieces": "workspace:*",
 		"@wolfstar/start-banner": "workspace:*",
 		"discord-api-types": "^0.38.8",
@@ -28,8 +26,10 @@
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",
+		"@wolfstar/cli": "workspace:^",
+		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
-		"typescript": "~5.8.3"
+		"typescript": "~7.0.2"
 	},
 	"engines": {
 		"node": ">=20"
