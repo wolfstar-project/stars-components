@@ -5,13 +5,6 @@ settings:
   dedupePeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@types/pg': 8.23.1
-  ansi-regex: ^6.3.0
-  esbuild: ^0.28.2
-  minimist: 1.2.8
-  '@redstardev/unplugin-version-injector>vite': 8.2.1
-
 importers:
 
   .:
@@ -2074,9 +2067,9 @@ packages:
       '@farmfe/core': '>=1'
       '@nuxt/kit': ^3
       '@nuxt/schema': ^3
-      esbuild: ^0.28.2
+      esbuild: '*'
       rollup: ^3
-      vite: 8.2.1
+      vite: '>=3'
       webpack: ^4 || ^5
     peerDependenciesMeta:
       '@farmfe/core':
@@ -2876,6 +2869,10 @@ packages:
   ansi-escapes@7.3.0:
     resolution: {integrity: sha512-BvU8nYgGQBxcmMuEeUEmNTvrMVjJNSH7RgW24vXexN4Ven6qCvy4TntnvlnwnMLTVlcRQQdbRY8NKnaIoeWDNg==}
     engines: {node: '>=18'}
+
+  ansi-regex@5.0.1:
+    resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
+    engines: {node: '>=8'}
 
   ansi-regex@6.3.0:
     resolution: {integrity: sha512-WpDfL7NO6j7tH88IDBNVdUJxDh9nmCteAVW9dsep846XdwF4naCBK+/tGLX3KJgcpgMRXCFlTM2hKGoK9FsdrQ==}
@@ -4675,7 +4672,7 @@ packages:
       '@farmfe/core': '*'
       '@rspack/core': '*'
       bun-types-no-globals: '*'
-      esbuild: ^0.28.2
+      esbuild: '*'
       rolldown: '*'
       rollup: '*'
       unloader: '*'
@@ -4743,7 +4740,7 @@ packages:
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
       '@vitejs/devtools': ^0.4.0
-      esbuild: ^0.28.2
+      esbuild: ^0.27.0 || ^0.28.0
       jiti: '>=1.21.0'
       less: ^4.0.0
       sass: ^1.70.0
@@ -6565,6 +6562,8 @@ snapshots:
     dependencies:
       environment: 1.1.0
 
+  ansi-regex@5.0.1: {}
+
   ansi-regex@6.3.0: {}
 
   ansi-styles@3.2.1:
@@ -8166,7 +8165,7 @@ snapshots:
 
   strip-ansi@6.0.1:
     dependencies:
-      ansi-regex: 6.3.0
+      ansi-regex: 5.0.1
 
   strip-ansi@7.2.0:
     dependencies:
