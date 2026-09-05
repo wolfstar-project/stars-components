@@ -39,6 +39,7 @@ export type {
 	ResolvedCodegenConfig,
 	ResolvedDevConfig,
 	ResolvedExperimentalConfig,
+	ResolvedFutureConfig,
 	ResolvedNitroConfig,
 	ResolvedI18nCodegenConfig,
 	ResolvedImportsConfig,

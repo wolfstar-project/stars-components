@@ -11,6 +11,17 @@ Minimal HTTP Discord bot using the `@wolfstar/*` HTTP framework stack.
 - `registerCommands()` — guild push when `REGISTRY_GUILD_ID` is set, else global
 - `@wolfstar/logger` + `@wolfstar/start-banner` — container logger and startup banner
 
+## The build
+
+The build lives in [`stars.config.ts`](./stars.config.ts): `tsdown: {}` holds what a separate `tsdown.config.ts`
+used to, and `future: { compatibilityVersion: 4 }` opts into the next major's defaults (auto imports on and wired
+into the build, `stars.config` as the only build configuration). See the
+[framework README](../../packages/http-framework#the-build-tsdown).
+
+The `build` and `dev` scripts run the CLI by path (`node ../../packages/cli/dist/cli.js …`) because the `stars`
+executable is only linked once `@wolfstar/cli` is installed from npm; in a real project they are `stars build` and
+`stars dev`.
+
 ## Setup
 
 ```bash

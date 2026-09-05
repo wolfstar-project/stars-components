@@ -72,7 +72,7 @@ stars --help | --version
 
 ### `stars dev`
 
-Watches the sources through the configured build tool (`tsdown` programmatically with your `tsdown.config.*`, `tsc -b --watch`, or a plain file watcher for JavaScript projects), starts the bot after the first successful build and restarts it after every following one. Failed builds keep the previous process running and wait for the next change; a crashed bot waits for the next change or a manual restart.
+Watches the sources through the configured build tool (`tsdown` programmatically, configured from your `stars.config`, `tsc -b --watch`, or a plain file watcher for JavaScript projects), starts the bot after the first successful build and restarts it after every following one. Failed builds keep the previous process running and wait for the next change; a crashed bot waits for the next change or a manual restart.
 
 The bot runs as a child `node` process with `STARS_DEV=1` in its environment. Because `stars dev` already restarts the whole process, leave the framework's own `hmr` option disabled while using it.
 
@@ -125,6 +125,38 @@ Three `dev` options round out the dev loop (all documented in
   the URL to the Discord application, and is opt-in because it edits a live application.
 - `dev.logFile` (default `.stars/dev.log`) mirrors the session's logs to disk, so a run can be read back after the
   terminal UI is gone. Set it to `false` to disable it.
+
+### The build
+
+`tsdown` is configured from `stars.config`, and a base project configures nothing: the entry's directory, one output
+file per source file, ESM on Node, `build.outDir`, the tsconfig (`src/tsconfig.json` or `tsconfig.json`), the
+extension `build.output` implies, sourcemaps, unbundled dependencies, Nuxt's `~`/`@`/`~~`/`@@` alias prefixes and
+the auto imports plugin are all filled in
+(the [framework README](../http-framework#the-build-tsdown) lists every default). The `tsdown` block is for what they
+cannot know:
+
+```typescript
+export default defineConfig({
+	entry: 'src/main.ts',
+	future: { compatibilityVersion: 4 },
+	tsdown: { plugins: [copyLocales()] }
+});
+```
+
+With `future.compatibilityVersion: 3` an existing `tsdown.config.*` still drives the build and the block is merged
+over it (values from `stars.config` win, `plugins` are appended); with `4` the block is the whole configuration. The
+`vite` block works the same way for `build.tool: 'vite'`. `stars info` shows which file the build is configured from
+and which options the block sets.
+
+### Compatibility version
+
+`future.compatibilityVersion` opts a project into the next major's defaults, the way Nuxt's own does (see the
+[framework README](../http-framework#compatibility-version) for the full reference):
+
+| Version       | What it changes                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `3` (default) | Today's behaviour: a `tsdown.config.*` drives the build, auto imports off unless asked for                          |
+| `4`           | `tsdown` configured from `stars.config` alone, auto imports on and wired in, `'auto'` picks `tsdown` for TypeScript |
 
 ### Experimental flags
 

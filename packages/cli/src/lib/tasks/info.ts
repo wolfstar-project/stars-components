@@ -30,6 +30,12 @@ export interface ProjectInfo {
 	codegen: ResolvedStarsConfig['codegen'];
 	imports: ResolvedStarsConfig['imports'];
 	experimental: ResolvedStarsConfig['experimental'];
+	future: ResolvedStarsConfig['future'];
+	/**
+	 * The option names set in the `tsdown`/`vite` blocks. Only the names: the values hold plugins and callbacks,
+	 * which neither serialize to JSON nor read usefully on a terminal.
+	 */
+	options: { tsdown: string[]; vite: string[] };
 }
 
 export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
@@ -53,7 +59,9 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		dev: config.dev,
 		codegen: config.codegen,
 		imports: config.imports,
-		experimental: config.experimental
+		experimental: config.experimental,
+		future: config.future,
+		options: { tsdown: Object.keys(config.tsdown), vite: Object.keys(config.vite) }
 	};
 }
 
@@ -92,6 +100,9 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		]),
 		section('Build', [
 			row('tool', info.build.tool),
+			// Which file the build tool is configured from: its own, or this project's `stars.config`.
+			row('config', info.build.configFile ? show(info.build.configFile) : colors.dim('stars.config')),
+			row('options', describeOptions(info, colors)),
 			row('outDir', show(info.build.outDir)),
 			row('tsconfig', show(info.build.tsconfig)),
 			row('runs', show(info.build.output))
@@ -113,6 +124,7 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Codegen', [
 			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled'))
 		]),
+		section('Future', [row('compat', `v${info.future.compatibilityVersion} defaults`)]),
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),
 			row('nitro', flag(info.experimental.enableNitro, colors)),
@@ -125,6 +137,11 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('dts', show(info.imports.dts))
 		])
 	].join('\n\n');
+}
+
+function describeOptions(info: ProjectInfo, colors: ReturnType<typeof createColors>): string {
+	const names = info.build.tool === 'vite' ? info.options.vite : info.options.tsdown;
+	return names.length > 0 ? names.join(', ') : colors.dim('none');
 }
 
 function flag(enabled: boolean, colors: ReturnType<typeof createColors>): string {

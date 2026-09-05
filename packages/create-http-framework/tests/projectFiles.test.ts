@@ -1,4 +1,14 @@
-import { buildDependencies, buildDevDependencies, buildScripts, packageJson, type ProjectContext } from '../src/tools/projectFiles.js';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+	buildDependencies,
+	buildDevDependencies,
+	buildScripts,
+	packageJson,
+	writeProjectFiles,
+	type ProjectContext
+} from '../src/tools/projectFiles.js';
 
 /** Fixed version for every package name that `projectFiles.ts` may look up, keyed by npm package name. */
 const versions: ProjectContext['versions'] = {
@@ -202,5 +212,48 @@ describe('packageJson', () => {
 		expect(parsed.dependencies).toHaveProperty('@wolfstar/start-banner');
 		expect(parsed.dependencies).toHaveProperty('gradient-string');
 		expect(parsed.dependencies).not.toHaveProperty('@discordjs/builders');
+	});
+});
+
+describe('writeProjectFiles', () => {
+	let target: string;
+
+	beforeEach(async () => {
+		target = await mkdtemp(join(tmpdir(), 'create-http-framework-'));
+	});
+
+	afterEach(async () => {
+		await rm(target, { recursive: true, force: true });
+	});
+
+	test('GIVEN tsdown THEN the build lives in stars.config.ts and needs no options of its own', async () => {
+		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsdown' }));
+
+		const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
+		expect(config).toContain("build: { tool: 'tsdown' },");
+		expect(config).toContain('future: { compatibilityVersion: 4 }');
+		// The defaults cover a base project, so there is no `tsdown` block and no `tsdown.config.ts` either.
+		expect(config).not.toContain('tsdown:');
+		await expect(readFile(join(target, 'tsdown.config.ts'), 'utf-8')).rejects.toMatchObject({ code: 'ENOENT' });
+
+		const tsconfig = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
+		// The auto imports declaration file is only typed if the tsconfig can see it.
+		expect(tsconfig.include).toContain('.stars/*.d.ts');
+		// …and the built-in aliases only type-check with the matching paths.
+		expect(tsconfig.compilerOptions.paths).toEqual({
+			'~/*': ['./src/*'],
+			'@/*': ['./src/*'],
+			'~~/*': ['./*'],
+			'@@/*': ['./*']
+		});
+	});
+
+	test('GIVEN tsc THEN stars.config.ts carries the compatibility version without a tsdown block', async () => {
+		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsc7' }));
+
+		const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
+		expect(config).toContain("build: { tool: 'tsc', tsconfig: 'src/tsconfig.json' },");
+		expect(config).toContain('future: { compatibilityVersion: 4 }');
+		expect(config).not.toContain('tsdown:');
 	});
 });

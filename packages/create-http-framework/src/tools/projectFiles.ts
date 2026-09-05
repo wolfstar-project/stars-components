@@ -152,6 +152,17 @@ const sharedCompilerOptions = {
 	emitDecoratorMetadata: true
 } as const;
 
+/**
+ * The `paths` that make `stars`' built-in aliases type-check. Only the `tsdown` build resolves them, so only its
+ * tsconfig declares them: `tsc` emits imports untouched and would leave `~/lib/…` in the output.
+ */
+const STARS_ALIAS_PATHS = {
+	'~/*': ['./src/*'],
+	'@/*': ['./src/*'],
+	'~~/*': ['./*'],
+	'@@/*': ['./*']
+} as const;
+
 /** Writes the tsconfig(s). The tsc branches use a composite build so `tsc -b src` resolves `src/tsconfig.json`. */
 function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 	if (ctx.language === 'js') return;
@@ -160,8 +171,15 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 		writeFile(
 			join(targetDir, 'tsconfig.json'),
 			json({
-				compilerOptions: { ...sharedCompilerOptions, outDir: './dist', rootDir: './src' },
-				include: ['src/**/*.ts'],
+				compilerOptions: {
+					...sharedCompilerOptions,
+					outDir: './dist',
+					rootDir: './src',
+					// The alias prefixes the build resolves on its own (`~`/`@` → src, `~~`/`@@` → the root).
+					paths: STARS_ALIAS_PATHS
+				},
+				// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
+				include: ['src/**/*.ts', '.stars/*.d.ts'],
 				exclude: ['node_modules', 'dist']
 			})
 		);
@@ -184,37 +202,29 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 	);
 }
 
-function writeBuildConfig(targetDir: string, ctx: ProjectContext): void {
-	if (ctx.language === 'js' || ctx.buildTool !== 'tsdown') return;
-	const content = [
-		"import { defineConfig } from 'tsdown';",
-		'',
-		'export default defineConfig({',
-		"\tentry: ['src/**/*.ts'],",
-		"\tformat: ['esm'],",
-		"\ttarget: 'node20',",
-		'\t// Mirror the src/ structure so the framework can load command pieces from dist/commands at runtime.',
-		'\tunbundle: true,',
-		'\t// Emit dist/main.js so the shared `start` script (node dist/main.js) works.',
-		"\toutExtensions: () => ({ js: '.js' }),",
-		'\tclean: true,',
-		'\tsourcemap: true',
-		'});',
-		''
-	].join('\n');
-	writeFile(join(targetDir, 'tsdown.config.ts'), content);
-}
-
-/** Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). */
+/**
+ * Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). It carries
+ * the build too: `tsdown` projects are configured here rather than in a `tsdown.config.ts` of their own, which is
+ * what `future.compatibilityVersion: 4` means for a generated project.
+ */
 function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
 	const isJs = ctx.language === 'js';
-	const build = isJs ? "{ tool: 'none' }" : ctx.buildTool === 'tsdown' ? "{ tool: 'tsdown' }" : "{ tool: 'tsc', tsconfig: 'src/tsconfig.json' }";
+	const isTsdown = !isJs && ctx.buildTool === 'tsdown';
+	const build = isJs ? "{ tool: 'none' }" : isTsdown ? "{ tool: 'tsdown' }" : "{ tool: 'tsc', tsconfig: 'src/tsconfig.json' }";
 	const content = [
 		"import { defineConfig } from '@wolfstar/http-framework/config';",
 		'',
 		'export default defineConfig({',
 		`\tentry: 'src/main.${isJs ? 'js' : 'ts'}',`,
-		`\tbuild: ${build}`,
+		`\tbuild: ${build},`,
+		"\t// The next major's defaults: auto imports wired into the build, and `tsdown` configured from this file.",
+		'\tfuture: { compatibilityVersion: 4 }',
+		...(isTsdown
+			? [
+					'\t// The build needs nothing else. Add a `tsdown` block for what the defaults cannot know,',
+					'\t// such as a plugin that copies assets into dist/.'
+				]
+			: []),
 		'});',
 		''
 	].join('\n');
@@ -278,7 +288,6 @@ function writeFormatterConfig(targetDir: string, ctx: ProjectContext): void {
 export function writeProjectFiles(targetDir: string, ctx: ProjectContext): void {
 	writeFile(join(targetDir, 'package.json'), packageJson(ctx));
 	writeTsconfig(targetDir, ctx);
-	writeBuildConfig(targetDir, ctx);
 	writeStarsConfig(targetDir, ctx);
 	writeLinterConfig(targetDir, ctx);
 	writeFormatterConfig(targetDir, ctx);
