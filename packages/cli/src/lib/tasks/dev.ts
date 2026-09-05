@@ -16,7 +16,6 @@ export interface DevTaskOptions extends ProjectArgs {
 export async function runDev(options: DevTaskOptions): Promise<void> {
 	const config = await resolveDevConfig(await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config }));
 	assertSupportedExperiments(config);
-	await prepareAutoImports(config);
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();
 
@@ -45,7 +44,13 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	if (process.platform !== 'win32') process.on('SIGUSR2', () => void service.restart('manual'));
 
 	const finished = renderer.start().then(() => shutdown(ExitCode.Ok));
-	await service.start();
+	try {
+		await prepareAutoImports(config);
+		await service.start();
+	} catch (error) {
+		service.log('stars', 'error', error instanceof Error ? (error.stack ?? error.message) : String(error));
+		await shutdown(ExitCode.Error);
+	}
 	await finished;
 }
 

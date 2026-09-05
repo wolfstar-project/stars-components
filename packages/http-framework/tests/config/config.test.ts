@@ -17,6 +17,21 @@ describe('stars.config', () => {
 		expect(defineConfig(config)).toBe(config);
 	});
 
+	test.each([
+		[undefined, null],
+		['MY BOT\nCustom banner', ['MY BOT', 'Custom banner']],
+		[['MY BOT'], ['MY BOT']],
+		[false, false]
+	])('resolves dev.banner %j', async (banner, expected) => {
+		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': `export default ${JSON.stringify({ dev: { banner } })}` });
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.banner).toEqual(expected);
+	});
+
+	test('rejects invalid dev.banner values', async () => {
+		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { banner: true } }' });
+		await expect(loadStarsConfig({ cwd: fixture.root, env: {} })).rejects.toThrow('dev.banner');
+	});
+
 	test('discovers stars.config.* in the documented order', async () => {
 		fixture = await createFixture({ 'stars.config.js': 'export default {};', 'stars.config.ts': 'export default {};' });
 		expect(CONFIG_FILE_NAMES[0]).toBe('stars.config.ts');

@@ -376,6 +376,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
+      '@xterm/headless':
+        specifier: ^6.0.0
+        version: 6.0.0
       golar:
         specifier: ^0.1.10
         version: 0.1.10
@@ -2831,6 +2834,9 @@ packages:
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@wolfstar/http-framework': ^3.1.0
+
+  '@xterm/headless@6.0.0':
+    resolution: {integrity: sha512-5Yj1QINYCyzrZtf8OFIHi47iQtI+0qYFPHmouEfG8dHNxbZ9Tb9YGSuLcsEwj9Z+OL75GJqPyJbyoFer80a2Hw==}
 
   '@yuku-codegen/binding-android-arm64@0.8.7':
     resolution: {integrity: sha512-C/0zV5IhgVdYhGJTwrY0v8dknxlhiKwtVJkMUaexu9/QvRmzlV4vfU3hZlUSgqc2BxQHntL1mCVbDq8j0FRFDw==}
@@ -6650,6 +6656,8 @@ snapshots:
       i18next: 25.10.10(typescript@7.0.2)
     transitivePeerDependencies:
       - typescript
+
+  '@xterm/headless@6.0.0': {}
 
   '@yuku-codegen/binding-android-arm64@0.8.7':
     optional: true

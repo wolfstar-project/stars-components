@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { stripVTControlCharacters } from 'node:util';
 
 export type LogSource = 'stars' | 'build' | 'app' | 'tsc' | 'tunnel';
 export type LogLevel = 'debug' | 'info' | 'success' | 'warn' | 'error';
@@ -65,4 +66,23 @@ const LEVEL_ORDER: Record<LogLevel, number> = { debug: 0, info: 1, success: 1, w
  */
 export function matchesLevel(level: LogLevel, minimum: LogLevel): boolean {
 	return LEVEL_ORDER[level] >= LEVEL_ORDER[minimum];
+}
+
+/**
+ * Whether an application stderr line only continues the preceding JavaScript error. Stack frames and the fields
+ * Node prints after an `Error` are useful log lines, but they must not each increment the panel's error counter.
+ */
+export function isErrorDetail(entry: Pick<LogEntry, 'source' | 'level' | 'text'>): boolean {
+	if (entry.source !== 'app' || entry.level !== 'error') return false;
+	const text = stripVTControlCharacters(entry.text);
+	return /^\s+at\s/.test(text) || /^\s+(?:type|path|code|cause|errno|syscall|address|port):/.test(text) || /^\s*}\s*$/.test(text) || !text.trim();
+}
+
+/** stderr is a transport, not a severity: Node and many loggers also send warnings there. */
+export function classifyAppLine(text: string, fallback: LogLevel): LogLevel {
+	const plain = stripVTControlCharacters(text);
+	if (/\b(?:Error|ERROR|FATAL)\b|\bERR_[A-Z_]+\b/.test(plain)) return 'error';
+	if (/\b(?:Warning|WARN|WARNING|DeprecationWarning|ExperimentalWarning)\b/.test(plain) || /^\(node:\d+\).*warning/i.test(plain)) return 'warn';
+	if (/^\s*(?:\(Use .*--trace-warnings|\[(?:info|debug)\]|INFO\b|DEBUG\b|[◇ℹ✔])/.test(plain)) return 'info';
+	return fallback;
 }
