@@ -1,5 +1,48 @@
 # Changelog
 
+## 3.5.0
+
+### Minor Changes
+
+- [#164](https://github.com/wolfstar-project/stars-components/pull/164) [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0) - feat(config): configure the `tsdown` build from `stars.config`
+
+    The `tsdown` block is now the project's build configuration rather than a bag of options merged into a separate
+    `tsdown.config.ts`, and it is typed with the options a bot actually reaches for (`entry`, `format`, `unbundle`,
+    `plugins`, `alias`, `define`, `deps`, `hooks`, …) instead of `Record<string, unknown>`. What `stars.config` already
+    says — the entry's directory, `build.outDir`, `build.tsconfig`, the extension `build.output` implies — fills in the
+    rest, so most projects need nothing in it at all.
+
+    `build.tsconfig` is now resolved for `tsdown` builds too, not only `tsc` ones (`src/tsconfig.json`, else
+    `tsconfig.json`): `tsdown` alone looks only next to the project root, so a bot keeping its sources' tsconfig in
+    `src/` — the layout the scaffold and the examples use — silently built without its paths and target.
+
+    `build.configFile` on the resolved configuration reports which file the build tool is configured from
+    (`tsdown.config.*`, `package.json#tsdown`, `vite.config.*`), or `null` when `stars.config` is the only one.
+
+    Two options are also validated against the build tool they belong to: a non-empty `tsdown` block with another tool
+    raises `TSDOWN_OPTIONS_REQUIRE_TSDOWN`, and `vite` likewise raises `VITE_OPTIONS_REQUIRE_VITE`. A project that only
+    declares `tsdown: {}` now resolves `build.tool: 'auto'` to `tsdown`, the way depending on it already did. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#164](https://github.com/wolfstar-project/stars-components/pull/164) [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0) - feat(config): add `future.compatibilityVersion`, with auto imports on from 4
+
+    `future` carries the defaults of the next major, the way Nuxt's own `future.compatibilityVersion` does: a project
+    opts into them one major early, and they become the default when that major ships. Where `experimental` guards work
+    that is still landing, everything in `future` is already decided.
+
+    `future: { compatibilityVersion: 4 }` changes three things:
+
+    - Auto imports are **on** with the `tsdown` build tool, and `stars` wires the `autoImports()` plugin into the build
+      itself — until now the default said `true` but nothing injected the transform unless the project's own
+      `tsdown.config.ts` did. At `3` they stay off unless asked for, so the promise matches what the build does.
+    - `tsdown` is configured from `stars.config` alone. A `tsdown.config.*` (or a `package.json#tsdown` field) raises
+      `TSDOWN_CONFIG_FILE_UNSUPPORTED` naming the file, rather than being silently ignored and quietly dropping the
+      plugins it declares.
+    - `build.tool: 'auto'` resolves to `tsdown` for any TypeScript entry, without looking for a `tsdown.config.*` or a
+      `tsdown` dependency first. `tsc` stays available as an explicit choice.
+
+    `3` is the default and keeps today's behaviour, including loading a `tsdown.config.*` and merging the `tsdown` block
+    over it. An unknown version raises `INVALID_COMPATIBILITY_VERSION`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 3.4.0
 
 ### Minor Changes

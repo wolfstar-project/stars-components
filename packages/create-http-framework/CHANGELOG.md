@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.4.0
+
+### Minor Changes
+
+- [#164](https://github.com/wolfstar-project/stars-components/pull/164) [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0) - feat: scaffold the build inside `stars.config`
+
+    Generated TypeScript projects no longer ship a `tsdown.config.ts`: the build lives in `stars.config.ts` alongside
+    everything else the `stars` CLI reads, and `future: { compatibilityVersion: 4 }` opts them into the next major's
+    defaults — auto imports wired into the build, and `stars.config` as the only build configuration.
+
+    The generated `tsconfig.json` includes `.stars/*.d.ts` so the auto imports are typed and declares the `paths` for the
+    built-in `~`/`@`/`~~`/`@@` aliases, and the generated `.gitignore` covers `.stars/`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.3.0
 
 ### Minor Changes
