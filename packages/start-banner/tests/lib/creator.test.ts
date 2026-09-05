@@ -1,4 +1,4 @@
-import { createBanner } from '../../src/index.js';
+import { createBanner, createStarsBanner, DEFAULT_STARS_LOGO } from '../../src/index.js';
 
 describe('createBanner', () => {
 	test('GIVEN no options THEN throws an Error', () => {
@@ -43,5 +43,20 @@ describe('createBanner', () => {
 				'Hello Wolfstar\nFoo   Moderation: ON\n      Analytics : ON'
 			);
 		});
+	});
+});
+
+describe('createStarsBanner', () => {
+	test('uses the compact Stars logo by default', () => {
+		expect(createStarsBanner()).toBe(DEFAULT_STARS_LOGO.join('\n'));
+		expect(createStarsBanner({ name: ['My bot'] })).toContain('My bot');
+	});
+
+	test('replaces the default logo with a custom one', () => {
+		expect(createStarsBanner({ logo: ['BOT'], name: ['My bot'] })).toBe('BOT My bot');
+	});
+
+	test('supports a text-only banner', () => {
+		expect(createStarsBanner({ logo: false, name: ['My bot'], extra: ['Ready'] })).toBe('My bot\nReady');
 	});
 });

@@ -3,7 +3,7 @@ import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
 import { Client, container } from '@wolfstar/http-framework';
 import { init, load } from '@wolfstar/http-framework-i18n';
 import { registerCommands } from '@wolfstar/shared-http-pieces';
-import { createBanner } from '@wolfstar/start-banner';
+import { createStarsBanner } from '@wolfstar/start-banner';
 import { morning } from 'gradient-string';
 
 await setup();
@@ -27,8 +27,7 @@ await client.listen({ address, port });
 
 console.log(
 	morning.multiline(
-		createBanner({
-			logo: ['   *  .  *', ' .  ★  . ', '*  .  *  .'],
+		createStarsBanner({
 			name: ['Stars Components', 'with-subcommands-js example'],
 			extra: [
 				'',
