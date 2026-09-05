@@ -1,5 +1,12 @@
 # with-i18n-js
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0), [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0)]:
+    - @wolfstar/http-framework@3.5.0
+
 ## 0.0.8
 
 ### Patch Changes

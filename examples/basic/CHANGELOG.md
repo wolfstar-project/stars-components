@@ -1,5 +1,18 @@
 # basic
 
+## 0.0.9
+
+### Patch Changes
+
+- [#164](https://github.com/wolfstar-project/stars-components/pull/164) [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0) - chore: move the example's build into `stars.config.ts`
+
+    The example's `tsdown.config.ts` is gone: its locale-copying plugin and target now live in the `tsdown` block of
+    `stars.config.ts`, which also opts into `future: { compatibilityVersion: 4 }`. Its `build` and `dev` scripts run the
+    CLI by path, since the `stars` executable is only linked once `@wolfstar/cli` is installed from npm. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- Updated dependencies [[`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0), [`05fca34`](https://github.com/wolfstar-project/stars-components/commit/05fca3434124f40a41f9af5dc4e6d083f570acc0)]:
+    - @wolfstar/http-framework@3.5.0
+
 ## 0.0.8
 
 ### Patch Changes

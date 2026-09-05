@@ -1,5 +1,11 @@
 # @wolfstar/i18next-type-generator
 
+## 3.1.1
+
+### Patch Changes
+
+- [#163](https://github.com/wolfstar-project/stars-components/pull/163) [`a697108`](https://github.com/wolfstar-project/stars-components/commit/a697108cb52dd123366d4288d91957458ab90401) - Enable npm provenance for published releases (`publishConfig.provenance`), matching every other package in this workspace. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 3.1.0
 
 ### Minor Changes
