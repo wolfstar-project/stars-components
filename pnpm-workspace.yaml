@@ -12,6 +12,13 @@ preferWorkspacePackages: true
 
 strictPeerDependencies: false
 
+overrides:
+    '@types/pg': '8.23.1'
+    ansi-regex: '^6.3.0'
+    esbuild: '^0.28.2'
+    minimist: '1.2.8'
+    '@redstardev/unplugin-version-injector>vite': '8.2.2'
+
 allowBuilds:
     '@swc/core': true
     esbuild: true
@@ -29,4 +36,3 @@ minimumReleaseAgeExclude:
     - vitepress-plugin-llms@1.13.3
     - markdown-it-image-size@15.0.1
     - vite@6.4.3
-    - '@wolfstar/plugin-i18next@1.0.1-next-20260830111821'
