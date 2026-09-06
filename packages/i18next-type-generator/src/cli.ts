@@ -56,7 +56,7 @@ const main = defineCommand({
 	},
 	async run({ args }) {
 		await generate([args.source, args.destination], {
-			verbose: args.verbose,
+			verbose: args.verbose ?? false,
 			oxfmt: args.oxfmt,
 			prettier: args.prettier,
 			indentation: parseIndentation(args.indentation)

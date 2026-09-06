@@ -48,17 +48,44 @@ Without this, `changesets/action` fails when it attempts to open the release PR.
 
 Repository secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret              | Description                                                                                                                                                                                                                                                                              |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WOLFSTAR_TOKEN`    | A GitHub PAT with `repo` and `workflow` scopes. Passed to `changesets/action` through its `github-token` input to push commits and open PRs; the default `GITHUB_TOKEN` does not trigger other workflows. Also used by the `@next` snapshot changelog generator to query the GitHub API. |
-| `NPM_PUBLISH_TOKEN` | An npm **granular access token** with type **Automation** (bypasses 2FA) and publish access to all `@wolfstar/*` packages. Wired as `NODE_AUTH_TOKEN` for the `actions/setup-node` registry configuration. Classic publish tokens fail with `ERR_PNPM_OTP_NON_INTERACTIVE` in CI.        |
+| Secret           | Description                                                                                                                                                                                                                                                                              |
+| :--------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WOLFSTAR_TOKEN` | A GitHub PAT with `repo` and `workflow` scopes. Passed to `changesets/action` through its `github-token` input to push commits and open PRs; the default `GITHUB_TOKEN` does not trigger other workflows. Also used by the `@next` snapshot changelog generator to query the GitHub API. |
 
 `changesets/action` v2 no longer reads the v1 `GITHUB_TOKEN`, `NPM_TOKEN`, `publish`,
-`title`, or `commit` inputs. GitHub authentication is provided through `github-token`,
-while npm authentication comes from `actions/setup-node`'s `registry-url` and
-`NODE_AUTH_TOKEN`.
+`title`, or `commit` inputs. GitHub authentication is provided through `github-token`.
 
-### 3. Install the autofix.ci GitHub App (optional)
+npm authentication uses **trusted publishing (OIDC)**, not a token secret — see below.
+
+### 3. Configure npm trusted publishing (required before first release)
+
+Both the `snapshot` and `release` jobs authenticate to npm via
+[OIDC trusted publishing](https://docs.npmjs.com/trusted-publishers/) instead of a
+long-lived `NPM_PUBLISH_TOKEN`. This requires **per-package, one-time setup on
+npmjs.com** that cannot be done from this repo:
+
+1. For each of the 16 `@wolfstar/*` packages, go to the package's **Settings** page on
+   npmjs.com and add a **Trusted Publisher**:
+    - Publisher: **GitHub Actions**
+    - Organization/user: `wolfstar-project`
+    - Repository: `stars-components`
+    - Workflow filename: `release.yml`
+    - Environment: leave empty (the workflow does not use a GitHub Environment)
+2. `repository.url` in each package's `package.json` must exactly match the GitHub repo
+   (`wolfstar-project/stars-components`) — trusted publishing matches on it.
+3. New packages must have this configured before their first trusted-publish run;
+   npm falls back to rejecting the publish (not to a token) if it's missing.
+
+Provenance attestations are generated automatically under trusted publishing — no
+`NPM_CONFIG_PROVENANCE` flag needed.
+
+**Known upstream limitation:** publishing many scoped packages in a single OIDC-authenticated
+run has an open, unresolved bug in the npm CLI causing intermittent `404`s
+([npm/cli#8976](https://github.com/npm/cli/issues/8976)). If `pnpm run publish` or
+`pnpm run publish:snapshot` fails with `404` on some packages, re-run the job — this repo
+publishes 16 scoped packages together, matching the reported failure pattern.
+
+### 4. Install the autofix.ci GitHub App (optional)
 
 `.github/workflows/autofix.yml` uses the [autofix.ci](https://autofix.ci) GitHub App to
 push lint/format fixes back to PR branches. Install it at <https://github.com/apps/autofix-ci>.
