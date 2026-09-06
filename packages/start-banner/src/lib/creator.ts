@@ -1,5 +1,8 @@
 import { generateFrameData } from './utils.js';
 
+/** The compact logo used by {@link createStarsBanner} when a project does not provide one. */
+export const DEFAULT_STARS_LOGO = [String.raw`   *  .  *`, String.raw` .  ★  . `, String.raw`*  .  *  .`] as const;
+
 export function createBanner(options: BannerOptions) {
 	const logoHeight = options.logo?.length ?? 0;
 	const nameHeight = options.name?.length ?? 0;
@@ -36,4 +39,17 @@ export interface BannerOptions {
 	logo?: readonly string[];
 	name?: readonly string[];
 	extra?: readonly string[];
+}
+
+export interface StarsBannerOptions extends Omit<BannerOptions, 'logo'> {
+	/** Replaces {@link DEFAULT_STARS_LOGO}; use `false` for a text-only banner. */
+	logo?: readonly string[] | false;
+}
+
+/**
+ * Creates a startup banner with a small Stars logo by default. A project only needs to provide its name and status
+ * lines; passing `logo` replaces the built-in artwork without changing the rest of the layout.
+ */
+export function createStarsBanner({ logo = DEFAULT_STARS_LOGO, ...options }: StarsBannerOptions = {}): string {
+	return createBanner({ ...options, ...(logo === false ? {} : { logo }) });
 }

@@ -1,7 +1,7 @@
 import { setup } from './lib/setup/all.js';
 import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
 import { Client, container } from '@wolfstar/http-framework';
-import { createBanner } from '@wolfstar/start-banner';
+import { createStarsBanner } from '@wolfstar/start-banner';
 import { morning } from 'gradient-string';
 
 await setup();
@@ -15,8 +15,7 @@ await client.listen({ address, port });
 
 console.log(
 	morning.multiline(
-		createBanner({
-			logo: [String.raw`   *  .  *`, String.raw` .  ★  . `, String.raw`*  .  *  .`],
+		createStarsBanner({
 			name: ['{{name}}'],
 			extra: [
 				'',
