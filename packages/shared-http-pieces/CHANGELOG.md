@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- [#146](https://github.com/wolfstar-project/stars-components/pull/146) [`7d7f296`](https://github.com/wolfstar-project/stars-components/commit/7d7f29623ff205256207f30b8df1279956208a12) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+- [#169](https://github.com/wolfstar-project/stars-components/pull/169) [`f9bc134`](https://github.com/wolfstar-project/stars-components/commit/f9bc134f5161b4757fc254febf85df6bacb6a9f9) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+- [#171](https://github.com/wolfstar-project/stars-components/pull/171) [`ca2744c`](https://github.com/wolfstar-project/stars-components/commit/ca2744ce4a3f2d77e712d672414b542719dd3af0) - fix(deps): update dependency @wolfstar/plugin-i18next to v2 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`b516cad`](https://github.com/wolfstar-project/stars-components/commit/b516cadec4faef9e77b9a4af6d41016a6a4225a6)]:
+    - @wolfstar/http-framework@3.6.0
+
 ## 2.0.0
 
 ### Major Changes
