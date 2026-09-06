@@ -90,7 +90,7 @@ jobs:
                     # Windows only runs @wolfstar/cli: it is the one package with platform-sensitive code (process
                     # spawning, path handling), the rest is exercised by the ubuntu run below with coverage.
                     - os: ubuntu-24.04-arm
-                      command: pnpm test --reporter=default --reporter=junit --outputFile=test-report.junit.xml
+                      command: pnpm test -- --reporter=default --reporter=junit --outputFile=test-report.junit.xml
                       coverage: true
                     - os: windows-latest
                       command: pnpm --filter @wolfstar/cli test
