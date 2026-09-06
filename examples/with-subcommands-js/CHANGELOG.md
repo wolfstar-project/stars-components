@@ -1,5 +1,20 @@
 # with-subcommands-js
 
+## 0.0.10
+
+### Patch Changes
+
+- [#167](https://github.com/wolfstar-project/stars-components/pull/167) [`6836885`](https://github.com/wolfstar-project/stars-components/commit/6836885e5998f7af6d346fd30286ecede047389c) - feat: add a compact, replaceable default Stars banner
+
+    `createStarsBanner()` uses a small built-in Stars logo, accepts a custom `logo` array as a replacement, and supports
+    `logo: false` for text-only output. Newly scaffolded projects and the runnable examples use this helper instead of
+    embedding the default artwork in every entry file. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- Updated dependencies [[`6836885`](https://github.com/wolfstar-project/stars-components/commit/6836885e5998f7af6d346fd30286ecede047389c), [`7d7f296`](https://github.com/wolfstar-project/stars-components/commit/7d7f29623ff205256207f30b8df1279956208a12), [`f9bc134`](https://github.com/wolfstar-project/stars-components/commit/f9bc134f5161b4757fc254febf85df6bacb6a9f9), [`ca2744c`](https://github.com/wolfstar-project/stars-components/commit/ca2744ce4a3f2d77e712d672414b542719dd3af0), [`b516cad`](https://github.com/wolfstar-project/stars-components/commit/b516cadec4faef9e77b9a4af6d41016a6a4225a6)]:
+    - @wolfstar/start-banner@2.1.0
+    - @wolfstar/shared-http-pieces@2.0.1
+    - @wolfstar/http-framework@3.6.0
+
 ## 0.0.9
 
 ### Patch Changes

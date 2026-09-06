@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/cli",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "The stars command line interface for @wolfstar/http-framework projects: typed configuration, dev server, build and project info",
 	"keywords": [
 		"api",
