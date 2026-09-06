@@ -1,15 +1,15 @@
-import { Box, Static, useApp, useInput, useWindowSize } from 'ink';
+import { Box, useInput, useWindowSize } from 'ink';
 import { useState } from 'react';
 import type { DevService } from '../../lib/dev-service.js';
 import { HelpOverlay } from './components/HelpOverlay.js';
 import { LogBrowser } from './components/LogBrowser.js';
-import { LogLine } from './components/LogLine.js';
+import { InfoOverlay } from './components/InfoOverlay.js';
 import { Panel } from './components/Panel.js';
 import { useDevStatus } from './hooks/useDevStatus.js';
 import { useLogCounters } from './hooks/useLogCounters.js';
-import { useSpinner } from './hooks/useSpinner.js';
-import { useStaticLog } from './hooks/useStaticLog.js';
-import { useUptime } from './hooks/useUptime.js';
+import { useBuildClock } from './hooks/useBuildClock.js';
+import { describeBadge } from '../panel-logic.js';
+import { openDevUrl } from '../../lib/open-url.js';
 import { ColorProvider } from './theme.js';
 
 export interface DevAppProps {
@@ -18,50 +18,64 @@ export interface DevAppProps {
 	reducedMotion: boolean;
 	/** Called when the user asks to quit, so the CLI can stop the bot and exit. */
 	onQuit: () => void;
+	onViewChange: (overlay: boolean) => void;
+	onCopy: (text: string) => void;
 }
 
-type View = 'panel' | 'logs' | 'help';
+type View = 'panel' | 'logs' | 'errors' | 'help' | 'info';
 
 /**
- * The interactive `stars dev` UI, in the style of Nuxt CLI v4's own dev server: log output streams into the
- * terminal's real scrollback through `<Static>` (never re-rendered, never reformatted), and a compact panel below
- * it — a handful of lines, redrawn as state changes — carries the status Nuxt's own summary/hints blocks show.
- * `l` opens the full, filterable log history and `?` the key reference, both replacing the panel until closed.
+ * A bottom-aligned panel in the normal buffer, with logs folded away. Only the browsable overlays use the
+ * alternate screen, preserving the terminal's history and the panel when they close.
  */
-export function DevApp({ service, color, reducedMotion, onQuit }: DevAppProps) {
-	const { exit } = useApp();
+export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, onCopy }: DevAppProps) {
 	const { columns, rows } = useWindowSize();
 	const [view, setView] = useState<View>('panel');
+	const [confirmQuit, setConfirmQuit] = useState(false);
 
 	const status = useDevStatus(service);
-	const uptime = useUptime(status.startedAt);
 	const counters = useLogCounters(service);
-	const entries = useStaticLog(service);
-	const spinning = status.build === 'building' || status.process === 'starting' || status.tunnel === 'starting' || status.typecheck === 'checking';
-	const spinner = useSpinner(spinning, reducedMotion);
+	const badge = describeBadge(status).badge;
+	const busy = badge !== 'ready' && badge !== 'error';
+	const clock = useBuildClock(status.progress.startedAt, busy && view === 'panel', reducedMotion);
 
-	const width = Math.max(20, columns);
-	const height = Math.max(6, rows);
-	const narrow = width < 60;
+	const width = Math.max(1, columns);
+	const height = Math.max(2, rows - 1);
 
-	const quit = () => {
-		onQuit();
-		exit();
+	const changeView = (next: View) => {
+		onViewChange(next !== 'panel');
+		setView(next);
 	};
 
 	useInput((input, key) => {
+		if (key.ctrl && input === 'c') return onQuit();
+		if (key.ctrl && input === 'l') return service.clearLogs();
 		if (view !== 'panel') return;
-		if (key.ctrl && input === 'c') return quit();
+		if (confirmQuit) {
+			if (input === 'y') return onQuit();
+			return setConfirmQuit(false);
+		}
+		if (key.ctrl && input === 'r') return void service.restart('manual');
+		if (key.ctrl && input === 'd') return busy ? setConfirmQuit(true) : onQuit();
 
 		switch (input) {
 			case 'q':
-				return quit();
+				return busy ? setConfirmQuit(true) : onQuit();
 			case 'r':
 				return void service.restart('manual');
 			case 'l':
-				return setView('logs');
+				return changeView('logs');
+			case 'e':
+				return changeView('errors');
+			case 'c':
+				return service.clearLogs();
+			case 'o':
+				return void openDevUrl(status.url).catch((error: Error) => service.log('stars', 'warn', error.message));
+			case 'i':
+				return changeView('info');
+			case 'h':
 			case '?':
-				return setView('help');
+				return changeView('help');
 			default:
 				break;
 		}
@@ -69,19 +83,28 @@ export function DevApp({ service, color, reducedMotion, onQuit }: DevAppProps) {
 
 	return (
 		<ColorProvider color={color}>
-			<Static items={entries}>{(entry) => <LogLine key={entry.id} entry={entry} />}</Static>
-			<Box width={width} flexDirection="column">
-				{view === 'logs' && <LogBrowser service={service} height={height} onClose={() => setView('panel')} />}
-				{view === 'help' && <HelpOverlay height={height} onClose={() => setView('panel')} />}
+			<Box width={width} height={height} flexDirection="column" justifyContent={view === 'panel' ? 'flex-end' : 'flex-start'}>
+				{(view === 'logs' || view === 'errors') && (
+					<LogBrowser
+						service={service}
+						height={height}
+						width={width}
+						lastError={view === 'errors'}
+						onCopy={onCopy}
+						onClose={() => changeView('panel')}
+					/>
+				)}
+				{view === 'help' && <HelpOverlay height={height} width={width} onClose={() => changeView('panel')} />}
+				{view === 'info' && <InfoOverlay service={service} height={height} width={width} onClose={() => changeView('panel')} />}
 				{view === 'panel' && (
 					<Panel
-						name={service.config.packageJson?.name ?? 'stars project'}
 						status={status}
 						config={service.config}
-						uptimeMs={uptime}
 						counters={counters}
-						spinner={spinner}
-						narrow={narrow}
+						{...clock}
+						width={width}
+						height={height}
+						confirmQuit={confirmQuit}
 					/>
 				)}
 			</Box>

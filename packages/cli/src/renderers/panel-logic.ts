@@ -7,11 +7,15 @@ export type Badge = 'starting' | 'building' | 'restarting' | 'ready' | 'error';
  * cycles through (`STARTING`/`BUILDING`/`RESTART`/`READY`/`ERROR`).
  */
 export function describeBadge(status: DevStatus): { badge: Badge; note: string } {
-	if (status.build === 'building') return { badge: 'building', note: 'compiling changes' };
+	if (status.build === 'building') return { badge: status.startedAt === null ? 'starting' : 'building', note: status.progress.message };
 	if (status.process === 'starting') return { badge: 'starting', note: 'starting the bot' };
 	if (status.process === 'stopping') return { badge: 'restarting', note: 'restarting the bot' };
 	if (status.build === 'failed') return { badge: 'error', note: 'build failed, waiting for changes' };
 	if (status.process === 'crashed') return { badge: 'error', note: 'the bot crashed, press r to restart' };
+	if (status.health === 'down') return { badge: 'error', note: 'health check failed' };
+	if (status.typecheck === 'failed') return { badge: 'error', note: 'type check failed, press e to view it' };
+	if (status.process === 'stopped') return { badge: 'error', note: 'the bot stopped, press r to restart' };
+	if (status.progress.fraction < 1) return { badge: 'starting', note: status.progress.message };
 	if (status.process === 'running') return { badge: 'ready', note: 'watching for changes' };
 	return { badge: 'starting', note: 'waiting for the first build' };
 }

@@ -376,6 +376,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
+      '@xterm/headless':
+        specifier: ^6.0.0
+        version: 6.0.0
       golar:
         specifier: ^0.1.10
         version: 0.1.10
@@ -845,8 +848,8 @@ importers:
         specifier: workspace:^
         version: link:../http-framework
       '@wolfstar/plugin-i18next':
-        specifier: 1.0.1-next-20260830111821
-        version: 1.0.1-next-20260830111821(@wolfstar/http-framework@packages+http-framework)(typescript@7.0.2)
+        specifier: 2.0.1
+        version: 2.0.1(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(typescript@7.0.2)
       discord-api-types:
         specifier: ^0.38.8
         version: 0.38.53
@@ -2571,11 +2574,18 @@ packages:
     resolution: {integrity: sha512-k+YOdgn6v4K5iFdOKe81SU2EOigdpLi0BGxIAOuFz2l4QUr0zDS+1dRzy11aKEJjqLrZho2uaa3CNdW/JQbO+Q==}
     engines: {node: '>=20'}
 
-  '@wolfstar/plugin-i18next@1.0.1-next-20260830111821':
-    resolution: {integrity: sha512-iVdicg24E07oj/o+VHnAO7+Hkc0gNqyvXjwc9SVTqDjm//1PPuYjby21NBqS27Sg/9wdyYDMWh0tqySyA5eOZQ==}
+  '@wolfstar/plugin-i18next@2.0.1':
+    resolution: {integrity: sha512-wFolysPXugjAv9jfXfuw7bwuK2mxzp9EfBd3RUtDo6gKdSPbZ0yb/7fOUQXkiVHGPHOEeNkhlcXIxLIRjUwTRA==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@wolfstar/http-framework': ^3.1.0
+      '@wolfstar/i18next-type-generator': ^3.0.0
+    peerDependenciesMeta:
+      '@wolfstar/i18next-type-generator':
+        optional: true
+
+  '@xterm/headless@6.0.0':
+    resolution: {integrity: sha512-5Yj1QINYCyzrZtf8OFIHi47iQtI+0qYFPHmouEfG8dHNxbZ9Tb9YGSuLcsEwj9Z+OL75GJqPyJbyoFer80a2Hw==}
 
   '@yuku-codegen/binding-android-arm64@0.8.7':
     resolution: {integrity: sha512-C/0zV5IhgVdYhGJTwrY0v8dknxlhiKwtVJkMUaexu9/QvRmzlV4vfU3hZlUSgqc2BxQHntL1mCVbDq8j0FRFDw==}
@@ -6205,7 +6215,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@wolfstar/plugin-i18next@1.0.1-next-20260830111821(@wolfstar/http-framework@packages+http-framework)(typescript@7.0.2)':
+  '@wolfstar/plugin-i18next@2.0.1(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(typescript@7.0.2)':
     dependencies:
       '@discordjs/collection': 2.1.1
       '@sapphire/pieces': 4.4.1
@@ -6216,8 +6226,12 @@ snapshots:
       chokidar: 5.0.0
       discord-api-types: 0.38.53
       i18next: 25.10.10(typescript@7.0.2)
+    optionalDependencies:
+      '@wolfstar/i18next-type-generator': link:packages/i18next-type-generator
     transitivePeerDependencies:
       - typescript
+
+  '@xterm/headless@6.0.0': {}
 
   '@yuku-codegen/binding-android-arm64@0.8.7':
     optional: true

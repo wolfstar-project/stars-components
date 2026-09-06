@@ -119,6 +119,15 @@ describe('processTemplate', () => {
 		};
 	}
 
+	test.each(['ts', 'js'] as const)('GIVEN a %s project THEN uses the replaceable default Stars banner', async (language) => {
+		await processTemplate(outputDir, makeContext({ language }));
+
+		const main = await readFile(join(outputDir, `src/main.${language}`), 'utf8');
+		expect(main).toContain("import { createStarsBanner } from '@wolfstar/start-banner';");
+		expect(main).toContain('createStarsBanner({');
+		expect(main).not.toContain('logo: [');
+	});
+
 	test('GIVEN i18n enabled THEN writes the localized ping command and locale JSON', async () => {
 		await processTemplate(outputDir, makeContext({ i18n: true }));
 

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from './builders/types.js';
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-import { LogBuffer, type LogLevel, type LogSource } from './log-buffer.js';
+import { displayPath, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from './log-buffer.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from './process-supervisor.js';
 import { Tunnel, type TunnelState } from './tunnel.js';
 import { Typechecker, type TypecheckState } from './typechecker.js';
@@ -11,6 +11,7 @@ export type HealthState = 'unknown' | 'ok' | 'down';
 export type RestartReason = 'initial' | 'build' | 'manual' | 'crash';
 
 export interface DevStatus {
+	readonly progress: { readonly fraction: number; readonly message: string; readonly startedAt: number; readonly readyMs: number | null };
 	readonly process: ProcessState;
 	readonly build: BuildState;
 	readonly health: HealthState;
@@ -63,6 +64,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	#pendingReason: RestartReason | null = null;
 	#stopped = false;
 	#queue: Promise<void> = Promise.resolve();
+	#progress = { fraction: 0, message: 'preparing your app', startedAt: Date.now(), readyMs: null as number | null };
 
 	public constructor(
 		public readonly config: ResolvedStarsConfig,
@@ -75,14 +77,27 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.typechecker = options.typechecker ?? new Typechecker(config);
 		this.tunnel = options.tunnel ?? new Tunnel(config);
 
-		this.builder.on('start', () => this.#setBuild('building'));
+		this.builder.on('start', () => {
+			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
+			this.#setBuild('building');
+		});
+		this.builder.on('progress', (fraction, message) => {
+			this.#progress = { ...this.#progress, fraction: Math.max(this.#progress.fraction, Math.min(0.75, fraction)), message };
+			this.#emitStatus();
+		});
 		this.builder.on('success', (outcome) => this.#onBuildSuccess(outcome));
 		this.builder.on('failure', (outcome) => this.#onBuildFailure(outcome));
 		this.builder.on('log', (level, text) => this.log('build', level, text));
 
-		this.supervisor.on('state', () => this.#emitStatus());
-		this.supervisor.on('stdout', (line) => this.log('app', 'info', line));
-		this.supervisor.on('stderr', (line) => this.log('app', 'error', line));
+		this.supervisor.on('state', () => {
+			if (this.supervisor.state === 'running') {
+				this.#settleProgress();
+				void this.#checkHealth();
+			}
+			this.#emitStatus();
+		});
+		this.supervisor.on('stdout', (line) => this.log('app', classifyAppLine(line, 'info'), line));
+		this.supervisor.on('stderr', (line) => this.log('app', classifyAppLine(line, 'error'), line));
 		this.supervisor.on('error', (error) => this.log('stars', 'error', `Failed to start the bot: ${error.message}`));
 		this.supervisor.on('exit', (exit) => this.#onExit(exit));
 
@@ -100,6 +115,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 	public get status(): DevStatus {
 		return {
+			progress: this.#progress,
 			process: this.supervisor.state,
 			build: this.#build,
 			health: this.#health,
@@ -126,11 +142,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	 */
 	public async start(): Promise<void> {
 		this.#stopped = false;
-		this.log(
-			'stars',
-			'info',
-			`Watching ${this.config.build.tool === 'none' ? 'sources' : `with ${this.config.build.tool}`}, entry ${this.config.entry}`
-		);
+		const entry = displayPath(this.config.root, this.config.entry);
+		this.log('stars', 'info', this.config.build.tool === 'none' ? `Watching ${entry}` : `Watching ${entry} with ${this.config.build.tool}`);
 		if (this.config.dev.typecheck.enabled) this.typechecker.start();
 		// The tunnel comes up next to the build: neither waits for the other, and a failed tunnel never stops the bot.
 		void this.tunnel.start();
@@ -144,6 +157,9 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#clearRestartTimer();
 		return this.#enqueue(async () => {
 			if (this.#stopped) return;
+			if (reason === 'manual' || reason === 'crash') {
+				this.#progress = { fraction: 0, message: 'restarting the bot', startedAt: Date.now(), readyMs: null };
+			}
 			this.#lastRestartReason = reason;
 			if (this.supervisor.running) {
 				this.#restarts++;
@@ -154,8 +170,9 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			}
 
 			if (this.#stopped) return;
-			this.supervisor.start();
+			this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 			this.#health = 'unknown';
+			this.supervisor.start();
 			this.#emitStatus();
 		});
 	}
@@ -179,6 +196,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 	#onBuildSuccess(outcome: BuildOutcome): void {
 		this.#lastBuild = outcome;
+		this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 		this.#setBuild('ok');
 		if (this.#stopped) return;
 		// A checker without a watch mode (`tsz`) only knows about the change once the build is through.
@@ -233,6 +251,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 	async #checkHealth(): Promise<void> {
 		if (!this.supervisor.running || !this.config.dev.url || !this.config.dev.health) return;
+		const pid = this.supervisor.pid;
 
 		let next: HealthState;
 		try {
@@ -242,10 +261,23 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			next = 'down';
 		}
 
+		if (this.#stopped || pid !== this.supervisor.pid) return;
 		if (next !== this.#health) {
 			this.#health = next;
+			if (next === 'ok') this.#settleProgress();
 			this.#emitStatus();
 		}
+	}
+
+	#settleProgress(): void {
+		if (this.config.dev.health && this.#health !== 'ok') return;
+		if (this.#build !== 'ok') return;
+		this.#progress = {
+			...this.#progress,
+			fraction: 1,
+			message: 'watching for changes',
+			readyMs: this.#progress.readyMs ?? Date.now() - this.#progress.startedAt
+		};
 	}
 
 	#emitStatus(): void {
@@ -258,7 +290,12 @@ export function createSupervisor(config: ResolvedStarsConfig): ProcessSupervisor
 		command: process.execPath,
 		args: [...config.dev.nodeArgs, config.build.output, ...config.dev.args],
 		cwd: config.root,
-		env: { ...process.env, ...config.dev.env, STARS_DEV: '1', FORCE_COLOR: process.env.FORCE_COLOR ?? (process.stdout.isTTY ? '1' : undefined) },
+		env: {
+			...process.env,
+			...config.dev.env,
+			STARS_DEV: '1',
+			FORCE_COLOR: process.env.NO_COLOR !== undefined ? undefined : (process.env.FORCE_COLOR ?? (process.stdout.isTTY ? '1' : undefined))
+		},
 		killTimeout: config.dev.killTimeout
 	});
 }

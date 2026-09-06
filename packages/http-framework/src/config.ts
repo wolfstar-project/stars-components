@@ -167,6 +167,8 @@ export interface StarsTunnelConfig {
 }
 
 export interface StarsDevConfig {
+	/** Custom terminal wordmark (one or more lines), or `false` to hide it. Defaults to the Stars wordmark. */
+	banner?: string | readonly string[] | false;
 	/**
 	 * Extra paths to watch, relative to {@link StarsConfig.root}. Only used when
 	 * the build tool is `none`; `tsdown` and `tsc` watch through their own build.

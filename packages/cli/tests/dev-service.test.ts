@@ -127,4 +127,20 @@ describe('DevService', () => {
 		builder.succeed();
 		await waitFor(() => service.logs.entries().some((entry) => entry.text === 'dev=1'));
 	});
+
+	test('advances only on real milestones and resets the next build', async () => {
+		await setup(KEEPALIVE_SCRIPT);
+		builder.emit('start');
+		builder.emit('progress', 0.5, 'finishing build');
+		expect(service.status.progress).toMatchObject({ fraction: 0.5, message: 'finishing build', readyMs: null });
+		builder.emit('progress', 0.25, 'bundling app');
+		expect(service.status.progress.fraction).toBe(0.5);
+		builder.emit('success', { ok: true, durationMs: 30, message: null });
+		expect(service.status.progress.fraction).toBe(0.75);
+		await waitFor(() => service.status.process === 'running');
+		expect(service.status.progress.fraction).toBe(1);
+		expect(service.status.progress.readyMs).toEqual(expect.any(Number));
+		builder.emit('start');
+		expect(service.status.progress).toMatchObject({ fraction: 0, readyMs: null });
+	});
 });

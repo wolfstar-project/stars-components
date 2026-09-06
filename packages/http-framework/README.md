@@ -485,6 +485,10 @@ way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `.env.local`/`
 `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` explicitly only
 to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }`.
 
+`dev.banner` replaces the default Stars wordmark in the interactive CLI. Use a string or an array of lines, for
+example `dev: { banner: ['★ STARYL', 'Twitch notifications'] }`, or `false` to hide it. Up to four lines fit the
+compact panel. Application logs and standalone banners are available behind `l`, not printed over the dev panel.
+
 `dev` also carries the three options that round out the dev loop:
 
 ```typescript
@@ -520,18 +524,18 @@ export default defineConfig({
 
 The defaults are the configuration a bot would otherwise write out by hand:
 
-| Option                       | Default                                                        | Why                                                                         |
-| ---------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `entry`                      | every source file next to `entry`, minus `*.test.*`/`*.spec.*` | pieces are found by the stores, not imported by the entry                   |
-| `unbundle`                   | `true`                                                         | keeps `dist/commands/…` loadable one file at a time at runtime              |
-| `format` / `platform`        | `'esm'` / `'node'`                                             | what the framework and `node dist/…` expect                                 |
-| `outDir` / `outExtensions`   | `build.outDir` / the extension of `build.output`               | so `stars dev`, `package.json#main` and `node dist/…` agree                 |
-| `tsconfig`                   | `build.tsconfig` (`src/tsconfig.json`, else `tsconfig.json`)   | `tsdown` alone looks only next to the root, missing the `src/` layout       |
-| `sourcemap` / `treeshake`    | `true`                                                         | a deployed bot needs readable stack traces                                  |
-| `minify`                     | `false`                                                        | nothing is shipped over a wire, so bytes buy nothing here                   |
-| `deps.skipNodeModulesBundle` | `true`                                                         | dependencies stay in `node_modules` instead of being copied into `dist`     |
-| `alias`                      | `~`/`@` → the entry's directory, `~~`/`@@` → the project root  | the prefixes Nuxt gives every project                                       |
-| `dts`                        | `false`                                                        | nothing consumes a bot's `dist/`; set `tsdown: { dts: true }` if yours does |
+| Option                     | Default                                                        | Why                                                                         |
+| -------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `entry`                    | every source file next to `entry`, minus `*.test.*`/`*.spec.*` | pieces are found by the stores, not imported by the entry                   |
+| `unbundle`                 | `true`                                                         | keeps `dist/commands/…` loadable one file at a time at runtime              |
+| `format` / `platform`      | `'esm'` / `'node'`                                             | what the framework and `node dist/…` expect                                 |
+| `outDir` / `outExtensions` | `build.outDir` / the extension of `build.output`               | so `stars dev`, `package.json#main` and `node dist/…` agree                 |
+| `tsconfig`                 | `build.tsconfig` (`src/tsconfig.json`, else `tsconfig.json`)   | `tsdown` alone looks only next to the root, missing the `src/` layout       |
+| `sourcemap` / `treeshake`  | `true`                                                         | a deployed bot needs readable stack traces                                  |
+| `minify`                   | `false`                                                        | nothing is shipped over a wire, so bytes buy nothing here                   |
+| `deps.neverBundle`         | `true`                                                         | dependencies stay in `node_modules` instead of being copied into `dist`     |
+| `alias`                    | `~`/`@` → the entry's directory, `~~`/`@@` → the project root  | the prefixes Nuxt gives every project                                       |
+| `dts`                      | `false`                                                        | nothing consumes a bot's `dist/`; set `tsdown: { dts: true }` if yours does |
 
 #### Aliases
 

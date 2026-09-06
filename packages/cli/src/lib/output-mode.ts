@@ -6,6 +6,10 @@ export interface ResolveOutputModeOptions {
 	env?: NodeJS.ProcessEnv;
 	/** Whether stdout is an interactive terminal. */
 	isTTY?: boolean;
+	/** Raw-key input requires a terminal too, even when the output is a TTY. */
+	isInputTTY?: boolean;
+	columns?: number;
+	rows?: number;
 	/** Whether the process runs in a CI environment. */
 	isCI?: boolean;
 }
@@ -20,16 +24,18 @@ const truthy = new Set(['1', 'true', 'yes', 'on']);
 export function resolveOutputMode(options: ResolveOutputModeOptions = {}): OutputMode {
 	const env = options.env ?? process.env;
 	const isTTY = options.isTTY ?? Boolean(process.stdout.isTTY);
+	const isInputTTY = options.isInputTTY ?? options.isTTY ?? Boolean(process.stdin.isTTY);
 	const isCI = options.isCI ?? isCIEnvironment(env);
 
 	if (options.tui === false) return 'plain';
 
 	const forced = env.STARS_TUI?.trim().toLowerCase();
 	if (forced === 'plain' || forced === '0' || forced === 'false' || forced === 'off') return 'plain';
+	if (!isTTY || !isInputTTY || env.TERM === 'dumb') return 'plain';
 	if (forced === 'tui' || (forced && truthy.has(forced))) return isTTY ? 'tui' : 'plain';
 
 	if (options.tui === true) return isTTY ? 'tui' : 'plain';
-	if (!isTTY || isCI || env.TERM === 'dumb') return 'plain';
+	if (isCI || (options.columns ?? process.stdout.columns ?? 80) < 40 || (options.rows ?? process.stdout.rows ?? 24) < 10) return 'plain';
 	return 'tui';
 }
 

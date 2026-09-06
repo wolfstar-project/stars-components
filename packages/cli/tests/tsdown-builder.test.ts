@@ -55,6 +55,8 @@ describe('TsdownBuilder', () => {
 		expect(config.build.configFile).toBeNull();
 
 		const builder = new TsdownBuilder(config);
+		const logs: { level: string; text: string }[] = [];
+		builder.on('log', (level, text) => logs.push({ level, text }));
 		const started = new Promise<void>((resolve) => builder.once('start', resolve));
 		const [outcome] = await Promise.all([builder.build(), started]);
 
@@ -62,6 +64,27 @@ describe('TsdownBuilder', () => {
 		// Unbundled, so the entry keeps its name and the pieces next to it stay loadable from `dist` at runtime.
 		expect(await run(config.build.output)).toContain('hello bot');
 		expect(await run(join(fixture.root, 'dist', 'lib', 'greet.js'))).toBe('');
+		// The CLI owns progress/success output instead of repeating tsdown's entry list and output table.
+		expect(logs.every(({ level }) => level === 'warn' || level === 'error')).toBe(true);
+		expect(logs.some(({ text }) => text.includes('skipNodeModulesBundle'))).toBe(false);
+	});
+
+	test('keeps dependencies external so dynamically loaded classes share their runtime identity', async () => {
+		fixture = await createFixture({
+			'package.json': PACKAGE_JSON,
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, future: { compatibilityVersion: 4 } };",
+			'node_modules/piece-base/package.json': JSON.stringify({ name: 'piece-base', type: 'module', exports: './index.js' }),
+			'node_modules/piece-base/index.js': 'export class Piece {}\n',
+			'src/main.ts':
+				"import { Piece } from 'piece-base';\nimport { UserPiece } from './commands/ping.js';\nconsole.log(new UserPiece() instanceof Piece);\n",
+			'src/commands/ping.ts': "import { Piece } from 'piece-base';\nexport class UserPiece extends Piece {}\n"
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const outcome = await new TsdownBuilder(config).build();
+
+		expect(outcome).toMatchObject({ ok: true, message: null });
+		expect(await run(config.build.output)).toContain('true');
 	});
 
 	test('resolves the `~`/`@` alias prefixes, and keeps a project’s own aliases next to them', async () => {
@@ -137,6 +160,31 @@ describe('TsdownBuilder', () => {
 	});
 
 	// Same libuv fs-event limitation as the other watch tests — see the comment in builders.test.ts.
+	test.skipIf(process.platform === 'win32')('recovers from a watch error with a fresh build start and duration', async () => {
+		fixture = await createFixture({
+			'package.json': PACKAGE_JSON,
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, future: { compatibilityVersion: 4 } };",
+			'src/main.ts': 'const broken = ;'
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const builder = new TsdownBuilder(config);
+		const starts = vi.fn();
+		builder.on('start', starts);
+		try {
+			const failed = new Promise<BuildOutcome>((resolve) => builder.once('failure', resolve));
+			await builder.watch();
+			expect((await failed).ok).toBe(false);
+			const fixed = new Promise<BuildOutcome>((resolve) => builder.once('success', resolve));
+			await writeFile(join(fixture.root, 'src/main.ts'), "console.log('fixed');");
+			const outcome = await fixed;
+			expect(starts).toHaveBeenCalledTimes(2);
+			expect(outcome.ok).toBe(true);
+			expect(outcome.durationMs).toBeLessThan(5000);
+		} finally {
+			await builder.close();
+		}
+	});
+
 	test.skipIf(process.platform === 'win32')('watch() rebuilds on change and reports through the same events', async () => {
 		fixture = await createFixture({
 			'package.json': PACKAGE_JSON,
@@ -145,8 +193,16 @@ describe('TsdownBuilder', () => {
 		});
 
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
-		const builder = new TsdownBuilder(config);
+		const before = vi.fn();
+		const done = vi.fn();
+		const success = vi.fn();
+		const builder = new TsdownBuilder({
+			...config,
+			tsdown: { ...config.tsdown, hooks: { 'build:before': before, 'build:done': done }, onSuccess: success }
+		});
 		const successes: number[] = [];
+		const progress: number[] = [];
+		builder.on('progress', (fraction) => progress.push(fraction));
 		builder.on('success', (outcome) => successes.push(outcome.durationMs));
 
 		await new Promise<void>((resolve) => {
@@ -154,10 +210,16 @@ describe('TsdownBuilder', () => {
 			void builder.watch();
 		});
 		expect(successes).toHaveLength(1);
+		expect(progress).toEqual([0.25, 0.5]);
+		progress.length = 0;
 
 		await writeFile(join(fixture.root, 'src', 'main.ts'), "console.log('v2');\n");
 		await new Promise<void>((resolve) => builder.once('success', () => resolve()));
 		expect(await run(config.build.output)).toContain('v2');
+		expect(progress).toEqual([0.25, 0.5]);
+		expect(before).toHaveBeenCalledTimes(1);
+		expect(done).toHaveBeenCalledTimes(2);
+		expect(success).toHaveBeenCalledTimes(2);
 
 		await builder.close();
 	});
