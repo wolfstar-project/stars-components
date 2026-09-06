@@ -60,7 +60,7 @@
 		"@clack/prompts": "^1.7.0",
 		"@wolfstar/http-framework": "workspace:^",
 		"chokidar": "^4.0.3",
-		"citty": "^0.1.6",
+		"citty": "^0.2.2",
 		"colorette": "^2.0.20",
 		"ink": "^7.1.1",
 		"react": "^19.2.8"
@@ -71,7 +71,7 @@
 		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
 		"typescript": "~7.0.2",
-		"vite": "^8.2.1",
+		"vite": "^8.2.2",
 		"vitest": "^4.1.11"
 	},
 	"peerDependencies": {
