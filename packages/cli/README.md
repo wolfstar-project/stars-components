@@ -76,21 +76,51 @@ Watches the sources through the configured build tool (`tsdown` programmatically
 
 The bot runs as a child `node` process with `STARS_DEV=1` in its environment. Because `stars dev` already restarts the whole process, leave the framework's own `hmr` option disabled while using it.
 
-**Interactive UI** (default on a TTY): an [Ink](https://github.com/vadimdemedes/ink) (React) application in the
-terminal's alternate screen — lifecycle and uptime, restart counter and reason, build state, URL, health, type
-checking and tunnel status, plus the filtered logs.
+**Interactive UI** (default on a TTY): a bottom-aligned panel following the layout and keyboard conventions of
+[Nuxt CLI's dev TUI](https://github.com/nuxt/cli/tree/b4b366eafdd9ac4d5b81b6ae7dadda35364252c9/packages/nuxt-cli/src/dev/tui).
+The normal screen shows a Stars wordmark, aligned URLs, a 20-cell progress bar with elapsed time, status and
+shortcuts. The percentage follows actual build milestones, not a timer: it can stay still while a compiler phase
+runs. Once ready, the bar gives way to diagnostics and the header reports the load time.
 
-| Key                    | Action                                                    |
-| ---------------------- | --------------------------------------------------------- |
-| `r`                    | restart the bot                                           |
-| `c`                    | clear the logs                                            |
-| `f`                    | cycle the source filter (all › app › build › stars)       |
-| `e`                    | cycle the level filter (all › warnings › errors)          |
-| `↑` `↓` / `j` `k`      | scroll one line (`PgUp`/`PgDn` one page, `End` to follow) |
-| `h` / `?`              | toggle help                                               |
-| `q` / `Esc` / `Ctrl+C` | quit                                                      |
+Application output (including its banner), build-plugin output and diagnostics stay in the bounded log history and
+`.stars/dev.log`. tsdown's entry list and output-size table are suppressed. Only log/help/info overlays enter the
+alternate screen; closing them restores the panel without duplicating output in scrollback. Error stack frames do
+not count as individual errors. `READY` reports process state unless `dev.health` is configured; it does not certify
+that every application plugin loaded successfully. Logged errors switch the badge to `ERROR`.
 
-**Plain mode** prints prefixed lines instead and is selected by `--no-tui`, `STARS_TUI=plain`, or automatically when stdout is not a terminal, in CI, or with `TERM=dumb`. Both modes honour `NO_COLOR`/`FORCE_COLOR`, `STARS_REDUCED_MOTION=1` disables the spinner, and both stop the bot cleanly on `SIGINT`/`SIGTERM`. `SIGUSR2` restarts the bot (not on Windows).
+| Key            | Action                                                       |
+| -------------- | ------------------------------------------------------------ |
+| `r` / `Ctrl+R` | restart the bot                                              |
+| `o`            | open the local URL in a browser                              |
+| `i`            | show project, versions, URLs, health, types and session info |
+| `l`            | browse logs                                                  |
+| `e`            | select the last error with its surrounding context           |
+| `c` / `Ctrl+L` | clear log history                                            |
+| `h` / `?`      | show keyboard shortcuts                                      |
+| `q` / `Ctrl+D` | quit; confirm with `y` while a build/restart is in flight    |
+| `Ctrl+C`       | quit immediately from any view                               |
+
+In the log view: arrows or `j/k` select, `PgUp/PgDn` move a page, `g/G` go to the beginning/follow the tail,
+`e/w/a` filter errors/warnings/all, `c/b/r` toggle CLI/build/runtime sources, `/` searches, `x` clears, and
+`Enter`/`y` copies the selected line on terminals supporting OSC 52 clipboard writes. `q`, `Esc` or the view's
+own shortcut closes an overlay rather than quitting the session. Nuxt-specific request and page-route inspectors
+are not exposed: the bot supervisor does not receive those runtime events.
+
+Replace the default wordmark in `stars.config.ts` (up to four lines are displayed, clipped to the terminal width):
+
+```ts
+export default defineConfig({
+	dev: { banner: ['★ STARYL', 'Twitch notifications'] }
+});
+```
+
+`dev.banner` also accepts a string containing newlines, or `false` to hide the wordmark. Omit it for Stars branding.
+For the application's standalone banner outside the TUI, use `createStarsBanner` from `@wolfstar/start-banner`.
+
+**Plain mode** prints prefixed lines instead and is selected by `--no-tui`, `STARS_TUI=plain`, redirected input/output,
+CI, `TERM=dumb`, or terminals smaller than 40×10. `STARS_TUI=1` overrides CI/size checks, never redirected streams or
+a dumb terminal. Both modes honour `NO_COLOR`/`FORCE_COLOR`; `STARS_REDUCED_MOTION=1` freezes the logo/spinner but
+keeps the elapsed clock. Both stop the bot cleanly on `SIGINT`/`SIGTERM`. `SIGUSR2` restarts the bot (not on Windows).
 
 ### `stars commands`
 

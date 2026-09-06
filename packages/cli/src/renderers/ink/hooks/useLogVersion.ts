@@ -9,6 +9,7 @@ export function useLogVersion(logs: LogBuffer): number {
 		const bump = () => setVersion((current) => current + 1);
 		logs.on('entry', bump);
 		logs.on('clear', bump);
+		bump();
 		return () => {
 			logs.off('entry', bump);
 			logs.off('clear', bump);

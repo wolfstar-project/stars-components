@@ -85,9 +85,11 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 			...user,
 			...(plugins.length > 0 ? { plugins } : {}),
 			...(Object.keys(alias).length > 0 ? { alias } : {}),
-			// Last, and so not overridable: these two are how the CLI talks to `tsdown` rather than build options —
-			// the project root it resolves everything from, and the logger the dev panel reads its build channel off.
+			// Last, and so not overridable: these are how the CLI talks to `tsdown` rather than project build options —
+			// the project root it resolves from, its own compact progress UI, and the logger that feeds diagnostics to
+			// the dev panel. `logLevel` also covers the few lifecycle messages tsdown writes through its global logger.
 			cwd: this.config.root,
+			logLevel: 'warn',
 			customLogger: this.#logger()
 		};
 	}
@@ -131,7 +133,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 			treeshake: true,
 			minify: false,
 			dts: false,
-			deps: { skipNodeModulesBundle: true },
+			deps: { neverBundle: true },
 			...(build.tsconfig === null ? {} : { tsconfig: build.tsconfig })
 		};
 	}
@@ -170,16 +172,37 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 	#watchOptions(options: TsdownOptions): TsdownOptions {
 		const hooks = (options.hooks ?? {}) as Record<string, unknown>;
 		const prepare = hooks['build:prepare'];
+		const before = hooks['build:before'];
+		const done = hooks['build:done'];
 		const success = options.onSuccess;
 
 		return {
 			...options,
 			watch: true,
+			// tsdown's build:before runs once when the watcher is configured, not on every rebuild. Rolldown's
+			// buildStart is the actual per-build boundary, including recovery after a failed compilation.
+			plugins: [
+				{
+					name: 'stars:dev-progress',
+					buildStart: () => {
+						if (this.#startedAt === 0) this.#begin();
+						this.emit('progress', 0.25, 'bundling app');
+					}
+				},
+				...toArray(options.plugins)
+			],
 			hooks: {
 				...hooks,
 				'build:prepare': async (...args: never[]) => {
-					if (typeof prepare === 'function') await (prepare as AnyFunction)(...args);
 					if (this.#startedAt === 0) this.#begin();
+					if (typeof prepare === 'function') await (prepare as AnyFunction)(...args);
+				},
+				'build:before': async (...args: never[]) => {
+					if (typeof before === 'function') await (before as AnyFunction)(...args);
+				},
+				'build:done': async (...args: never[]) => {
+					this.emit('progress', 0.5, 'finishing build');
+					if (typeof done === 'function') await (done as AnyFunction)(...args);
 				}
 			},
 			onSuccess: async (...args: never[]) => {
@@ -218,8 +241,11 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 
 		const warned = new Set<string>();
 		return {
-			level: 'info',
-			info: (...args) => log('info', args),
+			// `stars` owns the build progress and completion messages. Keeping tsdown at `warn` avoids copying its
+			// entry list, target, output table and completion line into the dev session while preserving diagnostics
+			// that need action from the project.
+			level: 'warn',
+			info: () => {},
 			warn: (...args) => log('warn', args),
 			warnOnce: (...args) => {
 				const key = args.map(String).join(' ');
@@ -233,7 +259,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 				// In watch mode tsdown never calls `onSuccess` after an error, report the failure now.
 				if (this.#startedAt !== 0 && this.#bundles.length > 0) this.#finish(errorSummary(args));
 			},
-			success: (...args) => log('success', args),
+			success: () => {},
 			clearScreen: () => {}
 		};
 	}
