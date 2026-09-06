@@ -11,6 +11,8 @@ export interface BuildOutcome {
 
 export interface BuilderEvents {
 	start: [];
+	/** Coarse, real lifecycle milestones, not an estimate of compiler work remaining. */
+	progress: [fraction: number, message: string];
 	success: [outcome: BuildOutcome];
 	failure: [outcome: BuildOutcome];
 	log: [level: LogLevel, text: string];

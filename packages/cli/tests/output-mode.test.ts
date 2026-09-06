@@ -31,6 +31,15 @@ describe('resolveOutputMode', () => {
 		expect(isCIEnvironment({ CI: 'false' })).toBe(false);
 		expect(isCIEnvironment({ GITHUB_ACTIONS: 'true' })).toBe(true);
 	});
+
+	test('never uses raw keys on redirected stdin or a dumb terminal, even when forced', () => {
+		expect(resolveOutputMode({ env: { STARS_TUI: '1' }, isTTY: true, isInputTTY: false })).toBe('plain');
+		expect(resolveOutputMode({ env: { STARS_TUI: '1', TERM: 'dumb' }, isTTY: true })).toBe('plain');
+	});
+	test('falls back in small panes unless explicitly forced', () => {
+		expect(resolveOutputMode({ env: {}, isTTY: true, columns: 35, rows: 8 })).toBe('plain');
+		expect(resolveOutputMode({ env: { STARS_TUI: '1' }, isTTY: true, columns: 35, rows: 8 })).toBe('tui');
+	});
 });
 
 describe('colours and motion', () => {

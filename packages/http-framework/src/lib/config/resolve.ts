@@ -55,6 +55,7 @@ export type ResolvedTunnelConfig =
 	| { readonly mode: 'url'; readonly url: string; readonly path: string; readonly updateEndpoint: boolean };
 
 export interface ResolvedDevConfig {
+	readonly banner: readonly string[] | false | null;
 	readonly watch: readonly string[];
 	readonly ignore: readonly string[];
 	readonly debounce: number;
@@ -545,6 +546,7 @@ function resolveDev(
 	validator: Validator
 ): ResolvedDevConfig {
 	validator.knownKeys(config, 'dev', [
+		'banner',
 		'watch',
 		'ignore',
 		'debounce',
@@ -585,8 +587,14 @@ function resolveDev(
 	const typecheck = resolveTypecheck(root, packageJson, config.typecheck, validator);
 	const tunnel = resolveTunnel(config.tunnel, validator);
 	const logFile = config.logFile === false ? null : resolve(root, validator.string(config.logFile, 'dev.logFile') ?? DEFAULT_DEV_LOG_FILE);
+	const banner =
+		config.banner === false
+			? false
+			: typeof config.banner === 'string'
+				? config.banner.split('\n')
+				: (validator.stringArray(config.banner, 'dev.banner') ?? null);
 
-	return { watch, ignore, debounce, env: devEnv, nodeArgs, args, url, health, killTimeout, typecheck, tunnel, logFile };
+	return { watch, ignore, debounce, env: devEnv, nodeArgs, args, url, health, killTimeout, typecheck, tunnel, logFile, banner };
 }
 
 /**

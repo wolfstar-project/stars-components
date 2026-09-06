@@ -42,4 +42,14 @@ If the height of the right section is higher than the height of the logo, then a
 
 ## Usage
 
-To use the module, you import the `createBanner` function from the package, and then pass arrays with the lines.
+`createStarsBanner` includes a compact default logo. Pass `logo` to replace it, or `false` for text-only output:
+
+```ts
+import { createStarsBanner } from '@wolfstar/start-banner';
+
+console.log(createStarsBanner({ name: ['My bot'], extra: ['Ready'] }));
+console.log(createStarsBanner({ logo: ['CUSTOM'], name: ['My bot'] }));
+```
+
+Use the lower-level `createBanner` function when no default artwork is wanted; pass arrays containing the logo, name,
+and extra lines.
