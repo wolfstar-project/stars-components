@@ -59,7 +59,7 @@
 	"dependencies": {
 		"@clack/prompts": "^1.7.0",
 		"@wolfstar/http-framework": "workspace:^",
-		"chokidar": "^4.0.3",
+		"chokidar": "^5.0.0",
 		"citty": "^0.1.6",
 		"colorette": "^2.0.20",
 		"ink": "^7.1.1",
