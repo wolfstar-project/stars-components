@@ -1,5 +1,11 @@
 # @wolfstar/i18next-type-generator
 
+## 3.1.2
+
+### Patch Changes
+
+- [#169](https://github.com/wolfstar-project/stars-components/pull/169) [`f9bc134`](https://github.com/wolfstar-project/stars-components/commit/f9bc134f5161b4757fc254febf85df6bacb6a9f9) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 3.1.1
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.1
+
+### Patch Changes
+
+- [#167](https://github.com/wolfstar-project/stars-components/pull/167) [`6836885`](https://github.com/wolfstar-project/stars-components/commit/6836885e5998f7af6d346fd30286ecede047389c) - feat: add a compact, replaceable default Stars banner
+
+    `createStarsBanner()` uses a small built-in Stars logo, accepts a custom `logo` array as a replacement, and supports
+    `logo: false` for text-only output. Newly scaffolded projects and the runnable examples use this helper instead of
+    embedding the default artwork in every entry file. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#169](https://github.com/wolfstar-project/stars-components/pull/169) [`f9bc134`](https://github.com/wolfstar-project/stars-components/commit/f9bc134f5161b4757fc254febf85df6bacb6a9f9) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 2.4.0
 
 ### Minor Changes
