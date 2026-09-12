@@ -23,9 +23,10 @@ The shared commands used for Star Network's HTTP-only bots.
 - Define `locales/{{lng}}/commands/shared:infoEmbedDescription` as a string. This is the content displayed in `/info`'s embed description.
 - Define the information variables.
 - Importing `@wolfstar/shared-http-pieces/register` registers a `preGenericsInitialization` hook
-  that adds this package's bundled locales to your `Client`'s i18n backend automatically — as long
-  as it's imported before `new Client(...)`, no manual wiring is required. The resolved path is
-  also exported as `localesPath`, if you need it directly.
+  that adds this package's bundled locales and `commands/shared` namespace to your `Client`'s i18n
+  configuration automatically, while retaining the consumer's own locale path and namespaces. As
+  long as it's imported before `new Client(...)`, no manual wiring is required. The resolved path
+  is also exported as `localesPath`, if you need it directly.
 
 ## Usage
 
