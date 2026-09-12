@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+### Patch Changes
+
+- [#176](https://github.com/wolfstar-project/stars-components/pull/176) [`b40763a`](https://github.com/wolfstar-project/stars-components/commit/b40763afe6f7a2fc753530f3f4027e912bce919e) - Preserve consumer locale paths and load the bundled `commands/shared` namespace when using the register entrypoint. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.0.1
 
 ### Patch Changes
