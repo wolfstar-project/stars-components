@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import './commands/_load.js';
 import './listeners/_load.js';
+import { registerSharedLocales } from './lib/register-i18n.js';
 
 /**
  * Path pattern for this package's bundled locales, in the format
@@ -22,7 +23,7 @@ export const localesPath = join(fileURLToPath(new URL('../src/locales', import.m
 Client.plugins.registerPreGenericsInitializationHook((options) => {
 	const { i18n } = options;
 	if (!i18n) return;
-	options.i18n = { ...i18n, backend: { ...i18n.backend, paths: [...(i18n.backend?.paths ?? []), localesPath] } };
+	options.i18n = registerSharedLocales(i18n, localesPath);
 }, '@wolfstar/shared-http-pieces');
 
 // A dynamic import, not a static one: static imports are hoisted above the hook

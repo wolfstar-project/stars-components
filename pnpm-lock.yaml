@@ -939,6 +939,9 @@ importers:
       '@discordjs/collection':
         specifier: ^2.1.1
         version: 2.1.1
+      '@sapphire/pieces':
+        specifier: ^4.4.1
+        version: 4.4.1
       '@sentry/node':
         specifier: ^10.73.0
         version: 10.73.0(@opentelemetry/core@2.10.0)(supports-color@7.2.0)
@@ -961,6 +964,9 @@ importers:
         specifier: ^2.8.1
         version: 2.8.1
     devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
       '@wolfstar/i18next-type-generator':
         specifier: workspace:^
         version: link:../i18next-type-generator
@@ -970,6 +976,9 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.2.2)
 
   packages/shared-influx-pieces:
     dependencies:
