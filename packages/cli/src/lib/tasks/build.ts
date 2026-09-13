@@ -6,6 +6,7 @@ import { loadStarsConfig } from '@wolfstar/http-framework/config';
 import { displayPath } from '@wolfstar/http-framework/config';
 import { CliError, ExitCode } from '../errors.js';
 import { shouldUseColor } from '../output-mode.js';
+import { Locales } from '../locales.js';
 import { prepareAutoImports } from './prepare.js';
 
 export interface BuildTaskOptions extends ProjectArgs {
@@ -35,6 +36,7 @@ export async function runBuild(options: BuildTaskOptions): Promise<void> {
 	if (!outcome.ok) {
 		throw new CliError(`Build failed${outcome.message ? `: ${outcome.message}` : ''}`, { code: 'BUILD_FAILED', exitCode: ExitCode.BuildFailed });
 	}
+	new Locales(config).copy();
 
 	stdout.write(`${colors.dim('stars')} ${colors.green(`built in ${outcome.durationMs}ms`)} → ${displayPath(config.root, config.build.output)}\n`);
 }

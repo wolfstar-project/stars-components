@@ -71,6 +71,8 @@ export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, on
 				return service.clearLogs();
 			case 'o':
 				return void openDevUrl(status.url).catch((error: Error) => service.log('stars', 'warn', error.message));
+			case 't':
+				return void service.toggleTunnel();
 			case 'i':
 				return changeView('info');
 			case 'h':

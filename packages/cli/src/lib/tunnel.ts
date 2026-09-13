@@ -26,6 +26,7 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 	#child: ChildProcess | null = null;
 	#state: TunnelState = 'off';
 	#url: string | null = null;
+	#wanted = false;
 
 	public constructor(private readonly config: ResolvedStarsConfig) {
 		super();
@@ -40,20 +41,30 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		return this.#url;
 	}
 
-	public async start(): Promise<void> {
-		const tunnel = this.config.dev.tunnel;
+	public async start(forceQuick = false): Promise<void> {
+		if (this.#state === 'starting' || this.#state === 'up') return;
+		const configured = this.config.dev.tunnel;
+		const tunnel: ResolvedTunnelConfig =
+			forceQuick && configured.mode === 'off' ? { mode: 'quick', path: '/', updateEndpoint: false } : configured;
 		if (tunnel.mode === 'off') return;
 
+		this.#wanted = true;
 		this.#setState('starting', null);
 		const url = tunnel.mode === 'url' ? await this.#useConfiguredUrl(tunnel) : await this.#openQuickTunnel();
-		if (!url) return;
+		if (!url || !this.#wanted) return;
 
 		this.#setState('up', endpointUrl(url, tunnel.path));
 		this.emit('log', 'success', `Tunnel ready at ${this.#url}`);
 		if (tunnel.updateEndpoint) await this.#updateInteractionsEndpoint(this.#url!);
 	}
 
+	/** Toggles the configured tunnel, opening a quick tunnel when the project did not configure one. */
+	public toggle(): Promise<void> {
+		return this.#state === 'starting' || this.#state === 'up' ? this.close() : this.start(true);
+	}
+
 	public close(): Promise<void> {
+		this.#wanted = false;
 		const child = this.#child;
 		this.#child = null;
 		this.#setState('off', null);
@@ -130,11 +141,11 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 				stdout.flush();
 				stderr.flush();
 				this.#child = null;
-				if (!settled) {
+				if (!settled && this.#wanted) {
 					this.emit('log', 'error', `cloudflared exited with code ${code} before the tunnel was up`);
 					this.#setState('failed', null);
 					settle(null);
-				}
+				} else settle(null);
 			});
 		});
 	}
@@ -226,6 +237,6 @@ export function readDiscordCredentials(config: ResolvedStarsConfig, env: NodeJS.
 let envFileCache: { root: string; values: Record<string, string> } | null = null;
 
 function readProjectEnvFilesCached(root: string): Record<string, string> {
-	if (envFileCache?.root !== root) envFileCache = { root, values: readProjectEnvFiles(root) };
+	if (envFileCache?.root !== root) envFileCache = { root, values: readProjectEnvFiles(root, 'development') };
 	return envFileCache.values;
 }

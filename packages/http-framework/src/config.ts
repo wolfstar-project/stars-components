@@ -94,21 +94,20 @@ export interface StarsTsdownConfig {
 }
 
 /**
- * The `stars` major version whose defaults the project runs on, the way Nuxt's own `future.compatibilityVersion`
- * makes the next major's defaults available one major early.
+ * The build-default generation the project runs on. Version 4 is current; version 3 remains available for projects
+ * that still load a standalone `tsdown.config.*`.
  */
 export type StarsCompatibilityVersion = 3 | 4;
 
 /**
- * Nuxt-style `future` block: defaults that are already decided for the next major, available today. Where
- * `experimental` guards work that is still landing and may change shape, everything here is settled — it only waits
- * for a major to become the default.
+ * Nuxt-style compatibility block. New projects need not set it; version 3 is retained as an explicit migration
+ * escape hatch for projects that still use a standalone `tsdown.config.*`.
  */
 export interface StarsFutureConfig {
 	/**
 	 * The major whose defaults apply.
 	 *
-	 * `4` turns on the next major's build pipeline:
+	 * `4` is the default build pipeline:
 	 * - auto imports are on by default with the `tsdown` build tool ({@link StarsImportsConfig}), and the
 	 *   `autoImports()` plugin is wired into the build by `stars` itself.
 	 * - `tsdown` is configured from {@link StarsConfig.tsdown} only. A `tsdown.config.*` in the project root is
@@ -116,9 +115,9 @@ export interface StarsFutureConfig {
 	 * - `build.tool: 'auto'` resolves to `tsdown` for any TypeScript entry, without looking for a `tsdown.config.*`
 	 *   or a `tsdown` dependency first.
 	 *
-	 * `3` keeps today's behaviour: auto imports off unless asked for, and a `tsdown.config.*` loaded and merged with
+	 * `3` keeps the legacy behaviour: auto imports off unless asked for, and a `tsdown.config.*` loaded and merged with
 	 * {@link StarsConfig.tsdown}.
-	 * @default 3
+	 * @default 4
 	 */
 	compatibilityVersion?: StarsCompatibilityVersion;
 }
@@ -203,7 +202,7 @@ export interface StarsDevConfig {
 	 * The URL the bot listens on, shown in the dev UI's status line and used for {@link StarsDevConfig.health}.
 	 *
 	 * Resolved automatically, the way Vite's and Nuxt's dev servers do, from (in order) `dev.env.HTTP_PORT`, the
-	 * process's `HTTP_PORT`, the project's `.env.local`/`.env` (`HTTP_PORT` or `PORT`), or `3000`. `stars dev` also
+	 * process's `HTTP_PORT`, the project's `src/.env*`/`.env*` (`HTTP_PORT` or `PORT`), or `3000`. `stars dev` also
 	 * resolves whether `localhost` should be shown as `127.0.0.1` instead, the same DNS-order check Vite does, so the
 	 * printed URL is always the one that is actually reachable.
 	 * @default `http://localhost:3000` (or whichever port is found)
@@ -381,7 +380,7 @@ export interface StarsConfig {
 	imports?: StarsImportsConfig | boolean;
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
-	/** The next major's defaults, available today. */
+	/** Build-default compatibility. Omit for version 4; set version 3 only while migrating a standalone tsdown config. */
 	future?: StarsFutureConfig;
 	/**
 	 * Raw options merged into `vite.config.*`, the way `vite: {}` in a Nuxt config is merged into Nuxt's own Vite

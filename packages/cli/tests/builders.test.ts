@@ -16,7 +16,11 @@ describe('createBuilder', () => {
 		expect((await createBuilder(await loadStarsConfig({ cwd: fixture.root, env: {} }))).tool).toBe('none');
 		await fixture.cleanup();
 
-		fixture = await createFixture({ 'src/main.ts': '', 'tsdown.config.ts': 'export default {};' });
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsdown.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 } };'
+		});
 		expect((await createBuilder(await loadStarsConfig({ cwd: fixture.root, env: {} }))).tool).toBe('tsdown');
 	});
 
