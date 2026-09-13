@@ -4,6 +4,7 @@ import { useColor } from '../theme.js';
 const KEYS: [string, string][] = [
 	['r', 'restart the bot now'],
 	['o', 'open the local URL in a browser'],
+	['t', 'toggle the public tunnel'],
 	['i', 'show versions, URLs and session info'],
 	['l', 'open the logs (scroll, filter by source or level)'],
 	['e', 'jump to the last error, keeping its context'],

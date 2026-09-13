@@ -4,8 +4,7 @@ import { initializeSentry, setInvite, setRepository } from '@wolfstar/shared-htt
 import '@wolfstar/shared-http-pieces/register';
 
 export function setup() {
-	// From dist/lib/setup → src/.env
-	envRun(new URL('../../../src/.env', import.meta.url));
+	envRun();
 
 	setRepository('stars-components');
 	setInvite(envParseString('DISCORD_CLIENT_ID'), '0');

@@ -26,9 +26,8 @@ To setup `@wolfstar/env-utilities`, you use the `setup` function exported by the
 ```typescript
 import { setup } from '@wolfstar/env-utilities';
 
-// Set the path as the `.env` file besides the current module:
-// NOTE: If not set, it defaults to dotenv's default, `path.resolve(process.cwd(), '.env')`.
-setup(new URL('.env', import.meta.url));
+// Finds src/.env* and .env* from the current project automatically.
+setup();
 ```
 
 Alternatively, if you do not need to provide any custom options you can import it as a side effect:
@@ -46,6 +45,9 @@ You can also pass a `string` or if you want to define other options, you may use
 - `DOTENV_PREFIX`: configures `EnvSetupOptions.prefix`. If set, it will specify a required prefix for dotenv variables (e.g. `APP_`).
 
 ### What `.env` files can be used?
+
+Every file below is searched first under `src/`, then at the project root. An explicit `path` or `DOTENV_PATH`
+disables this discovery and uses that base path only.
 
 - `.env`: Default.
 - `.env.local`: Local overrides. This file is loaded for all environments except test.

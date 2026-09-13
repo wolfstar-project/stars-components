@@ -203,31 +203,16 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 }
 
 /**
- * Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). It carries
- * the build too: `tsdown` projects are configured here rather than in a `tsdown.config.ts` of their own, which is
- * what `future.compatibilityVersion: 4` means for a generated project.
+ * Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). Conventional
+ * JavaScript and tsdown projects need no options; an explicit tsc selection is the only generated override.
  */
 function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
 	const isJs = ctx.language === 'js';
-	const isTsdown = !isJs && ctx.buildTool === 'tsdown';
-	const build = isJs ? "{ tool: 'none' }" : isTsdown ? "{ tool: 'tsdown' }" : "{ tool: 'tsc', tsconfig: 'src/tsconfig.json' }";
-	const content = [
-		"import { defineConfig } from '@wolfstar/http-framework/config';",
-		'',
-		'export default defineConfig({',
-		`\tentry: 'src/main.${isJs ? 'js' : 'ts'}',`,
-		`\tbuild: ${build},`,
-		"\t// The next major's defaults: auto imports wired into the build, and `tsdown` configured from this file.",
-		'\tfuture: { compatibilityVersion: 4 }',
-		...(isTsdown
-			? [
-					'\t// The build needs nothing else. Add a `tsdown` block for what the defaults cannot know,',
-					'\t// such as a plugin that copies assets into dist/.'
-				]
-			: []),
-		'});',
-		''
-	].join('\n');
+	const usesTsc = !isJs && ctx.buildTool !== 'tsdown';
+	const options = usesTsc ? "{ build: { tool: 'tsc' } }" : '{}';
+	const content = ["import { defineConfig } from '@wolfstar/http-framework/config';", '', `export default defineConfig(${options});`, ''].join(
+		'\n'
+	);
 	writeFile(join(targetDir, isJs ? 'stars.config.js' : 'stars.config.ts'), content);
 }
 

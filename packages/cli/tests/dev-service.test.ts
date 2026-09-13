@@ -44,7 +44,10 @@ describe('DevService', () => {
 	let service: DevService;
 
 	async function setup(script: string) {
-		fixture = await createFixture({ 'src/main.js': script, 'stars.config.mjs': 'export default { dev: { debounce: 10, killTimeout: 1000 } };' });
+		fixture = await createFixture({
+			'src/main.js': script,
+			'stars.config.mjs': "export default { dev: { debounce: 10, killTimeout: 1000, env: { NODE_ENV: 'production' } } };"
+		});
 		config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 		builder = new FakeBuilder();
 		service = new DevService(config, { builder });
@@ -121,11 +124,11 @@ describe('DevService', () => {
 		expect(service.status.process).toBe('stopped');
 	});
 
-	test('sets STARS_DEV in the bot environment', async () => {
-		await setup("console.log('dev=' + process.env.STARS_DEV); setInterval(() => {}, 1000);");
+	test('sets STARS_DEV and forces development mode in the bot environment', async () => {
+		await setup("console.log('dev=' + process.env.STARS_DEV + ',mode=' + process.env.NODE_ENV); setInterval(() => {}, 1000);");
 		await service.start();
 		builder.succeed();
-		await waitFor(() => service.logs.entries().some((entry) => entry.text === 'dev=1'));
+		await waitFor(() => service.logs.entries().some((entry) => entry.text === 'dev=1,mode=development'));
 	});
 
 	test('advances only on real milestones and resets the next build', async () => {

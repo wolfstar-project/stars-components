@@ -230,8 +230,7 @@ describe('writeProjectFiles', () => {
 		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsdown' }));
 
 		const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
-		expect(config).toContain("build: { tool: 'tsdown' },");
-		expect(config).toContain('future: { compatibilityVersion: 4 }');
+		expect(config).toContain('defineConfig({})');
 		// The defaults cover a base project, so there is no `tsdown` block and no `tsdown.config.ts` either.
 		expect(config).not.toContain('tsdown:');
 		await expect(readFile(join(target, 'tsdown.config.ts'), 'utf-8')).rejects.toMatchObject({ code: 'ENOENT' });
@@ -248,12 +247,12 @@ describe('writeProjectFiles', () => {
 		});
 	});
 
-	test('GIVEN tsc THEN stars.config.ts carries the compatibility version without a tsdown block', async () => {
+	test('GIVEN tsc THEN stars.config.ts only selects tsc', async () => {
 		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsc7' }));
 
 		const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
-		expect(config).toContain("build: { tool: 'tsc', tsconfig: 'src/tsconfig.json' },");
-		expect(config).toContain('future: { compatibilityVersion: 4 }');
+		expect(config).toContain("defineConfig({ build: { tool: 'tsc' } })");
+		expect(config).not.toContain('compatibilityVersion');
 		expect(config).not.toContain('tsdown:');
 	});
 });

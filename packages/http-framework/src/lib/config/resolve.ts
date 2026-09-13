@@ -148,10 +148,11 @@ export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
 export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
 export const DEFAULT_TUNNEL_PATH = '/';
 
-export const DEFAULT_COMPATIBILITY_VERSION = 3;
+export const DEFAULT_COMPATIBILITY_VERSION = 4;
+export const LEGACY_COMPATIBILITY_VERSION = 3;
 export const LATEST_COMPATIBILITY_VERSION = 4;
 
-const COMPATIBILITY_VERSIONS = new Set<number>([DEFAULT_COMPATIBILITY_VERSION, LATEST_COMPATIBILITY_VERSION]);
+const COMPATIBILITY_VERSIONS = new Set<number>([LEGACY_COMPATIBILITY_VERSION, LATEST_COMPATIBILITY_VERSION]);
 const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'vite', 'auto']);
 const TYPECHECKERS = new Set<string>(['tsc', 'golar', 'tsz', 'auto']);
 const VITE_CONFIG_FILES = ['vite.config.ts', 'vite.config.mts', 'vite.config.cts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs'];
@@ -357,7 +358,7 @@ function resolveBuild(
 			`\`${displayPath(root, configFile)}\` is not used with compatibility version ${future.compatibilityVersion}`,
 			'tsdown',
 			'TSDOWN_CONFIG_FILE_UNSUPPORTED',
-			`Move its options into \`tsdown\` here, drop the ${displayPath(root, configFile)} configuration, or set \`future.compatibilityVersion\` to ${DEFAULT_COMPATIBILITY_VERSION}.`
+			`Move its options into \`tsdown\` here, drop the ${displayPath(root, configFile)} configuration, or set \`future.compatibilityVersion\` to ${LEGACY_COMPATIBILITY_VERSION}.`
 		);
 	}
 
@@ -402,9 +403,7 @@ function detectBuildTool(
 }
 
 /**
- * Resolves the `future` block. It carries the defaults of the next major, the way Nuxt's own
- * `future.compatibilityVersion` does: a project opts into them one major early, and they become the default when
- * that major ships.
+ * Resolves the Nuxt-style compatibility block. Version 4 is the default; version 3 remains an explicit legacy mode.
  */
 function resolveFuture(config: StarsFutureConfig, validator: Validator): ResolvedFutureConfig {
 	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
@@ -420,7 +419,7 @@ function resolveFuture(config: StarsFutureConfig, validator: Validator): Resolve
 			`Unknown compatibility version ${describe(version)}`,
 			'future.compatibilityVersion',
 			'INVALID_COMPATIBILITY_VERSION',
-			`Use ${DEFAULT_COMPATIBILITY_VERSION} (today's defaults) or ${LATEST_COMPATIBILITY_VERSION} (the next major's).`
+			`Use ${LEGACY_COMPATIBILITY_VERSION} for the legacy build pipeline or ${LATEST_COMPATIBILITY_VERSION} for today's defaults.`
 		);
 	}
 
@@ -491,20 +490,22 @@ function resolveBuildOutput(root: string, entry: string, outDir: string, package
 	return join(outDir, `${basename(entry, extension)}${outputExtension}`);
 }
 
-const ENV_FILES = ['.env.local', '.env'] as const;
 const ENV_PORT_KEYS = ['HTTP_PORT', 'PORT'] as const;
 
 /**
- * Reads the project's `.env.local`/`.env` into a plain object, the way `stars dev` and `stars commands` need it:
+ * Reads the project's environment layers from `src/.env*` and `.env*` into a plain object, the way `stars dev` and
+ * `stars commands` need it:
  * these files are only loaded into `process.env` by the bot itself once it starts (see `@wolfstar/env-utilities`),
  * so by the time the CLI runs they are not there yet. This is a minimal line reader, not a full dotenv
  * implementation — quoting is stripped, but expansion (`dotenv-expand`) is not. Earlier files win, matching
  * dotenv's own precedence.
  */
-export function readProjectEnvFiles(root: string): Record<string, string> {
+export function readProjectEnvFiles(root: string, environment = 'development'): Record<string, string> {
 	const result: Record<string, string> = {};
+	const suffixes = [`.${environment}.local`, ...(environment === 'test' ? [] : ['.local']), `.${environment}`, ''];
+	const files = suffixes.flatMap((suffix) => [join('src', `.env${suffix}`), `.env${suffix}`]);
 
-	for (const file of ENV_FILES) {
+	for (const file of files) {
 		const path = join(root, file);
 		if (!isFile(path)) continue;
 
@@ -528,8 +529,8 @@ export function readProjectEnvFiles(root: string): Record<string, string> {
 	return result;
 }
 
-function readDevPortFromEnvFile(root: string): string | null {
-	const values = readProjectEnvFiles(root);
+function readDevPortFromEnvFile(root: string, environment: string): string | null {
+	const values = readProjectEnvFiles(root, environment);
 	for (const key of ENV_PORT_KEYS) {
 		if (values[key]) return values[key];
 	}
@@ -580,7 +581,7 @@ function resolveDev(
 	} else {
 		// Mirrors Vite's and Nuxt's own dev servers: a URL is shown without any configuration. The exact host
 		// (`localhost` vs `127.0.0.1`) is resolved at runtime by `stars dev`, once it knows which one is actually reachable.
-		const port = devEnv.HTTP_PORT ?? env.HTTP_PORT ?? readDevPortFromEnvFile(root) ?? String(DEFAULT_DEV_PORT);
+		const port = devEnv.HTTP_PORT ?? env.HTTP_PORT ?? readDevPortFromEnvFile(root, env.NODE_ENV ?? 'development') ?? String(DEFAULT_DEV_PORT);
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}
 

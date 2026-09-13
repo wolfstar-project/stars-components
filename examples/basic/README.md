@@ -13,9 +13,8 @@ Minimal HTTP Discord bot using the `@wolfstar/*` HTTP framework stack.
 
 ## The build
 
-The build lives in [`stars.config.ts`](./stars.config.ts): `tsdown: {}` holds what a separate `tsdown.config.ts`
-used to, and `future: { compatibilityVersion: 4 }` opts into the next major's defaults (auto imports on and wired
-into the build, `stars.config` as the only build configuration). See the
+The intentionally empty [`stars.config.ts`](./stars.config.ts) demonstrates the defaults: the entry and output are
+detected, tsdown and auto imports are wired automatically, and `src/locales` is copied into the build. See the
 [framework README](../../packages/http-framework#the-build-tsdown).
 
 The `build` and `dev` scripts run the CLI by path (`node ../../packages/cli/dist/cli.js …`) because the `stars`

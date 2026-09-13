@@ -9,6 +9,7 @@ export interface Hint {
 export const PANEL_HINTS: Hint[] = [
 	{ key: 'r', label: 'restart', priority: 80 },
 	{ key: 'o', label: 'open', priority: 40 },
+	{ key: 't', label: 'tunnel', priority: 60 },
 	{ key: 'i', label: 'info', priority: 50 },
 	{ key: 'l', label: 'logs', priority: 70 },
 	{ key: '?', label: 'help', priority: 100 },
