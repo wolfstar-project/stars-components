@@ -34,6 +34,10 @@ The ecosystem also includes a project scaffolder, development CLI, interaction t
 
 ## Quick Start
 
+<p align="center">
+  <img src="./.github/media/scaffolder-demo.gif" alt="Scaffold a Discord application and run it with Stars CLI" width="800" />
+</p>
+
 ### Prerequisites
 
 - Node.js `^22.11`, `^24`, or `>=26`
