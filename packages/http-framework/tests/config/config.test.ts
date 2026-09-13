@@ -46,7 +46,7 @@ describe('stars.config', () => {
 		expect(config.root).toBe(fixture.root);
 		expect(config.entry).toBe(join(fixture.root, 'src', 'main.js'));
 		expect(config.build).toEqual({ tool: 'none', outDir: join(fixture.root, 'dist'), tsconfig: null, output: config.entry, configFile: null });
-		expect(config.future.compatibilityVersion).toBe(3);
+		expect(config.future.compatibilityVersion).toBe(4);
 		expect(config.dev.watch).toEqual([join(fixture.root, 'src')]);
 		expect(config.dev.debounce).toBe(150);
 		expect(config.dev.nodeArgs).toEqual(['--enable-source-maps']);
@@ -63,7 +63,11 @@ describe('stars.config', () => {
 	test('enables auto imports by default from compatibility version 4 on', async () => {
 		// At 3 the `autoImports()` plugin is the project's own to add, so defaulting them on would promise imports
 		// that never get injected.
-		fixture = await createFixture({ 'src/main.ts': '', 'tsdown.config.ts': 'export default {};' });
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsdown.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 } };'
+		});
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).imports.enabled).toBe(false);
 		await fixture.cleanup();
 
@@ -90,7 +94,11 @@ describe('stars.config', () => {
 	});
 
 	test('keeps a tsdown.config.* authoritative at compatibility version 3', async () => {
-		fixture = await createFixture({ 'src/main.ts': '', 'tsdown.config.ts': 'export default {};' });
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsdown.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 } };'
+		});
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 		expect(config.build.tool).toBe('tsdown');
 		expect(config.build.configFile).toBe(join(fixture.root, 'tsdown.config.ts'));
@@ -124,7 +132,7 @@ describe('stars.config', () => {
 			'src/main.ts': '',
 			'tsdown.config.ts': 'export default {};',
 			'stars.config.mjs':
-				"export default { imports: { dirs: ['src/shared'], presets: [], exclude: ['container'], dts: 'types/imports.d.ts' } };"
+				"export default { future: { compatibilityVersion: 3 }, imports: { dirs: ['src/shared'], presets: [], exclude: ['container'], dts: 'types/imports.d.ts' } };"
 		});
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 		expect(config.imports).toEqual({
@@ -191,8 +199,8 @@ describe('stars.config', () => {
 
 	test('detects vite as the build tool only once `experimental.enableVite` is on', async () => {
 		fixture = await createFixture({ 'src/main.ts': '', 'tsconfig.json': '{}', 'vite.config.ts': 'export default {};' });
-		// Without the flag a vite.config.* belongs to something else in the project and must not take the build over.
-		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).build.tool).toBe('tsc');
+		// Without the flag a vite.config.* belongs to something else in the project and must not take the default build over.
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).build.tool).toBe('tsdown');
 		await fixture.cleanup();
 
 		fixture = await createFixture({
@@ -222,7 +230,7 @@ describe('stars.config', () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
 			'tsdown.config.ts': 'export default {};',
-			'stars.config.mjs': 'export default { tsdown: { minify: true } };'
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 }, tsdown: { minify: true } };'
 		});
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).tsdown).toEqual({ minify: true });
 		await fixture.cleanup();
@@ -240,7 +248,7 @@ describe('stars.config', () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
 			'tsdown.config.ts': 'export default {};',
-			'stars.config.mjs': 'export default { imports: false };'
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 }, imports: false };'
 		});
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).imports.enabled).toBe(false);
 	});
@@ -292,8 +300,24 @@ describe('stars.config', () => {
 		expect((await loadStarsConfig({ cwd: fixture.root, env: { HTTP_PORT: '4400' } })).dev.url).toBe('http://localhost:4400');
 	});
 
+	test('reads development env layers from src and root with Nuxt-style precedence', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'src/.env.development.local': 'HTTP_PORT=4500\nSOURCE_ONLY=yes\n',
+			'.env.development.local': 'HTTP_PORT=4501\nROOT_ONLY=yes\n',
+			'src/.env': 'HTTP_PORT=4502\n'
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: { NODE_ENV: 'development' } });
+		expect(config.dev.url).toBe('http://localhost:4500');
+	});
+
 	test('detects tsdown from the configuration file or the dependencies', async () => {
-		fixture = await createFixture({ 'src/main.ts': '', 'tsdown.config.ts': 'export default {};' });
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsdown.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 } };'
+		});
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).build.tool).toBe('tsdown');
 		await fixture.cleanup();
 
@@ -306,7 +330,7 @@ describe('stars.config', () => {
 	test('maps .mts entries to .mjs outputs when package.json has no main', async () => {
 		fixture = await createFixture({ 'src/main.mts': '', 'tsconfig.json': '{}', 'stars.config.mjs': "export default { entry: 'src/main.mts' };" });
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
-		expect(config.build.tool).toBe('tsc');
+		expect(config.build.tool).toBe('tsdown');
 		expect(config.build.output).toBe(join(fixture.root, 'dist', 'main.mjs'));
 	});
 
@@ -439,7 +463,7 @@ describe('stars.config', () => {
 			const tsdown = await expectConfigError("export default { build: { tool: 'none' }, tsdown: { minify: true } };");
 			expect(tsdown).toMatchObject({ code: 'TSDOWN_OPTIONS_REQUIRE_TSDOWN', path: 'tsdown' });
 
-			const vite = await expectConfigError('export default { vite: { define: {} } };', {
+			const vite = await expectConfigError('export default { future: { compatibilityVersion: 3 }, vite: { define: {} } };', {
 				'src/main.ts': '',
 				'tsdown.config.ts': 'export default {};'
 			});

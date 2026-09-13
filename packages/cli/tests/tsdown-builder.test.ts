@@ -130,7 +130,8 @@ describe('TsdownBuilder', () => {
 			// A plain `.mjs` config keeps the fixture independent of which TypeScript loader `tsdown` picks.
 			'tsdown.config.mjs':
 				"export default { entry: ['src/main.ts'], format: 'esm', outDir: 'dist', outExtensions: () => ({ js: '.js' }), define: { __FROM__: '\"file\"', __ONLY_FILE__: '\"file-only\"' } };\n",
-			'stars.config.mjs': "export default { entry: 'src/main.ts', tsdown: { define: { __FROM__: '\"stars\"' } } };",
+			'stars.config.mjs':
+				"export default { entry: 'src/main.ts', future: { compatibilityVersion: 3 }, tsdown: { define: { __FROM__: '\"stars\"' } } };",
 			'src/main.ts': 'declare const __FROM__: string;\ndeclare const __ONLY_FILE__: string;\nconsole.log(__FROM__, __ONLY_FILE__);\n'
 		});
 

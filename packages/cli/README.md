@@ -41,13 +41,10 @@ Projects scaffolded with [`@wolfstar/create-http-framework`](../create-http-fram
 // stars.config.ts
 import { defineConfig } from '@wolfstar/http-framework/config';
 
-export default defineConfig({
-	entry: 'src/main.ts',
-	build: { tool: 'tsdown' }
-});
+export default defineConfig({});
 ```
 
-`stars dev`'s URL needs no configuration either — it is detected from `HTTP_PORT` (env var, `.env.local`/`.env`, or `dev.env`) or `3000`, the same way Vite's and Nuxt's dev servers do, and `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` only to override it.
+`stars dev`'s URL needs no configuration either — it is detected from `HTTP_PORT` (env var, `src/.env*`/`.env*`, or `dev.env`) or `3000`, the same way Vite's and Nuxt's dev servers do, and `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` only to override it.
 
 The resolved configuration is also available programmatically, exactly as the commands see it (re-exported from this package for convenience, or import it directly from `@wolfstar/http-framework/config`):
 
@@ -74,7 +71,7 @@ stars --help | --version
 
 Watches the sources through the configured build tool (`tsdown` programmatically, configured from your `stars.config`, `tsc -b --watch`, or a plain file watcher for JavaScript projects), starts the bot after the first successful build and restarts it after every following one. Failed builds keep the previous process running and wait for the next change; a crashed bot waits for the next change or a manual restart.
 
-The bot runs as a child `node` process with `STARS_DEV=1` in its environment. Because `stars dev` already restarts the whole process, leave the framework's own `hmr` option disabled while using it.
+The bot runs as a child `node` process with `STARS_DEV=1` and `NODE_ENV=development` in its environment. Because `stars dev` already restarts the whole process, leave the framework's own `hmr` option disabled while using it.
 
 **Interactive UI** (default on a TTY): a bottom-aligned panel following the layout and keyboard conventions of
 [Nuxt CLI's dev TUI](https://github.com/nuxt/cli/tree/b4b366eafdd9ac4d5b81b6ae7dadda35364252c9/packages/nuxt-cli/src/dev/tui).
@@ -92,6 +89,7 @@ that every application plugin loaded successfully. Logged errors switch the badg
 | -------------- | ------------------------------------------------------------ |
 | `r` / `Ctrl+R` | restart the bot                                              |
 | `o`            | open the local URL in a browser                              |
+| `t`            | toggle a public `cloudflared` tunnel                         |
 | `i`            | show project, versions, URLs, health, types and session info |
 | `l`            | browse logs                                                  |
 | `e`            | select the last error with its surrounding context           |
@@ -150,7 +148,7 @@ Three `dev` options round out the dev loop (all documented in
   `dev.typecheck.checker` picks which one: `tsc` (the project's TypeScript, watch mode), `golar` (`golar tsc`, watch
   mode), `tsz` (the tsc-compatible checker, re-run after every build since it has no watch mode), or `auto` — the
   default, which uses `golar` when the project depends on it and `tsc` otherwise.
-- `dev.tunnel: true` opens a `cloudflared` quick tunnel so Discord can reach the bot's interactions endpoint from the
+- Pressing `t` opens and closes a `cloudflared` quick tunnel without configuration. `dev.tunnel: true` opens it at startup so Discord can reach the bot's interactions endpoint from the
   internet; a string is an https URL you already serve, which the CLI only probes. `dev.tunnel.updateEndpoint` writes
   the URL to the Discord application, and is opt-in because it edits a live application.
 - `dev.logFile` (default `.stars/dev.log`) mirrors the session's logs to disk, so a run can be read back after the
@@ -161,15 +159,13 @@ Three `dev` options round out the dev loop (all documented in
 `tsdown` is configured from `stars.config`, and a base project configures nothing: the entry's directory, one output
 file per source file, ESM on Node, `build.outDir`, the tsconfig (`src/tsconfig.json` or `tsconfig.json`), the
 extension `build.output` implies, sourcemaps, unbundled dependencies, Nuxt's `~`/`@`/`~~`/`@@` alias prefixes and
-the auto imports plugin are all filled in
+the auto imports plugin, and copying `src/locales` to `dist/locales` are all filled in
 (the [framework README](../http-framework#the-build-tsdown) lists every default). The `tsdown` block is for what they
 cannot know:
 
 ```typescript
 export default defineConfig({
-	entry: 'src/main.ts',
-	future: { compatibilityVersion: 4 },
-	tsdown: { plugins: [copyLocales()] }
+	tsdown: { dts: true }
 });
 ```
 
@@ -180,13 +176,13 @@ and which options the block sets.
 
 ### Compatibility version
 
-`future.compatibilityVersion` opts a project into the next major's defaults, the way Nuxt's own does (see the
+`future.compatibilityVersion` selects the legacy or current defaults, the way Nuxt's own compatibility setting does (see the
 [framework README](../http-framework#compatibility-version) for the full reference):
 
 | Version       | What it changes                                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `3` (default) | Today's behaviour: a `tsdown.config.*` drives the build, auto imports off unless asked for                          |
-| `4`           | `tsdown` configured from `stars.config` alone, auto imports on and wired in, `'auto'` picks `tsdown` for TypeScript |
+| `3`           | Legacy behaviour: a `tsdown.config.*` drives the build, auto imports off unless asked for                           |
+| `4` (default) | `tsdown` configured from `stars.config` alone, auto imports on and wired in, `'auto'` picks `tsdown` for TypeScript |
 
 ### Experimental flags
 

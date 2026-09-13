@@ -1,4 +1,4 @@
-import { chmodSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { loadEnvFiles, type EnvLoaderOptions } from '../src/lib/env-loader';
@@ -42,6 +42,9 @@ describe('Env file Loader', () => {
 		delete process.env.MY_APP_SETTING;
 		delete process.env.NOT_MY_SETTING;
 		delete process.env.MY_APP_SETTING_2;
+		delete process.env.FROM_SOURCE;
+		delete process.env.FROM_ROOT;
+		delete process.env.PRIORITY;
 	});
 
 	afterEach(() => {
@@ -49,7 +52,7 @@ describe('Env file Loader', () => {
 
 		for (const file of readdirSync(fixturesDirectory)) {
 			if (file === '.gitignore' || file === '.gitkeep') continue;
-			rmSync(resolve(fixturesDirectory, file));
+			rmSync(resolve(fixturesDirectory, file), { recursive: true, force: true });
 		}
 	});
 
@@ -67,6 +70,19 @@ describe('Env file Loader', () => {
 			FOURTH: 'FOURTH',
 			SAME: 'SAME'
 		});
+	});
+
+	test('discovers layered env files in src and the project root by default', () => {
+		process.env.NODE_ENV = 'development';
+		vi.spyOn(process, 'cwd').mockReturnValue(fixturesDirectory);
+		mkdirSync(resolve(fixturesDirectory, 'src'), { recursive: true });
+		writeFileSync(resolve(fixturesDirectory, 'src/.env.development.local'), 'FROM_SOURCE=yes\nPRIORITY=source-local\n');
+		writeFileSync(resolve(fixturesDirectory, '.env.development.local'), 'FROM_ROOT=yes\nPRIORITY=root-local\n');
+		writeFileSync(resolve(fixturesDirectory, 'src/.env'), 'PRIORITY=source-generic\n');
+
+		const output = loadEnvFiles();
+
+		expect(output.parsed).toMatchObject({ FROM_SOURCE: 'yes', FROM_ROOT: 'yes', PRIORITY: 'source-local' });
 	});
 
 	test('should error if NODE_ENV not set', () => {
@@ -92,10 +108,10 @@ describe('Env file Loader', () => {
 		loadEnvFiles({ ...envLoaderConfig, debug: true });
 
 		expect(consoleLogSpy).toHaveBeenCalledTimes(4);
-		expect(consoleLogSpy.mock.calls[0][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.development.local`');
-		expect(consoleLogSpy.mock.calls[1][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.local`');
-		expect(consoleLogSpy.mock.calls[2][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env.development`');
-		expect(consoleLogSpy.mock.calls[3][0]).toEqual('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]][DEBUG] loading `.env`');
+		expect(consoleLogSpy.mock.calls[0][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env.development.local`');
+		expect(consoleLogSpy.mock.calls[1][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env.local`');
+		expect(consoleLogSpy.mock.calls[2][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env.development`');
+		expect(consoleLogSpy.mock.calls[3][0]).toContain('[@wolfstar/env-utilities@[VI]{{inject}}[/VI]] loading `.env`');
 	});
 
 	test('should exclude .env.local when NODE_ENV set to test', () => {

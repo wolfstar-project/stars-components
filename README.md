@@ -3,7 +3,9 @@
     <img src="https://cdn.wolfstar.rocks/assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
   </picture>
 
-**A comprehensive collection of shared utilities and components powering the Star Network**
+**An HTTP-first TypeScript framework and toolkit for Discord applications**
+
+[Documentation](https://stars-components.js.org) · [Core package](https://www.npmjs.com/package/@wolfstar/http-framework) · [Official plugins](https://github.com/wolfstar-project/plugins)
 
 [![GitHub License](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
 [![Greptile: The War on Bugs](https://www.greptile.com/badge.svg)](https://www.greptile.com/?utm_source=oss_badge&utm_medium=readme&utm_campaign=greptile_for_open_source)
@@ -15,7 +17,9 @@
 
 ## Overview
 
-Stars Components is a monorepo containing **16 publishable TypeScript packages** under the `@wolfstar` npm scope. These packages provide foundational utilities and frameworks for building HTTP-only Discord bots and related services within the Star Network ecosystem.
+Stars Components is a monorepo containing **22 independently versioned TypeScript packages** under the `@wolfstar` npm scope. Its core is [`@wolfstar/http-framework`](./packages/http-framework), a framework for Discord applications that receive interactions over HTTP—well suited to webhook and serverless deployments without a persistent Gateway connection.
+
+The ecosystem also includes a project scaffolder, development CLI, interaction test utilities, integrations, and reusable tooling. Optional features such as REST routes, i18n, logging transports, and modular subcommands are available from the [official plugin repository](https://github.com/wolfstar-project/plugins).
 
 **Technology Stack:**
 
@@ -29,6 +33,10 @@ Stars Components is a monorepo containing **16 publishable TypeScript packages**
 ---
 
 ## Quick Start
+
+<p align="center">
+  <img src="./.github/media/scaffolder-demo.gif" alt="Scaffold a Discord application and run it with Stars CLI" width="800" />
+</p>
 
 ### Prerequisites
 
@@ -45,11 +53,11 @@ cd stars-components
 # Install dependencies (uses pnpm workspaces)
 pnpm install
 
-# Run quality gates in order
+# Run quality gates
 pnpm lint      # oxlint + oxfmt check
-pnpm typecheck # TypeScript check (requires pnpm build first)
-pnpm test      # vitest
 pnpm build     # tsdown for each package
+pnpm typecheck # TypeScript check (uses built declarations)
+pnpm test      # vitest
 ```
 
 **Important:** Run `pnpm build` before `pnpm typecheck`, as typecheck resolves cross-package imports against built `dist/*.d.ts` files.

@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from './builders/types.js';
 import { displayPath, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
 import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from './log-buffer.js';
+import { Locales } from './locales.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from './process-supervisor.js';
 import { Tunnel, type TunnelState } from './tunnel.js';
 import { Typechecker, type TypecheckState } from './typechecker.js';
@@ -52,6 +53,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public readonly supervisor: ProcessSupervisor;
 	public readonly typechecker: Typechecker;
 	public readonly tunnel: Tunnel;
+	public readonly locales: Locales;
 
 	#build: BuildState = 'idle';
 	#health: HealthState = 'unknown';
@@ -76,6 +78,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.supervisor = options.supervisor ?? createSupervisor(config);
 		this.typechecker = options.typechecker ?? new Typechecker(config);
 		this.tunnel = options.tunnel ?? new Tunnel(config);
+		this.locales = new Locales(config);
 
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
@@ -105,6 +108,10 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.typechecker.on('state', () => this.#emitStatus());
 		this.tunnel.on('log', (level, text) => this.log('tunnel', level, text));
 		this.tunnel.on('state', () => this.#emitStatus());
+		this.locales.on('log', (level, text) => this.log('build', level, text));
+		this.locales.on('change', () => {
+			if (this.#build === 'ok') this.#scheduleRestart('build');
+		});
 
 		if (config.dev.url && config.dev.health) {
 			const interval = options.healthInterval ?? 5000;
@@ -145,6 +152,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		const entry = displayPath(this.config.root, this.config.entry);
 		this.log('stars', 'info', this.config.build.tool === 'none' ? `Watching ${entry}` : `Watching ${entry} with ${this.config.build.tool}`);
 		if (this.config.dev.typecheck.enabled) this.typechecker.start();
+		await this.locales.watch();
 		// The tunnel comes up next to the build: neither waits for the other, and a failed tunnel never stops the bot.
 		void this.tunnel.start();
 		await this.builder.watch();
@@ -177,6 +185,11 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		});
 	}
 
+	/** Opens or closes the public tunnel (used by the `t` key). */
+	public toggleTunnel(): Promise<void> {
+		return this.tunnel.toggle();
+	}
+
 	/**
 	 * Stops the watcher and the bot. Safe to call more than once.
 	 */
@@ -186,7 +199,13 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		if (this.#healthTimer) clearInterval(this.#healthTimer);
 		this.#healthTimer = null;
 		await this.#enqueue(async () => {
-			await Promise.allSettled([this.builder.close(), this.supervisor.stop(), this.typechecker.close(), this.tunnel.close()]);
+			await Promise.allSettled([
+				this.builder.close(),
+				this.supervisor.stop(),
+				this.typechecker.close(),
+				this.tunnel.close(),
+				this.locales.close()
+			]);
 		});
 	}
 
@@ -195,6 +214,16 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	}
 
 	#onBuildSuccess(outcome: BuildOutcome): void {
+		try {
+			this.locales.copy();
+		} catch (error) {
+			this.#onBuildFailure({
+				...outcome,
+				ok: false,
+				message: `Failed to copy locales: ${error instanceof Error ? error.message : String(error)}`
+			});
+			return;
+		}
 		this.#lastBuild = outcome;
 		this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 		this.#setBuild('ok');
@@ -294,6 +323,7 @@ export function createSupervisor(config: ResolvedStarsConfig): ProcessSupervisor
 			...process.env,
 			...config.dev.env,
 			STARS_DEV: '1',
+			NODE_ENV: 'development',
 			FORCE_COLOR: process.env.NO_COLOR !== undefined ? undefined : (process.env.FORCE_COLOR ?? (process.stdout.isTTY ? '1' : undefined))
 		},
 		killTimeout: config.dev.killTimeout
