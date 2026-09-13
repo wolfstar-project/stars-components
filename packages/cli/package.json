@@ -67,13 +67,13 @@
 	},
 	"devDependencies": {
 		"@types/react": "^19.2.18",
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.0",
 		"@xterm/headless": "^6.0.0",
 		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
 		"typescript": "~7.0.2",
 		"vite": "^8.2.2",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.0"
 	},
 	"peerDependencies": {
 		"tsdown": ">=0.15.0",
