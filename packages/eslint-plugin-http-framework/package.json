@@ -50,9 +50,9 @@
 	"devDependencies": {
 		"@typescript-eslint/parser": "^8.69.0",
 		"@vitest/coverage-v8": "^4.1.11",
-		"eslint": "^10.9.1",
+		"eslint": "^10.10.0",
 		"golar": "^0.1.10",
-		"tsdown": "^0.22.14",
+		"tsdown": "^0.23.0",
 		"typescript": "~5.8.3",
 		"vitest": "^4.1.11"
 	},
