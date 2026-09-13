@@ -74,7 +74,7 @@
 		"@redstardev/unplugin-version-injector": "^0.0.2",
 		"@vitest/coverage-v8": "^4.1.11",
 		"golar": "^0.1.10",
-		"tsdown": "^0.22.14",
+		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
 		"vitest": "^4.1.11"
 	},
