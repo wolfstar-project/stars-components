@@ -163,6 +163,11 @@ the auto imports plugin, and copying `src/locales` to `dist/locales` are all fil
 (the [framework README](../http-framework#the-build-tsdown) lists every default). The `tsdown` block is for what they
 cannot know:
 
+Every `@wolfstar/plugin-*` package listed in the project's `dependencies` or `optionalDependencies` is activated
+automatically in bundler builds. `stars` injects its `/register` side-effect entrypoint before the application entry,
+so projects do not need to maintain bare imports such as `import '@wolfstar/plugin-i18next/register'`. Packages used
+only for development are intentionally not activated from `devDependencies`.
+
 ```typescript
 export default defineConfig({
 	tsdown: { dts: true }
