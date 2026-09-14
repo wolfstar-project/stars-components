@@ -6,7 +6,7 @@ import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
 type TsdownModule = typeof import('tsdown');
 type TsdownLogger = import('tsdown').Logger;
-type TsdownBundle = import('tsdown').TsdownBundle;
+type TsdownHandle = import('tsdown').TsdownHandle;
 type TsdownInlineConfig = NonNullable<Parameters<TsdownModule['build']>[0]>;
 type TsdownOptions = Record<string, unknown>;
 type AnyFunction = (...args: never[]) => unknown;
@@ -27,7 +27,7 @@ const RELATIVE_PATH = /^\.\.?[/\\]/;
  */
 export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builder {
 	public readonly tool = 'tsdown' as const;
-	#bundles: TsdownBundle[] = [];
+	#handle: TsdownHandle | null = null;
 	#hadError = false;
 	#startedAt = 0;
 
@@ -41,7 +41,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		this.#begin();
 
 		try {
-			this.#bundles = await tsdown.build(options as TsdownInlineConfig);
+			this.#handle = await tsdown.build(options as TsdownInlineConfig);
 			return this.#finish(this.#hadError ? 'The build reported errors' : null);
 		} catch (error) {
 			return this.#finish(error instanceof Error ? error.message : String(error));
@@ -53,13 +53,13 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		const options = await this.#options();
 
 		this.#begin();
-		this.#bundles = await tsdown.build(this.#watchOptions(options) as TsdownInlineConfig);
+		this.#handle = await tsdown.build(this.#watchOptions(options) as TsdownInlineConfig);
 	}
 
 	public async close(): Promise<void> {
-		const bundles = this.#bundles;
-		this.#bundles = [];
-		await Promise.allSettled(bundles.map((bundle) => bundle[Symbol.asyncDispose]()));
+		const handle = this.#handle;
+		this.#handle = null;
+		await handle?.watch.close();
 	}
 
 	#load(): Promise<TsdownModule> {
@@ -257,7 +257,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 				this.#hadError = true;
 				log('error', args);
 				// In watch mode tsdown never calls `onSuccess` after an error, report the failure now.
-				if (this.#startedAt !== 0 && this.#bundles.length > 0) this.#finish(errorSummary(args));
+				if (this.#startedAt !== 0) this.#finish(errorSummary(args));
 			},
 			success: () => {},
 			clearScreen: () => {}
