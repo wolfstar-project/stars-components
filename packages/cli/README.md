@@ -210,6 +210,13 @@ and which options the block sets.
 
 ### Generated TypeScript configuration
 
+The generated compiler options combine `@sapphire/ts-config`, `@sapphire/ts-config/extra-strict`, and
+`@sapphire/ts-config/decorators`. The CLI loads these presets and writes their options directly into the file,
+so consumers do not need to install Sapphire. This enables strict checks, explicit overrides, and legacy decorators
+with metadata. Stars targets ES2022, skips dependency declaration checks, and stores incremental build information
+inside `.stars/`. Tsdown and Vite use `ESNext`/`Bundler` with `noEmit`; tsc retains Sapphire's Node16 emit settings.
+Project compiler options can override these defaults. The optional Sapphire `verbatim` preset is not enabled.
+
 Run `stars prepare` and extend the generated config from your project's `tsconfig.json`:
 
 ```json

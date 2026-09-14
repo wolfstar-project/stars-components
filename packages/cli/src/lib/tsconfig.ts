@@ -1,6 +1,15 @@
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+
+const require = createRequire(import.meta.url);
+const sapphireOptions = Object.assign(
+	{},
+	...['@sapphire/ts-config', '@sapphire/ts-config/extra-strict', '@sapphire/ts-config/decorators'].map(
+		(id) => (require(id) as { compilerOptions: Record<string, unknown> }).compilerOptions
+	)
+) as Record<string, unknown>;
 
 /** Generates an extendable config without changing the project's own tsconfig. */
 export async function prepareTsconfig(config: ResolvedStarsConfig, check = false) {
@@ -21,7 +30,17 @@ export async function prepareTsconfig(config: ResolvedStarsConfig, check = false
 	}
 	const content = `${JSON.stringify(
 		{
-			compilerOptions: { paths },
+			compilerOptions: {
+				...sapphireOptions,
+				// Bundlers emit the application; TypeScript only checks it. Keep Node16 emit for tsc.
+				...(config.build.tool === 'tsdown' || config.build.tool === 'vite'
+					? { module: 'ESNext', moduleResolution: 'Bundler', noEmit: true }
+					: {}),
+				target: 'ES2022',
+				skipLibCheck: true,
+				tsBuildInfoFile: './tsconfig.tsbuildinfo',
+				paths
+			},
 			include: [`${fromGenerated(dirname(config.entry))}/**/*`, ...(config.imports.enabled ? [fromGenerated(config.imports.dts)] : [])],
 			exclude: [fromGenerated(join(config.root, 'node_modules')), fromGenerated(config.build.outDir)]
 		},

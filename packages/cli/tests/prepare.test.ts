@@ -11,7 +11,7 @@ describe('generated TypeScript configuration', () => {
 
 	beforeEach(async () => {
 		fixture = await createFixture({
-			'package.json': '{"name":"bot"}',
+			'package.json': '{"name":"bot","type":"module"}',
 			'src/main.ts': '',
 			'src/lib/value.ts': 'export const value = 1;',
 			'tsconfig.json': '{"extends":"./.stars/tsconfig.json"}',
@@ -39,10 +39,35 @@ describe('generated TypeScript configuration', () => {
 		);
 		const tsc = join(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin/tsc');
 		expect(() =>
-			execFileSync(process.execPath, [tsc, '--noEmit', '--module', 'nodenext', '-p', join(fixture.root, 'tsconfig.json')], {
+			execFileSync(process.execPath, [tsc, '-p', join(fixture.root, 'tsconfig.json')], {
 				encoding: 'utf-8'
 			})
 		).not.toThrow();
+	});
+
+	test('enforces Sapphire strictness and supports legacy decorators with bundler resolution', async () => {
+		await prepareProject(await loadStarsConfig({ cwd: fixture.root, env: {} }));
+		await fixture.write('src/main.ts', 'class Base { value = 1; }\nexport class Child extends Base { value = 2; }');
+		const tsc = join(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin/tsc');
+		const compile = () => execFileSync(process.execPath, [tsc, '-p', join(fixture.root, 'tsconfig.json')], { encoding: 'utf-8', stdio: 'pipe' });
+		expect(compile).toThrow();
+		await fixture.write(
+			'src/main.ts',
+			[
+				'function property(_target: object, _key: string): void {}',
+				'class Base { value = 1; }',
+				'export class Child extends Base { @property override value = 2; }'
+			].join('\n')
+		);
+		expect(compile).not.toThrow();
+		const generated = JSON.parse(await readFile(join(fixture.root, '.stars/tsconfig.json'), 'utf-8'));
+		expect(generated.compilerOptions).toMatchObject({
+			strict: true,
+			noImplicitOverride: true,
+			emitDecoratorMetadata: true,
+			moduleResolution: 'Bundler',
+			noEmit: true
+		});
 	});
 
 	test('tracks entry and custom alias changes and reports stale configuration', async () => {
@@ -65,5 +90,7 @@ describe('generated TypeScript configuration', () => {
 		await prepareProject(await loadStarsConfig({ cwd: fixture.root, env: {} }));
 		const generated = JSON.parse(await readFile(join(fixture.root, '.stars/tsconfig.json'), 'utf-8'));
 		expect(generated.compilerOptions.paths).toEqual({});
+		expect(generated.compilerOptions.moduleResolution).toBe('Node16');
+		expect(generated.compilerOptions.noEmit).toBeUndefined();
 	});
 });

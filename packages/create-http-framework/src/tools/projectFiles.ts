@@ -163,7 +163,6 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 			json({
 				extends: './.stars/tsconfig.json',
 				compilerOptions: {
-					...sharedCompilerOptions,
 					outDir: './dist',
 					rootDir: './src'
 				},
