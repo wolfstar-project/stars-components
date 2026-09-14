@@ -1,5 +1,12 @@
 # @wolfstar/oxlint-config
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1)]:
+    - @wolfstar/eslint-plugin-http-framework@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
