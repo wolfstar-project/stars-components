@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { dirname, extname, relative, resolve } from 'node:path';
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { pluginRegistrations } from '../plugin-registrations.js';
 import { importFromProject } from '../project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
@@ -75,7 +76,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		// A `tsdown.config.*` (or `package.json#tsdown`) is the project's own; `build.configFile` is `null` from
 		// compatibility version 4 on, where loading one is a configuration error rather than a fallback.
 		const defaults = this.config.build.configFile === null ? this.#defaults() : {};
-		const plugins = [...(await this.#plugins()), ...toArray(user.plugins)];
+		const plugins = [pluginRegistrations(this.config), ...(await this.#plugins()), ...toArray(user.plugins)];
 		// `plugins` and `alias` are added to rather than replaced: a project declaring one of its own would
 		// otherwise silently drop the auto imports transform, or every `~`/`@` import in its sources.
 		const alias = { ...(defaults.alias as object), ...this.#alias(user.alias) };
