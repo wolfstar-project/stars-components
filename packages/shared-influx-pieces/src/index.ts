@@ -1,3 +1,4 @@
+// @ts-ignore TS6196: This type is consumed by the module augmentation below.
 import type { BooleanString } from '@wolfstar/env-utilities';
 import type { InfluxClient } from './lib/InfluxClient.js';
 

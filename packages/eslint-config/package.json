@@ -53,9 +53,9 @@
 		"typescript-eslint": "^8.69.0"
 	},
 	"devDependencies": {
-		"eslint": "^10.9.1",
+		"eslint": "^10.10.0",
 		"golar": "^0.1.10",
-		"tsdown": "^0.22.14",
+		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2"
 	},
 	"peerDependencies": {

@@ -35,7 +35,7 @@ export function createClackPrompt(): CommandsPrompt {
 			const answer = await confirm({ message, initialValue: false });
 
 			if (isCancel(answer)) throw aborted();
-			return answer;
+			return Boolean(answer);
 		}
 	};
 }

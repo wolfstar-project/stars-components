@@ -80,12 +80,12 @@
 		"chokidar": "^5.0.0",
 		"discord-api-types": "^0.38.8",
 		"mlly": "^1.8.2",
-		"unimport": "^6.4.0"
+		"unimport": "^6.5.0"
 	},
 	"devDependencies": {
 		"@vitest/coverage-v8": "^4.1.11",
 		"golar": "^0.1.10",
-		"tsdown": "^0.22.14",
+		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
 		"vitest": "^4.1.11"
 	},

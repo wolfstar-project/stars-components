@@ -41,7 +41,7 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@clack/prompts": "^1.7.0",
+		"@clack/prompts": "^1.8.0",
 		"@vercel/detect-agent": "^1.2.5",
 		"cross-spawn": "^7.0.6",
 		"handlebars": "^4.7.9",
@@ -55,7 +55,7 @@
 		"@types/node": "22.15.21",
 		"@vitest/coverage-v8": "^4.1.11",
 		"golar": "^0.1.10",
-		"tsdown": "^0.22.14",
+		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
 		"vitest": "^4.1.11"
 	},
