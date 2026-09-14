@@ -1,5 +1,11 @@
 # @wolfstar/cli
 
+## 0.6.0
+
+### Minor Changes
+
+- [#192](https://github.com/wolfstar-project/stars-components/pull/192) [`673ea73`](https://github.com/wolfstar-project/stars-components/commit/673ea73674d7323168f095410bc8c8e326fc769e) - Automatically activate `@wolfstar/plugin-*` dependencies during bundler builds by injecting each plugin's `/register` side-effect entrypoint before the application entry. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.5.0
 
 ### Minor Changes
