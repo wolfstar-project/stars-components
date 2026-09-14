@@ -1,4 +1,3 @@
-import { Logger } from '@wolfstar/logger';
 import { config, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
 import { basename, dirname, join, resolve } from 'node:path';
