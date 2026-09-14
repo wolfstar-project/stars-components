@@ -19,9 +19,9 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 ## Quality gates (in order)
 
 1. `pnpm lint`
-2. `pnpm typecheck`
-3. `pnpm test`
-4. `pnpm build`
+2. `pnpm build`
+3. `pnpm typecheck` (resolves cross-package imports against built `dist/*.d.ts`, so it needs `pnpm build` first)
+4. `pnpm test`
 
 ## Conventions
 
@@ -44,11 +44,20 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - A project's build lives in `stars.config.*`, not in a separate `tsdown.config.ts`: `tsdown: {}` (and `vite: {}` for
   `build.tool: 'vite'`) is merged into what the CLI derives from `entry`/`build`. The packages of this repository are
   libraries and keep their own `tsdown.config.ts` — this is about the bot projects the CLI builds.
-- `future: { compatibilityVersion: 3 | 4 }` mirrors Nuxt's own: `3` is today's default, `4` turns on the next major's
-  build (auto imports on and wired in, `stars.config` as the only `tsdown` configuration, `'auto'` picking `tsdown`
-  for TypeScript entries). When `@wolfstar/http-framework` v4 is cut: default `compatibilityVersion` to `4`, drop `3`
-  from `COMPATIBILITY_VERSIONS` in `packages/http-framework/src/lib/config/resolve.ts` with a migration hint, and
-  remove the `build.configFile` branch (compatibility version 3's file mode) from `TsdownBuilder` and its test.
+- `future: { compatibilityVersion: 3 | 4 }` mirrors Nuxt's own: `4` is the default as of the convention-first rework
+  (#182, `@wolfstar/http-framework` major) — `tsdown` configured from `stars.config` alone, auto imports on and wired
+  in, `'auto'` picking `tsdown` for TypeScript entries. `3` is legacy behaviour (a `tsdown.config.*` drives the build,
+  auto imports off unless asked for) and was kept as an opt-in rather than dropped: `LEGACY_COMPATIBILITY_VERSION` (3)
+  stays in `COMPATIBILITY_VERSIONS` alongside `LATEST_COMPATIBILITY_VERSION`/`DEFAULT_COMPATIBILITY_VERSION` (4) in
+  `packages/http-framework/src/lib/config/resolve.ts`, and the `build.configFile` branch (compatibility version 3's
+  file mode) stays in `TsdownBuilder` and its test.
+- Convention-first defaults (#182) beyond the compatibility version: `stars dev` forces `NODE_ENV=development` for
+  config evaluation, build plugins, and the supervised process; `src/locales` is copied to the build output and kept
+  in sync by a `chokidar` watcher (`packages/cli/src/lib/locales.ts`) instead of a hand-written `tsdown` plugin; and
+  `@wolfstar/env-utilities`' `setup()` (aliased `envRun` in scaffolded `src/lib/setup/all.ts`) takes no argument,
+  discovering `.env*` files under both `src/` and the project root itself. `@wolfstar/create-http-framework` now
+  scaffolds a bare `defineConfig({})` (or `{ build: { tool: 'tsc' } }` for a `tsc` project) instead of specifying
+  `entry`/`build`/`future`.
 
 ## Branding (target state after rebrand)
 
@@ -76,6 +85,6 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 ## Cursor Cloud specific instructions
 
 - This repo is a **library monorepo** (22 publishable `@wolfstar/*` packages, see `packages/`). There is no app/server/GUI to run; "running" the product means exercising packages via the quality gates and/or importing built `dist/` outputs.
-- Dependencies are pre-installed by the startup update script (`pnpm install --frozen-lockfile`). Standard commands live in root `package.json`: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- Dependencies are pre-installed by the startup update script (`pnpm install --frozen-lockfile`). Standard commands live in root `package.json`: `pnpm lint`, `pnpm build`, `pnpm typecheck`, `pnpm test`.
 - **Run `pnpm build` before `pnpm typecheck`.** `typecheck` resolves cross-package imports (e.g. `@wolfstar/env-utilities`) against each package's built `dist/*.d.ts`; without a prior build, `golar tsc` fails with `TS2307: Cannot find module`. CI's "Build & Typecheck" job runs build then typecheck for this reason.
 - Node: CI and `mise.toml` pin Node 24; root `engines` require `^22.11 || ^24 || >=26`. The VM's default Node (v22.x via `/exec-daemon/node`) satisfies that and works for all gates. `pnpm` is provided via corepack, pinned by the `packageManager` field in root `package.json` (check that file for the current exact version; Renovate bumps it often).
