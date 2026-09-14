@@ -224,4 +224,34 @@ describe('TsdownBuilder', () => {
 
 		await builder.close();
 	});
+	test('automatically activates installed @wolfstar/plugin-* packages', async () => {
+		const packageJson = JSON.stringify({
+			name: 'tsdown-fixture',
+			type: 'module',
+			main: 'dist/main.js',
+			dependencies: {
+				'@wolfstar/plugin-example': '1.0.0',
+				'ordinary-package': '1.0.0'
+			}
+		});
+		fixture = await createFixture({
+			'package.json': packageJson,
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, future: { compatibilityVersion: 4 } };",
+			'node_modules/@wolfstar/plugin-example/package.json': JSON.stringify({
+				name: '@wolfstar/plugin-example',
+				type: 'module',
+				exports: { './register': './register.js' }
+			}),
+			'node_modules/@wolfstar/plugin-example/register.js':
+				"globalThis.registeredWolfstarPlugins = [...(globalThis.registeredWolfstarPlugins ?? []), 'example'];\n",
+			'src/main.ts': "console.log((globalThis as { registeredWolfstarPlugins?: string[] }).registeredWolfstarPlugins?.join(','));\n"
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const outcome = await new TsdownBuilder(config).build();
+
+		expect(outcome).toMatchObject({ ok: true, message: null });
+		expect(await run(config.build.output)).toContain('example');
+	});
+
 });
