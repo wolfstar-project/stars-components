@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { readdir } from 'node:fs/promises';
+import { runPublishWithRetry } from './run-with-retry.mjs';
 
 const rootDir = new URL('../', import.meta.url);
 const changesetDir = new URL('.changeset/', rootDir);
@@ -37,4 +38,4 @@ if (!(await hasUnreleasedChangesets())) {
 
 run('changeset', ['version', '--snapshot', 'next']);
 run('pnpm', ['build']);
-run('changeset', ['publish', '--tag', 'next', '--no-git-tag']);
+runPublishWithRetry('changeset', ['publish', '--tag', 'next', '--no-git-tag']);

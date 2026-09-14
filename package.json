@@ -14,7 +14,7 @@
 		"docs:api-json": "typedoc --options typedoc.json --json docs-output/api.json",
 		"update": "pnpm update --interactive --recursive",
 		"changeset": "changeset add",
-		"publish": "pnpm build && changeset publish",
+		"publish": "pnpm build && node scripts/publish.mjs",
 		"publish:snapshot": "node scripts/publish-snapshot.mjs",
 		"tolgee:pull": "tolgee pull && node --experimental-strip-types scripts/tolgee-pull-remap.ts",
 		"tolgee:push": "tolgee push --languages en",
