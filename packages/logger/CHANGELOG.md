@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.8
+
+### Patch Changes
+
+- [#182](https://github.com/wolfstar-project/stars-components/pull/182) [`93544d5`](https://github.com/wolfstar-project/stars-components/commit/93544d53776cb46aa3126996435388a80834335b) - Deprecate this package in favor of the upcoming `@wolfstar/plugin-logger` (see wolfstar-project/plugins). `@wolfstar/logger` continues to work and is not removed, but will not receive new features going forward. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.7
 
 ### Patch Changes
