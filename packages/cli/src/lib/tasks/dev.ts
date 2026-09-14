@@ -14,7 +14,11 @@ export interface DevTaskOptions extends ProjectArgs {
 }
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
-	const config = await resolveDevConfig(await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config }));
+	// Dev mode applies to config evaluation, build plugins, and the supervised application — not only the child.
+	process.env.NODE_ENV = 'development';
+	const config = await resolveDevConfig(
+		await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } })
+	);
 	assertSupportedExperiments(config);
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();

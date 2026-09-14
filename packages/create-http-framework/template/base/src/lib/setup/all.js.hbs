@@ -1,6 +1,5 @@
 import { setup as envRun } from '@wolfstar/env-utilities';
 
 export function setup() {
-	// From src/lib/setup → .env at the project root
-	envRun(new URL('../../../.env', import.meta.url));
+	envRun();
 }

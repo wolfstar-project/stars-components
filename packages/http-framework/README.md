@@ -470,10 +470,7 @@ configuration without pulling in `@wolfstar/cli`.
 // stars.config.ts
 import { defineConfig } from '@wolfstar/http-framework/config';
 
-export default defineConfig({
-	entry: 'src/main.ts',
-	build: { tool: 'tsdown' }
-});
+export default defineConfig({});
 ```
 
 `@wolfstar/http-framework/config` has no side effects — importing it (or a `stars.config.ts` that imports it) never
@@ -481,7 +478,7 @@ starts the bot. `loadStarsConfig` discovers `stars.config.{ts,mts,cts,js,mjs,cjs
 validates every option and resolves all paths to absolute ones.
 
 `dev.url`, the URL `stars dev` shows and health-checks the bot on, needs no configuration either: it is detected the
-way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `.env.local`/`.env`, or `dev.env`) or `3000`, and
+way Vite's and Nuxt's dev servers are, from `HTTP_PORT` (env var, `src/.env*`/`.env*`, or `dev.env`) or `3000`, and
 `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` explicitly only
 to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }`.
 
@@ -489,12 +486,11 @@ to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }
 example `dev: { banner: ['★ STARYL', 'Twitch notifications'] }`, or `false` to hide it. Up to four lines fit the
 compact panel. Application logs and standalone banners are available behind `l`, not printed over the dev panel.
 
-`dev` also carries the three options that round out the dev loop:
+`dev` also carries optional overrides for the dev loop. Press `t` in the TUI to toggle a quick tunnel without any
+configuration:
 
 ```typescript
 export default defineConfig({
-	entry: 'src/main.ts',
-	build: { tool: 'tsdown' },
 	dev: {
 		// A type checker next to the bot, reported on the dev UI's `tsc` channel. Never blocks a build.
 		// `checker` is 'tsc' | 'golar' | 'tsz' | 'auto' (default: golar when installed, tsc otherwise).
@@ -516,10 +512,7 @@ because it edits a live application, and needs `DISCORD_TOKEN` in the environmen
 project configures nothing at all — this is a complete build:
 
 ```typescript
-export default defineConfig({
-	entry: 'src/main.ts',
-	future: { compatibilityVersion: 4 }
-});
+export default defineConfig({});
 ```
 
 The defaults are the configuration a bot would otherwise write out by hand:
@@ -566,19 +559,18 @@ A project's own `tsdown.alias` is added to these rather than replacing them, and
 (`'./src/lib'`) is resolved against the project root, the way every other path in `stars.config` is — a module id
 (`'preact/compat'`) is left alone.
 
-So the block is for what the defaults cannot know — a plugin that copies assets, an extra alias, a target:
+So the block is for what the defaults cannot know — an extra alias, declaration output, or a target. Conventional
+`src/locales` assets are copied to `dist/locales` automatically by the CLI:
 
 ```typescript
 export default defineConfig({
-	entry: 'src/main.ts',
-	future: { compatibilityVersion: 4 },
-	tsdown: { plugins: [alias({ entries: aliasEntries }), copyLocales()] }
+	tsdown: { alias: { '#shared': './src/shared' }, dts: true }
 });
 ```
 
 Anything in `tsdown` wins over the defaults, and `plugins` are appended rather than replaced.
 
-With `future.compatibilityVersion: 3` (today's default) a `tsdown.config.*` in the project root is still loaded and
+With `future.compatibilityVersion: 3` (legacy mode) a `tsdown.config.*` in the project root is still loaded and
 `tsdown` is merged over it, so a project can move its options across one at a time. With `4` the block is the whole
 configuration, and a leftover `tsdown.config.*` is reported instead of being silently ignored.
 
@@ -587,21 +579,18 @@ into the project's own `vite.config.*`, the way `vite: {}` in a Nuxt config is.
 
 ### Compatibility version
 
-`future` carries the defaults of the next major, the way Nuxt's own `future.compatibilityVersion` does: a project
-opts into them one major early, and they become the default when that major ships. Where `experimental` guards work
-that is still landing, everything here is already decided.
+`future.compatibilityVersion` selects the build-default generation. Version 4 is the default; version 3 remains as
+an explicit migration mode for projects that still have a standalone `tsdown.config.*`.
 
 ```typescript
 export default defineConfig({
-	entry: 'src/main.ts',
 	future: {
-		// 3 (the default today) or 4 (the next major's defaults).
-		compatibilityVersion: 4
+		compatibilityVersion: 3
 	}
 });
 ```
 
-`4` changes three things:
+The default version 4 provides three things:
 
 - **Auto imports are on** with the `tsdown` build tool, and the `autoImports()` plugin is wired into the build by
   `stars` itself instead of by the project's own configuration file — the framework's exports and the project's

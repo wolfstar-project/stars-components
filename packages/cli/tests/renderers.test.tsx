@@ -209,6 +209,12 @@ describe('renderers', () => {
 		stdin.press('q');
 		await waitFor(() => stdout.screen().includes('Stars'));
 	});
+	test('toggles the tunnel with t', async () => {
+		const toggle = vi.spyOn(service, 'toggleTunnel').mockResolvedValue();
+		await start();
+		stdin.press('t');
+		await waitFor(() => toggle.mock.calls.length === 1);
+	});
 	test('confirms q during a build and Ctrl+C always quits, including in overlays', async () => {
 		await start();
 		stdin.press('q');

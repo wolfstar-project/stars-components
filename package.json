@@ -1,7 +1,7 @@
 {
 	"name": "stars-components",
 	"private": true,
-	"description": "A collection of shared utilities for the Star Network",
+	"description": "An HTTP-first TypeScript framework and toolkit for Discord applications",
 	"type": "module",
 	"scripts": {
 		"clean": "node scripts/clean.mjs",
