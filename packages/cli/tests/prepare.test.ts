@@ -85,6 +85,30 @@ describe('generated TypeScript configuration', () => {
 		).rejects.toMatchObject({ code: 'PREPARE_OUTDATED' });
 	});
 
+	test.each(['tsdown', 'vite'])('supports Nitro-style module imports for %s', async (tool) => {
+		await fixture.write('stars.config.mjs', `export default { build: { tool: '${tool}' }, experimental: { enableVite: true }, imports: false };`);
+		await fixture.write('package.json', JSON.stringify({ name: 'bot', type: 'module', imports: { '#value': './src/lib/value.ts' } }));
+		await fixture.write('src/helper.js', 'export const extra = 2;');
+		await fixture.write('src/model.ts', 'export interface Model { value: number; }');
+		await fixture.write(
+			'src/main.ts',
+			[
+				"import { value } from '#value';",
+				"import { extra } from './helper.js';",
+				"import { value as explicit } from './lib/value.ts';",
+				"import type { Model } from './model.ts';",
+				'export const model: Model = { value: value + extra + explicit };',
+				'export const request = new Request("https://example.com");'
+			].join('\n')
+		);
+		await prepareProject(await loadStarsConfig({ cwd: fixture.root, env: {} }));
+		const tsc = join(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin/tsc');
+		const compile = () => execFileSync(process.execPath, [tsc, '-p', join(fixture.root, 'tsconfig.json')], { encoding: 'utf-8', stdio: 'pipe' });
+		expect(compile).not.toThrow();
+		await fixture.write('src/main.ts', "import { Model } from './model.ts';\nexport const model: Model = { value: 1 };");
+		expect(compile).toThrow();
+	});
+
 	test('does not advertise bundler aliases for tsc builds', async () => {
 		await fixture.write('stars.config.mjs', "export default { build: { tool: 'tsc' }, imports: false };");
 		await prepareProject(await loadStarsConfig({ cwd: fixture.root, env: {} }));
@@ -92,5 +116,7 @@ describe('generated TypeScript configuration', () => {
 		expect(generated.compilerOptions.paths).toEqual({});
 		expect(generated.compilerOptions.moduleResolution).toBe('Node16');
 		expect(generated.compilerOptions.noEmit).toBeUndefined();
+		expect(generated.compilerOptions.allowImportingTsExtensions).toBeUndefined();
+		expect(generated.compilerOptions.verbatimModuleSyntax).toBeUndefined();
 	});
 });

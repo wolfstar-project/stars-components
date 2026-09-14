@@ -34,9 +34,21 @@ export async function prepareTsconfig(config: ResolvedStarsConfig, check = false
 				...sapphireOptions,
 				// Bundlers emit the application; TypeScript only checks it. Keep Node16 emit for tsc.
 				...(config.build.tool === 'tsdown' || config.build.tool === 'vite'
-					? { module: 'ESNext', moduleResolution: 'Bundler', noEmit: true }
+					? {
+							module: 'ESNext',
+							moduleResolution: 'Bundler',
+							moduleDetection: 'force',
+							isolatedModules: true,
+							verbatimModuleSyntax: true,
+							allowJs: true,
+							allowImportingTsExtensions: true,
+							resolvePackageJsonImports: true,
+							lib: ['ESNext', 'DOM'],
+							noEmit: true
+						}
 					: {}),
 				target: 'ES2022',
+				forceConsistentCasingInFileNames: true,
 				skipLibCheck: true,
 				tsBuildInfoFile: './tsconfig.tsbuildinfo',
 				paths

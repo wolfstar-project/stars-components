@@ -215,7 +215,13 @@ The generated compiler options combine `@sapphire/ts-config`, `@sapphire/ts-conf
 so consumers do not need to install Sapphire. This enables strict checks, explicit overrides, and legacy decorators
 with metadata. Stars targets ES2022, skips dependency declaration checks, and stores incremental build information
 inside `.stars/`. Tsdown and Vite use `ESNext`/`Bundler` with `noEmit`; tsc retains Sapphire's Node16 emit settings.
-Project compiler options can override these defaults. The optional Sapphire `verbatim` preset is not enabled.
+Project compiler options can override these defaults.
+
+Bundler builds also follow [Nitro's TypeScript configuration](https://github.com/nitrojs/nitro/blob/main/lib/tsconfig.json):
+forced module detection, isolated modules, verbatim module syntax, JavaScript sources, `.ts` import extensions,
+package.json imports, and ESNext/DOM libraries. Use `import type` and `export type` for type-only dependencies.
+These options apply to tsdown and Vite; tsc keeps its emit-compatible settings. Sapphire's decorator options and
+the ES2022 target remain in effect. This does not enable Stars' experimental Nitro runtime integration.
 
 Run `stars prepare` and extend the generated config from your project's `tsconfig.json`:
 
