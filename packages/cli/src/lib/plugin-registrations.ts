@@ -11,7 +11,7 @@ const PLUGIN_PACKAGE = /^@wolfstar\/plugin-[^/]+$/;
 
 /**
  * Activates installed WolfStar plugins without making applications maintain a list
- * of side-effect-only `@wolfstar/plugin-*/register` imports in their entry point.
+ * of side-effect-only plugin registration imports in their entry point.
  */
 export function pluginRegistrations(config: ResolvedStarsConfig): object {
 	const plugins = findPluginDependencies(config.root);
