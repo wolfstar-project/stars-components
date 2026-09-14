@@ -253,5 +253,4 @@ describe('TsdownBuilder', () => {
 		expect(outcome).toMatchObject({ ok: true, message: null });
 		expect(await run(config.build.output)).toContain('example');
 	});
-
 });
