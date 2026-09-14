@@ -1,3 +1,4 @@
+import { container } from '@sapphire/pieces';
 import { config, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -35,10 +36,18 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 
 const packageVersion: string = '[VI]{{inject}}[/VI]';
 
-const logger = new Logger({ level: Logger.Level.Debug });
+interface MinimalDebugLogger {
+	debug(...values: readonly unknown[]): void;
+}
+
+function resolveDebugLogger(): MinimalDebugLogger {
+	return (container as { logger?: MinimalDebugLogger }).logger ?? console;
+}
 
 export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
-	const log = options?.debug ? (message: string) => logger.debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`) : () => undefined;
+	const log = options?.debug
+		? (message: string) => resolveDebugLogger().debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`)
+		: () => undefined;
 
 	/**
 	 * @see {@linkplain https://github.com/facebook/create-react-app/blob/d960b9e38c062584ff6cfb1a70e1512509a966e7/packages/react-scripts/config/env.js#L18-L23}
