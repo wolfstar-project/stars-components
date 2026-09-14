@@ -20,7 +20,7 @@ calls into it), the typed `stars.config.*` schema and loader live in [`@wolfstar
 - `stars build` runs the configured build tool once.
 - `stars info` prints the resolved configuration and environment (`--json` for scripts).
 - `stars codegen` runs the configured code generators (`--check` for CI).
-- `stars prepare` generates the auto imports declaration file (`--check` for CI).
+- `stars prepare` generates `.stars/tsconfig.json` and the auto imports declaration file (`--check` for CI).
 - `stars commands` inspects and cleans the application commands Discord has deployed.
 
 Everything is driven by a typed `stars.config.ts` file.
@@ -207,3 +207,26 @@ and which options the block sets.
 | `3`   | build failed                                         |
 | `130` | interrupted with `SIGINT`                            |
 | `143` | terminated with `SIGTERM`/`SIGHUP`                   |
+
+### Generated TypeScript configuration
+
+Run `stars prepare` and extend the generated config from your project's `tsconfig.json`:
+
+```json
+{
+	"extends": "./.stars/tsconfig.json"
+}
+```
+
+New tsdown projects already extend this file and run `stars prepare` through `postinstall`.
+Keep your existing compiler options alongside `extends`. `stars dev` and `stars build` also regenerate this file.
+For tsdown builds, `@/` and `~/` resolve to the entry file's directory (normally `src/`), while `@@/` and `~~/`
+resolve to the project root. Filesystem aliases in `stars.config.ts`'s `tsdown.alias` are included too, with custom
+values taking precedence. Legacy builds using a separate tsdown config only include aliases declared in
+`stars.config.ts`. Other build tools do not get tsdown aliases, since TypeScript alone does not rewrite imports.
+
+The generated config includes source files and the auto imports declaration, including a custom `imports.dts`
+location. Explicit `include` or `compilerOptions.paths` in your own tsconfig replace the inherited values;
+remove manually duplicated paths to use the generated aliases. Generation works with `imports: false` too.
+Use `stars prepare --check` to check both generated files without writing them. Do not edit `.stars/tsconfig.json`
+by hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.

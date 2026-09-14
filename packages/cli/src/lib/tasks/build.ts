@@ -7,7 +7,7 @@ import { displayPath } from '@wolfstar/http-framework/config';
 import { CliError, ExitCode } from '../errors.js';
 import { shouldUseColor } from '../output-mode.js';
 import { Locales } from '../locales.js';
-import { prepareAutoImports } from './prepare.js';
+import { prepareProject } from './prepare.js';
 
 export interface BuildTaskOptions extends ProjectArgs {
 	stdout?: NodeJS.WritableStream;
@@ -18,7 +18,7 @@ export async function runBuild(options: BuildTaskOptions): Promise<void> {
 	const colors = createColors({ useColor: shouldUseColor() });
 	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
 	assertSupportedExperiments(config);
-	await prepareAutoImports(config);
+	await prepareProject(config);
 
 	if (config.build.tool === 'none') {
 		stdout.write(`${colors.dim('stars')} nothing to build, ${displayPath(config.root, config.entry)} runs as-is (build.tool is 'none')\n`);
