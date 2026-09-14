@@ -7,6 +7,7 @@ import type { ProjectArgs } from '../args.js';
 import { resolveCwd } from '../args.js';
 import { CliError, ExitCode } from '../errors.js';
 import { shouldUseColor } from '../output-mode.js';
+import { prepareTsconfig } from '../tsconfig.js';
 
 export interface PrepareTaskOptions extends ProjectArgs {
 	check?: boolean;
@@ -19,7 +20,7 @@ export type PrepareResult =
 	| { enabled: true; dts: string; status: 'written' | 'up-to-date' | 'outdated' };
 
 /**
- * Generates `imports.dts` (see {@link StarsImportsConfig} in `@wolfstar/http-framework/config`), the way `nuxt
+ * Generates `.stars/tsconfig.json` and `imports.dts` (see {@link StarsImportsConfig} in `@wolfstar/http-framework/config`), the way `nuxt
  * prepare` regenerates `.nuxt/imports.d.ts`. Run automatically by `stars dev` and `stars build` before the first
  * build; `--check` fails instead of writing, for CI.
  */
@@ -27,19 +28,21 @@ export async function runPrepare(options: PrepareTaskOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: shouldUseColor() && !options.json });
 	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
-	const result = await prepareAutoImports(config, Boolean(options.check));
+	const result = await prepareProject(config, Boolean(options.check));
 
 	if (options.json) {
 		stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-	} else if (!result.enabled) {
-		stdout.write(`${colors.dim('stars')} nothing to prepare (auto imports are disabled)\n`);
 	} else {
-		const paint = result.status === 'outdated' ? colors.red : colors.green;
-		stdout.write(`${colors.dim('stars')} imports: ${paint(result.status)} ${displayPath(config.root, result.dts)}\n`);
+		const paintConfig = result.tsconfig.status === 'outdated' ? colors.red : colors.green;
+		stdout.write(`${colors.dim('stars')} tsconfig: ${paintConfig(result.tsconfig.status)} ${displayPath(config.root, result.tsconfig.path)}\n`);
+		if (result.enabled) {
+			const paint = result.status === 'outdated' ? colors.red : colors.green;
+			stdout.write(`${colors.dim('stars')} imports: ${paint(result.status)} ${displayPath(config.root, result.dts)}\n`);
+		}
 	}
 
-	if (result.status === 'outdated') {
-		throw new CliError('The auto imports declaration file is out of date, run `stars prepare` to update it.', {
+	if (result.status === 'outdated' || result.tsconfig.status === 'outdated') {
+		throw new CliError('The generated project files are out of date, run `stars prepare` to update it.', {
 			code: 'PREPARE_OUTDATED',
 			exitCode: ExitCode.Error
 		});
@@ -64,4 +67,10 @@ export async function prepareAutoImports(config: ResolvedStarsConfig, check = fa
 	await mkdir(dirname(dts), { recursive: true });
 	await writeFile(dts, content);
 	return { enabled: true, dts, status: 'written' };
+}
+
+/** Prepares TypeScript configuration and auto import declarations before building. */
+export async function prepareProject(config: ResolvedStarsConfig, check = false) {
+	const tsconfig = await prepareTsconfig(config, check);
+	return { ...(await prepareAutoImports(config, check)), tsconfig };
 }

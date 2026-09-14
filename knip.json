@@ -72,7 +72,8 @@
 		"packages/cli": {
 			"entry": ["src/index.ts", "src/cli.ts", "tests/**/*.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignoreBinaries": ["cloudflared"]
+			"ignoreBinaries": ["cloudflared"],
+			"ignoreDependencies": ["@sapphire/ts-config"]
 		}
 	}
 }

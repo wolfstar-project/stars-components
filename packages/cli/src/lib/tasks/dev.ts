@@ -7,7 +7,7 @@ import { ExitCode } from '../errors.js';
 import { withResolvedLocalhost } from '../host.js';
 import { LogFileWriter } from '../log-file.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../output-mode.js';
-import { prepareAutoImports } from './prepare.js';
+import { prepareProject } from './prepare.js';
 
 export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
@@ -49,7 +49,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 
 	const finished = renderer.start().then(() => shutdown(ExitCode.Ok));
 	try {
-		await prepareAutoImports(config);
+		await prepareProject(config);
 		await service.start();
 	} catch (error) {
 		service.log('stars', 'error', error instanceof Error ? (error.stack ?? error.message) : String(error));
