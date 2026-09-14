@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.0
+
+### Minor Changes
+
+- [#182](https://github.com/wolfstar-project/stars-components/pull/182) [`93544d5`](https://github.com/wolfstar-project/stars-components/commit/93544d53776cb46aa3126996435388a80834335b) - Make the Stars workflow convention-first: compatibility version 4 is now the default, `stars dev` forces development mode, `src/locales` is copied and watched automatically, and environment files are discovered under both `src/` and the project root.
+
+    The interactive dev UI now supports `t` to open or close a public quick tunnel without configuring `dev.tunnel`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#182](https://github.com/wolfstar-project/stars-components/pull/182) [`93544d5`](https://github.com/wolfstar-project/stars-components/commit/93544d53776cb46aa3126996435388a80834335b) - Fix a broken build caused by an incomplete removal of `@wolfstar/logger` (undefined `Logger` reference left by [#187](https://github.com/wolfstar-project/stars-components/issues/187)). Use `container.logger` from `@sapphire/pieces` when available (populated by `@wolfstar/http-framework`), falling back to `console.debug` for standalone consumers, instead of the deprecated `@wolfstar/logger` package. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.0.8
 
 ### Patch Changes
