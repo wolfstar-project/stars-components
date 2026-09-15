@@ -164,11 +164,9 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@types/pg': 8.23.1
   ansi-regex: ^6.3.0
   esbuild: ^0.28.2
   minimist: 1.2.8
-  '@redstardev/unplugin-version-injector>vite': 8.2.2
 
 importers:
 
@@ -2262,7 +2260,7 @@ packages:
       '@nuxt/schema': ^3
       esbuild: ^0.28.2
       rollup: ^3
-      vite: 8.2.2
+      vite: '>=3'
       webpack: ^4 || ^5
     peerDependenciesMeta:
       '@farmfe/core':
