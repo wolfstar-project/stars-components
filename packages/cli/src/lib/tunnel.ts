@@ -1,12 +1,7 @@
 import { readProjectEnvFiles, type ResolvedStarsConfig, type ResolvedTunnelConfig } from '@wolfstar/http-framework/config';
-import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import { startTunnel, type Tunnel as UntunTunnel } from 'untun';
 import type { LogLevel } from './log-buffer.js';
-import { createLineSplitter } from './process-supervisor.js';
-
-const QUICK_TUNNEL_URL = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i;
-const INSTALL_HINT =
-	'Install cloudflared (https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/), point `dev.tunnel` at an https URL you already serve, or set it to false.';
 
 export type TunnelState = 'off' | 'starting' | 'up' | 'failed';
 
@@ -18,12 +13,12 @@ export interface TunnelEvents {
 /**
  * Exposes the bot's interactions endpoint publicly while `stars dev` runs.
  *
- * `dev.tunnel: true` spawns a `cloudflared` quick tunnel and reads its hostname off the process output (it changes
- * on every run); a configured https URL is only probed, since the user already serves it. Writing the URL to the
- * Discord application is opt-in through `dev.tunnel.updateEndpoint`, because it edits a live application.
+ * `dev.tunnel: true` opens a `cloudflared` quick tunnel via `untun` (it changes on every run); a configured https
+ * URL is only probed, since the user already serves it. Writing the URL to the Discord application is opt-in
+ * through `dev.tunnel.updateEndpoint`, because it edits a live application.
  */
 export class Tunnel extends EventEmitter<TunnelEvents> {
-	#child: ChildProcess | null = null;
+	#tunnel: UntunTunnel | null = null;
 	#state: TunnelState = 'off';
 	#url: string | null = null;
 	#wanted = false;
@@ -63,17 +58,12 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		return this.#state === 'starting' || this.#state === 'up' ? this.close() : this.start(true);
 	}
 
-	public close(): Promise<void> {
+	public async close(): Promise<void> {
 		this.#wanted = false;
-		const child = this.#child;
-		this.#child = null;
+		const tunnel = this.#tunnel;
+		this.#tunnel = null;
 		this.#setState('off', null);
-		if (!child || child.exitCode !== null) return Promise.resolve();
-
-		return new Promise((resolve) => {
-			child.once('exit', () => resolve());
-			child.kill();
-		});
+		if (tunnel) await tunnel.close();
 	}
 
 	async #useConfiguredUrl(tunnel: Extract<ResolvedTunnelConfig, { mode: 'url' }>): Promise<string | null> {
@@ -95,64 +85,20 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 
 		this.emit('log', 'info', 'Opening a cloudflared quick tunnel…');
 
-		return new Promise<string | null>((resolve) => {
-			let child: ChildProcess;
-			try {
-				child = spawn('cloudflared', ['tunnel', '--url', target, '--no-autoupdate'], {
-					cwd: this.config.root,
-					stdio: ['ignore', 'pipe', 'pipe'],
-					windowsHide: true
-				});
-			} catch {
-				this.#failWithMissingBinary();
-				resolve(null);
-				return;
+		try {
+			const tunnel = await startTunnel({ url: target, acceptCloudflareNotice: true });
+			if (!tunnel || !this.#wanted) {
+				await tunnel?.close();
+				return null;
 			}
 
-			this.#child = child;
-			let settled = false;
-			const settle = (url: string | null) => {
-				if (settled) return;
-				settled = true;
-				resolve(url);
-			};
-
-			const handleLine = (line: string) => {
-				const match = QUICK_TUNNEL_URL.exec(line);
-				if (match) settle(match[0]);
-				else if (line.trim().length > 0) this.emit('log', 'debug', line.trim());
-			};
-
-			const stdout = createLineSplitter(handleLine);
-			const stderr = createLineSplitter(handleLine);
-			child.stdout?.on('data', stdout.push);
-			child.stderr?.on('data', stderr.push);
-
-			child.once('error', (error: NodeJS.ErrnoException) => {
-				if (error.code === 'ENOENT') this.#failWithMissingBinary();
-				else {
-					this.emit('log', 'error', `cloudflared failed: ${error.message}`);
-					this.#setState('failed', null);
-				}
-				settle(null);
-			});
-
-			child.once('exit', (code) => {
-				stdout.flush();
-				stderr.flush();
-				this.#child = null;
-				if (!settled && this.#wanted) {
-					this.emit('log', 'error', `cloudflared exited with code ${code} before the tunnel was up`);
-					this.#setState('failed', null);
-					settle(null);
-				} else settle(null);
-			});
-		});
-	}
-
-	#failWithMissingBinary(): void {
-		this.emit('log', 'error', `cloudflared is not installed. ${INSTALL_HINT}`);
-		this.#setState('failed', null);
+			this.#tunnel = tunnel;
+			return await tunnel.getURL();
+		} catch (error) {
+			this.emit('log', 'error', `cloudflared failed: ${error instanceof Error ? error.message : String(error)}`);
+			this.#setState('failed', null);
+			return null;
+		}
 	}
 
 	/**
