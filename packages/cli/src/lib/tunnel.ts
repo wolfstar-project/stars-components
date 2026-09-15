@@ -10,6 +10,11 @@ export interface TunnelEvents {
 	state: [state: TunnelState, url: string | null];
 }
 
+export interface TunnelOptions {
+	/** Override for tests. */
+	startTunnel?: typeof startTunnel;
+}
+
 /**
  * Exposes the bot's interactions endpoint publicly while `stars dev` runs.
  *
@@ -18,13 +23,18 @@ export interface TunnelEvents {
  * through `dev.tunnel.updateEndpoint`, because it edits a live application.
  */
 export class Tunnel extends EventEmitter<TunnelEvents> {
+	#startTunnel: typeof startTunnel;
 	#tunnel: UntunTunnel | null = null;
 	#state: TunnelState = 'off';
 	#url: string | null = null;
 	#wanted = false;
 
-	public constructor(private readonly config: ResolvedStarsConfig) {
+	public constructor(
+		private readonly config: ResolvedStarsConfig,
+		options: TunnelOptions = {}
+	) {
 		super();
+		this.#startTunnel = options.startTunnel ?? startTunnel;
 	}
 
 	public get state(): TunnelState {
@@ -86,9 +96,14 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		this.emit('log', 'info', 'Opening a cloudflared quick tunnel…');
 
 		try {
-			const tunnel = await startTunnel({ url: target, acceptCloudflareNotice: true });
-			if (!tunnel || !this.#wanted) {
+			const tunnel = await this.#startTunnel({ url: target, acceptCloudflareNotice: true });
+			if (!this.#wanted) {
 				await tunnel?.close();
+				return null;
+			}
+			if (!tunnel) {
+				this.emit('log', 'error', 'cloudflared setup was cancelled');
+				this.#setState('failed', null);
 				return null;
 			}
 
