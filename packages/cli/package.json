@@ -64,7 +64,8 @@
 		"citty": "^0.2.2",
 		"colorette": "^2.0.20",
 		"ink": "^7.1.1",
-		"react": "^19.3.0"
+		"react": "^19.3.0",
+		"untun": "^0.2.2"
 	},
 	"devDependencies": {
 		"@types/react": "^19.3.0",
