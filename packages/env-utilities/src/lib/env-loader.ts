@@ -1,6 +1,7 @@
 import { container } from '@sapphire/pieces';
 import { config, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
+import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,6 +33,19 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 	 * ```
 	 */
 	path?: string | URL;
+	/**
+	 * **Experimental.** Selects the loader used to resolve environment variables.
+	 *
+	 * - `'dotenv'` (default): loads and merges `.env*` files with `dotenv`/`dotenv-expand`, as documented on the
+	 *   other options.
+	 * - `'varlock'`: delegates to {@link https://varlock.dev | varlock} instead of `dotenv`. Varlock resolves a
+	 *   checked-in `.env.schema` (with its own `.env*` file discovery and validation) via its CLI and injects the
+	 *   result into `process.env`. When selected, `encoding`, `path`, and `env` are ignored — configure the schema
+	 *   itself instead. Requires the optional `varlock` package to be installed.
+	 *
+	 * @default 'dotenv'
+	 */
+	loader?: 'dotenv' | 'varlock';
 }
 
 const packageVersion: string = '[VI]{{inject}}[/VI]';
@@ -48,6 +62,10 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	const log = options?.debug
 		? (message: string) => resolveDebugLogger().debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`)
 		: () => undefined;
+
+	if (options?.loader === 'varlock') {
+		return loadWithVarlock(options, log);
+	}
 
 	/**
 	 * @see {@linkplain https://github.com/facebook/create-react-app/blob/d960b9e38c062584ff6cfb1a70e1512509a966e7/packages/react-scripts/config/env.js#L18-L23}
@@ -102,22 +120,71 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	 * @see {@linkplain https://github.com/facebook/create-react-app/blob/d960b9e38c062584ff6cfb1a70e1512509a966e7/packages/react-scripts/config/env.js#L72-L89}
 	 */
 	if (options?.prefix) {
-		const prefixRegExp = new RegExp(`^${options.prefix}`, 'i');
-		parsed = Object.keys(parsed)
-			.filter((key) => {
-				const match = prefixRegExp.test(key);
-				log(`Prefix for key \`${key}\` ${match ? 'matches' : 'does not match'} \`${options.prefix}\``);
-				return match;
-			})
-			.reduce<DotenvParseOutput>((obj, key) => {
-				obj[key] = parsed[key];
-				return obj;
-			}, {});
+		parsed = filterByPrefix(parsed, options.prefix, log);
 	}
 
 	return {
 		parsed
 	};
+}
+
+/**
+ * **Experimental.** Resolves environment variables via {@link https://varlock.dev | varlock} instead of `dotenv`.
+ *
+ * Varlock ships no synchronous "parse only" API comparable to `dotenv.config()`; its documented Node.js
+ * integration (`varlock/auto-load`) resolves the configured `.env.schema` by shelling out to its CLI and injects
+ * the result directly into `process.env`. To still return a `dotenv`-compatible {@link DotenvConfigOutput}, this
+ * diffs `process.env` before and after loading and reports the keys varlock added or changed.
+ */
+function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => void): DotenvConfigOutput {
+	log('resolving environment variables via varlock');
+
+	const before = { ...process.env };
+
+	try {
+		createRequire(import.meta.url)('varlock/auto-load');
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') {
+			throw new Error(
+				"The 'varlock' loader was requested, but the optional `varlock` package is not installed. Install it with your package manager (e.g. `pnpm add varlock`) to use it."
+			);
+		}
+
+		throw error;
+	}
+
+	let parsed: DotenvParseOutput = {};
+	for (const [key, value] of Object.entries(process.env)) {
+		// Varlock stores its own resolved-config blob (and related bookkeeping) on `process.env` under these
+		// internal keys; they are not user-facing variables and must not leak into the returned `parsed` map.
+		if (/^_{1,2}VARLOCK_/i.test(key)) continue;
+		if (value !== undefined && before[key] !== value) {
+			log(`\`${key}\` resolved via varlock`);
+			parsed[key] = value;
+		}
+	}
+
+	if (options.prefix) {
+		parsed = filterByPrefix(parsed, options.prefix, log);
+	}
+
+	return {
+		parsed
+	};
+}
+
+function filterByPrefix(parsed: DotenvParseOutput, prefix: string, log: (message: string) => void): DotenvParseOutput {
+	const prefixRegExp = new RegExp(`^${prefix}`, 'i');
+	return Object.keys(parsed)
+		.filter((key) => {
+			const match = prefixRegExp.test(key);
+			log(`Prefix for key \`${key}\` ${match ? 'matches' : 'does not match'} \`${prefix}\``);
+			return match;
+		})
+		.reduce<DotenvParseOutput>((obj, key) => {
+			obj[key] = parsed[key];
+			return obj;
+		}, {});
 }
 
 function appendSuffix(path: string | URL, suffix: string): string | URL {

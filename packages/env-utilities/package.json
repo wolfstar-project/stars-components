@@ -77,7 +77,16 @@
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
+		"varlock": "^1.19.0",
 		"vitest": "^4.1.11"
+	},
+	"peerDependencies": {
+		"varlock": "^1.19.0"
+	},
+	"peerDependenciesMeta": {
+		"varlock": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=20"

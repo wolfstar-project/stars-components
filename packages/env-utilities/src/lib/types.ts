@@ -17,4 +17,9 @@ export interface Env {
 	DOTENV_ENV?: string;
 	DOTENV_PATH?: string;
 	DOTENV_PREFIX?: string;
+	/**
+	 * **Experimental.** Selects the loader used by `setup()`: `'dotenv'` (default) or `'varlock'` (see
+	 * {@link https://varlock.dev}).
+	 */
+	DOTENV_LOADER?: 'dotenv' | 'varlock';
 }
