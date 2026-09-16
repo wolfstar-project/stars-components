@@ -728,8 +728,8 @@ importers:
         specifier: ^1.8.2
         version: 1.8.2
       unimport:
-        specifier: ^6.5.0
-        version: 6.5.0(oxc-parser@0.147.0)(rolldown@1.2.4)(vite@8.2.2)
+        specifier: ^7.0.2
+        version: 7.0.2(acorn@8.18.0)(oxc-parser@0.147.0)(rolldown@1.2.4)(vite@8.2.2)
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
@@ -5109,13 +5109,16 @@ packages:
   unescape-js@1.1.4:
     resolution: {integrity: sha512-42SD8NOQEhdYntEiUQdYq/1V/YHwr1HLwlHuTJB5InVVdOSbgI6xu8jK5q65yIzuFCfczzyDF/7hbGzVbyCw0g==}
 
-  unimport@6.5.0:
-    resolution: {integrity: sha512-t0KLJLRbebz3f7NrQe+vy2ObeugVeM1XqI2oeYnauddmHSglYj3U6bxOJ65IbXmOFkcAGFJK2OyGH7aqHPM6Ug==}
+  unimport@7.0.2:
+    resolution: {integrity: sha512-5yrZs6kHyx5h1ZgeLxK0EgS/JL7Uhwv9HgzQImW8JccGmbYWyXx7Jc4YhU5+sd1Yk31PlfLQhfbZ1oigXipo3A==}
     engines: {node: '>=18.12.0'}
     peerDependencies:
+      acorn: ^8.0.0
       oxc-parser: '*'
       rolldown: ^1.0.0
     peerDependenciesMeta:
+      acorn:
+        optional: true
       oxc-parser:
         optional: true
       rolldown:
@@ -9079,9 +9082,8 @@ snapshots:
     dependencies:
       string.fromcodepoint: 0.2.1
 
-  unimport@6.5.0(oxc-parser@0.147.0)(rolldown@1.2.4)(vite@8.2.2):
+  unimport@7.0.2(acorn@8.18.0)(oxc-parser@0.147.0)(rolldown@1.2.4)(vite@8.2.2):
     dependencies:
-      acorn: 8.18.0
       escape-string-regexp: 5.0.0
       estree-walker: 3.0.3
       local-pkg: 1.2.1
@@ -9096,6 +9098,7 @@ snapshots:
       unplugin: 3.3.0(rolldown@1.2.4)(vite@8.2.2)
       unplugin-utils: 0.3.2
     optionalDependencies:
+      acorn: 8.18.0
       oxc-parser: 0.147.0
       rolldown: 1.2.4
     transitivePeerDependencies:
