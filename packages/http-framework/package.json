@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework",
-	"version": "4.0.0",
+	"version": "4.0.1",
 	"description": "The framework for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -85,7 +85,7 @@
 	"devDependencies": {
 		"@vitest/coverage-v8": "^4.1.11",
 		"golar": "^0.1.10",
-		"tsdown": "^0.22.14",
+		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
 		"vitest": "^4.1.11"
 	},

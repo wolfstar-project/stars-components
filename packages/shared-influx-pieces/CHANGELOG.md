@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.8
+
+### Patch Changes
+
+- [#178](https://github.com/wolfstar-project/stars-components/pull/178) [`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1)]:
+    - @wolfstar/env-utilities@2.1.1
+    - @wolfstar/http-framework@4.0.1
+    - @wolfstar/influx-utilities@1.1.6
+
 ## 1.1.7
 
 ### Patch Changes

@@ -238,13 +238,10 @@ describe('writeProjectFiles', () => {
 		const tsconfig = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
 		// The auto imports declaration file is only typed if the tsconfig can see it.
 		expect(tsconfig.include).toContain('.stars/*.d.ts');
-		// …and the built-in aliases only type-check with the matching paths.
-		expect(tsconfig.compilerOptions.paths).toEqual({
-			'~/*': ['./src/*'],
-			'@/*': ['./src/*'],
-			'~~/*': ['./*'],
-			'@@/*': ['./*']
-		});
+		expect(tsconfig.extends).toBe('./.stars/tsconfig.json');
+		const packageJson = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8'));
+		expect(packageJson.scripts.postinstall).toBe('stars prepare');
+		expect(tsconfig.compilerOptions.paths).toBeUndefined();
 	});
 
 	test('GIVEN tsc THEN stars.config.ts only selects tsc', async () => {

@@ -67,7 +67,7 @@ async function scanPresetImports(root: string, presets: readonly string[], exclu
  * Builds the rolldown plugin `tsdown.config.ts` adds to `plugins` to enable auto imports, as resolved from
  * {@link StarsImportsConfig} (see `@wolfstar/http-framework/config`).
  */
-export async function autoImports(options: AutoImportsPluginOptions) {
+export async function autoImports(options: AutoImportsPluginOptions): Promise<ReturnType<typeof unplugin.rolldown>> {
 	const excluded = new Set([...BLOCKED_EXPORTS, ...options.exclude]);
 	const imports = await scanPresetImports(options.root, options.presets, excluded);
 

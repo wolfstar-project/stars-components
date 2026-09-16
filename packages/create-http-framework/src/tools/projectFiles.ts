@@ -35,6 +35,7 @@ export function buildScripts(ctx: ProjectContext): Record<string, string> {
 	// the scripts are the same for every language and build tool.
 	const scripts: Record<string, string> = {
 		dev: 'stars dev',
+		...(ctx.language === 'ts' && ctx.buildTool === 'tsdown' ? { postinstall: 'stars prepare' } : {}),
 		...(ctx.language === 'js' ? {} : { build: 'stars build' }),
 		start: ctx.language === 'js' ? 'node src/main.js' : 'node dist/main.js'
 	};
@@ -152,17 +153,6 @@ const sharedCompilerOptions = {
 	emitDecoratorMetadata: true
 } as const;
 
-/**
- * The `paths` that make `stars`' built-in aliases type-check. Only the `tsdown` build resolves them, so only its
- * tsconfig declares them: `tsc` emits imports untouched and would leave `~/lib/…` in the output.
- */
-const STARS_ALIAS_PATHS = {
-	'~/*': ['./src/*'],
-	'@/*': ['./src/*'],
-	'~~/*': ['./*'],
-	'@@/*': ['./*']
-} as const;
-
 /** Writes the tsconfig(s). The tsc branches use a composite build so `tsc -b src` resolves `src/tsconfig.json`. */
 function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 	if (ctx.language === 'js') return;
@@ -171,12 +161,10 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 		writeFile(
 			join(targetDir, 'tsconfig.json'),
 			json({
+				extends: './.stars/tsconfig.json',
 				compilerOptions: {
-					...sharedCompilerOptions,
 					outDir: './dist',
-					rootDir: './src',
-					// The alias prefixes the build resolves on its own (`~`/`@` → src, `~~`/`@@` → the root).
-					paths: STARS_ALIAS_PATHS
+					rootDir: './src'
 				},
 				// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
 				include: ['src/**/*.ts', '.stars/*.d.ts'],

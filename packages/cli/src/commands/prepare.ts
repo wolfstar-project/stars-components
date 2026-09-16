@@ -4,13 +4,13 @@ import { projectArgs } from '../lib/args.js';
 export default defineCommand({
 	meta: {
 		name: 'prepare',
-		description: 'Generate the auto imports declaration file (imports.dts)'
+		description: 'Generate TypeScript configuration and auto imports declarations'
 	},
 	args: {
 		...projectArgs,
 		check: {
 			type: 'boolean',
-			description: 'Fail when the generated file is out of date instead of writing it',
+			description: 'Fail when the generated files are out of date instead of writing it',
 			default: false
 		},
 		json: {

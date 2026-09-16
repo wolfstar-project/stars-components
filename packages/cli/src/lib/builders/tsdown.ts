@@ -1,12 +1,13 @@
 import { EventEmitter } from 'node:events';
 import { dirname, extname, relative, resolve } from 'node:path';
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { pluginRegistrations } from '../plugin-registrations.js';
 import { importFromProject } from '../project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
 type TsdownModule = typeof import('tsdown');
 type TsdownLogger = import('tsdown').Logger;
-type TsdownBundle = import('tsdown').TsdownBundle;
+type TsdownHandle = import('tsdown').TsdownHandle;
 type TsdownInlineConfig = NonNullable<Parameters<TsdownModule['build']>[0]>;
 type TsdownOptions = Record<string, unknown>;
 type AnyFunction = (...args: never[]) => unknown;
@@ -27,7 +28,7 @@ const RELATIVE_PATH = /^\.\.?[/\\]/;
  */
 export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builder {
 	public readonly tool = 'tsdown' as const;
-	#bundles: TsdownBundle[] = [];
+	#handle: TsdownHandle | null = null;
 	#hadError = false;
 	#startedAt = 0;
 
@@ -41,7 +42,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		this.#begin();
 
 		try {
-			this.#bundles = await tsdown.build(options as TsdownInlineConfig);
+			this.#handle = await tsdown.build(options as TsdownInlineConfig);
 			return this.#finish(this.#hadError ? 'The build reported errors' : null);
 		} catch (error) {
 			return this.#finish(error instanceof Error ? error.message : String(error));
@@ -53,13 +54,13 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		const options = await this.#options();
 
 		this.#begin();
-		this.#bundles = await tsdown.build(this.#watchOptions(options) as TsdownInlineConfig);
+		this.#handle = await tsdown.build(this.#watchOptions(options) as TsdownInlineConfig);
 	}
 
 	public async close(): Promise<void> {
-		const bundles = this.#bundles;
-		this.#bundles = [];
-		await Promise.allSettled(bundles.map((bundle) => bundle[Symbol.asyncDispose]()));
+		const handle = this.#handle;
+		this.#handle = null;
+		await handle?.watch.close();
 	}
 
 	#load(): Promise<TsdownModule> {
@@ -75,7 +76,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		// A `tsdown.config.*` (or `package.json#tsdown`) is the project's own; `build.configFile` is `null` from
 		// compatibility version 4 on, where loading one is a configuration error rather than a fallback.
 		const defaults = this.config.build.configFile === null ? this.#defaults() : {};
-		const plugins = [...(await this.#plugins()), ...toArray(user.plugins)];
+		const plugins = [pluginRegistrations(this.config), ...(await this.#plugins()), ...toArray(user.plugins)];
 		// `plugins` and `alias` are added to rather than replaced: a project declaring one of its own would
 		// otherwise silently drop the auto imports transform, or every `~`/`@` import in its sources.
 		const alias = { ...(defaults.alias as object), ...this.#alias(user.alias) };
@@ -257,7 +258,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 				this.#hadError = true;
 				log('error', args);
 				// In watch mode tsdown never calls `onSuccess` after an error, report the failure now.
-				if (this.#startedAt !== 0 && this.#bundles.length > 0) this.#finish(errorSummary(args));
+				if (this.#startedAt !== 0) this.#finish(errorSummary(args));
 			},
 			success: () => {},
 			clearScreen: () => {}

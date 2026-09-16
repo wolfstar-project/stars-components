@@ -20,7 +20,7 @@ calls into it), the typed `stars.config.*` schema and loader live in [`@wolfstar
 - `stars build` runs the configured build tool once.
 - `stars info` prints the resolved configuration and environment (`--json` for scripts).
 - `stars codegen` runs the configured code generators (`--check` for CI).
-- `stars prepare` generates the auto imports declaration file (`--check` for CI).
+- `stars prepare` generates `.stars/tsconfig.json` and the auto imports declaration file (`--check` for CI).
 - `stars commands` inspects and cleans the application commands Discord has deployed.
 
 Everything is driven by a typed `stars.config.ts` file.
@@ -163,6 +163,11 @@ the auto imports plugin, and copying `src/locales` to `dist/locales` are all fil
 (the [framework README](../http-framework#the-build-tsdown) lists every default). The `tsdown` block is for what they
 cannot know:
 
+Every `@wolfstar/plugin-*` package listed in the project's `dependencies` or `optionalDependencies` is activated
+automatically in bundler builds. `stars` injects its `/register` side-effect entrypoint before the application entry,
+so projects do not need to maintain bare imports such as `import '@wolfstar/plugin-i18next/register'`. Packages used
+only for development are intentionally not activated from `devDependencies`.
+
 ```typescript
 export default defineConfig({
 	tsdown: { dts: true }
@@ -207,3 +212,39 @@ and which options the block sets.
 | `3`   | build failed                                         |
 | `130` | interrupted with `SIGINT`                            |
 | `143` | terminated with `SIGTERM`/`SIGHUP`                   |
+
+### Generated TypeScript configuration
+
+The generated compiler options combine `@sapphire/ts-config`, `@sapphire/ts-config/extra-strict`, and
+`@sapphire/ts-config/decorators`. The CLI loads these presets and writes their options directly into the file,
+so consumers do not need to install Sapphire. This enables strict checks, explicit overrides, and legacy decorators
+with metadata. Stars targets ES2022, skips dependency declaration checks, and stores incremental build information
+inside `.stars/`. Tsdown and Vite use `ESNext`/`Bundler` with `noEmit`; tsc retains Sapphire's Node16 emit settings.
+Project compiler options can override these defaults.
+
+Bundler builds also follow [Nitro's TypeScript configuration](https://github.com/nitrojs/nitro/blob/main/lib/tsconfig.json):
+forced module detection, isolated modules, verbatim module syntax, JavaScript sources, `.ts` import extensions,
+package.json imports, and ESNext/DOM libraries. Use `import type` and `export type` for type-only dependencies.
+These options apply to tsdown and Vite; tsc keeps its emit-compatible settings. Sapphire's decorator options and
+the ES2022 target remain in effect. This does not enable Stars' experimental Nitro runtime integration.
+
+Run `stars prepare` and extend the generated config from your project's `tsconfig.json`:
+
+```json
+{
+	"extends": "./.stars/tsconfig.json"
+}
+```
+
+New tsdown projects already extend this file and run `stars prepare` through `postinstall`.
+Keep your existing compiler options alongside `extends`. `stars dev` and `stars build` also regenerate this file.
+For tsdown builds, `@/` and `~/` resolve to the entry file's directory (normally `src/`), while `@@/` and `~~/`
+resolve to the project root. Filesystem aliases in `stars.config.ts`'s `tsdown.alias` are included too, with custom
+values taking precedence. Legacy builds using a separate tsdown config only include aliases declared in
+`stars.config.ts`. Other build tools do not get tsdown aliases, since TypeScript alone does not rewrite imports.
+
+The generated config includes source files and the auto imports declaration, including a custom `imports.dts`
+location. Explicit `include` or `compilerOptions.paths` in your own tsconfig replace the inherited values;
+remove manually duplicated paths to use the generated aliases. Generation works with `imports: false` too.
+Use `stars prepare --check` to check both generated files without writing them. Do not edit `.stars/tsconfig.json`
+by hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.

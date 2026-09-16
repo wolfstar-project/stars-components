@@ -145,11 +145,12 @@ async function main(): Promise<void> {
 				return undefined;
 			}
 		});
-		if (isCancel(nameResult)) {
+		if (typeof nameResult === 'string') {
+			projectName = nameResult;
+		} else {
 			cancel('Operation cancelled.');
 			process.exit(0);
 		}
-		projectName = nameResult;
 	}
 
 	// ── Package manager ───────────────────────────────────────────────────────
