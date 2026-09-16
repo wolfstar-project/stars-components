@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.0.2
+
+### Patch Changes
+
+- [#180](https://github.com/wolfstar-project/stars-components/pull/180) [`a33c03d`](https://github.com/wolfstar-project/stars-components/commit/a33c03d42b0380fcf9841a58e66aa3ad0fa5b4bb) - fix(deps): update dependency unimport to v7 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 4.0.1
 
 ### Patch Changes
