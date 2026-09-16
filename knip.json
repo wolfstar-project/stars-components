@@ -74,6 +74,11 @@
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignoreBinaries": ["cloudflared"],
 			"ignoreDependencies": ["@sapphire/ts-config"]
+		},
+		"packages/env-utilities": {
+			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
+			"ignoreDependencies": ["varlock"]
 		}
 	}
 }
