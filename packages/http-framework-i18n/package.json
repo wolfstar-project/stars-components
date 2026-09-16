@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-i18n",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"description": "DEPRECATED: use @wolfstar/plugin-i18next instead. An internationalization layer powered by i18next and @wolfstar/i18next-backend for @wolfstar/http-framework",
 	"keywords": [
 		"api",

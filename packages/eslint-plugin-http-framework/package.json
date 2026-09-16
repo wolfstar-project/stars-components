@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/eslint-plugin-http-framework",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Custom lint rules for @wolfstar/http-framework and the @wolfstar/plugin-* ecosystem, usable from both ESLint and oxlint",
 	"keywords": [
 		"eslint-plugin",

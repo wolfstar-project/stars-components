@@ -1,5 +1,16 @@
 # with-subcommands
 
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1)]:
+    - @wolfstar/env-utilities@2.1.1
+    - @wolfstar/http-framework-i18n@2.0.1
+    - @wolfstar/http-framework@4.0.1
+    - @wolfstar/shared-http-pieces@2.0.4
+    - @wolfstar/start-banner@2.1.1
+
 ## 0.0.12
 
 ### Patch Changes

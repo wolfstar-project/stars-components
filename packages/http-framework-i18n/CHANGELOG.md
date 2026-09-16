@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- [#178](https://github.com/wolfstar-project/stars-components/pull/178) [`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1)]:
+    - @wolfstar/i18next-backend@2.0.12
+
 ## 2.0.0
 
 ### Major Changes

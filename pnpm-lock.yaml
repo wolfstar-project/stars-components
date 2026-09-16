@@ -164,11 +164,9 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@types/pg': 8.23.1
   ansi-regex: ^6.3.0
   esbuild: ^0.28.2
   minimist: 1.2.8
-  '@redstardev/unplugin-version-injector>vite': 8.2.2
 
 importers:
 
@@ -530,6 +528,9 @@ importers:
       react:
         specifier: ^19.3.0
         version: 19.3.0
+      untun:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       '@types/react':
         specifier: ^19.3.0
@@ -2262,7 +2263,7 @@ packages:
       '@nuxt/schema': ^3
       esbuild: ^0.28.2
       rollup: ^3
-      vite: 8.2.2
+      vite: '>=3'
       webpack: ^4 || ^5
     peerDependenciesMeta:
       '@farmfe/core':
@@ -5221,6 +5222,10 @@ packages:
     peerDependenciesMeta:
       synckit:
         optional: true
+
+  untun@0.2.2:
+    resolution: {integrity: sha512-+NnOJcSiEtYsVgJmXUzQbJeRAFXJC4yPJYuh6kF9B0Rm6zunXcs/3GZOTllyocSbUDIxD6Bj7e/4ATw7sph1Sw==}
+    hasBin: true
 
   untyped@2.0.0:
     resolution: {integrity: sha512-nwNCjxJTjNuLCgFr42fEak5OcLuB3ecca+9ksPFNvtfYSLpjf+iJqSIaSnIile6ZPbKYxI5k2AfXqeopGudK/g==}
@@ -9256,6 +9261,8 @@ snapshots:
   unrun@0.3.1:
     dependencies:
       rolldown: 1.2.8
+
+  untun@0.2.2: {}
 
   untyped@2.0.0:
     dependencies:

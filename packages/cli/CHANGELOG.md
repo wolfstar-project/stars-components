@@ -1,5 +1,33 @@
 # @wolfstar/cli
 
+## 0.6.1
+
+### Patch Changes
+
+- [#195](https://github.com/wolfstar-project/stars-components/pull/195) [`76f3cf4`](https://github.com/wolfstar-project/stars-components/commit/76f3cf4d9eb1633f3706014f5b5c17539ac20a0e) - Fixed the `dev.tunnel` quick tunnel: it now opens the `cloudflared` tunnel through `untun` instead of spawning `cloudflared` directly and scraping its stdout for the URL with a regex. `untun` manages the `cloudflared` binary itself (downloading it if missing) and exposes the tunnel URL and lifecycle programmatically, which also fixes the tunnel never closing when spawning `cloudflared` failed silently. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 0.6.0
+
+### Minor Changes
+
+- [#192](https://github.com/wolfstar-project/stars-components/pull/192) [`673ea73`](https://github.com/wolfstar-project/stars-components/commit/673ea73674d7323168f095410bc8c8e326fc769e) - Automatically activate `@wolfstar/plugin-*` dependencies during bundler builds by injecting each plugin's `/register` side-effect entrypoint before the application entry. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 0.5.0
+
+### Minor Changes
+
+- [#191](https://github.com/wolfstar-project/stars-components/pull/191) [`baf401e`](https://github.com/wolfstar-project/stars-components/commit/baf401e7e2857edc2b2b860349898802ac91d15f) - Generate an extendable .stars/tsconfig.json during prepare, dev and build with TypeScript paths matching tsdown aliases, and extend it in scaffolded projects.
+
+    Include Sapphire base, extra-strict, and decorators compiler options in the generated configuration, with ESNext/Bundler and noEmit for bundler builds.
+
+    Align bundler compiler options with Nitro: isolated modules, verbatim syntax, JavaScript sources, explicit TypeScript extensions, package imports, and web API types. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#178](https://github.com/wolfstar-project/stars-components/pull/178) [`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`6d63859`](https://github.com/wolfstar-project/stars-components/commit/6d63859d5eede5367868daa8e9ab89a739407de1)]:
+    - @wolfstar/http-framework@4.0.1
+
 ## 0.4.0
 
 ### Minor Changes

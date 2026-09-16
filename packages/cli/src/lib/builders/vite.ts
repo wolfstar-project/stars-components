@@ -1,5 +1,6 @@
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
 import { EventEmitter } from 'node:events';
+import { pluginRegistrations } from '../plugin-registrations.js';
 import { importFromProject } from '../project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
@@ -87,7 +88,8 @@ export class ViteBuilder extends EventEmitter<BuilderEvents> implements Builder 
 			root: this.config.root,
 			logLevel: 'warn',
 			customLogger: this.#logger(vite),
-			...this.config.vite
+			...this.config.vite,
+			plugins: [pluginRegistrations(this.config), ...toArray(this.config.vite.plugins)]
 		} as Parameters<ViteModule['build']>[0];
 	}
 
@@ -113,4 +115,9 @@ export class ViteBuilder extends EventEmitter<BuilderEvents> implements Builder 
 		this.emit(outcome.ok ? 'success' : 'failure', outcome);
 		return outcome;
 	}
+}
+
+function toArray(value: unknown): unknown[] {
+	if (value === undefined || value === null || value === false) return [];
+	return Array.isArray(value) ? value : [value];
 }
