@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { THEMES, type ThemeName, type ThemeToken } from '../../lib/theme.js';
+import { THEMES, type ThemeName, type ThemeToken } from '../../../utils/theme.js';
 
 interface ThemeState {
 	/** Whether the UI may use colour. */

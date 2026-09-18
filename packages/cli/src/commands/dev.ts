@@ -5,7 +5,7 @@ import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
 import { LogFileWriter } from '../dev/log-file.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { CliError, ExitCode, renderCrashReport } from '../utils/errors.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { THEME_SETTINGS, isThemeSetting, readSavedTheme, resolveThemeSetting, saveTheme } from '../utils/theme.js';
 import { prepareProject } from './_shared.js';
@@ -81,7 +81,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 		await prepareProject(config);
 		await service.start();
 	} catch (error) {
-		service.log('stars', 'error', error instanceof Error ? (error.stack ?? error.message) : String(error));
+		service.log('stars', 'error', error instanceof Error ? await renderCrashReport(error, config.root) : String(error));
 		await shutdown(ExitCode.Error);
 	}
 	await finished;

@@ -44,7 +44,7 @@ export async function runMain(argv: string[] = process.argv.slice(2)): Promise<v
 	try {
 		await _runCommand(main, { rawArgs: argv });
 	} catch (error) {
-		console.error(formatError(error));
+		console.error(await formatError(error));
 		process.exit(exitCodeOf(error));
 	}
 }

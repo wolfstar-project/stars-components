@@ -43,7 +43,7 @@ export class CliError extends Error {
  * `ConfigError` comes from `@wolfstar/http-framework/config`: the framework validates `stars.config.*` and throws a
  * plain data error, the CLI decides how it looks on a terminal and which exit code it gets ({@link exitCodeOf}).
  */
-export function formatError(error: unknown): string {
+export async function formatError(error: unknown): Promise<string> {
 	if (error instanceof ConfigError) {
 		const location = [error.file, error.path ? `option \`${error.path}\`` : null].filter(Boolean).join(' › ');
 		return [`${error.message}${location ? ` (${location})` : ''}`, error.hint ? `  hint: ${error.hint}` : null].filter(Boolean).join('\n');
@@ -55,8 +55,19 @@ export function formatError(error: unknown): string {
 
 	// citty's CLIError (unknown command, missing argument): the message is enough.
 	if (error instanceof Error && error.name === 'CLIError') return error.message;
-	if (error instanceof Error) return error.stack ?? error.message;
+	if (error instanceof Error) return renderCrashReport(error);
 	return String(error);
+}
+
+/**
+ * Renders an unexpected error (a bug, not something the CLI already explains through {@link CliError} or
+ * `ConfigError`) as a sourcemapped, syntax-highlighted report — frames and a snippet of the original source instead
+ * of a stack trace pointing into the bundled `dist/cli.js`.
+ */
+export async function renderCrashReport(error: unknown, cwd: string = process.cwd()): Promise<string> {
+	const { createReport, fsLoader, renderAnsi } = await import('my-bad');
+	const report = await createReport(error, { cwd, loaders: [fsLoader()] });
+	return renderAnsi(report, { cwd });
 }
 
 export function exitCodeOf(error: unknown): ExitCode {
