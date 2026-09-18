@@ -122,6 +122,14 @@ export class ProcessSupervisor extends EventEmitter<ProcessSupervisorEvents> {
 		return this.#stopping;
 	}
 
+	/**
+	 * Sends `SIGKILL` right away, without waiting for the process to exit. Used to force a shutdown that is taking too long.
+	 */
+	public kill(): void {
+		const child = this.#child;
+		if (child && child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+	}
+
 	public async restart(): Promise<void> {
 		await this.stop();
 		this.start();

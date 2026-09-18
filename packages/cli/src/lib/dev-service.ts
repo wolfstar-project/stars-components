@@ -209,6 +209,17 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		});
 	}
 
+	/**
+	 * Kills the bot and the helper processes without waiting for them. Only for a forced shutdown, {@link stop} is the graceful path.
+	 */
+	public kill(): void {
+		this.#stopped = true;
+		this.#clearRestartTimer();
+		this.supervisor.kill();
+		void this.typechecker.close();
+		void this.tunnel.close();
+	}
+
 	public clearLogs(): void {
 		this.logs.clear();
 	}
