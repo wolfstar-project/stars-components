@@ -27,21 +27,19 @@ pnpm add -D oxfmt @wolfstar/oxfmt-config
 
 ## Usage
 
-oxfmt has no `extends` mechanism for `.oxfmtrc.json` yet ([oxc-project/oxc#16394](https://github.com/oxc-project/oxc/issues/16394)), so consume this package from an `oxfmt.config.ts` instead:
+oxfmt has no `extends` mechanism for `.oxfmtrc.json` yet ([oxc-project/oxc#16394](https://github.com/oxc-project/oxc/issues/16394)), so consume this package from an `oxfmt.config.ts` instead. The package default-exports a config object created with `defineConfig` from `oxfmt`, ready to spread into your own:
 
 ```typescript
 import { defineConfig } from 'oxfmt';
-import config from '@wolfstar/oxfmt-config' with { type: 'json' };
+import baseConfig from '@wolfstar/oxfmt-config';
 
 export default defineConfig({
-	...config,
+	...baseConfig,
 	ignorePatterns: ['**/dist/**']
 });
 ```
 
 oxfmt picks up `.oxfmtrc.json` before `oxfmt.config.ts`, and only one config file may exist per directory — remove any existing `.oxfmtrc.json` when switching to the TypeScript config, otherwise it silently keeps winning.
-
-If you prefer plain JSON, copy the values out of this package's `index.json` into your own `.oxfmtrc.json`.
 
 ## Buy us some doughnuts
 

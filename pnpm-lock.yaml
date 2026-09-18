@@ -916,19 +916,38 @@ importers:
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.2.2)
 
   packages/oxfmt-config:
-    dependencies:
+    devDependencies:
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
       oxfmt:
-        specifier: '>=0.60.0'
+        specifier: 0.67.0
         version: 0.67.0
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
 
   packages/oxlint-config:
     dependencies:
       '@wolfstar/eslint-plugin-http-framework':
         specifier: workspace:*
         version: link:../eslint-plugin-http-framework
+    devDependencies:
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
       oxlint:
-        specifier: '>=1.0.0'
+        specifier: 1.82.0
         version: 1.82.0
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
 
   packages/prettier-config:
     devDependencies:
