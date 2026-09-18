@@ -1,5 +1,12 @@
 # with-subcommands
 
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`95a5fa1`](https://github.com/wolfstar-project/stars-components/commit/95a5fa1f42d8793dd6e8f1a4a8f6a75ac6e3cdb2)]:
+    - @wolfstar/env-utilities@2.2.0
+
 ## 0.0.14
 
 ### Patch Changes

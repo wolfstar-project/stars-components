@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0
+
+### Minor Changes
+
+- [#198](https://github.com/wolfstar-project/stars-components/pull/198) [`95a5fa1`](https://github.com/wolfstar-project/stars-components/commit/95a5fa1f42d8793dd6e8f1a4a8f6a75ac6e3cdb2) - feat: add experimental support for [varlock](https://varlock.dev) as an alternative to `dotenv`, opt-in via the `loader: 'varlock'` option (or the `DOTENV_LOADER` environment variable) Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.1
 
 ### Patch Changes
