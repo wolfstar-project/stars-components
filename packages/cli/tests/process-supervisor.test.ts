@@ -50,6 +50,23 @@ describe('ProcessSupervisor', () => {
 		expect(supervisor.state).toBe('stopped');
 	});
 
+	test('kill() sends SIGKILL right away, even to a process that ignores SIGTERM', async () => {
+		const supervisor = createSupervisor("process.on('SIGTERM', () => {}); console.log('ready'); setInterval(() => {}, 1000);", 60_000);
+		const lines: string[] = [];
+		supervisor.on('stdout', (line) => lines.push(line));
+		supervisor.start();
+		await waitFor(() => lines.includes('ready'));
+
+		const exit = new Promise<ProcessExit>((resolve) => supervisor.once('exit', resolve));
+		supervisor.kill();
+		expect(await exit).toMatchObject({ signal: 'SIGKILL' });
+		expect(supervisor.pid).toBeNull();
+	});
+
+	test('kill() without a process does nothing', () => {
+		expect(() => createSupervisor(KEEPALIVE_SCRIPT).kill()).not.toThrow();
+	});
+
 	test('stop() without a process resolves immediately and restart() starts again', async () => {
 		const supervisor = createSupervisor(KEEPALIVE_SCRIPT);
 		await supervisor.stop();

@@ -42,9 +42,23 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 		return exiting;
 	};
 
-	process.once('SIGINT', () => void shutdown(ExitCode.Interrupted));
-	process.once('SIGTERM', () => void shutdown(ExitCode.Terminated));
-	process.once('SIGHUP', () => void shutdown(ExitCode.Terminated));
+	// Like Turborepo: the first signal shuts down gracefully, a second one gives up waiting and kills everything.
+	let signalled = false;
+	const onSignal = (code: ExitCode) => () => {
+		if (signalled) {
+			process.stderr.write('\nForcing shutdown.\n');
+			service.kill();
+			process.exit(code);
+		}
+
+		signalled = true;
+		void shutdown(code);
+		process.stderr.write('\nShutting down gracefully, press Ctrl+C again to force quit.\n');
+	};
+
+	process.on('SIGINT', onSignal(ExitCode.Interrupted));
+	process.on('SIGTERM', onSignal(ExitCode.Terminated));
+	process.on('SIGHUP', onSignal(ExitCode.Terminated));
 	if (process.platform !== 'win32') process.on('SIGUSR2', () => void service.restart('manual'));
 
 	const finished = renderer.start().then(() => shutdown(ExitCode.Ok));
