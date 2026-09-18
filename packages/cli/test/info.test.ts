@@ -44,4 +44,17 @@ describe('stars info', () => {
 		expect(output).toContain('http://localhost:3000');
 		expect(output).toContain('none');
 	});
+
+	test.each([
+		['true', 'cloudflared quick tunnel'],
+		["'https://bot.example.com'", 'https://bot.example.com']
+	])('describes dev.tunnel %s', async (tunnel, expected) => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'stars.config.mjs': `export default { dev: { url: 'http://localhost:3000', tunnel: ${tunnel} } };`
+		});
+		const output = await capture((stdout) => runInfo({ cwd: fixture.root, stdout }));
+
+		expect(output).toContain(expected);
+	});
 });

@@ -120,3 +120,48 @@ describe('generated TypeScript configuration', () => {
 		expect(generated.compilerOptions.verbatimModuleSyntax).toBeUndefined();
 	});
 });
+
+describe('runPrepare', () => {
+	let fixture: Fixture;
+
+	beforeEach(async () => {
+		fixture = await createFixture({
+			'package.json': '{"name":"bot","type":"module"}',
+			'src/main.ts': '',
+			'src/lib/value.ts': 'export const value = 1;',
+			'stars.config.mjs': "export default { build: { tool: 'tsdown' }, imports: { dirs: ['src/lib'], presets: [] } };"
+		});
+	});
+
+	afterEach(async () => fixture.cleanup());
+
+	function capture(): { stdout: NodeJS.WritableStream; text(): string } {
+		let output = '';
+		return {
+			stdout: { write: (chunk: string) => ((output += chunk), true) } as unknown as NodeJS.WritableStream,
+			text: () => output
+		};
+	}
+
+	test('writes the tsconfig and the auto imports declaration, then reports both as written', async () => {
+		const out = capture();
+
+		await runPrepare({ cwd: fixture.root, stdout: out.stdout });
+
+		expect(out.text()).toContain('tsconfig:');
+		expect(out.text()).toContain('imports:');
+		expect(out.text()).toContain('written');
+		await expect(readFile(join(fixture.root, '.stars/tsconfig.json'), 'utf-8')).resolves.toContain('compilerOptions');
+	});
+
+	test('--check passes once written and fails when the declaration goes stale', async () => {
+		await runPrepare({ cwd: fixture.root, stdout: capture().stdout });
+		const out = capture();
+
+		await runPrepare({ cwd: fixture.root, check: true, stdout: out.stdout });
+		expect(out.text()).toContain('up-to-date');
+
+		await fixture.write('src/lib/other.ts', 'export const other = 2;');
+		await expect(runPrepare({ cwd: fixture.root, check: true, stdout: capture().stdout })).rejects.toMatchObject({ code: 'PREPARE_OUTDATED' });
+	});
+});
