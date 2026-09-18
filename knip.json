@@ -75,6 +75,11 @@
 			"ignoreBinaries": ["cloudflared"],
 			"ignoreDependencies": ["@sapphire/ts-config"]
 		},
+		"packages/oxlint-config": {
+			"entry": ["src/index.ts"],
+			"project": ["src/**/*.ts"],
+			"ignoreDependencies": ["@wolfstar/eslint-plugin-http-framework"]
+		},
 		"packages/env-utilities": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
