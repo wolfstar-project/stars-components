@@ -1,5 +1,11 @@
 # @wolfstar/oxfmt-config
 
+## 0.2.0
+
+### Minor Changes
+
+- [#202](https://github.com/wolfstar-project/stars-components/pull/202) [`78b70d9`](https://github.com/wolfstar-project/stars-components/commit/78b70d968ece4f86714a00349d673b5105ae6c75) - Ship the shared configs as built TypeScript modules created with `defineConfig` from `oxfmt`/`oxlint` instead of raw JSON files. `@wolfstar/oxfmt-config` now default-exports a config object to spread into `oxfmt.config.ts`, and `@wolfstar/oxlint-config` default-exports one to pass to `extends` in `oxlint.config.ts`. The `index.json` and `.oxlintrc.json` entry points are removed. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,5 +1,15 @@
 # @wolfstar/cli
 
+## 0.7.0
+
+### Minor Changes
+
+- [#204](https://github.com/wolfstar-project/stars-components/pull/204) [`d99bf71`](https://github.com/wolfstar-project/stars-components/commit/d99bf718c6207655e8d13fc8da57f2218877fd7d) - `stars dev` now has colour themes, like Claude Code. Press `T` in the interactive UI to preview and pick `dark`, `light`, the colour-blind friendly `dark-daltonized`/`light-daltonized`, the terminal-palette-only `dark-ansi`/`light-ansi`, or `auto` (follows the terminal background). The choice is saved to `~/.config/stars/preferences.json` (`$XDG_CONFIG_HOME`, `%APPDATA%` or `$STARS_CONFIG_DIR`). `--theme <name>` and `STARS_THEME` override the saved theme for one run. The UI now paints with semantic theme colours, so body text keeps the terminal's own foreground and stays readable on light backgrounds. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#201](https://github.com/wolfstar-project/stars-components/pull/201) [`f6e4256`](https://github.com/wolfstar-project/stars-components/commit/f6e4256b2ce3920b447302371333a8845058b69a) - `stars dev` now shuts down like Turborepo: the first `Ctrl+C` (or `SIGINT`/`SIGTERM`/`SIGHUP`) stops the bot gracefully and prints a hint, a second one kills the bot and its helper processes right away instead of waiting for `dev.killTimeout`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#200](https://github.com/wolfstar-project/stars-components/pull/200) [`241bed1`](https://github.com/wolfstar-project/stars-components/commit/241bed15de74a7e126828e2960eb0c0e45c80104) - Render unexpected errors (and `stars dev` startup crashes) as sourcemapped, syntax-highlighted reports through `my-bad`, the way `nuxt` does, instead of a raw stack trace into the bundled `dist`. Errors the CLI already explains (`CliError`, `ConfigError`) keep their short message and hint. `runMain` is now exported for programmatic use, and the package's sources are reorganised after `nuxt/cli` (`commands/`, `dev/`, `builders/`, `utils/`, `main.ts`, `run.ts`) with no change to the `stars` commands or the public exports. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.6.1
 
 ### Patch Changes
