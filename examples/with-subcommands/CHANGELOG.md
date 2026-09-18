@@ -1,5 +1,12 @@
 # with-subcommands
 
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`a33c03d`](https://github.com/wolfstar-project/stars-components/commit/a33c03d42b0380fcf9841a58e66aa3ad0fa5b4bb)]:
+    - @wolfstar/http-framework@4.0.2
+
 ## 0.0.13
 
 ### Patch Changes
