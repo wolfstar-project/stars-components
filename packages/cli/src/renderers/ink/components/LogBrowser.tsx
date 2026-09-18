@@ -4,7 +4,7 @@ import { stripVTControlCharacters } from 'node:util';
 import type { DevService } from '../../../lib/dev-service.js';
 import { isErrorDetail, type LogEntry, type LogLevel } from '../../../lib/log-buffer.js';
 import { useLogVersion } from '../hooks/useLogVersion.js';
-import { useColor } from '../theme.js';
+import { usePaint } from '../theme.js';
 import { Hints } from './Hints.js';
 
 export interface LogBrowserProps {
@@ -20,7 +20,7 @@ const group = (entry: LogEntry) => (entry.source === 'app' ? 'runtime' : entry.s
 
 /** Filterable history, using Nuxt's keys and selecting the last error without discarding its context. */
 export function LogBrowser({ service, height, width, lastError = false, onClose, onCopy }: LogBrowserProps) {
-	const paint = useColor();
+	const paint = usePaint();
 	const [sources, setSources] = useState({ cli: true, build: true, runtime: true });
 	const [level, setLevel] = useState<LogLevel | null>(null);
 	const [query, setQuery] = useState('');
@@ -131,10 +131,16 @@ export function LogBrowser({ service, height, width, lastError = false, onClose,
 				{visible.length === 0 && <Text dimColor> no matching logs</Text>}
 				{visible.map(({ entry, text }, i) => (
 					<Text key={`${entry.id}-${i}`} wrap="truncate-end">
-						<Text color={paint('green')}>{entry.id === selected ? '▎ ' : '  '}</Text>
+						<Text color={paint('brand')}>{entry.id === selected ? '▎ ' : '  '}</Text>
 						<Text
 							color={paint(
-								entry.level === 'error' ? 'red' : entry.level === 'warn' ? 'yellow' : entry.level === 'success' ? 'green' : 'white'
+								entry.level === 'error'
+									? 'error'
+									: entry.level === 'warn'
+										? 'warning'
+										: entry.level === 'success'
+											? 'success'
+											: 'text'
 							)}
 							dimColor={isErrorDetail(entry)}
 						>

@@ -5,7 +5,7 @@ import type { DevStatus } from '../../../lib/dev-service.js';
 import { readOwnPackageJson } from '../../../lib/version.js';
 import type { LogCounters } from '../hooks/useLogCounters.js';
 import { describeBadge } from '../../panel-logic.js';
-import { useColor } from '../theme.js';
+import { usePaint } from '../theme.js';
 import { Hints, PANEL_HINTS } from './Hints.js';
 
 export interface PanelProps {
@@ -21,7 +21,7 @@ export interface PanelProps {
 
 /** Nuxt's wordmark / URLs / progress / status / hints layout, with Stars branding. */
 export function Panel({ status, config, counters, frame, elapsedMs, width, height, confirmQuit }: PanelProps) {
-	const paint = useColor();
+	const paint = usePaint();
 	const state = describeBadge(status);
 	const busy = state.badge !== 'ready' && state.badge !== 'error';
 	const badge = !busy && counters.errors > 0 ? 'error' : state.badge;
@@ -37,7 +37,7 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 						{' '}
 						{line === null ? (
 							<>
-								<Text color={paint('green')}>
+								<Text color={paint('brand')}>
 									{[...'·✦★✦'].map((cell, i) => (
 										<Text key={i} dimColor={busy && i !== frame % 4}>
 											{cell}
@@ -45,13 +45,13 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 									))}
 								</Text>
 								{'  '}
-								<Text bold color={paint('green')}>
+								<Text bold color={paint('brand')}>
 									Stars
 								</Text>
 								<Text dimColor>{` ${readOwnPackageJson().version}`}</Text>
 							</>
 						) : (
-							<Text color={paint('green')}>{line}</Text>
+							<Text color={paint('brand')}>{line}</Text>
 						)}
 					</Text>
 					{index === 0 && width >= 60 && badge === 'ready' && status.progress.readyMs !== null && (
@@ -69,10 +69,10 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 							<Text wrap="truncate-end">
 								{'   '}
 								<Text dimColor>{'Local    '}</Text>
-								<Text color={paint('cyan')} dimColor={busy}>
+								<Text color={paint('url')} dimColor={busy}>
 									{status.url}
 								</Text>
-								{busy && <Text color={paint('yellow')}>{` ${['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][frame % 10]}`}</Text>}
+								{busy && <Text color={paint('busy')}>{` ${['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][frame % 10]}`}</Text>}
 							</Text>
 						)
 					}
@@ -86,7 +86,7 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 							<Text wrap="truncate-end">
 								{'   '}
 								<Text dimColor>{'Tunnel   '}</Text>
-								<Text color={paint('magenta')}>{status.tunnelUrl}</Text>
+								<Text color={paint('tunnel')}>{status.tunnelUrl}</Text>
 							</Text>
 						)
 					}
@@ -98,7 +98,7 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 			content: busy ? (
 				<Text wrap="truncate-end">
 					{'   '}
-					<Text color={paint('green')}>{'━'.repeat(filled)}</Text>
+					<Text color={paint('brand')}>{'━'.repeat(filled)}</Text>
 					<Text dimColor>
 						{'━'.repeat(20 - filled)}
 						{` ${Math.round(status.progress.fraction * 100)}% · ${(elapsedMs / 1000).toFixed(1)}s`}
@@ -108,9 +108,9 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 				<Text wrap="truncate-end">
 					{'   '}
 					{counters.warnings > 0 && (
-						<Text color={paint('yellow')}>{`⚠ ${counters.warnings} ${plural(counters.warnings, 'warning')}   `}</Text>
+						<Text color={paint('warning')}>{`⚠ ${counters.warnings} ${plural(counters.warnings, 'warning')}   `}</Text>
 					)}
-					{counters.errors > 0 && <Text bold color={paint('red')}>{`✖ ${counters.errors} ${plural(counters.errors, 'error')}   `}</Text>}
+					{counters.errors > 0 && <Text bold color={paint('error')}>{`✖ ${counters.errors} ${plural(counters.errors, 'error')}   `}</Text>}
 					{counters.errors === 0 && counters.warnings === 0 && (
 						<Text dimColor>
 							{status.typecheck === 'checking'
@@ -131,8 +131,8 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 					{' '}
 					<Text
 						bold
-						backgroundColor={paint(confirmQuit || busy ? 'yellow' : badge === 'error' ? 'red' : 'green')}
-						color={paint(badge === 'error' && !confirmQuit ? 'white' : 'black')}
+						backgroundColor={paint(confirmQuit || busy ? 'busy' : badge === 'error' ? 'error' : 'success')}
+						color={paint(badge === 'error' && !confirmQuit ? 'onError' : 'onBright')}
 					>{` ${confirmQuit ? 'QUIT?' : badge === 'restarting' ? 'RESTART' : badge.toUpperCase()} `}</Text>
 					{'  '}
 					<Text dimColor>{confirmQuit ? 'press y to confirm, esc to stay' : note}</Text>

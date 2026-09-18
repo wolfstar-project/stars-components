@@ -11,6 +11,7 @@ export const PANEL_HINTS: Hint[] = [
 	{ key: 'o', label: 'open', priority: 40 },
 	{ key: 't', label: 'tunnel', priority: 60 },
 	{ key: 'i', label: 'info', priority: 50 },
+	{ key: 'T', label: 'theme', priority: 30 },
 	{ key: 'l', label: 'logs', priority: 70 },
 	{ key: '?', label: 'help', priority: 100 },
 	{ key: 'q', label: 'quit', priority: 90 }
