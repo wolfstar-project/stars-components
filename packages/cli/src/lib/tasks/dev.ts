@@ -3,17 +3,24 @@ import type { ProjectArgs } from '../args.js';
 import { resolveCwd } from '../args.js';
 import { assertSupportedExperiments, createBuilder } from '../builders/index.js';
 import { DevService } from '../dev-service.js';
-import { ExitCode } from '../errors.js';
+import { CliError, ExitCode } from '../errors.js';
 import { withResolvedLocalhost } from '../host.js';
 import { LogFileWriter } from '../log-file.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../output-mode.js';
+import { THEME_SETTINGS, isThemeSetting, readSavedTheme, resolveThemeSetting, saveTheme } from '../theme.js';
 import { prepareProject } from './prepare.js';
 
 export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
+	/** `--theme`. */
+	theme?: string;
 }
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
+	if (options.theme !== undefined && !isThemeSetting(options.theme)) {
+		throw new CliError(`Unknown theme \`${options.theme}\`.`, { code: 'INVALID_THEME', hint: `Use one of: ${THEME_SETTINGS.join(', ')}.` });
+	}
+
 	// Dev mode applies to config evaluation, build plugins, and the supervised application — not only the child.
 	process.env.NODE_ENV = 'development';
 	const config = await resolveDevConfig(
@@ -22,13 +29,21 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	assertSupportedExperiments(config);
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();
+	const theme = resolveThemeSetting({ flag: options.theme, saved: readSavedTheme() });
 
 	const service = new DevService(config, { builder: await createBuilder(config) });
 	const logFile = config.dev.logFile ? new LogFileWriter(config.dev.logFile, service.logs) : null;
 	logFile?.open();
 	const renderer =
 		mode === 'tui'
-			? (await import('../../renderers/tui.js')).createTuiRenderer(service, { color, reducedMotion: prefersReducedMotion() })
+			? (await import('../../renderers/tui.js')).createTuiRenderer(service, {
+					color,
+					theme,
+					reducedMotion: prefersReducedMotion(),
+					onThemeSave: (setting) => {
+						if (!saveTheme(setting)) service.log('stars', 'warn', 'Could not save the theme preference.');
+					}
+				})
 			: (await import('../../renderers/plain.js')).createPlainRenderer(service, { color });
 
 	let exiting: Promise<never> | null = null;

@@ -10,28 +10,37 @@ import { useLogCounters } from './hooks/useLogCounters.js';
 import { useBuildClock } from './hooks/useBuildClock.js';
 import { describeBadge } from '../panel-logic.js';
 import { openDevUrl } from '../../lib/open-url.js';
-import { ColorProvider } from './theme.js';
+import { ThemeProvider } from './theme.js';
+import { ThemeOverlay } from './components/ThemeOverlay.js';
+import { resolveTheme, type ThemeSetting } from '../../lib/theme.js';
 
 export interface DevAppProps {
 	service: DevService;
 	color: boolean;
+	/** The theme setting to start with; `auto` follows the terminal background. */
+	theme: ThemeSetting;
 	reducedMotion: boolean;
 	/** Called when the user asks to quit, so the CLI can stop the bot and exit. */
 	onQuit: () => void;
 	onViewChange: (overlay: boolean) => void;
 	onCopy: (text: string) => void;
+	/** Called when the user keeps a theme in the picker, so the CLI can remember it. */
+	onThemeSave: (setting: ThemeSetting) => void;
 }
 
-type View = 'panel' | 'logs' | 'errors' | 'help' | 'info';
+type View = 'panel' | 'logs' | 'errors' | 'help' | 'info' | 'theme';
 
 /**
  * A bottom-aligned panel in the normal buffer, with logs folded away. Only the browsable overlays use the
  * alternate screen, preserving the terminal's history and the panel when they close.
  */
-export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, onCopy }: DevAppProps) {
+export function DevApp({ service, color, theme, reducedMotion, onQuit, onViewChange, onCopy, onThemeSave }: DevAppProps) {
 	const { columns, rows } = useWindowSize();
 	const [view, setView] = useState<View>('panel');
 	const [confirmQuit, setConfirmQuit] = useState(false);
+	// `saved` is what Esc restores after previewing other themes in the picker.
+	const [saved, setSaved] = useState(theme);
+	const [preview, setPreview] = useState(theme);
 
 	const status = useDevStatus(service);
 	const counters = useLogCounters(service);
@@ -75,6 +84,8 @@ export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, on
 				return void service.toggleTunnel();
 			case 'i':
 				return changeView('info');
+			case 'T':
+				return changeView('theme');
 			case 'h':
 			case '?':
 				return changeView('help');
@@ -84,7 +95,7 @@ export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, on
 	});
 
 	return (
-		<ColorProvider color={color}>
+		<ThemeProvider color={color} theme={resolveTheme(preview)}>
 			<Box width={width} height={height} flexDirection="column" justifyContent={view === 'panel' ? 'flex-end' : 'flex-start'}>
 				{(view === 'logs' || view === 'errors') && (
 					<LogBrowser
@@ -98,6 +109,24 @@ export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, on
 				)}
 				{view === 'help' && <HelpOverlay height={height} width={width} onClose={() => changeView('panel')} />}
 				{view === 'info' && <InfoOverlay service={service} height={height} width={width} onClose={() => changeView('panel')} />}
+				{view === 'theme' && (
+					<ThemeOverlay
+						current={saved}
+						height={height}
+						width={width}
+						onPreview={setPreview}
+						onSelect={(setting) => {
+							setSaved(setting);
+							setPreview(setting);
+							onThemeSave(setting);
+							changeView('panel');
+						}}
+						onClose={() => {
+							setPreview(saved);
+							changeView('panel');
+						}}
+					/>
+				)}
 				{view === 'panel' && (
 					<Panel
 						status={status}
@@ -110,6 +139,6 @@ export function DevApp({ service, color, reducedMotion, onQuit, onViewChange, on
 					/>
 				)}
 			</Box>
-		</ColorProvider>
+		</ThemeProvider>
 	);
 }

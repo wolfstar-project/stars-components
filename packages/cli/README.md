@@ -115,6 +115,14 @@ export default defineConfig({
 `dev.banner` also accepts a string containing newlines, or `false` to hide the wordmark. Omit it for Stars branding.
 For the application's standalone banner outside the TUI, use `createStarsBanner` from `@wolfstar/start-banner`.
 
+**Themes.** Press `T` to pick a colour theme, like Claude Code's `/theme`: arrows preview it live, `Enter` keeps and saves
+it, `Esc` restores the previous one. Available themes are `auto` (follows the terminal background through
+`COLORFGBG`, dark when unknown), `dark`, `light`, `dark-daltonized` and `light-daltonized` (blue/orange instead of
+green/red, for colour-blind users), and `dark-ansi` and `light-ansi` (only the 16 ANSI colours, so your terminal
+palette decides). The theme resolves as `--theme <name>` › `STARS_THEME` › the saved choice › `auto`. It is saved in
+`preferences.json` under `$STARS_CONFIG_DIR`, `$XDG_CONFIG_HOME/stars`, `%APPDATA%\stars` or `~/.config/stars`.
+`NO_COLOR` still disables colour altogether.
+
 **Plain mode** prints prefixed lines instead and is selected by `--no-tui`, `STARS_TUI=plain`, redirected input/output,
 CI, `TERM=dumb`, or terminals smaller than 40×10. `STARS_TUI=1` overrides CI/size checks, never redirected streams or
 a dumb terminal. Both modes honour `NO_COLOR`/`FORCE_COLOR`; `STARS_REDUCED_MOTION=1` freezes the logo/spinner but

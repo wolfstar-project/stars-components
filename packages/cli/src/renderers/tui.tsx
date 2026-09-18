@@ -4,11 +4,16 @@ import { DevApp } from './ink/DevApp.js';
 import type { Renderer } from './plain.js';
 import { captureOutput } from './capture-output.js';
 import { isErrorDetail } from '../lib/log-buffer.js';
+import type { ThemeSetting } from '../lib/theme.js';
 
 export interface TuiRendererOptions {
 	stdout?: NodeJS.WriteStream;
 	stdin?: NodeJS.ReadStream;
 	color?: boolean;
+	/** Defaults to `auto`. */
+	theme?: ThemeSetting;
+	/** Called when the user keeps a theme in the picker. */
+	onThemeSave?: (setting: ThemeSetting) => void;
 	/** Freezes spinners, for `STARS_REDUCED_MOTION=1`. */
 	reducedMotion?: boolean;
 	/** Caps how often Ink repaints; the default is Ink's own. */
@@ -53,6 +58,8 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 		<DevApp
 			service={service}
 			color={options.color ?? false}
+			theme={options.theme ?? 'auto'}
+			onThemeSave={options.onThemeSave ?? (() => {})}
 			reducedMotion={options.reducedMotion ?? false}
 			onQuit={quit}
 			onViewChange={switchView}

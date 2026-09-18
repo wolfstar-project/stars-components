@@ -1,11 +1,12 @@
 import { Box, Text, useInput } from 'ink';
-import { useColor } from '../theme.js';
+import { usePaint } from '../theme.js';
 
 const KEYS: [string, string][] = [
 	['r', 'restart the bot now'],
 	['o', 'open the local URL in a browser'],
 	['t', 'toggle the public tunnel'],
 	['i', 'show versions, URLs and session info'],
+	['T', 'pick a colour theme (dark, light, colour-blind friendly, ANSI)'],
 	['l', 'open the logs (scroll, filter by source or level)'],
 	['e', 'jump to the last error, keeping its context'],
 	['c / Ctrl+L', 'clear the log history'],
@@ -21,7 +22,7 @@ export interface HelpOverlayProps {
 
 /** The static keys reference, opened with `?` from the pinned panel. */
 export function HelpOverlay({ height, width, onClose }: HelpOverlayProps) {
-	const paint = useColor();
+	const paint = usePaint();
 	useInput((input, key) => {
 		if (!key.ctrl && (key.escape || ['q', 'h', '?'].includes(input))) onClose();
 	});
@@ -33,7 +34,7 @@ export function HelpOverlay({ height, width, onClose }: HelpOverlayProps) {
 			{KEYS.slice(0, Math.max(0, height - 3)).map(([key, description]) => (
 				<Text key={key} wrap="truncate-end">
 					{'  '}
-					<Text bold color={paint('white')}>
+					<Text bold color={paint('text')}>
 						{key.padEnd(14)}
 					</Text>
 					<Text dimColor>{description}</Text>

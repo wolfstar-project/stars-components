@@ -209,6 +209,32 @@ describe('renderers', () => {
 		stdin.press('q');
 		await waitFor(() => stdout.screen().includes('Stars'));
 	});
+	test('previews themes live, saves the chosen one and restores on cancel', async () => {
+		const onThemeSave = vi.fn();
+		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: true, theme: 'dark', onThemeSave });
+		void renderer.start();
+		await waitFor(() => stdout.screen().includes('Stars'));
+		expect(stdout.screen()).toContain('theme');
+		stdin.press('T');
+		await waitFor(() => stdout.screen().includes('colour theme'));
+		expect(stdout.terminal.buffer.active.type).toBe('alternate');
+		expect(stdout.screen()).toContain('dark-daltonized');
+		expect(stdout.screen()).toContain('(current)');
+		stdin.press('\u001b[B');
+		await wait(30);
+		stdin.press('\u001b');
+		await waitFor(() => stdout.screen().includes('Stars'));
+		expect(onThemeSave).not.toHaveBeenCalled();
+		stdin.press('T');
+		await waitFor(() => stdout.screen().includes('colour theme'));
+		stdin.press('j');
+		await wait(30);
+		stdin.press('\r');
+		await waitFor(() => stdout.screen().includes('Stars'));
+		expect(onThemeSave).toHaveBeenCalledTimes(1);
+		expect(onThemeSave).toHaveBeenCalledWith('light');
+		expect(stdout.terminal.buffer.active.type).toBe('normal');
+	});
 	test('toggles the tunnel with t', async () => {
 		const toggle = vi.spyOn(service, 'toggleTunnel').mockResolvedValue();
 		await start();
