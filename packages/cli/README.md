@@ -91,6 +91,7 @@ that every application plugin loaded successfully. Logged errors switch the badg
 | `o`            | open the local URL in a browser                              |
 | `t`            | toggle a public `cloudflared` tunnel                         |
 | `i`            | show project, versions, URLs, health, types and session info |
+| `T`            | pick a colour theme (see **Themes** below)                   |
 | `l`            | browse logs                                                  |
 | `e`            | select the last error with its surrounding context           |
 | `c` / `Ctrl+L` | clear log history                                            |
