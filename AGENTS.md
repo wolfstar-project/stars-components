@@ -53,7 +53,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   file mode) stays in `TsdownBuilder` and its test.
 - Convention-first defaults (#182) beyond the compatibility version: `stars dev` forces `NODE_ENV=development` for
   config evaluation, build plugins, and the supervised process; `src/locales` is copied to the build output and kept
-  in sync by a `chokidar` watcher (`packages/cli/src/lib/locales.ts`) instead of a hand-written `tsdown` plugin; and
+  in sync by a `chokidar` watcher (`packages/cli/src/utils/locales.ts`) instead of a hand-written `tsdown` plugin; and
   `@wolfstar/env-utilities`' `setup()` (aliased `envRun` in scaffolded `src/lib/setup/all.ts`) takes no argument,
   discovering `.env*` files under both `src/` and the project root itself. `@wolfstar/create-http-framework` now
   scaffolds a bare `defineConfig({})` (or `{ build: { tool: 'tsc' } }` for a `tsc` project) instead of specifying
