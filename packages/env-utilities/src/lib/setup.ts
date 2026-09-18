@@ -29,6 +29,7 @@ export function setup(pathOrOptions?: string | URL | EnvSetupOptions): DotenvCon
 		env: process.env.DOTENV_ENV,
 		path: process.env.DOTENV_PATH,
 		prefix: process.env.DOTENV_PREFIX,
+		loader: process.env.DOTENV_LOADER,
 		...options
 	});
 }
