@@ -17,13 +17,16 @@ async function sign(privateKey: CryptoKey, timestamp: string, body: string): Pro
 	return Buffer.from(signature).toString('hex');
 }
 
+const FIXTURES_DIR = join(import.meta.dirname, 'fixtures', 'nitro');
+
 /**
  * `nitro` and `vite` are resolved from the project root through the project's own `node_modules` (see
  * `importFromProject`), so the fixture needs one — a symlink to this package's real `node_modules` gets there
  * without a real install.
  */
 async function createNitroFixture(publicKeyHex: string): Promise<{ root: string; cleanup(): Promise<void> }> {
-	const root = await mkdtemp(join(import.meta.dirname, '.nitro-fixture-'));
+	await mkdir(FIXTURES_DIR, { recursive: true });
+	const root = await mkdtemp(join(FIXTURES_DIR, 'run-'));
 	await symlink(join(import.meta.dirname, '..', 'node_modules'), join(root, 'node_modules'), 'dir');
 	await mkdir(join(root, 'src'), { recursive: true });
 	await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'nitro-fixture', type: 'module' }));
