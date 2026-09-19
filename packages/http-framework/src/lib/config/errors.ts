@@ -17,7 +17,7 @@ import { defineDiagnostics } from 'nostics';
  * entry here spells out its shape on both sides instead.
  */
 export const configDiagnostics = defineDiagnostics({
-	docsBase: (code) => `https://wolfstar.rocks/docs/config/errors#${code.toLowerCase()}`,
+	docsBase: (code) => `https://stars-components.js.org/docs/config/errors#${code.toLowerCase()}`,
 	reporters: [],
 	codes: {
 		ROOT_NOT_FOUND: {

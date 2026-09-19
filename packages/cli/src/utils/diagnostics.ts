@@ -14,7 +14,7 @@ import { defineDiagnostics } from 'nostics';
  * function widens to `unknown` params, erasing the sibling's fields from the merged type).
  */
 export const cliDiagnostics = defineDiagnostics({
-	docsBase: (code) => `https://wolfstar.rocks/docs/cli/errors#${code.toLowerCase()}`,
+	docsBase: (code) => `https://stars-components.js.org/docs/cli/errors#${code.toLowerCase()}`,
 	reporters: [],
 	codes: {
 		PREPARE_OUTDATED: {
