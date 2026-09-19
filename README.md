@@ -182,5 +182,5 @@ Copyright 2022 Wolfstar Project
 
 - **GitHub:** https://github.com/wolfstar-project/stars-components
 - **npm Packages:** https://www.npmjs.com/org/wolfstar
-- **Website:** https://wolfstar.rocks
+- **Website:** https://stars-components.js.org
 - **Issues & Discussions:** https://github.com/wolfstar-project/stars-components/issues
