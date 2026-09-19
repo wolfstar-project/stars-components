@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';

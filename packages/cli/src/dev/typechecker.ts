@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig, StarsTypechecker } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig, StarsTypechecker } from '@wolfstar/stars-config';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import type { Diagnostic } from 'nostics';

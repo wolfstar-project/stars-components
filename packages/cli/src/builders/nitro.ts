@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { EventEmitter } from 'node:events';
 import { pluginRegistrations } from '../utils/plugin-registrations.js';
 import { importFromProject } from '../utils/project.js';
@@ -25,7 +25,7 @@ const ENTRY_VIRTUAL_ID = '#stars/nitro-entry';
  * Nitro v3 is itself a Vite plugin — there is no separate `nitro build` step — so this reuses the project's own
  * `vite.config.*`/`stars.config#vite` the same way {@link import('./vite.js').ViteBuilder} does, and only adds the
  * `nitro()` plugin and a generated server entry on top. That entry imports the project's `Client` instance (the
- * entry's default export, already `load()`ed — see {@link import('@wolfstar/http-framework/config').StarsExperimentalConfig.enableNitro})
+ * entry's default export, already `load()`ed — see {@link import('@wolfstar/stars-config').StarsExperimentalConfig.enableNitro})
  * and calls its `fetch(request)` method, in the plain `{ fetch(Request): Promise<Response> }` shape Nitro's own
  * server entry convention expects — no separate adapter module to maintain, `Client` handles Fetch requests itself.
  */

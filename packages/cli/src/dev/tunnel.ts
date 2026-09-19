@@ -1,4 +1,4 @@
-import { readProjectEnvFiles, type ResolvedStarsConfig, type ResolvedTunnelConfig } from '@wolfstar/http-framework/config';
+import { readProjectEnvFiles, type ResolvedStarsConfig, type ResolvedTunnelConfig } from '@wolfstar/stars-config';
 import { EventEmitter } from 'node:events';
 import { startTunnel, type Tunnel as UntunTunnel } from 'untun';
 import type { LogLevel } from '../utils/log-buffer.js';

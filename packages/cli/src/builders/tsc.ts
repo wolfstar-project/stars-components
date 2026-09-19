@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { createLineSplitter } from '../utils/process-supervisor.js';
 import { resolveBinary } from '../utils/project.js';

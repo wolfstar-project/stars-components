@@ -15,6 +15,10 @@ export default defineProject(
 					replacement: fileURLToPath(new URL('../http-framework-test-utils/src/index.ts', import.meta.url))
 				},
 				{
+					find: '@wolfstar/stars-config',
+					replacement: fileURLToPath(new URL('../stars-config/src/index.ts', import.meta.url))
+				},
+				{
 					find: '@wolfstar/http-framework',
 					replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url))
 				}

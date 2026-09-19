@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig } from '@wolfstar/stars-config';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';

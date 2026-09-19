@@ -1,4 +1,4 @@
-import { displayPath, loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { displayPath, loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { arch, platform } from 'node:os';

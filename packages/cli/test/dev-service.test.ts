@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { join } from 'node:path';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';
-import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { DevService } from '../src/dev/dev-service.js';
 import { CRASH_SCRIPT, KEEPALIVE_SCRIPT, createFixture, waitFor, type Fixture } from './helpers.js';
 

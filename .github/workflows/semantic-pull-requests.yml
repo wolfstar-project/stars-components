@@ -52,6 +52,7 @@ jobs:
                       safe-fetch
                       shared-http-pieces
                       shared-influx-pieces
+                      stars-config
                       start-banner
                       twitch-helpers
                       weather-helpers

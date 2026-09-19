@@ -510,9 +510,9 @@ importers:
       '@sapphire/ts-config':
         specifier: ^5.0.3
         version: 5.0.3
-      '@wolfstar/http-framework':
+      '@wolfstar/stars-config':
         specifier: workspace:^
-        version: link:../http-framework
+        version: link:../stars-config
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -525,6 +525,9 @@ importers:
       ink:
         specifier: ^7.1.1
         version: 7.1.1(@types/react@19.3.0)(react@19.3.0)
+      mlly:
+        specifier: ^1.8.2
+        version: 1.8.2
       my-bad:
         specifier: ^0.2.2
         version: 0.2.3(vite@8.3.0)
@@ -727,9 +730,12 @@ importers:
       '@vladfrangu/async_event_emitter':
         specifier: ^2.4.7
         version: 2.4.7
-      c12:
-        specifier: ^3.3.4
-        version: 3.3.4(magicast@0.5.5)
+      '@wolfstar/cli':
+        specifier: workspace:^
+        version: link:../cli
+      '@wolfstar/stars-config':
+        specifier: workspace:^
+        version: link:../stars-config
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -739,9 +745,6 @@ importers:
       mlly:
         specifier: ^1.8.2
         version: 1.8.2
-      nostics:
-        specifier: ^1.2.0
-        version: 1.2.0
       unimport:
         specifier: ^7.0.2
         version: 7.0.2(acorn@8.18.0)(oxc-parser@0.148.0)(rolldown@1.2.9)(vite@8.3.0)
@@ -1114,6 +1117,31 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
+
+  packages/stars-config:
+    dependencies:
+      c12:
+        specifier: ^3.3.4
+        version: 3.3.4(magicast@0.5.5)
+      nostics:
+        specifier: ^1.2.0
+        version: 1.2.0
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
   packages/start-banner:
     devDependencies:

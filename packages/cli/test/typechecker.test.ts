@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig } from '@wolfstar/stars-config';
 import { join } from 'node:path';
 import { resolveTypecheckCommand } from '../src/dev/typechecker.js';
 import { createFixture, type Fixture } from './helpers.js';

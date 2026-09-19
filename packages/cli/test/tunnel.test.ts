@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig } from '@wolfstar/stars-config';
 import { Tunnel, endpointUrl, readDiscordCredentials } from '../src/dev/tunnel.js';
 import { createFixture, type Fixture } from './helpers.js';
 

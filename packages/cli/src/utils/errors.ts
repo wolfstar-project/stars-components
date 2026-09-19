@@ -1,4 +1,4 @@
-import { configDiagnostics } from '@wolfstar/http-framework/config';
+import { configDiagnostics } from '@wolfstar/stars-config';
 import { createColors } from 'colorette';
 import { Diagnostic } from 'nostics';
 import { ansiFormatter } from 'nostics/formatters/ansi';
@@ -25,7 +25,7 @@ const CLI_EXIT_CODES: Partial<Record<string, ExitCode>> = {
 
 /**
  * Formats an error for the terminal: a `Diagnostic` (from `stars.config.*` validation, via
- * `@wolfstar/http-framework/config`'s `configDiagnostics`, or from the CLI's own `cliDiagnostics`) renders through
+ * `@wolfstar/stars-config`'s `configDiagnostics`, or from the CLI's own `cliDiagnostics`) renders through
  * nostics' own ANSI formatter — message, `fix`, `sources` and `docs` — everything else falls back to a crash report.
  */
 export async function formatError(error: unknown): Promise<string> {

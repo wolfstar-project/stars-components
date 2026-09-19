@@ -1,7 +1,7 @@
-import { generateAutoImportsDts } from '@wolfstar/http-framework/auto-imports';
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { prepareTsconfig } from '../utils/tsconfig.js';
 
 export type PrepareResult =
@@ -16,6 +16,7 @@ export async function prepareAutoImports(config: ResolvedStarsConfig, check = fa
 	if (!config.imports.enabled) return { enabled: false, dts: null, status: null };
 
 	const { dirs, presets, exclude, dts } = config.imports;
+	const { generateAutoImportsDts } = await loadAutoImportsModule(config.root);
 	const content = await generateAutoImportsDts({ root: config.root, dirs, presets, exclude });
 
 	if (check) {

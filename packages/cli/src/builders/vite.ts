@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
 import { EventEmitter } from 'node:events';
 import { pluginRegistrations } from '../utils/plugin-registrations.js';
 import { importFromProject } from '../utils/project.js';

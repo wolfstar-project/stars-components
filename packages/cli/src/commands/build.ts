@@ -1,4 +1,4 @@
-import { displayPath, loadStarsConfig } from '@wolfstar/http-framework/config';
+import { displayPath, loadStarsConfig } from '@wolfstar/stars-config';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { createBuilder } from '../builders/index.js';
