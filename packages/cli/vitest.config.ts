@@ -10,6 +10,8 @@ export default mergeConfig(
 	defineProject({
 		resolve: {
 			alias: [
+				{ find: '@wolfstar/vite-server', replacement: fileURLToPath(new URL('../vite-server/src/index.ts', import.meta.url)) },
+				{ find: '@wolfstar/nitro-server', replacement: fileURLToPath(new URL('../nitro-server/src/index.ts', import.meta.url)) },
 				{
 					// The CI `unit` job runs tests without building first; alias to source like
 					// packages/http-framework/vitest.config.ts does for its own workspace deps.

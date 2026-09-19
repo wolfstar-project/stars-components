@@ -266,3 +266,11 @@ location. Explicit `include` or `compilerOptions.paths` in your own tsconfig rep
 remove manually duplicated paths to use the generated aliases. Generation works with `imports: false` too.
 Use `stars prepare --check` to check both generated files without writing them. Do not edit `.stars/tsconfig.json`
 by hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.
+
+## Server integrations
+
+`@wolfstar/vite-server` and `@wolfstar/nitro-server` provide the Vite and Nitro builders. The CLI loads the
+selected integration lazily, passes the resolved `stars.config` and supplies project dependency loading and
+plugin registration through `BuilderContext` from `@wolfstar/schema`. Neither server package depends on the CLI
+or framework. Existing experimental flags, presets, output directories and `stars dev`/`stars build` commands
+are unchanged; install Vite/Nitro in the consuming project as before.

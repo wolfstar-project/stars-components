@@ -510,9 +510,15 @@ importers:
       '@sapphire/ts-config':
         specifier: ^5.0.3
         version: 5.0.3
+      '@wolfstar/nitro-server':
+        specifier: workspace:^
+        version: link:../nitro-server
       '@wolfstar/schema':
         specifier: workspace:^
         version: link:../schema
+      '@wolfstar/vite-server':
+        specifier: workspace:^
+        version: link:../vite-server
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -930,6 +936,37 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
+  packages/nitro-server:
+    dependencies:
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      nitro:
+        specifier: ^3.0.260903-beta
+        version: 3.0.260903-beta
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.2
+        version: 8.3.0(@types/node@22.15.21)(jiti@2.7.0)(yaml@2.9.1)
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
+
   packages/oxfmt-config:
     devDependencies:
       golar:
@@ -1185,6 +1222,31 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
+
+  packages/vite-server:
+    dependencies:
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.2
+        version: 8.3.0(@types/node@22.15.21)(jiti@2.7.0)(yaml@2.9.1)
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
   packages/weather-helpers:
     dependencies:

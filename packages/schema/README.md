@@ -51,10 +51,8 @@ for backwards compatibility. The CLI depends directly on this package, keeping t
 
 ## Server integrations
 
-Stars already separates Vite and Nitro behind the CLI's `Builder` contract, with lazy adapter loading and
-project-local dependency resolution. They consume resolved schema options and wrap the framework's Fetch API.
-Nuxt's [`nitro-server`](https://github.com/nuxt/nuxt/tree/main/packages/nitro-server) and
-[`vite-server`](https://github.com/nuxt/nuxt/tree/main/packages/vite-server) are separate server integrations;
-Stars' adapters currently share CLI plugin registration and project resolution utilities. Keep them in the CLI
-until they need an independently consumable lifecycle: extracting packages now would require extracting those
-shared utilities too, with no additional server functionality. Neither adapter belongs in the schema package.
+Stars separates the optional integrations into [`@wolfstar/vite-server`](../vite-server) and
+[`@wolfstar/nitro-server`](../nitro-server), following Nuxt's server package boundaries.
+Both implement the `Builder` contract exported by this schema package. The CLI loads them on demand and supplies
+a `BuilderContext` for project dependency resolution and plugin registration, so neither integration depends on
+the CLI or framework runtime. Process supervision and the external-build watcher remain in the CLI.

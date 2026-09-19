@@ -46,6 +46,7 @@ describe('createBuilder', () => {
 
 		const builder = await createBuilder(await loadStarsConfig({ cwd: fixture.root, env: {} }));
 		expect(builder.tool).toBe('vite');
+		expect(builder).toBeInstanceOf((await import('@wolfstar/vite-server')).ViteBuilder);
 	});
 
 	test('leaves the build alone when `enableExternalVite` is on', async () => {
@@ -99,7 +100,7 @@ describe('createBuilder', () => {
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 		const builder = await createBuilder(config);
 		expect(builder.tool).toBe('vite');
-		expect(builder.constructor.name).toBe('NitroBuilder');
+		expect(builder).toBeInstanceOf((await import('@wolfstar/nitro-server')).NitroBuilder);
 	});
 
 	test('prefers ExternalBuilder over NitroBuilder when both experiments are on', async () => {
