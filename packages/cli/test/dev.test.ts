@@ -33,4 +33,8 @@ describe('runDev', () => {
 
 		expect(exit).toHaveBeenCalledWith(ExitCode.Terminated);
 	});
+
+	test('rejects an unknown theme before touching the config', async () => {
+		await expect(runDev({ cwd: fixture.root, theme: 'not-a-real-theme' })).rejects.toMatchObject({ code: 'INVALID_THEME' });
+	});
 });

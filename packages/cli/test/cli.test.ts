@@ -90,7 +90,7 @@ describe('stars', () => {
 		const result = await runCli(['commands', 'list', '--cwd', fixture.root]);
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain('DISCORD_TOKEN is not set');
-		expect(result.stderr).toContain('hint:');
+		expect(result.stderr).toContain('fix:');
 	});
 
 	test('unknown commands fail with exit code 1 and no stack trace', async () => {
@@ -105,6 +105,6 @@ describe('stars', () => {
 		const result = await runCli(['info', '--cwd', fixture.root, '--config', 'missing.ts']);
 		expect(result.code).toBe(2);
 		expect(result.stderr).toContain('Configuration file not found');
-		expect(result.stderr).toContain('hint:');
+		expect(result.stderr).toContain('fix:');
 	});
 });

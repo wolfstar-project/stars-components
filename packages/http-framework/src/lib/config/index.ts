@@ -19,7 +19,7 @@ export interface LoadStarsConfigOptions {
 /**
  * Loads, validates and resolves a project's `stars.config.*`.
  *
- * @throws {ConfigError} when the configuration file cannot be loaded or contains an invalid option.
+ * @throws {Diagnostic} (from `nostics`, via {@link configDiagnostics}) when the configuration file cannot be loaded or contains an invalid option.
  */
 export async function loadStarsConfig(options: LoadStarsConfigOptions = {}): Promise<ResolvedStarsConfig> {
 	const cwd = options.cwd ?? process.cwd();
@@ -29,8 +29,8 @@ export async function loadStarsConfig(options: LoadStarsConfigOptions = {}): Pro
 
 export { CONFIG_EXTENSIONS, CONFIG_FILE_NAMES, discoverConfigFile, loadConfigFile } from './load.js';
 export type { LoadConfigFileOptions, LoadedConfigFile } from './load.js';
-export { ConfigError } from './errors.js';
-export type { ConfigErrorOptions } from './errors.js';
+export { configDiagnostics } from './errors.js';
+export type { ConfigDiagnosticCode } from './errors.js';
 export { displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';
 export type {
 	PackageJsonLike,

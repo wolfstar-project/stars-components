@@ -2,7 +2,7 @@ import { PassThrough } from 'node:stream';
 import type { ApplicationCommand, DiscordClient } from '../src/utils/discord.js';
 import type { CommandsPrompt } from '../src/utils/prompts.js';
 import { runCommandsClean, runCommandsList } from '../src/commands/commands.js';
-import { createFixture, type Fixture } from './helpers.js';
+import { createFixture, waitFor, type Fixture } from './helpers.js';
 
 function createClient(commands: ApplicationCommand[]): DiscordClient & { deleted: string[] } {
 	const deleted: string[] = [];
@@ -135,6 +135,37 @@ describe('stars commands', () => {
 		await expect(runCommandsClean({ cwd: fixture.root, client, stdin, stdout: new PassThrough() })).rejects.toMatchObject({
 			code: 'CONFIRMATION_REQUIRED'
 		});
+		expect(client.deleted).toEqual([]);
+	});
+
+	test('clean --name aborts when a given prompt declines the single confirmation', async () => {
+		const client = createClient([...DEPLOYED]);
+		const prompt: CommandsPrompt = {
+			pick: () => Promise.reject(new Error('the wizard must not run for --name')),
+			confirm: () => Promise.resolve(false)
+		};
+
+		await expect(runCommandsClean({ cwd: fixture.root, names: ['ping'], prompt, client, stdout: new PassThrough() })).rejects.toMatchObject({
+			code: 'ABORTED'
+		});
+		expect(client.deleted).toEqual([]);
+	});
+
+	test('clean --name (no prompt) aborts when a terminal answers anything but yes', async () => {
+		const client = createClient([...DEPLOYED]);
+		const stdin = Object.assign(new PassThrough(), { isTTY: true });
+		const stdout = new PassThrough();
+		let output = '';
+		stdout.on('data', (chunk: Buffer) => (output += chunk.toString()));
+
+		const rejection = expect(runCommandsClean({ cwd: fixture.root, names: ['ping'], client, stdin, stdout })).rejects.toMatchObject({
+			code: 'ABORTED'
+		});
+
+		await waitFor(() => output.includes('[y/N]'));
+		stdin.emit('data', 'n\n');
+
+		await rejection;
 		expect(client.deleted).toEqual([]);
 	});
 });

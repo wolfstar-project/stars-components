@@ -3,7 +3,7 @@ import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { assertSupportedExperiments, createBuilder } from '../builders/index.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import { Locales } from '../utils/locales.js';
 import { shouldUseColor } from '../utils/output-mode.js';
 import { prepareProject } from './_shared.js';
@@ -33,7 +33,7 @@ export async function runBuild(options: BuildTaskOptions): Promise<void> {
 	stdout.write(`${colors.dim('stars')} building with ${colors.bold(config.build.tool)}…\n`);
 	const outcome = await builder.build();
 	if (!outcome.ok) {
-		throw new CliError(`Build failed${outcome.message ? `: ${outcome.message}` : ''}`, { code: 'BUILD_FAILED', exitCode: ExitCode.BuildFailed });
+		throw cliDiagnostics.BUILD_FAILED({ message: outcome.message ?? '' });
 	}
 	new Locales(config).copy();
 

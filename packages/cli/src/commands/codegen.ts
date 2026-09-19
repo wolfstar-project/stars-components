@@ -6,7 +6,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import { shouldUseColor } from '../utils/output-mode.js';
 import { resolveFromProject } from '../utils/project.js';
 
@@ -42,10 +42,7 @@ export async function runCodegen(options: CodegenTaskOptions): Promise<void> {
 	}
 
 	if (results.some((result) => result.status === 'outdated')) {
-		throw new CliError('Generated files are out of date, run `stars codegen` to update them.', {
-			code: 'CODEGEN_OUTDATED',
-			exitCode: ExitCode.Error
-		});
+		throw cliDiagnostics.CODEGEN_OUTDATED({});
 	}
 }
 
@@ -53,8 +50,9 @@ async function runI18n(config: ResolvedStarsConfig, check: boolean): Promise<Cod
 	const { locales, output } = config.codegen.i18n!;
 	const cli = resolveFromProject(config.root, '@wolfstar/i18next-type-generator');
 	if (!cli) {
-		throw new CliError(`"@wolfstar/i18next-type-generator" is not installed in ${config.root}`, {
-			code: 'DEPENDENCY_MISSING',
+		throw cliDiagnostics.DEPENDENCY_MISSING({
+			name: '@wolfstar/i18next-type-generator',
+			root: config.root,
 			hint: 'Install it with `pnpm add -D @wolfstar/i18next-type-generator`, or set `codegen.i18n` to false.'
 		});
 	}
@@ -83,10 +81,7 @@ function generate(root: string, cli: string, locales: string, output: string): P
 		child.once('error', reject);
 		child.once('exit', (code) => {
 			if (code === 0) resolve();
-			else
-				reject(
-					new CliError(`i18next-type-generator exited with code ${code}${stderr ? `: ${stderr.trim()}` : ''}`, { code: 'CODEGEN_FAILED' })
-				);
+			else reject(cliDiagnostics.CODEGEN_FAILED({ code, stderr: stderr.trim() }));
 		});
 	});
 }

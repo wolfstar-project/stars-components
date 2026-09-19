@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { CliError } from './errors.js';
+import { cliDiagnostics } from './diagnostics.js';
 
 /**
  * Resolves a module id from the project root, the way the project itself would.
@@ -21,7 +21,7 @@ export function resolveFromProject(root: string, id: string): string | null {
 export async function importFromProject<T>(root: string, id: string, hint: string): Promise<T> {
 	const resolved = resolveFromProject(root, id);
 	if (!resolved) {
-		throw new CliError(`"${id}" is not installed in ${root}`, { code: 'DEPENDENCY_MISSING', hint });
+		throw cliDiagnostics.DEPENDENCY_MISSING({ name: id, root, hint });
 	}
 
 	return (await import(pathToFileURL(resolved).href)) as T;

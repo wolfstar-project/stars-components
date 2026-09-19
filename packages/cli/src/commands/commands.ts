@@ -1,8 +1,9 @@
 import { loadStarsConfig } from '@wolfstar/http-framework/config';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
+import type { Diagnostic } from 'nostics';
 import { COMMAND_TYPE_NAMES, createDiscordClient, type ApplicationCommand, type DiscordClient } from '../utils/discord.js';
-import { CliError } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import { shouldUseColor } from '../utils/output-mode.js';
 import { createClackPrompt, type CommandsPrompt } from '../utils/prompts.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
@@ -63,10 +64,7 @@ export async function runCommandsClean(options: CommandsCleanOptions): Promise<v
 
 	const missing = wanted.filter((name) => !deployed.some((command) => command.name === name));
 	if (missing.length > 0) {
-		throw new CliError(`No deployed command is named ${missing.join(', ')}`, {
-			code: 'COMMAND_NOT_FOUND',
-			hint: 'Run `stars commands list` to see what is deployed.'
-		});
+		throw cliDiagnostics.COMMAND_NOT_FOUND({ names: missing.join(', ') });
 	}
 
 	if (deployed.length === 0) {
@@ -123,7 +121,7 @@ async function selectTargets(
 
 	const names = targets.map((command) => command.name).join(', ');
 	if (!(await prompt.confirm(`Delete ${targets.length} command(s) from ${scope}: ${names}?`))) {
-		throw new CliError('Aborted', { code: 'ABORTED' });
+		throw cliDiagnostics.ABORTED({});
 	}
 
 	return targets;
@@ -150,7 +148,7 @@ async function confirmOrThrow(
 ): Promise<void> {
 	if (options.prompt) {
 		if (await options.prompt.confirm(question)) return;
-		throw new CliError('Aborted', { code: 'ABORTED' });
+		throw cliDiagnostics.ABORTED({});
 	}
 
 	const stdin = options.stdin ?? process.stdin;
@@ -163,17 +161,14 @@ async function confirmOrThrow(
 			stdin.pause?.();
 			const answer = chunk.trim().toLowerCase();
 			if (answer === 'y' || answer === 'yes') resolve();
-			else reject(new CliError('Aborted', { code: 'ABORTED' }));
+			else reject(cliDiagnostics.ABORTED({}));
 		});
 		stdin.resume?.();
 	});
 }
 
-function confirmationRequired(): CliError {
-	return new CliError('Refusing to delete commands without a confirmation', {
-		code: 'CONFIRMATION_REQUIRED',
-		hint: 'Pass --yes to delete them, or --name to pick one, from a script.'
-	});
+function confirmationRequired(): Diagnostic {
+	return cliDiagnostics.CONFIRMATION_REQUIRED({});
 }
 
 const scopeArgs = {

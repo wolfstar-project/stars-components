@@ -1,5 +1,5 @@
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-import { CliError } from './errors.js';
+import { cliDiagnostics } from './diagnostics.js';
 import { readDiscordCredentials } from '../dev/tunnel.js';
 
 const API = 'https://discord.com/api/v10';
@@ -29,17 +29,11 @@ export const COMMAND_TYPE_NAMES: Record<number, string> = { 1: 'chat input', 2: 
 export function createDiscordClient(config: ResolvedStarsConfig, env: NodeJS.ProcessEnv = process.env): DiscordClient {
 	const credentials = readDiscordCredentials(config, env);
 	if (!credentials) {
-		throw new CliError('DISCORD_TOKEN is not set', {
-			code: 'DISCORD_TOKEN_MISSING',
-			hint: 'Set DISCORD_TOKEN in the environment or in the project .env file.'
-		});
+		throw cliDiagnostics.DISCORD_TOKEN_MISSING({});
 	}
 
 	if (!credentials.applicationId) {
-		throw new CliError('The Discord application id is not set', {
-			code: 'DISCORD_APPLICATION_ID_MISSING',
-			hint: 'Set DISCORD_APPLICATION_ID (or APPLICATION_ID) in the environment or in the project .env file.'
-		});
+		throw cliDiagnostics.DISCORD_APPLICATION_ID_MISSING({});
 	}
 
 	const applicationId = credentials.applicationId;
@@ -58,10 +52,7 @@ export function createDiscordClient(config: ResolvedStarsConfig, env: NodeJS.Pro
 		const body: unknown = await response.json().catch(() => null);
 		if (!response.ok) {
 			const detail = typeof body === 'object' && body !== null && 'message' in body ? String((body as { message: unknown }).message) : '';
-			throw new CliError(`Discord answered ${response.status}${detail ? `: ${detail}` : ''}`, {
-				code: 'DISCORD_REQUEST_FAILED',
-				hint: response.status === 401 ? 'Check DISCORD_TOKEN.' : 'Check the application id and the bot permissions.'
-			});
+			throw cliDiagnostics.DISCORD_REQUEST_FAILED({ status: response.status, detail });
 		}
 
 		return body;

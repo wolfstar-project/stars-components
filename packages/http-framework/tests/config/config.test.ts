@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { CONFIG_FILE_NAMES, ConfigError, defineConfig, discoverConfigFile, loadStarsConfig } from '../../src/config.js';
+import { Diagnostic } from 'nostics';
+import { CONFIG_FILE_NAMES, defineConfig, discoverConfigFile, loadStarsConfig } from '../../src/config.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 const PACKAGE_JSON = JSON.stringify({ name: 'bot', version: '1.2.3', main: 'dist/main.js' });
@@ -353,11 +354,11 @@ describe('stars.config', () => {
 				() => null,
 				(caught: unknown) => caught
 			);
-			expect(error).toBeInstanceOf(ConfigError);
-			expect((error as ConfigError).file).toBe(join(fixture.root, 'stars.config.mjs'));
-			expect((error as ConfigError).hint).toBeTruthy();
+			expect(error).toBeInstanceOf(Diagnostic);
+			expect((error as Diagnostic).sources).toEqual([join(fixture.root, 'stars.config.mjs')]);
+			expect((error as Diagnostic).fix).toBeTruthy();
 			await fixture.cleanup();
-			return error as ConfigError;
+			return error as Diagnostic;
 		}
 
 		test('rejects a missing --config file', async () => {
@@ -375,22 +376,39 @@ describe('stars.config', () => {
 			expect(error.code).toBe('CONFIG_LOAD_FAILED');
 		});
 
-		test('rejects unknown options with the known ones in the hint', async () => {
+		test('rejects unknown options with the known ones in the fix', async () => {
 			const error = await expectConfigError("export default { dev: { watchh: ['src'] } };");
-			expect(error).toMatchObject({ code: 'UNKNOWN_OPTION', path: 'dev.watchh' });
-			expect(error.hint).toContain('watch');
+			expect(error.code).toBe('UNKNOWN_OPTION');
+			expect(error.message).toContain('dev.watchh');
+			expect(error.fix).toContain('watch');
 		});
 
 		test('rejects wrong types with the option path', async () => {
 			const error = await expectConfigError("export default { dev: { debounce: 'fast' } };");
-			expect(error).toMatchObject({ code: 'INVALID_TYPE', path: 'dev.debounce' });
+			expect(error.code).toBe('INVALID_TYPE');
+			expect(error.message).toContain('dev.debounce');
 			expect(error.message).toContain('"fast"');
+		});
+
+		test('rejects a root that does not exist', async () => {
+			const error = await expectConfigError("export default { root: 'nope' };");
+			expect(error.code).toBe('ROOT_NOT_FOUND');
+		});
+
+		test('rejects a malformed package.json', async () => {
+			const error = await expectConfigError('export default {};', { 'src/main.js': '', 'package.json': '{ invalid json' });
+			expect(error.code).toBe('PACKAGE_JSON_INVALID');
+		});
+
+		test('rejects a codegen.i18n.locales directory that does not exist', async () => {
+			const error = await expectConfigError("export default { codegen: { i18n: { locales: 'nope' } } };");
+			expect(error.code).toBe('LOCALES_NOT_FOUND');
 		});
 
 		test('rejects a missing entry', async () => {
 			const error = await expectConfigError("export default { entry: 'src/nope.ts' };");
-			expect(error).toMatchObject({ code: 'ENTRY_NOT_FOUND', path: 'entry' });
-			expect((await expectConfigError('export default {};', {})).code).toBe('ENTRY_NOT_FOUND');
+			expect(error.code).toBe('ENTRY_NOT_FOUND');
+			expect((await expectConfigError('export default {};', {})).code).toBe('ENTRY_DEFAULT_NOT_FOUND');
 		});
 
 		test('rejects build.tool none for TypeScript entries and unknown tools', async () => {
@@ -407,33 +425,36 @@ describe('stars.config', () => {
 		});
 
 		test('rejects a tunnel URL that is not https', async () => {
-			expect((await expectConfigError("export default { dev: { tunnel: 'http://bot.example.com' } };")).code).toBe('INVALID_URL');
+			expect((await expectConfigError("export default { dev: { tunnel: 'http://bot.example.com' } };")).code).toBe('TUNNEL_URL_NOT_HTTPS');
 			expect((await expectConfigError("export default { dev: { tunnel: 'nope' } };")).code).toBe('INVALID_URL');
 		});
 
 		test('rejects `build.tool: vite` without the experiment, and unknown experiments', async () => {
 			const error = await expectConfigError("export default { build: { tool: 'vite' } };");
-			expect(error).toMatchObject({ code: 'EXPERIMENT_REQUIRED', path: 'build.tool' });
-			expect(error.hint).toContain('experimental.enableVite');
+			expect(error.code).toBe('EXPERIMENTAL_BUILD_TOOL');
+			expect(error.fix).toContain('experimental.enableVite');
 
 			expect((await expectConfigError('export default { experimental: { enableTurbo: true } };')).code).toBe('UNKNOWN_OPTION');
 			expect((await expectConfigError("export default { experimental: { enableVite: 'yes' } };")).code).toBe('INVALID_TYPE');
 		});
 
 		test('rejects `enableExternalVite`/`enableNitro`/`nitro` without their prerequisite', async () => {
-			expect((await expectConfigError('export default { experimental: { enableExternalVite: true } };')).path).toBe(
+			expect((await expectConfigError('export default { experimental: { enableExternalVite: true } };')).message).toContain(
 				'experimental.enableExternalVite'
 			);
-			expect((await expectConfigError('export default { experimental: { enableNitro: true } };')).path).toBe('experimental.enableNitro');
-			expect((await expectConfigError("export default { experimental: { enableVite: true, nitro: { preset: 'bun' } } };")).path).toBe(
+			expect((await expectConfigError('export default { experimental: { enableNitro: true } };')).message).toContain(
+				'experimental.enableNitro'
+			);
+			expect((await expectConfigError("export default { experimental: { enableVite: true, nitro: { preset: 'bun' } } };")).message).toContain(
 				'experimental.nitro'
 			);
 		});
 
 		test('rejects an unknown compatibility version and unknown `future` options', async () => {
 			const error = await expectConfigError('export default { future: { compatibilityVersion: 5 } };');
-			expect(error).toMatchObject({ code: 'INVALID_COMPATIBILITY_VERSION', path: 'future.compatibilityVersion' });
-			expect(error.hint).toContain('4');
+			expect(error.code).toBe('INVALID_COMPATIBILITY_VERSION');
+			expect(error.message).toContain('5');
+			expect(error.fix).toContain('4');
 
 			expect((await expectConfigError("export default { future: { compatibilityVersion: '4' } };")).code).toBe('INVALID_COMPATIBILITY_VERSION');
 			expect((await expectConfigError('export default { future: { compatVersion: 4 } };')).code).toBe('UNKNOWN_OPTION');
@@ -445,8 +466,9 @@ describe('stars.config', () => {
 				'src/main.ts': '',
 				'tsdown.config.ts': 'export default {};'
 			});
-			expect(error).toMatchObject({ code: 'TSDOWN_CONFIG_FILE_UNSUPPORTED', path: 'tsdown' });
-			expect(error.hint).toContain('compatibilityVersion');
+			expect(error.code).toBe('TSDOWN_CONFIG_FILE_UNSUPPORTED');
+			expect(error.message).toContain('tsdown');
+			expect(error.fix).toContain('compatibilityVersion');
 
 			// `tsdown` reads `package.json#tsdown` as well, so that counts as a configuration file too.
 			expect(
@@ -461,24 +483,26 @@ describe('stars.config', () => {
 
 		test('rejects `tsdown`/`vite` options that do not match the build tool', async () => {
 			const tsdown = await expectConfigError("export default { build: { tool: 'none' }, tsdown: { minify: true } };");
-			expect(tsdown).toMatchObject({ code: 'TSDOWN_OPTIONS_REQUIRE_TSDOWN', path: 'tsdown' });
+			expect(tsdown.code).toBe('TSDOWN_OPTIONS_REQUIRE_TSDOWN');
 
 			const vite = await expectConfigError('export default { future: { compatibilityVersion: 3 }, vite: { define: {} } };', {
 				'src/main.ts': '',
 				'tsdown.config.ts': 'export default {};'
 			});
-			expect(vite).toMatchObject({ code: 'VITE_OPTIONS_REQUIRE_VITE', path: 'vite' });
+			expect(vite.code).toBe('VITE_OPTIONS_REQUIRE_VITE');
 		});
 
 		test('rejects an unknown type checker', async () => {
 			const error = await expectConfigError("export default { dev: { typecheck: { checker: 'tsgo' } } };");
-			expect(error).toMatchObject({ code: 'INVALID_TYPECHECKER', path: 'dev.typecheck.checker' });
-			expect(error.hint).toContain('golar');
+			expect(error.code).toBe('INVALID_TYPECHECKER');
+			expect(error.message).toContain('tsgo');
+			expect(error.fix).toContain('golar');
 		});
 
 		test('rejects a typecheck tsconfig that does not exist', async () => {
 			const error = await expectConfigError("export default { dev: { typecheck: { tsconfig: 'nope.json' } } };");
-			expect(error).toMatchObject({ code: 'TSCONFIG_NOT_FOUND', path: 'dev.typecheck.tsconfig' });
+			expect(error.code).toBe('TSCONFIG_EXPLICIT_NOT_FOUND');
+			expect(error.fix).toContain('dev.typecheck.tsconfig');
 		});
 
 		test('rejects `imports: true` and `imports.enabled: true` without the tsdown build tool', async () => {

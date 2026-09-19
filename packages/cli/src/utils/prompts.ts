@@ -1,5 +1,6 @@
+import type { Diagnostic } from 'nostics';
 import type { ApplicationCommand } from './discord.js';
-import { CliError } from './errors.js';
+import { cliDiagnostics } from './diagnostics.js';
 
 export interface CommandsPrompt {
 	/** Asks which of the deployed commands to delete. Returns the chosen ids. */
@@ -51,6 +52,6 @@ function describeType(command: ApplicationCommand): string {
 	}
 }
 
-function aborted(): CliError {
-	return new CliError('Aborted', { code: 'ABORTED' });
+function aborted(): Diagnostic {
+	return cliDiagnostics.ABORTED({});
 }
