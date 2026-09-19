@@ -1,6 +1,6 @@
 import { loadStarsConfig } from '@wolfstar/http-framework/config';
 import { webcrypto } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { NitroBuilder } from '../src/builders/nitro.js';
@@ -19,11 +19,16 @@ async function sign(privateKey: CryptoKey, timestamp: string, body: string): Pro
 
 /**
  * `nitro` and `vite` are resolved from the project root through the project's own `node_modules` (see
- * `importFromProject`), so the fixture has to live where that resolution actually finds it — under this package's
- * own `node_modules`, the same way `vite-builder.test.ts` does.
+ * `importFromProject`), so the fixture needs one — a symlink to this package's real `node_modules` gets there
+ * without a real install. It has to sit outside `packages/cli` entirely, though (here, next to `packages/`
+ * itself): Vite's `resolve.tsconfigPaths` (see `NitroBuilder`'s `~`/`@`/`~~`/`@@` aliases) silently stops finding
+ * the fixture's own `tsconfig.json` once the fixture is nested inside the very directory its `node_modules`
+ * symlink points at (`packages/cli/.fixture/node_modules` → `packages/cli/node_modules`) — a self-referential
+ * layout no real project has, so a sibling of `packages/cli` avoids it instead of chasing why.
  */
 async function createNitroFixture(publicKeyHex: string): Promise<{ root: string; cleanup(): Promise<void> }> {
-	const root = await mkdtemp(join(import.meta.dirname, '..', 'node_modules', '.nitro-fixture-'));
+	const root = await mkdtemp(join(import.meta.dirname, '..', '..', '.nitro-fixture-'));
+	await symlink(join(import.meta.dirname, '..', 'node_modules'), join(root, 'node_modules'), 'dir');
 	await mkdir(join(root, 'src'), { recursive: true });
 	await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'nitro-fixture', type: 'module' }));
 	await writeFile(
@@ -90,6 +95,37 @@ describe('NitroBuilder', () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ type: 1 });
+	});
+
+	test('resolves ~/@ aliases via Vite’s tsconfigPaths (see nitro.build/examples/import-alias)', async () => {
+		const { publicKeyHex } = await generateDiscordKeyPair();
+		fixture = await createNitroFixture(publicKeyHex);
+		await mkdir(join(fixture.root, 'src', 'lib'), { recursive: true });
+		await writeFile(join(fixture.root, 'src', 'lib', 'greeting.ts'), "export const greeting = 'hello from ~/lib';\n");
+		// `prepare.test.ts` covers `.stars/tsconfig.json` generating these same `~`/`@`/`~~`/`@@` paths (a project's
+		// own tsconfig extends it); written directly here to exercise `NitroBuilder`'s `resolve.tsconfigPaths: true`
+		// against a plain path map, independent of that generation step.
+		await writeFile(join(fixture.root, 'tsconfig.json'), JSON.stringify({ compilerOptions: { paths: { '~/*': ['./src/*'] } } }));
+		await writeFile(
+			join(fixture.root, 'src', 'main.ts'),
+			[
+				"import { Client } from '@wolfstar/http-framework';",
+				"import { greeting } from '~/lib/greeting.js';",
+				`const client = new Client({ clientId: '1', discordToken: 'x', discordPublicKey: ${JSON.stringify(publicKeyHex)} });`,
+				'console.log(greeting);',
+				'export default client;',
+				''
+			].join('\n')
+		);
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const builder = new NitroBuilder(config);
+		const logs: string[] = [];
+		builder.on('log', (level, text) => logs.push(`${level}: ${text}`));
+		const outcome = await builder.build();
+
+		expect(outcome.ok, `${outcome.message}\n${logs.join('\n')}`).toBe(true);
+		expect(outcome.message).toBeNull();
 	});
 
 	test('reports a failed build instead of throwing', async () => {

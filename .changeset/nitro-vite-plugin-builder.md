@@ -24,3 +24,8 @@ Implemented `experimental.enableNitro`: `stars dev`/`stars build` now build the 
   instead of a `node:http` process; `stars dev` rebuilds and restarts on every change, the same as the other build
   tools. Install `nitro` (and `vite`) as a dev dependency to use it. The now-implemented `EXPERIMENT_UNAVAILABLE`
   diagnostic code is removed from `cliDiagnostics`/`CliDiagnosticCode`.
+- `@wolfstar/cli`: `NitroBuilder` also turns on Vite's native `resolve.tsconfigPaths` (see
+  https://nitro.build/examples/import-alias), and `stars prepare`'s generated `.stars/tsconfig.json` now emits the
+  same `~`/`@`/`~~`/`@@` aliases `build.tool: 'tsdown'` already gets whenever `experimental.enableNitro` is on — a
+  project's own `tsconfig.json#paths`/package.json `imports` just work under Nitro too, without a
+  `vite-tsconfig-paths` plugin.

@@ -85,6 +85,24 @@ describe('generated TypeScript configuration', () => {
 		).rejects.toMatchObject({ code: 'PREPARE_OUTDATED' });
 	});
 
+	test('generates the same ~/@/~~/@@ aliases for enableNitro builds, resolved by Vite’s own tsconfigPaths', async () => {
+		await fixture.write('app/main.ts', '');
+		await fixture.write(
+			'stars.config.mjs',
+			"export default { entry: 'app/main.ts', build: { tool: 'vite' }, experimental: { enableVite: true, enableNitro: true }, imports: false };"
+		);
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.build.tool).toBe('vite');
+		await prepareProject(config);
+		const generated = JSON.parse(await readFile(join(fixture.root, '.stars/tsconfig.json'), 'utf-8'));
+		expect(generated.compilerOptions.paths).toMatchObject({
+			'~/*': ['./../app/*'],
+			'@/*': ['./../app/*'],
+			'~~/*': ['./../*'],
+			'@@/*': ['./../*']
+		});
+	});
+
 	test.each(['tsdown', 'vite'])('supports Nitro-style module imports for %s', async (tool) => {
 		await fixture.write('stars.config.mjs', `export default { build: { tool: '${tool}' }, experimental: { enableVite: true }, imports: false };`);
 		await fixture.write('package.json', JSON.stringify({ name: 'bot', type: 'module', imports: { '#value': './src/lib/value.ts' } }));

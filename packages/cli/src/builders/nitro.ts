@@ -80,7 +80,11 @@ export class NitroBuilder extends EventEmitter<BuilderEvents> implements Builder
 	/**
 	 * Same merge `ViteBuilder` uses (`stars.config#vite` layered over the project's own `vite.config.*`), with the
 	 * `nitro()` plugin appended — after the project's own plugins, so a `nitro:` block a project adds itself to
-	 * `vite.config.*` is still free to run its own `setup` hooks against the instance this creates.
+	 * `vite.config.*` is still free to run its own `setup` hooks against the instance this creates — and Vite's
+	 * native `resolve.tsconfigPaths` turned on (see https://nitro.build/examples/import-alias): the project's own
+	 * `tsconfig.json#paths`/package.json `imports` aliases (including `.stars/tsconfig.json`'s generated ones) just
+	 * work under Nitro, without a `vite-tsconfig-paths` plugin. `false` in the project's own `vite.resolve` still
+	 * wins, the same as every other default here.
 	 */
 	#options(vite: ViteModule, nitroVite: NitroViteModule): Parameters<ViteModule['createBuilder']>[0] {
 		return {
@@ -88,6 +92,7 @@ export class NitroBuilder extends EventEmitter<BuilderEvents> implements Builder
 			logLevel: 'warn',
 			customLogger: this.#logger(vite),
 			...this.config.vite,
+			resolve: { tsconfigPaths: true, ...(this.config.vite.resolve as Record<string, unknown> | undefined) },
 			plugins: [
 				pluginRegistrations(this.config),
 				...toArray(this.config.vite.plugins),
