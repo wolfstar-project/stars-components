@@ -312,6 +312,19 @@ await client.load();
 await client.listen({ port: 3000 });
 ```
 
+`Client#fetch` is the Web `Request`/`Response` counterpart of `listen()` — the same signature verification, routing
+and replies, without binding a port. Use it to serve interactions from anything that speaks Fetch instead of
+`node:http` (Nitro, a Worker, `Bun.serve`, `Deno.serve`, Vite's own dev middleware):
+
+```typescript
+export default {
+	fetch: (request: Request) => client.fetch(request, { postPath: '/interactions' })
+};
+```
+
+This is what `@wolfstar/cli`'s `experimental.enableNitro` uses under the hood: the generated Nitro server entry calls
+`client.fetch(request)` directly instead of `listen()`, so `node:http` is swapped for whatever preset Nitro targets.
+
 ### Logger
 
 The framework ships a minimal logger, available as `container.logger` (and as `client.logger`) as soon as
@@ -619,7 +632,7 @@ export default defineConfig({
 		// The project runs Vite itself: `stars dev` only watches the output and restarts the bot.
 		enableExternalVite: false,
 		// Build and serve through Nitro (itself a Vite plugin) instead of node:http, deployable to any of its
-		// presets; the entry's default export must be the `Client` instance, wrapped in `createFetchHandler`.
+		// presets; the entry's default export must be the `Client` instance, served through `client.fetch(request)`.
 		enableNitro: false
 	}
 });

@@ -46,7 +46,7 @@ describe('NitroBuilder', () => {
 		await fixture?.cleanup();
 	});
 
-	test('builds a Nitro server that dispatches interactions through the framework’s Fetch adapter', async () => {
+	test('builds a Nitro server that dispatches interactions through client.fetch()', async () => {
 		const { publicKeyHex, privateKey } = await generateDiscordKeyPair();
 		fixture = await createNitroFixture(publicKeyHex);
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });

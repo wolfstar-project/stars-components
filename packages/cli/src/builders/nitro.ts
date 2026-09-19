@@ -24,10 +24,10 @@ const ENTRY_VIRTUAL_ID = '#stars/nitro-entry';
  *
  * Nitro v3 is itself a Vite plugin — there is no separate `nitro build` step — so this reuses the project's own
  * `vite.config.*`/`stars.config#vite` the same way {@link import('./vite.js').ViteBuilder} does, and only adds the
- * `nitro()` plugin and a generated server entry on top. That entry re-exports the project's `Client` instance (the
+ * `nitro()` plugin and a generated server entry on top. That entry imports the project's `Client` instance (the
  * entry's default export, already `load()`ed — see {@link import('@wolfstar/http-framework/config').StarsExperimentalConfig.enableNitro})
- * through `@wolfstar/http-framework/fetch`'s `createFetchHandler`, in the plain `{ fetch(Request): Promise<Response> }`
- * shape Nitro's own server entry convention expects — no per-preset adapter to maintain.
+ * and calls its `fetch(request)` method, in the plain `{ fetch(Request): Promise<Response> }` shape Nitro's own
+ * server entry convention expects — no separate adapter module to maintain, `Client` handles Fetch requests itself.
  */
 export class NitroBuilder extends EventEmitter<BuilderEvents> implements Builder {
 	public readonly tool = 'vite' as const;
@@ -102,21 +102,15 @@ export class NitroBuilder extends EventEmitter<BuilderEvents> implements Builder
 	}
 
 	/**
-	 * `createFetchHandler` is built once per process and reused across requests — the same lifetime `Client.listen()`
-	 * gives its own `node:http` server, and required since re-deriving the Discord signing key on every request would
-	 * make every reply pay for an extra async hop.
+	 * `client.fetch` imports the Discord public key once and reuses it across every call — the same lifetime
+	 * `Client.listen()` gives its own `node:http` server — so the generated entry only has to forward the request.
 	 */
 	#entryCode(): string {
 		return [
-			"import { createFetchHandler } from '@wolfstar/http-framework/fetch';",
 			`import client from ${JSON.stringify(this.config.entry)};`,
 			'',
-			'const handlerPromise = createFetchHandler(client);',
 			'export default {',
-			'\tasync fetch(request) {',
-			'\t\tconst handler = await handlerPromise;',
-			'\t\treturn handler(request);',
-			'\t}',
+			'\tfetch: (request) => client.fetch(request)',
 			'};',
 			''
 		].join('\n');
