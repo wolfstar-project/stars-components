@@ -5,7 +5,7 @@
  * This module is intentionally tiny: importing it from a `stars.config.ts`
  * file must never start the bot nor pull the heavy runtime of the CLI.
  *
- * @module @wolfstar/stars-config
+ * @module @wolfstar/schema
  */
 
 /**

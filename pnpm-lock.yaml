@@ -510,9 +510,9 @@ importers:
       '@sapphire/ts-config':
         specifier: ^5.0.3
         version: 5.0.3
-      '@wolfstar/stars-config':
+      '@wolfstar/schema':
         specifier: workspace:^
-        version: link:../stars-config
+        version: link:../schema
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -733,9 +733,9 @@ importers:
       '@wolfstar/cli':
         specifier: workspace:^
         version: link:../cli
-      '@wolfstar/stars-config':
+      '@wolfstar/schema':
         specifier: workspace:^
-        version: link:../stars-config
+        version: link:../schema
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -1032,6 +1032,31 @@ importers:
         specifier: ~7.0.2
         version: 7.0.2
 
+  packages/schema:
+    dependencies:
+      c12:
+        specifier: ^3.3.4
+        version: 3.3.4(magicast@0.5.5)
+      nostics:
+        specifier: ^1.2.0
+        version: 1.2.0
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
+
   packages/shared-http-pieces:
     dependencies:
       '@discordjs/builders':
@@ -1117,31 +1142,6 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
-
-  packages/stars-config:
-    dependencies:
-      c12:
-        specifier: ^3.3.4
-        version: 3.3.4(magicast@0.5.5)
-      nostics:
-        specifier: ^1.2.0
-        version: 1.2.0
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: ^4.1.11
-        version: 4.1.11(vitest@4.1.11)
-      golar:
-        specifier: ^0.1.10
-        version: 0.1.10
-      tsdown:
-        specifier: ^0.23.0
-        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
-      typescript:
-        specifier: ~7.0.2
-        version: 7.0.2
-      vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
   packages/start-banner:
     devDependencies:

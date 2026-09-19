@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';

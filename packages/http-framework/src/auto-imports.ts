@@ -14,7 +14,7 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createUnimport, type Import } from 'unimport';
 import unplugin from 'unimport/unplugin';
-import type { ResolvedImportsConfig } from '@wolfstar/stars-config';
+import type { ResolvedImportsConfig } from '@wolfstar/schema';
 
 /**
  * Export names never auto-imported, even when a preset re-exports them under that name: names generic enough that

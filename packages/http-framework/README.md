@@ -476,11 +476,11 @@ client.on(Events.HmrPieceReloaded, async (piece) => {
 ### Project configuration (`stars.config.*`)
 
 The typed project configuration consumed by the [`stars` CLI](../cli) — the `defineConfig` helper and the config
-loader — lives in [`@wolfstar/stars-config`](../stars-config), a small package shared by `@wolfstar/http-framework`
+loader — lives in [`@wolfstar/schema`](../schema), a small package shared by `@wolfstar/http-framework`
 and `@wolfstar/cli` so neither depends on the other's runtime. `@wolfstar/http-framework` re-exports its public
 surface unchanged as `@wolfstar/http-framework/config`, so any tool can resolve a project's configuration without
 pulling in `@wolfstar/cli` — most projects should keep importing it from here rather than depending on
-`@wolfstar/stars-config` directly.
+`@wolfstar/schema` directly.
 
 Installing `@wolfstar/http-framework` also gives a project the `stars` binary (it depends on `@wolfstar/cli` and
 exposes it as `stars`, the way `nuxt` exposes `nuxi`'s binary), so a project needs no separate `@wolfstar/cli`

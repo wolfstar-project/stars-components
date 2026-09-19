@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/stars-config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import type { Diagnostic } from 'nostics';

@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/stars-config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { createBuilder } from '../src/builders/index.js';

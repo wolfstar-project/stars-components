@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
 /**

@@ -1,5 +1,5 @@
 import { Terminal } from '@xterm/headless';
-import { loadStarsConfig } from '@wolfstar/stars-config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';

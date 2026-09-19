@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { dirname, extname, relative, resolve } from 'node:path';
-import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { pluginRegistrations } from '../utils/plugin-registrations.js';
 import { importFromProject } from '../utils/project.js';

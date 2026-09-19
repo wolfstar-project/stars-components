@@ -3,12 +3,12 @@
     <img src="https://cdn.wolfstar.rocks/wolfstar-assets/stars-components/wordmark.webp" alt="Stars Components" width="440" />
   </picture>
 
-# @wolfstar/stars-config
+# @wolfstar/schema
 
 **Typed `stars.config.*` schema and loader shared by `@wolfstar/http-framework` and `@wolfstar/cli`.**
 
-[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/stars-config)](https://npmx.dev/package/@wolfstar/stars-config)
-[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/stars-config)](https://npmx.dev/package/@wolfstar/stars-config)
+[![version](https://npmx.dev/api/registry/badge/version/@wolfstar/schema)](https://npmx.dev/package/@wolfstar/schema)
+[![downloads](https://npmx.dev/api/registry/badge/downloads/@wolfstar/schema)](https://npmx.dev/package/@wolfstar/schema)
 [![license](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
 
 </div>
@@ -32,7 +32,7 @@ reference.
 
 ```typescript
 // stars.config.ts
-import { defineConfig } from '@wolfstar/stars-config';
+import { defineConfig } from '@wolfstar/schema';
 
 export default defineConfig({});
 ```

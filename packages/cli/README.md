@@ -14,7 +14,7 @@
 `stars` is a small, fast CLI that owns the developer workflow of a bot built with `@wolfstar/http-framework`. Like
 Nuxt splits `nuxt.config`/`defineNuxtConfig` (owned by `@nuxt/schema`, which both `nuxt` and the separate `@nuxt/cli`
 package depend on) from `nuxi`, the typed `stars.config.*` schema and loader live in their own package,
-[`@wolfstar/stars-config`](../stars-config), which both [`@wolfstar/http-framework`](../http-framework) (re-exported
+[`@wolfstar/schema`](../schema), which both [`@wolfstar/http-framework`](../http-framework) (re-exported
 as `@wolfstar/http-framework/config`) and this package depend on — this package only consumes it to drive its
 commands. `@wolfstar/http-framework` also depends on this package and exposes it as its own `stars` binary (the way
 `nuxt` exposes `nuxi`'s), so installing it is enough to get `stars` without a separate `@wolfstar/cli` install; this

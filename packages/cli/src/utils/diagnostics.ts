@@ -2,7 +2,7 @@ import { defineDiagnostics } from 'nostics';
 
 /**
  * Structured, stable diagnostic codes for everything `@wolfstar/cli` itself rejects (as opposed to `stars.config.*`
- * validation, which is `@wolfstar/http-framework`'s own {@link import('@wolfstar/stars-config').configDiagnostics}).
+ * validation, which is `@wolfstar/http-framework`'s own {@link import('@wolfstar/schema').configDiagnostics}).
  *
  * `reporters` stays empty: `runMain` (`src/run.ts`) is the single place that renders a caught `Diagnostic` to the
  * terminal (`formatError`) and picks its exit code (`exitCodeOf`), so nothing here should print on its own — a

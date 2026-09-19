@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/stars-config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ViteBuilder } from '../src/builders/vite.js';

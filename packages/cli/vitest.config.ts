@@ -13,8 +13,8 @@ export default mergeConfig(
 				{
 					// The CI `unit` job runs tests without building first; alias to source like
 					// packages/http-framework/vitest.config.ts does for its own workspace deps.
-					find: '@wolfstar/stars-config',
-					replacement: fileURLToPath(new URL('../stars-config/src/index.ts', import.meta.url))
+					find: '@wolfstar/schema',
+					replacement: fileURLToPath(new URL('../schema/src/index.ts', import.meta.url))
 				},
 				{
 					// Not a dependency of this package (see utils/framework-auto-imports.ts): `@wolfstar/cli` has no

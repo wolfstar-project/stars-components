@@ -75,7 +75,7 @@
 		"@sapphire/utilities": "^3.18.2",
 		"@vladfrangu/async_event_emitter": "^2.4.7",
 		"@wolfstar/cli": "workspace:^",
-		"@wolfstar/stars-config": "workspace:^",
+		"@wolfstar/schema": "workspace:^",
 		"chokidar": "^5.0.0",
 		"discord-api-types": "^0.38.8",
 		"mlly": "^1.8.2",

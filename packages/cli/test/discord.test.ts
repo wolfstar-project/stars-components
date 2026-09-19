@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/stars-config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { createDiscordClient } from '../src/utils/discord.js';
 import { createFixture, type Fixture } from './helpers.js';
 

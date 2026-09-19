@@ -1,4 +1,4 @@
-import { displayPath, loadStarsConfig } from '@wolfstar/stars-config';
+import { displayPath, loadStarsConfig } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
@@ -15,7 +15,7 @@ export interface PrepareTaskOptions extends ProjectArgs {
 }
 
 /**
- * Generates `.stars/tsconfig.json` and `imports.dts` (see {@link StarsImportsConfig} in `@wolfstar/stars-config`), the way `nuxt
+ * Generates `.stars/tsconfig.json` and `imports.dts` (see {@link StarsImportsConfig} in `@wolfstar/schema`), the way `nuxt
  * prepare` regenerates `.nuxt/imports.d.ts`. Run automatically by `stars dev` and `stars build` before the first
  * build; `--check` fails instead of writing, for CI.
  */

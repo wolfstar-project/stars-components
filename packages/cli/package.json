@@ -64,7 +64,7 @@
 	"dependencies": {
 		"@clack/prompts": "^1.8.0",
 		"@sapphire/ts-config": "^5.0.3",
-		"@wolfstar/stars-config": "workspace:^",
+		"@wolfstar/schema": "workspace:^",
 		"chokidar": "^5.0.0",
 		"citty": "^0.2.2",
 		"colorette": "^2.0.20",

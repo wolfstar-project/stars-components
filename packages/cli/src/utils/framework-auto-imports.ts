@@ -18,7 +18,7 @@
  * variable (not a string literal) in the `import()` call keeps TypeScript from requiring `@wolfstar/http-framework`
  * to resolve at type-check time too, since only a literal argument triggers module resolution.
  */
-import type { ResolvedImportsConfig } from '@wolfstar/stars-config';
+import type { ResolvedImportsConfig } from '@wolfstar/schema';
 import { resolve as resolveModule } from 'mlly';
 import { pathToFileURL } from 'node:url';
 

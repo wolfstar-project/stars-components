@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig } from '@wolfstar/stars-config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import type { Builder } from './types.js';
 
 export async function createBuilder(config: ResolvedStarsConfig): Promise<Builder> {

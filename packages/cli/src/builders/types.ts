@@ -1,5 +1,5 @@
 import type { EventEmitter } from 'node:events';
-import type { StarsBuildTool } from '@wolfstar/stars-config';
+import type { StarsBuildTool } from '@wolfstar/schema';
 import type { LogLevel } from '../utils/log-buffer.js';
 
 export interface BuildOutcome {
