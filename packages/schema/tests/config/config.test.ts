@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Diagnostic } from 'nostics';
-import { CONFIG_FILE_NAMES, defineConfig, discoverConfigFile, loadStarsConfig } from '../../src/config.js';
+import { CONFIG_FILE_NAMES, defineConfig, discoverConfigFile, loadStarsConfig } from '../../src/index.js';
+import { defineConfig as defineLightweightConfig } from '../../src/config.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 const PACKAGE_JSON = JSON.stringify({ name: 'bot', version: '1.2.3', main: 'dist/main.js' });
@@ -16,6 +17,7 @@ describe('stars.config', () => {
 	test('defineConfig returns the configuration untouched', () => {
 		const config = { entry: 'src/main.ts' };
 		expect(defineConfig(config)).toBe(config);
+		expect(defineLightweightConfig).toBe(defineConfig);
 	});
 
 	test.each([

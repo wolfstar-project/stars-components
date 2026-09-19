@@ -36,7 +36,14 @@
 				"types": "./dist/esm/index.d.ts",
 				"default": "./dist/esm/index.js"
 			}
-		}
+		},
+		"./config": {
+			"import": {
+				"types": "./dist/esm/config.d.ts",
+				"default": "./dist/esm/config.js"
+			}
+		},
+		"./package.json": "./package.json"
 	},
 	"publishConfig": {
 		"access": "public",

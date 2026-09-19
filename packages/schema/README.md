@@ -36,3 +36,25 @@ import { defineConfig } from '@wolfstar/schema';
 
 export default defineConfig({});
 ```
+
+## Package structure
+
+- `src/types/config.ts` defines the public input types without runtime dependencies.
+- `src/config.ts` provides the identity helper and type exports. The `@wolfstar/schema/config` entry is suitable
+  for configuration files that only need `defineConfig`, without loading filesystem resolution or diagnostics.
+- `src/config/` owns discovery, validation, defaults, and resolution.
+- `src/index.ts` preserves the complete public API, including the helper and loader.
+
+The framework exposes package-root `config.js`/`config.d.ts` and `schema.js`/`schema.d.ts` facades, following
+[Nuxt's package layout](https://github.com/nuxt/nuxt/tree/main/packages/nuxt). Both forward this package unchanged
+for backwards compatibility. The CLI depends directly on this package, keeping the dependency graph acyclic.
+
+## Server integrations
+
+Stars already separates Vite and Nitro behind the CLI's `Builder` contract, with lazy adapter loading and
+project-local dependency resolution. They consume resolved schema options and wrap the framework's Fetch API.
+Nuxt's [`nitro-server`](https://github.com/nuxt/nuxt/tree/main/packages/nitro-server) and
+[`vite-server`](https://github.com/nuxt/nuxt/tree/main/packages/vite-server) are separate server integrations;
+Stars' adapters currently share CLI plugin registration and project resolution utilities. Keep them in the CLI
+until they need an independently consumable lifecycle: extracting packages now would require extracting those
+shared utilities too, with no additional server functionality. Neither adapter belongs in the schema package.

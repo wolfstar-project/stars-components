@@ -9,7 +9,7 @@ import type {
 	StarsExperimentalConfig,
 	StarsFutureConfig,
 	StarsTypechecker
-} from '../../config.js';
+} from '../types/config.js';
 import { configDiagnostics } from './errors.js';
 
 export interface PackageJsonLike {

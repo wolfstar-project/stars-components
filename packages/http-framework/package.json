@@ -26,7 +26,11 @@
 	},
 	"files": [
 		"dist/",
-		"bin/"
+		"bin/",
+		"config.js",
+		"config.d.ts",
+		"schema.js",
+		"schema.d.ts"
 	],
 	"type": "module",
 	"sideEffects": false,
@@ -42,8 +46,8 @@
 		},
 		"./config": {
 			"import": {
-				"types": "./dist/esm/config.d.ts",
-				"default": "./dist/esm/config.js"
+				"types": "./config.d.ts",
+				"default": "./config.js"
 			}
 		},
 		"./auto-imports": {
@@ -51,7 +55,14 @@
 				"types": "./dist/esm/auto-imports.d.ts",
 				"default": "./dist/esm/auto-imports.js"
 			}
-		}
+		},
+		"./schema": {
+			"import": {
+				"types": "./schema.d.ts",
+				"default": "./schema.js"
+			}
+		},
+		"./package.json": "./package.json"
 	},
 	"publishConfig": {
 		"access": "public",
