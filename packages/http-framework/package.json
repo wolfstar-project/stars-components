@@ -80,6 +80,7 @@
 		"chokidar": "^5.0.0",
 		"discord-api-types": "^0.38.8",
 		"mlly": "^1.8.2",
+		"nostics": "^1.2.0",
 		"unimport": "^7.0.2"
 	},
 	"devDependencies": {

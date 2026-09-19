@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-import { CliError } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import { createLineSplitter } from '../utils/process-supervisor.js';
 import { resolveBinary } from '../utils/project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
@@ -55,7 +55,7 @@ export class TscBuilder extends EventEmitter<BuilderEvents> implements Builder {
 
 	#spawn(extraArgs: string[]): ChildProcess {
 		const tsc = resolveTscBinary(this.config.root);
-		if (!tsc) throw new CliError(`"typescript" is not installed in ${this.config.root}`, { code: 'DEPENDENCY_MISSING', hint: INSTALL_HINT });
+		if (!tsc) throw cliDiagnostics.DEPENDENCY_MISSING({ name: 'typescript', root: this.config.root, hint: INSTALL_HINT });
 
 		const child = spawn(process.execPath, [tsc, '-b', this.config.build.tsconfig!, '--pretty', 'false', ...extraArgs], {
 			cwd: this.config.root,

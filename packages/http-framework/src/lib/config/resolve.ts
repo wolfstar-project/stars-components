@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import type { Diagnostic } from 'nostics';
 import type {
 	StarsBuildTool,
 	StarsCompatibilityVersion,
@@ -9,7 +10,7 @@ import type {
 	StarsFutureConfig,
 	StarsTypechecker
 } from '../../config.js';
-import { ConfigError } from './errors.js';
+import { configDiagnostics } from './errors.js';
 
 export interface PackageJsonLike {
 	name?: string;
@@ -170,7 +171,7 @@ const TYPESCRIPT_EXTENSIONS = new Set(['.ts', '.mts', '.cts']);
 /**
  * Applies defaults, validates every option and resolves all paths to absolute ones.
  *
- * @throws {ConfigError} with an actionable `hint` on the first invalid option.
+ * @throws {Diagnostic} (from `nostics`, via {@link configDiagnostics}) with an actionable `fix` on the first invalid option.
  */
 export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStarsConfig {
 	const cwd = resolve(options.cwd);
@@ -184,15 +185,10 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
 	if (!isDirectory(root)) {
-		throw validator.error(
-			`The project root does not exist: ${root}`,
-			'root',
-			'ROOT_NOT_FOUND',
-			'Point `root` to an existing directory, relative to the configuration file.'
-		);
+		throw validator.error(configDiagnostics.ROOT_NOT_FOUND, { root });
 	}
 
-	const packageJson = readPackageJson(root);
+	const packageJson = readPackageJson(root, validator);
 	const experimental = resolveExperimental(config.experimental ?? {}, validator);
 	const future = resolveFuture(config.future ?? {}, validator);
 	const entry = resolveEntry(root, validator.string(config.entry, 'entry'), validator);
@@ -206,21 +202,11 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
 	if (Object.keys(tsdown).length > 0 && build.tool !== 'tsdown') {
-		throw validator.error(
-			'`tsdown` options need the `tsdown` build tool',
-			'tsdown',
-			'TSDOWN_OPTIONS_REQUIRE_TSDOWN',
-			`Set \`build.tool\` to 'tsdown', or remove \`tsdown\` (the build tool is '${build.tool}').`
-		);
+		throw validator.error(configDiagnostics.TSDOWN_OPTIONS_REQUIRE_TSDOWN, { tool: build.tool });
 	}
 
 	if (Object.keys(vite).length > 0 && build.tool !== 'vite') {
-		throw validator.error(
-			'`vite` options need the `vite` build tool',
-			'vite',
-			'VITE_OPTIONS_REQUIRE_VITE',
-			`Set \`build.tool\` to 'vite' with \`experimental.enableVite\`, or remove \`vite\` (the build tool is '${build.tool}').`
-		);
+		throw validator.error(configDiagnostics.VITE_OPTIONS_REQUIRE_VITE, { tool: build.tool });
 	}
 
 	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental, future, vite, tsdown };
@@ -239,12 +225,7 @@ function resolveEntry(root: string, configured: string | undefined, validator: V
 	if (configured !== undefined) {
 		const entry = resolve(root, configured);
 		if (!isFile(entry)) {
-			throw validator.error(
-				`The entry file does not exist: ${entry}`,
-				'entry',
-				'ENTRY_NOT_FOUND',
-				'Point `entry` to the file that starts the bot, relative to the project root.'
-			);
+			throw validator.error(configDiagnostics.ENTRY_NOT_FOUND, { entry });
 		}
 		return entry;
 	}
@@ -254,12 +235,7 @@ function resolveEntry(root: string, configured: string | undefined, validator: V
 		if (isFile(entry)) return entry;
 	}
 
-	throw validator.error(
-		`Could not find the entry file in ${root}`,
-		'entry',
-		'ENTRY_NOT_FOUND',
-		`Set \`entry\` in the configuration, or create one of ${DEFAULT_ENTRIES.join(', ')}.`
-	);
+	throw validator.error(configDiagnostics.ENTRY_DEFAULT_NOT_FOUND, { root, defaults: DEFAULT_ENTRIES.join(', ') });
 }
 
 function resolveBuild(
@@ -276,21 +252,11 @@ function resolveBuild(
 
 	const requested = validator.string(config.tool, 'build.tool') ?? 'auto';
 	if (!BUILD_TOOLS.has(requested)) {
-		throw validator.error(
-			`Unknown build tool "${requested}"`,
-			'build.tool',
-			'INVALID_BUILD_TOOL',
-			"Use one of 'tsdown', 'tsc', 'vite', 'none' or 'auto'."
-		);
+		throw validator.error(configDiagnostics.INVALID_BUILD_TOOL, { tool: requested });
 	}
 
 	if (requested === 'vite' && !experimental.enableVite) {
-		throw validator.error(
-			"The 'vite' build tool is experimental",
-			'build.tool',
-			'EXPERIMENT_REQUIRED',
-			'Set `experimental.enableVite` to true to use it.'
-		);
+		throw validator.error(configDiagnostics.EXPERIMENTAL_BUILD_TOOL, { tool: 'vite', flag: 'experimental.enableVite' });
 	}
 
 	const isTypeScriptEntry = TYPESCRIPT_EXTENSIONS.has(extname(entry));
@@ -300,12 +266,7 @@ function resolveBuild(
 			: (requested as StarsBuildTool);
 
 	if (tool === 'none' && isTypeScriptEntry) {
-		throw validator.error(
-			`The entry ${displayPath(root, entry)} is TypeScript but the build tool is 'none'`,
-			'build.tool',
-			'BUILD_TOOL_REQUIRED',
-			"Set `build.tool` to 'tsdown' or 'tsc', or point `entry` to a JavaScript file."
-		);
+		throw validator.error(configDiagnostics.BUILD_TOOL_REQUIRED, { entry: displayPath(root, entry) });
 	}
 
 	// Nitro owns its own output layout; anything else keeps the plain `dist` convention.
@@ -317,12 +278,7 @@ function resolveBuild(
 	if (configuredTsconfig !== undefined) {
 		tsconfig = resolve(root, configuredTsconfig);
 		if (!isFile(tsconfig)) {
-			throw validator.error(
-				`The tsconfig file does not exist: ${tsconfig}`,
-				'build.tsconfig',
-				'TSCONFIG_NOT_FOUND',
-				'Point `build.tsconfig` to an existing tsconfig.json, relative to the project root.'
-			);
+			throw validator.error(configDiagnostics.TSCONFIG_EXPLICIT_NOT_FOUND, { tsconfig, path: 'build.tsconfig' });
 		}
 	} else if (tool === 'tsc' || tool === 'tsdown') {
 		// `tsdown` only looks for a `tsconfig.json` next to the project root, so a bot keeping its sources' one in
@@ -330,12 +286,7 @@ function resolveBuild(
 		// target. Resolving it here is what makes the `tsdown` build need no configuration of its own.
 		tsconfig = [join(root, 'src', 'tsconfig.json'), join(root, 'tsconfig.json')].find((candidate) => isFile(candidate)) ?? null;
 		if (!tsconfig && tool === 'tsc') {
-			throw validator.error(
-				`Could not find a tsconfig.json in ${root}`,
-				'build.tsconfig',
-				'TSCONFIG_NOT_FOUND',
-				'Create src/tsconfig.json or tsconfig.json, or set `build.tsconfig`.'
-			);
+			throw validator.error(configDiagnostics.TSCONFIG_NOT_FOUND, { root, suggestion: 'build.tsconfig' });
 		}
 	}
 
@@ -354,12 +305,11 @@ function resolveBuild(
 	// Compatibility version 4 builds `tsdown` from this file alone. A `tsdown.config.*` left behind would keep the
 	// plugins and entry points it declares out of the build, so it is reported rather than quietly ignored.
 	if (tool === 'tsdown' && configFile !== null && future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION) {
-		throw validator.error(
-			`\`${displayPath(root, configFile)}\` is not used with compatibility version ${future.compatibilityVersion}`,
-			'tsdown',
-			'TSDOWN_CONFIG_FILE_UNSUPPORTED',
-			`Move its options into \`tsdown\` here, drop the ${displayPath(root, configFile)} configuration, or set \`future.compatibilityVersion\` to ${LEGACY_COMPATIBILITY_VERSION}.`
-		);
+		throw validator.error(configDiagnostics.TSDOWN_CONFIG_FILE_UNSUPPORTED, {
+			file: displayPath(root, configFile),
+			version: future.compatibilityVersion,
+			legacyVersion: LEGACY_COMPATIBILITY_VERSION
+		});
 	}
 
 	return { tool, outDir, tsconfig, output, configFile };
@@ -407,7 +357,7 @@ function detectBuildTool(
  */
 function resolveFuture(config: StarsFutureConfig, validator: Validator): ResolvedFutureConfig {
 	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
-		throw validator.error('`future` must be an object', 'future', 'INVALID_TYPE', 'Use `{ compatibilityVersion }`.');
+		throw validator.typeError('future', 'an object', config, 'Use `{ compatibilityVersion }`.');
 	}
 
 	validator.knownKeys(config, 'future', ['compatibilityVersion']);
@@ -415,12 +365,11 @@ function resolveFuture(config: StarsFutureConfig, validator: Validator): Resolve
 	if (version === undefined) return { compatibilityVersion: DEFAULT_COMPATIBILITY_VERSION };
 
 	if (typeof version !== 'number' || !COMPATIBILITY_VERSIONS.has(version)) {
-		throw validator.error(
-			`Unknown compatibility version ${describe(version)}`,
-			'future.compatibilityVersion',
-			'INVALID_COMPATIBILITY_VERSION',
-			`Use ${LEGACY_COMPATIBILITY_VERSION} for the legacy build pipeline or ${LATEST_COMPATIBILITY_VERSION} for today's defaults.`
-		);
+		throw validator.error(configDiagnostics.INVALID_COMPATIBILITY_VERSION, {
+			value: version,
+			legacyVersion: LEGACY_COMPATIBILITY_VERSION,
+			latestVersion: LATEST_COMPATIBILITY_VERSION
+		});
 	}
 
 	return { compatibilityVersion: version as StarsCompatibilityVersion };
@@ -433,12 +382,7 @@ function resolveFuture(config: StarsFutureConfig, validator: Validator): Resolve
  */
 function resolveExperimental(config: StarsExperimentalConfig, validator: Validator): ResolvedExperimentalConfig {
 	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
-		throw validator.error(
-			'`experimental` must be an object',
-			'experimental',
-			'INVALID_TYPE',
-			'Use `{ enableVite, enableExternalVite, enableNitro, nitro }`.'
-		);
+		throw validator.typeError('experimental', 'an object', config, 'Use `{ enableVite, enableExternalVite, enableNitro, nitro }`.');
 	}
 
 	validator.knownKeys(config, 'experimental', ['enableVite', 'enableExternalVite', 'enableNitro', 'nitro']);
@@ -447,34 +391,31 @@ function resolveExperimental(config: StarsExperimentalConfig, validator: Validat
 	const enableNitro = validator.boolean(config.enableNitro, 'experimental.enableNitro') ?? false;
 
 	if (enableExternalVite && !enableVite) {
-		throw validator.error(
-			'`experimental.enableExternalVite` needs `experimental.enableVite`',
-			'experimental.enableExternalVite',
-			'EXPERIMENT_REQUIRED',
-			'Set `experimental.enableVite` to true as well, or drop `enableExternalVite`.'
-		);
+		throw validator.error(configDiagnostics.EXPERIMENT_REQUIRED, {
+			path: 'experimental.enableExternalVite',
+			requires: 'experimental.enableVite',
+			drop: 'enableExternalVite'
+		});
 	}
 
 	if (enableNitro && !enableVite) {
-		throw validator.error(
-			'`experimental.enableNitro` needs `experimental.enableVite`',
-			'experimental.enableNitro',
-			'EXPERIMENT_REQUIRED',
-			'Set `experimental.enableVite` to true as well, or drop `enableNitro`.'
-		);
+		throw validator.error(configDiagnostics.EXPERIMENT_REQUIRED, {
+			path: 'experimental.enableNitro',
+			requires: 'experimental.enableVite',
+			drop: 'enableNitro'
+		});
 	}
 
 	const rawNitro = 'nitro' in config ? config.nitro : undefined;
 	if (rawNitro !== undefined && !enableNitro) {
-		throw validator.error(
-			'`experimental.nitro` needs `experimental.enableNitro`',
-			'experimental.nitro',
-			'EXPERIMENT_REQUIRED',
-			'Set `experimental.enableNitro` to true as well, or drop `nitro`.'
-		);
+		throw validator.error(configDiagnostics.EXPERIMENT_REQUIRED, {
+			path: 'experimental.nitro',
+			requires: 'experimental.enableNitro',
+			drop: 'nitro'
+		});
 	}
 	if (rawNitro !== undefined && (rawNitro === null || typeof rawNitro !== 'object' || Array.isArray(rawNitro))) {
-		throw validator.error('`experimental.nitro` must be an object', 'experimental.nitro', 'INVALID_TYPE', 'Use `{ preset }`.');
+		throw validator.typeError('experimental.nitro', 'an object', rawNitro, 'Use `{ preset }`.');
 	}
 	if (rawNitro) validator.knownKeys(rawNitro, 'experimental.nitro', ['preset']);
 	const preset = validator.string(rawNitro?.preset, 'experimental.nitro.preset') ?? 'node-server';
@@ -576,7 +517,7 @@ function resolveDev(
 		try {
 			new URL(url);
 		} catch {
-			throw validator.error(`Invalid URL "${url}"`, 'dev.url', 'INVALID_URL', 'Use an absolute URL such as http://localhost:3000.');
+			throw validator.error(configDiagnostics.INVALID_URL, { url, fix: 'Use an absolute URL such as http://localhost:3000.' });
 		}
 	} else {
 		// Mirrors Vite's and Nuxt's own dev servers: a URL is shown without any configuration. The exact host
@@ -614,10 +555,10 @@ function resolveTypecheck(
 	let requestedChecker = 'auto';
 	if (config !== true) {
 		if (config === null || typeof config !== 'object' || Array.isArray(config)) {
-			throw validator.error(
-				'`dev.typecheck` must be a boolean or an object',
+			throw validator.typeError(
 				'dev.typecheck',
-				'INVALID_TYPE',
+				'a boolean or an object',
+				config,
 				'Use `true` to type-check with the project tsconfig, `{ tsconfig }` to pick one, or `false` to disable it.'
 			);
 		}
@@ -626,12 +567,7 @@ function resolveTypecheck(
 		configured = validator.string(config.tsconfig, 'dev.typecheck.tsconfig');
 		requestedChecker = validator.string(config.checker, 'dev.typecheck.checker') ?? 'auto';
 		if (!TYPECHECKERS.has(requestedChecker)) {
-			throw validator.error(
-				`Unknown type checker "${requestedChecker}"`,
-				'dev.typecheck.checker',
-				'INVALID_TYPECHECKER',
-				"Use one of 'tsc', 'golar', 'tsz' or 'auto'."
-			);
+			throw validator.error(configDiagnostics.INVALID_TYPECHECKER, { checker: requestedChecker });
 		}
 	}
 
@@ -640,24 +576,14 @@ function resolveTypecheck(
 	if (configured !== undefined) {
 		const tsconfig = resolve(root, configured);
 		if (!isFile(tsconfig)) {
-			throw validator.error(
-				`The tsconfig file does not exist: ${tsconfig}`,
-				'dev.typecheck.tsconfig',
-				'TSCONFIG_NOT_FOUND',
-				'Point `dev.typecheck.tsconfig` to an existing tsconfig.json, relative to the project root.'
-			);
+			throw validator.error(configDiagnostics.TSCONFIG_EXPLICIT_NOT_FOUND, { tsconfig, path: 'dev.typecheck.tsconfig' });
 		}
 		return { enabled: true, tsconfig, checker };
 	}
 
 	const found = [join(root, 'src', 'tsconfig.json'), join(root, 'tsconfig.json')].find((candidate) => isFile(candidate)) ?? null;
 	if (!found) {
-		throw validator.error(
-			`Could not find a tsconfig.json in ${root}`,
-			'dev.typecheck',
-			'TSCONFIG_NOT_FOUND',
-			'Create src/tsconfig.json or tsconfig.json, or set `dev.typecheck.tsconfig`.'
-		);
+		throw validator.error(configDiagnostics.TSCONFIG_NOT_FOUND, { root, suggestion: 'dev.typecheck.tsconfig' });
 	}
 
 	return { enabled: true, tsconfig: found, checker };
@@ -687,10 +613,10 @@ function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): 
 		url = config;
 	} else if (config !== true) {
 		if (config === null || typeof config !== 'object' || Array.isArray(config)) {
-			throw validator.error(
-				'`dev.tunnel` must be a boolean, an https URL or an object',
+			throw validator.typeError(
 				'dev.tunnel',
-				'INVALID_TYPE',
+				'a boolean, an https URL or an object',
+				config,
 				'Use `true` for a cloudflared quick tunnel, an https URL you already serve, or `false` to disable it.'
 			);
 		}
@@ -708,16 +634,11 @@ function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): 
 	try {
 		parsed = new URL(url);
 	} catch {
-		throw validator.error(`Invalid URL "${url}"`, 'dev.tunnel', 'INVALID_URL', 'Use an absolute https URL such as https://bot.example.com.');
+		throw validator.error(configDiagnostics.INVALID_URL, { url, fix: 'Use an absolute https URL such as https://bot.example.com.' });
 	}
 
 	if (parsed.protocol !== 'https:') {
-		throw validator.error(
-			`The tunnel URL must be https, received "${url}"`,
-			'dev.tunnel',
-			'INVALID_URL',
-			'Discord only accepts an https interactions endpoint.'
-		);
+		throw validator.error(configDiagnostics.TUNNEL_URL_NOT_HTTPS, { url });
 	}
 
 	return { mode: 'url', url, path, updateEndpoint };
@@ -734,10 +655,10 @@ function resolveCodegen(root: string, config: NonNullable<StarsConfig['codegen']
 	}
 
 	if (config.i18n === null || typeof config.i18n !== 'object') {
-		throw validator.error(
-			'`codegen.i18n` must be an object or `false`',
+		throw validator.typeError(
 			'codegen.i18n',
-			'INVALID_TYPE',
+			'an object or `false`',
+			config.i18n,
 			'Use `{ locales, output }` to configure it or `false` to disable it.'
 		);
 	}
@@ -745,12 +666,7 @@ function resolveCodegen(root: string, config: NonNullable<StarsConfig['codegen']
 	validator.knownKeys(config.i18n, 'codegen.i18n', ['locales', 'output']);
 	const locales = resolve(root, validator.string(config.i18n.locales, 'codegen.i18n.locales') ?? DEFAULT_I18N_LOCALES);
 	if (!isDirectory(locales)) {
-		throw validator.error(
-			`The locales directory does not exist: ${locales}`,
-			'codegen.i18n.locales',
-			'LOCALES_NOT_FOUND',
-			'Point `codegen.i18n.locales` to the base locale directory, relative to the project root.'
-		);
+		throw validator.error(configDiagnostics.LOCALES_NOT_FOUND, { locales });
 	}
 
 	const output = resolve(root, validator.string(config.i18n.output, 'codegen.i18n.output') ?? DEFAULT_I18N_OUTPUT);
@@ -784,10 +700,10 @@ function resolveImports(
 	const forcedOn = config === true;
 	const options = forcedOn || config === undefined ? {} : config;
 	if (typeof options !== 'object' || options === null || Array.isArray(options)) {
-		throw validator.error(
-			'`imports` must be an object, `true` or `false`',
+		throw validator.typeError(
 			'imports',
-			'INVALID_TYPE',
+			'an object, `true` or `false`',
+			options,
 			'Use `{ dirs, presets, exclude, dts }`, `true` to enable with defaults, or `false` to disable.'
 		);
 	}
@@ -796,12 +712,7 @@ function resolveImports(
 
 	const requestedOn = forcedOn || validator.boolean(options.enabled, 'imports.enabled');
 	if (requestedOn && buildTool !== 'tsdown') {
-		throw validator.error(
-			'`imports` requires the `tsdown` build tool',
-			'imports.enabled',
-			'IMPORTS_REQUIRE_TSDOWN',
-			"Set `build.tool` to 'tsdown', or remove `imports`/set it to `false`."
-		);
+		throw validator.error(configDiagnostics.IMPORTS_REQUIRE_TSDOWN, {});
 	}
 
 	const dirs = (validator.stringArray(options.dirs, 'imports.dirs') ?? [...DEFAULT_IMPORTS_DIRS]).map((dir) => resolve(root, dir));
@@ -816,20 +727,19 @@ function resolveImports(
 class Validator {
 	public constructor(private readonly file: string | null) {}
 
-	public error(message: string, path: string, code: string, hint: string): ConfigError {
-		return new ConfigError(message, { code, path, hint, file: this.file });
+	private get sources(): string[] | undefined {
+		return this.file ? [this.file] : undefined;
+	}
+
+	public error<Handle extends (params: any) => Diagnostic>(handle: Handle, params: Parameters<Handle>[0]): Diagnostic {
+		return handle({ ...params, sources: this.sources });
 	}
 
 	public knownKeys(value: object, path: string, keys: readonly string[]): void {
 		for (const key of Object.keys(value)) {
 			if (keys.includes(key)) continue;
 			const fullPath = path ? `${path}.${key}` : key;
-			throw this.error(
-				`Unknown option \`${fullPath}\``,
-				fullPath,
-				'UNKNOWN_OPTION',
-				`Known options${path ? ` of \`${path}\`` : ''}: ${keys.join(', ')}.`
-			);
+			throw this.error(configDiagnostics.UNKNOWN_OPTION, { path: fullPath, parent: path, known: keys.join(', ') });
 		}
 	}
 
@@ -872,28 +782,22 @@ class Validator {
 		return value as Record<string, string>;
 	}
 
-	private typeError(path: string, expected: string, value: unknown): ConfigError {
-		return this.error(
-			`\`${path}\` must be ${expected}, received ${describe(value)}`,
+	/** A generic "wrong type" diagnostic. `fix` defaults to the standard "set it or remove it" wording. */
+	public typeError(path: string, expected: string, value: unknown, fix?: string): Diagnostic {
+		return this.error(configDiagnostics.INVALID_TYPE, {
 			path,
-			'INVALID_TYPE',
-			`Set \`${path}\` to ${expected} or remove it to use the default.`
-		);
+			expected,
+			value,
+			fix: fix ?? `Set \`${path}\` to ${expected} or remove it to use the default.`
+		});
 	}
-}
-
-function describe(value: unknown): string {
-	if (value === null) return 'null';
-	if (Array.isArray(value)) return 'an array';
-	if (typeof value === 'string') return `"${value}"`;
-	return typeof value === 'object' ? 'an object' : `${typeof value} ${String(value)}`;
 }
 
 function hasDependency(packageJson: PackageJsonLike | null, name: string): boolean {
 	return Boolean(packageJson?.dependencies?.[name] ?? packageJson?.devDependencies?.[name]);
 }
 
-function readPackageJson(root: string): PackageJsonLike | null {
+function readPackageJson(root: string, validator: Validator): PackageJsonLike | null {
 	const file = join(root, 'package.json');
 	if (!isFile(file)) return null;
 
@@ -901,9 +805,9 @@ function readPackageJson(root: string): PackageJsonLike | null {
 		const parsed: unknown = JSON.parse(readFileSync(file, 'utf-8'));
 		return parsed !== null && typeof parsed === 'object' ? (parsed as PackageJsonLike) : null;
 	} catch (error) {
-		throw new ConfigError(`Failed to parse ${file}: ${error instanceof Error ? error.message : String(error)}`, {
-			code: 'PACKAGE_JSON_INVALID',
-			hint: 'Fix the JSON syntax of the package.json file.',
+		throw validator.error(configDiagnostics.PACKAGE_JSON_INVALID, {
+			file,
+			message: error instanceof Error ? error.message : String(error),
 			cause: error
 		});
 	}

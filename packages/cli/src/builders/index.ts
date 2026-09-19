@@ -1,5 +1,5 @@
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-import { CliError } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import type { Builder } from './types.js';
 
 /**
@@ -10,10 +10,7 @@ import type { Builder } from './types.js';
  */
 export function assertSupportedExperiments(config: ResolvedStarsConfig): void {
 	if (config.experimental.enableNitro) {
-		throw new CliError('`experimental.enableNitro` is not implemented yet', {
-			code: 'EXPERIMENT_UNAVAILABLE',
-			hint: "Nitro needs the framework's Fetch adapter (wolfstar-project/stars-components#81); until it lands, use `build.tool` 'tsdown', 'vite' or 'tsc'."
-		});
+		throw cliDiagnostics.EXPERIMENT_UNAVAILABLE({});
 	}
 }
 

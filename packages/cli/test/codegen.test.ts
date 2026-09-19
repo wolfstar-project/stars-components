@@ -1,8 +1,8 @@
 import { PassThrough } from 'node:stream';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { Diagnostic } from 'nostics';
 import { runCodegen } from '../src/commands/codegen.js';
-import { CliError } from '../src/utils/errors.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 function capture(): { stream: PassThrough; text(): string } {
@@ -74,7 +74,7 @@ describe('runCodegen', () => {
 
 		const error = await runCodegen({ cwd: fixture.root, stdout: capture().stream, check: true }).catch((caught: unknown) => caught);
 
-		expect(error).toBeInstanceOf(CliError);
+		expect(error).toBeInstanceOf(Diagnostic);
 		expect(error).toMatchObject({ code: 'CODEGEN_OUTDATED' });
 	});
 });

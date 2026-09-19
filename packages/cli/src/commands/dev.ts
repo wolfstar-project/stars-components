@@ -5,7 +5,8 @@ import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
 import { LogFileWriter } from '../dev/log-file.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
-import { CliError, ExitCode, renderCrashReport } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
+import { ExitCode, renderCrashReport } from '../utils/errors.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { THEME_SETTINGS, isThemeSetting, readSavedTheme, resolveThemeSetting, saveTheme } from '../utils/theme.js';
 import { prepareProject } from './_shared.js';
@@ -18,7 +19,7 @@ export interface DevTaskOptions extends ProjectArgs {
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
 	if (options.theme !== undefined && !isThemeSetting(options.theme)) {
-		throw new CliError(`Unknown theme \`${options.theme}\`.`, { code: 'INVALID_THEME', hint: `Use one of: ${THEME_SETTINGS.join(', ')}.` });
+		throw cliDiagnostics.INVALID_THEME({ theme: options.theme, themes: THEME_SETTINGS.join(', ') });
 	}
 
 	// Dev mode applies to config evaluation, build plugins, and the supervised application — not only the child.

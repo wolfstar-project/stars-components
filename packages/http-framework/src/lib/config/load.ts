@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { StarsConfig } from '../../config.js';
-import { ConfigError } from './errors.js';
+import { configDiagnostics } from './errors.js';
 
 export const CONFIG_EXTENSIONS = ['ts', 'mts', 'cts', 'js', 'mjs', 'cjs'] as const;
 export const CONFIG_FILE_NAMES = CONFIG_EXTENSIONS.map((extension) => `stars.config.${extension}`);
@@ -42,10 +42,7 @@ export async function loadConfigFile(options: LoadConfigFileOptions): Promise<Lo
 	if (options.configFile) {
 		file = resolve(cwd, options.configFile);
 		if (!isFile(file)) {
-			throw new ConfigError(`Configuration file not found: ${file}`, {
-				code: 'CONFIG_NOT_FOUND',
-				hint: `Pass an existing file to --config, or create one of ${CONFIG_FILE_NAMES.join(', ')} in ${cwd}.`
-			});
+			throw configDiagnostics.CONFIG_NOT_FOUND({ file, cwd, names: CONFIG_FILE_NAMES.join(', ') });
 		}
 	} else {
 		file = discoverConfigFile(cwd);
@@ -73,20 +70,11 @@ export async function loadConfigFile(options: LoadConfigFileOptions): Promise<Lo
 		loaded = layer ? layer.config : result.config;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		throw new ConfigError(`Failed to load the configuration: ${message}`, {
-			code: 'CONFIG_LOAD_FAILED',
-			file,
-			hint: 'The file must be valid TypeScript/JavaScript and export the configuration as its default export.',
-			cause: error
-		});
+		throw configDiagnostics.CONFIG_LOAD_FAILED({ message, cause: error, sources: [file] });
 	}
 
 	if (loaded === null || typeof loaded !== 'object' || Array.isArray(loaded)) {
-		throw new ConfigError('The configuration file must export an object as its default export.', {
-			code: 'CONFIG_NOT_OBJECT',
-			file,
-			hint: "Use `export default defineConfig({ ... })` from '@wolfstar/http-framework/config'."
-		});
+		throw configDiagnostics.CONFIG_NOT_OBJECT({ sources: [file] });
 	}
 
 	return { configFile: file, config: loaded as StarsConfig };

@@ -2,7 +2,7 @@ import { displayPath, loadStarsConfig } from '@wolfstar/http-framework/config';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
-import { CliError, ExitCode } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import { shouldUseColor } from '../utils/output-mode.js';
 import { prepareProject } from './_shared.js';
 
@@ -37,10 +37,7 @@ export async function runPrepare(options: PrepareTaskOptions): Promise<void> {
 	}
 
 	if (result.status === 'outdated' || result.tsconfig.status === 'outdated') {
-		throw new CliError('The generated project files are out of date, run `stars prepare` to update it.', {
-			code: 'PREPARE_OUTDATED',
-			exitCode: ExitCode.Error
-		});
+		throw cliDiagnostics.PREPARE_OUTDATED({});
 	}
 }
 

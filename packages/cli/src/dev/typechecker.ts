@@ -1,8 +1,9 @@
 import type { ResolvedStarsConfig, StarsTypechecker } from '@wolfstar/http-framework/config';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import type { Diagnostic } from 'nostics';
 import { resolveTscBinary } from '../builders/tsc.js';
-import { CliError } from '../utils/errors.js';
+import { cliDiagnostics } from '../utils/diagnostics.js';
 import type { LogLevel } from '../utils/log-buffer.js';
 import { createLineSplitter } from '../utils/process-supervisor.js';
 import { resolveBinary } from '../utils/project.js';
@@ -170,7 +171,7 @@ export class Typechecker extends EventEmitter<TypecheckerEvents> {
 /**
  * Builds the command line of the configured type checker, resolved from the project's own `node_modules`.
  *
- * @throws {CliError} when the checker is not installed in the project.
+ * @throws {Diagnostic} when the checker is not installed in the project.
  */
 export function resolveTypecheckCommand(config: ResolvedStarsConfig): TypecheckCommand {
 	const { checker, tsconfig } = config.dev.typecheck;
@@ -207,9 +208,10 @@ export function resolveTypecheckCommand(config: ResolvedStarsConfig): TypecheckC
 
 const WATCH_ARGS = ['--noEmit', '--watch', '--preserveWatchOutput', '--pretty', 'false'] as const;
 
-function missing(config: ResolvedStarsConfig, name: string, install: string): CliError {
-	return new CliError(`"${name}" is not installed in ${config.root}`, {
-		code: 'DEPENDENCY_MISSING',
+function missing(config: ResolvedStarsConfig, name: string, install: string): Diagnostic {
+	return cliDiagnostics.DEPENDENCY_MISSING({
+		name,
+		root: config.root,
 		hint: `${install}, pick another \`dev.typecheck.checker\`, or set \`dev.typecheck\` to false.`
 	});
 }

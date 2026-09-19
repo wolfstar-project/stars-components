@@ -315,7 +315,7 @@ export interface StarsNitroConfig {
  *
  * `enableExternalVite`, `enableNitro` and `nitro` build on `enableVite` (and `nitro` on `enableNitro` too): the type
  * only accepts them once their prerequisite is `true`, so turning one on without the other is a type error here
- * instead of a `ConfigError` at load time.
+ * instead of a diagnostic at load time.
  */
 export type StarsExperimentalConfig =
 	| { enableVite?: false; enableExternalVite?: false; enableNitro?: false }
