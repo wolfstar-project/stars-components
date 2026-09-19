@@ -390,6 +390,21 @@ describe('stars.config', () => {
 			expect(error.message).toContain('"fast"');
 		});
 
+		test('rejects a root that does not exist', async () => {
+			const error = await expectConfigError("export default { root: 'nope' };");
+			expect(error.code).toBe('ROOT_NOT_FOUND');
+		});
+
+		test('rejects a malformed package.json', async () => {
+			const error = await expectConfigError('export default {};', { 'src/main.js': '', 'package.json': '{ invalid json' });
+			expect(error.code).toBe('PACKAGE_JSON_INVALID');
+		});
+
+		test('rejects a codegen.i18n.locales directory that does not exist', async () => {
+			const error = await expectConfigError("export default { codegen: { i18n: { locales: 'nope' } } };");
+			expect(error.code).toBe('LOCALES_NOT_FOUND');
+		});
+
 		test('rejects a missing entry', async () => {
 			const error = await expectConfigError("export default { entry: 'src/nope.ts' };");
 			expect(error.code).toBe('ENTRY_NOT_FOUND');

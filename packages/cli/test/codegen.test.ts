@@ -13,6 +13,7 @@ function capture(): { stream: PassThrough; text(): string } {
 }
 
 const FAKE_GENERATOR = "import { writeFileSync } from 'node:fs';\nwriteFileSync(process.argv[3], '// generated\\n');\n";
+const FAILING_GENERATOR = "process.stderr.write('boom');\nprocess.exit(1);\n";
 
 async function createProject(): Promise<Fixture> {
 	return createFixture({
@@ -76,5 +77,19 @@ describe('runCodegen', () => {
 
 		expect(error).toBeInstanceOf(Diagnostic);
 		expect(error).toMatchObject({ code: 'CODEGEN_OUTDATED' });
+	});
+
+	test('fails with an actionable error when the generator exits non-zero', async () => {
+		fixture = await createFixture({
+			'package.json': '{"name":"bot","type":"module"}',
+			'src/main.ts': '',
+			'src/locales/en-US/common.json': '{}',
+			'stars.config.mjs': "export default { imports: false, codegen: { i18n: { locales: 'src/locales', output: 'src/i18next.d.ts' } } };",
+			'node_modules/@wolfstar/i18next-type-generator/package.json':
+				'{"name":"@wolfstar/i18next-type-generator","main":"cli.mjs","type":"module"}',
+			'node_modules/@wolfstar/i18next-type-generator/cli.mjs': FAILING_GENERATOR
+		});
+
+		await expect(runCodegen({ cwd: fixture.root, stdout: capture().stream })).rejects.toMatchObject({ code: 'CODEGEN_FAILED' });
 	});
 });
