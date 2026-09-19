@@ -1,4 +1,4 @@
-import { createNitroConfig, createNitroViteConfig, defineNitroConfig, NITRO_ENTRY_ID } from '../src/index.js';
+import { createNitroConfig, createNitroViteConfig, defineNitroConfig, NITRO_ENTRY_ID, NITRO_ERROR_HANDLER_ID } from '../src/index.js';
 import { fixture } from './helpers.js';
 
 describe('Nitro configuration', () => {
@@ -23,6 +23,22 @@ describe('Nitro configuration', () => {
 			expect(config.output?.dir).toBe(f.config.build.outDir);
 			expect(config.serverEntry).toBe(NITRO_ENTRY_ID);
 			expect(config.virtual?.['#custom']).toBe('export default 1');
+		} finally {
+			await f.cleanup();
+		}
+	});
+	test('defaults the error handler to the Stars JSON handler, but respects an explicit one', async () => {
+		const f = await fixture(true);
+		try {
+			const config = createNitroConfig(f.config);
+			expect(config.errorHandler).toBe(NITRO_ERROR_HANDLER_ID);
+			expect(config.virtual?.[NITRO_ERROR_HANDLER_ID]).toBeTypeOf('function');
+
+			const overridden = createNitroConfig({
+				...f.config,
+				experimental: { ...f.config.experimental, nitro: { ...f.config.experimental.nitro, errorHandler: './my-handler.ts' } }
+			});
+			expect(overridden.errorHandler).toBe('./my-handler.ts');
 		} finally {
 			await f.cleanup();
 		}

@@ -38,7 +38,13 @@
 				"default": "./dist/esm/index.js"
 			}
 		},
-		"./package.json": "./package.json"
+		"./package.json": "./package.json",
+		"./runtime": {
+			"import": {
+				"types": "./dist/esm/runtime.d.ts",
+				"default": "./dist/esm/runtime.js"
+			}
+		}
 	},
 	"publishConfig": {
 		"access": "public",
