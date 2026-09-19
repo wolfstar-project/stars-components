@@ -20,14 +20,10 @@ async function sign(privateKey: CryptoKey, timestamp: string, body: string): Pro
 /**
  * `nitro` and `vite` are resolved from the project root through the project's own `node_modules` (see
  * `importFromProject`), so the fixture needs one — a symlink to this package's real `node_modules` gets there
- * without a real install. It has to sit outside `packages/cli` entirely, though (here, next to `packages/`
- * itself): Vite's `resolve.tsconfigPaths` (see `NitroBuilder`'s `~`/`@`/`~~`/`@@` aliases) silently stops finding
- * the fixture's own `tsconfig.json` once the fixture is nested inside the very directory its `node_modules`
- * symlink points at (`packages/cli/.fixture/node_modules` → `packages/cli/node_modules`) — a self-referential
- * layout no real project has, so a sibling of `packages/cli` avoids it instead of chasing why.
+ * without a real install.
  */
 async function createNitroFixture(publicKeyHex: string): Promise<{ root: string; cleanup(): Promise<void> }> {
-	const root = await mkdtemp(join(import.meta.dirname, '..', '..', '.nitro-fixture-'));
+	const root = await mkdtemp(join(import.meta.dirname, '.nitro-fixture-'));
 	await symlink(join(import.meta.dirname, '..', 'node_modules'), join(root, 'node_modules'), 'dir');
 	await mkdir(join(root, 'src'), { recursive: true });
 	await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'nitro-fixture', type: 'module' }));
