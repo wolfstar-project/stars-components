@@ -38,7 +38,13 @@
 				"default": "./dist/esm/index.js"
 			}
 		},
-		"./package.json": "./package.json"
+		"./package.json": "./package.json",
+		"./internal": {
+			"import": {
+				"types": "./dist/esm/internal.d.ts",
+				"default": "./dist/esm/internal.js"
+			}
+		}
 	},
 	"publishConfig": {
 		"access": "public",
@@ -49,10 +55,12 @@
 		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "golar tsc -p ../../tsconfig.json",
 		"lint": "oxlint src --fix",
-		"prepack": "pnpm run build"
+		"prepack": "pnpm run build",
+		"test": "vitest run"
 	},
 	"dependencies": {
-		"@wolfstar/schema": "workspace:^"
+		"@wolfstar/schema": "workspace:^",
+		"srvx": "^1.0.5"
 	},
 	"devDependencies": {
 		"@vitest/coverage-v8": "^4.1.11",

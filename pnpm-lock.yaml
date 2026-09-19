@@ -941,10 +941,19 @@ importers:
       '@wolfstar/schema':
         specifier: workspace:^
         version: link:../schema
+      '@wolfstar/vite-server':
+        specifier: workspace:^
+        version: link:../vite-server
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
+      picomatch:
+        specifier: ^4.0.4
+        version: 4.0.7
     devDependencies:
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
       '@vitest/coverage-v8':
         specifier: ^4.1.11
         version: 4.1.11(vitest@4.1.11)
@@ -1228,6 +1237,9 @@ importers:
       '@wolfstar/schema':
         specifier: workspace:^
         version: link:../schema
+      srvx:
+        specifier: ^1.0.5
+        version: 1.0.5
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^4.1.11
@@ -2648,6 +2660,9 @@ packages:
 
   '@types/node@22.15.21':
     resolution: {integrity: sha512-EV/37Td6c+MgKAbkcLG6vqZ2zEYHD7bvSrzqqs2RIhbA6w3x+Dqz8MZM3sP6kGTeLrdoOgKZe+Xja7tUB2DNkQ==}
+
+  '@types/picomatch@4.0.3':
+    resolution: {integrity: sha512-iG0T6+nYJ9FAPmx9SsUlnwcq1ZVRuCXcVEvWnntoPlrOpwtSTKNDC9uVAxTsC3PUvJ+99n4RpAcNgBbHX3JSnQ==}
 
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
@@ -6622,6 +6637,8 @@ snapshots:
   '@types/node@22.15.21':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/picomatch@4.0.3': {}
 
   '@types/react@19.3.0':
     dependencies:

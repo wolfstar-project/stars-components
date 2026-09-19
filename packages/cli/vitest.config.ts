@@ -10,6 +10,7 @@ export default mergeConfig(
 	defineProject({
 		resolve: {
 			alias: [
+				{ find: '@wolfstar/vite-server/internal', replacement: fileURLToPath(new URL('../vite-server/src/internal.ts', import.meta.url)) },
 				{ find: '@wolfstar/vite-server', replacement: fileURLToPath(new URL('../vite-server/src/index.ts', import.meta.url)) },
 				{ find: '@wolfstar/nitro-server', replacement: fileURLToPath(new URL('../nitro-server/src/index.ts', import.meta.url)) },
 				{

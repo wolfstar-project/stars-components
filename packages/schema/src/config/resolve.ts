@@ -73,6 +73,7 @@ export interface ResolvedDevConfig {
 }
 
 export interface ResolvedNitroConfig {
+	readonly [option: string]: unknown;
 	readonly preset: string;
 }
 
@@ -417,10 +418,9 @@ function resolveExperimental(config: StarsExperimentalConfig, validator: Validat
 	if (rawNitro !== undefined && (rawNitro === null || typeof rawNitro !== 'object' || Array.isArray(rawNitro))) {
 		throw validator.typeError('experimental.nitro', 'an object', rawNitro, 'Use `{ preset }`.');
 	}
-	if (rawNitro) validator.knownKeys(rawNitro, 'experimental.nitro', ['preset']);
 	const preset = validator.string(rawNitro?.preset, 'experimental.nitro.preset') ?? 'node-server';
 
-	return { enableVite, enableExternalVite, enableNitro, nitro: { preset } };
+	return { enableVite, enableExternalVite, enableNitro, nitro: { ...rawNitro, preset } };
 }
 
 function resolveBuildOutput(root: string, entry: string, outDir: string, packageJson: PackageJsonLike | null): string {

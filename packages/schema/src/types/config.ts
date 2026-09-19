@@ -290,6 +290,11 @@ export interface StarsImportsConfig {
  * — see {@link StarsExperimentalConfig}.
  */
 export interface StarsNitroConfig {
+	/** Additional Nitro options (routeRules, runtimeConfig, storage, publicAssets, hooks, etc.).
+	 * Use `defineNitroConfig` from `@wolfstar/nitro-server` for upstream option completion.
+	 * Stars owns rootDir, serverEntry, output.dir and the reserved virtual entry.
+	 */
+	[option: string]: unknown;
 	/**
 	 * `'node-server'` (the default, runs locally with plain `node`), `'cloudflare-module'`, `'aws-lambda'`,
 	 * `'vercel'`, `'netlify'`, `'bun'`, `'deno-deploy'`, and more — see Nitro's own preset list.
