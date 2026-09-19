@@ -1,6 +1,6 @@
 import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
 import { defineCommand } from 'citty';
-import { assertSupportedExperiments, createBuilder } from '../builders/index.js';
+import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
 import { LogFileWriter } from '../dev/log-file.js';
@@ -27,7 +27,6 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const config = await resolveDevConfig(
 		await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } })
 	);
-	assertSupportedExperiments(config);
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();
 	const theme = resolveThemeSetting({ flag: options.theme, saved: readSavedTheme() });

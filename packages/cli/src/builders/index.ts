@@ -1,26 +1,20 @@
 import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-import { cliDiagnostics } from '../utils/diagnostics.js';
 import type { Builder } from './types.js';
 
-/**
- * Fails on experiments the CLI cannot honour yet, before a command gets far enough to look like it worked.
- *
- * Called by `stars dev`/`stars build` up front, since a project whose build tool needs no build at all would
- * otherwise return early and never reach {@link createBuilder}.
- */
-export function assertSupportedExperiments(config: ResolvedStarsConfig): void {
-	if (config.experimental.enableNitro) {
-		throw cliDiagnostics.EXPERIMENT_UNAVAILABLE({});
-	}
-}
-
 export async function createBuilder(config: ResolvedStarsConfig): Promise<Builder> {
-	assertSupportedExperiments(config);
-
-	// The project runs its own build, so the CLI only watches what it writes (see `ExternalBuilder`).
+	// The project runs its own build, so the CLI only watches what it writes (see `ExternalBuilder`) — including when
+	// it is driving `vite build` with its own `nitro()` plugin itself; `build.output` already points at Nitro's
+	// `server/index.mjs` in that case (see `resolveBuild`).
 	if (config.experimental.enableExternalVite) {
 		const { ExternalBuilder } = await import('./external.js');
 		return new ExternalBuilder(config);
+	}
+
+	// Nitro is itself a Vite plugin — there is no separate `nitro build` step — so it is handled before the
+	// `build.tool` switch below, the same way `enableExternalVite` is.
+	if (config.experimental.enableNitro) {
+		const { NitroBuilder } = await import('./nitro.js');
+		return new NitroBuilder(config);
 	}
 
 	switch (config.build.tool) {

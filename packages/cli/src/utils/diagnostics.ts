@@ -60,11 +60,6 @@ export const cliDiagnostics = defineDiagnostics({
 		},
 		CODEGEN_FAILED: {
 			why: (p: { code: number | null; stderr: string }) => `i18next-type-generator exited with code ${p.code}${p.stderr ? `: ${p.stderr}` : ''}`
-		},
-		EXPERIMENT_UNAVAILABLE: {
-			why: (_p: {}) => '`experimental.enableNitro` is not implemented yet',
-			fix: (_p: {}) =>
-				"Nitro needs the framework's Fetch adapter (wolfstar-project/stars-components#81); until it lands, use `build.tool` 'tsdown', 'vite' or 'tsc'."
 		}
 	}
 });

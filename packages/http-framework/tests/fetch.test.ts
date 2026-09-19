@@ -1,6 +1,5 @@
 import { webcrypto } from 'node:crypto';
 import { InteractionType } from 'discord-api-types/v10';
-import { createFetchHandler } from '../src/fetch.js';
 import { Client } from '../src/lib/Client.js';
 
 async function generateDiscordKeyPair() {
@@ -15,22 +14,22 @@ async function sign(privateKey: CryptoKey, timestamp: string, body: string): Pro
 	return Buffer.from(signature).toString('hex');
 }
 
-describe('createFetchHandler', () => {
+describe('Client#fetch', () => {
 	test('verifies the signature and replies to a Ping the same way listen() does', async () => {
 		const { publicKeyHex, privateKey } = await generateDiscordKeyPair();
-		const client = new Client({ id: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
-		const handler = await createFetchHandler(client, { discordPublicKey: publicKeyHex, postPath: '/interactions' });
+		const client = new Client({ clientId: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
 
 		const timestamp = String(Math.floor(Date.now() / 1000));
 		const body = JSON.stringify({ type: InteractionType.Ping });
 		const signature = await sign(privateKey, timestamp, body);
 
-		const response = await handler(
+		const response = await client.fetch(
 			new Request('http://localhost/interactions', {
 				method: 'POST',
 				headers: { 'x-signature-ed25519': signature, 'x-signature-timestamp': timestamp, 'content-type': 'application/json' },
 				body
-			})
+			}),
+			{ postPath: '/interactions' }
 		);
 
 		expect(response.status).toBe(200);
@@ -40,15 +39,15 @@ describe('createFetchHandler', () => {
 
 	test('rejects a bad signature the same way listen() does', async () => {
 		const { publicKeyHex } = await generateDiscordKeyPair();
-		const client = new Client({ id: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
-		const handler = await createFetchHandler(client, { discordPublicKey: publicKeyHex, postPath: '/interactions' });
+		const client = new Client({ clientId: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
 
-		const response = await handler(
+		const response = await client.fetch(
 			new Request('http://localhost/interactions', {
 				method: 'POST',
 				headers: { 'x-signature-ed25519': '00'.repeat(64), 'x-signature-timestamp': '0' },
 				body: JSON.stringify({ type: InteractionType.Ping })
-			})
+			}),
+			{ postPath: '/interactions' }
 		);
 
 		expect(response.status).toBe(401);
@@ -56,10 +55,31 @@ describe('createFetchHandler', () => {
 
 	test('404s outside the configured path, 405s on the wrong method', async () => {
 		const { publicKeyHex } = await generateDiscordKeyPair();
-		const client = new Client({ id: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
-		const handler = await createFetchHandler(client, { discordPublicKey: publicKeyHex, postPath: '/interactions' });
+		const client = new Client({ clientId: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
 
-		expect((await handler(new Request('http://localhost/nope', { method: 'POST' }))).status).toBe(404);
-		expect((await handler(new Request('http://localhost/interactions', { method: 'GET' }))).status).toBe(405);
+		expect((await client.fetch(new Request('http://localhost/nope', { method: 'POST' }), { postPath: '/interactions' })).status).toBe(404);
+		expect((await client.fetch(new Request('http://localhost/interactions', { method: 'GET' }), { postPath: '/interactions' })).status).toBe(405);
+	});
+
+	test('reuses the same imported key across calls', async () => {
+		const { publicKeyHex, privateKey } = await generateDiscordKeyPair();
+		const client = new Client({ clientId: '1', discordToken: 'x', discordPublicKey: publicKeyHex });
+
+		for (let i = 0; i < 2; i++) {
+			const timestamp = String(Math.floor(Date.now() / 1000));
+			const body = JSON.stringify({ type: InteractionType.Ping });
+			const signature = await sign(privateKey, timestamp, body);
+
+			const response = await client.fetch(
+				new Request('http://localhost/interactions', {
+					method: 'POST',
+					headers: { 'x-signature-ed25519': signature, 'x-signature-timestamp': timestamp, 'content-type': 'application/json' },
+					body
+				}),
+				{ postPath: '/interactions' }
+			);
+
+			expect(response.status).toBe(200);
+		}
 	});
 });

@@ -89,7 +89,7 @@ describe('createBuilder', () => {
 		await builder.close();
 	});
 
-	test('refuses nitro until the framework can serve it', async () => {
+	test('uses NitroBuilder when the experiment is on', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
 			'tsconfig.json': '{}',
@@ -97,6 +97,20 @@ describe('createBuilder', () => {
 		});
 
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
-		await expect(createBuilder(config)).rejects.toMatchObject({ code: 'EXPERIMENT_UNAVAILABLE' });
+		const builder = await createBuilder(config);
+		expect(builder.tool).toBe('vite');
+		expect(builder.constructor.name).toBe('NitroBuilder');
+	});
+
+	test('prefers ExternalBuilder over NitroBuilder when both experiments are on', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsconfig.json': '{}',
+			'stars.config.mjs': 'export default { experimental: { enableVite: true, enableExternalVite: true, enableNitro: true } };'
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const builder = await createBuilder(config);
+		expect(builder.constructor.name).toBe('ExternalBuilder');
 	});
 });

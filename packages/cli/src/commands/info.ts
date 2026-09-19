@@ -127,6 +127,7 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),
 			row('nitro', flag(info.experimental.enableNitro, colors)),
+			...(info.experimental.enableNitro ? [row('nitro preset', info.experimental.nitro.preset)] : []),
 			row('external', flag(info.experimental.enableExternalVite, colors))
 		]),
 		section('Imports', [

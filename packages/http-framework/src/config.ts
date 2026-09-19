@@ -329,9 +329,8 @@ export type StarsExperimentalConfig =
 			/**
 			 * Runs the bot through Vite itself, the way `nuxt dev` runs on Vite's own dev server: instead of
 			 * building then restarting a child `node` process on every change, `stars dev` loads the entry through
-			 * Vite's SSR module graph and serves it — through `@wolfstar/http-framework/fetch`'s
-			 * `createFetchHandler` — from one long-lived process, invalidating and re-evaluating just the entry's
-			 * module graph on a change instead of restarting.
+			 * Vite's SSR module graph and serves it — through `Client#fetch` — from one long-lived process,
+			 * invalidating and re-evaluating just the entry's module graph on a change instead of restarting.
 			 *
 			 * With this on, the entry's default export must be the `Client` instance (already `load()`ed, not
 			 * `listen()`ed) rather than a script that calls `client.listen()` itself — `stars dev` owns the socket.
@@ -346,12 +345,14 @@ export type StarsExperimentalConfig =
 			/**
 			 * Builds the bot through [Nitro](https://nitro.build) instead of a `node:http` server, so `stars build`
 			 * produces a server deployable to any of Nitro's presets (`node-server` locally, `cloudflare-module`,
-			 * `aws-lambda`, `vercel`, `netlify`, `bun`, `deno-deploy`, and more) from the same
-			 * `@wolfstar/http-framework/fetch` handler `enableExternalVite` already runs in dev — no per-platform
-			 * adapter to maintain.
+			 * `aws-lambda`, `vercel`, `netlify`, `bun`, `deno-deploy`, and more). Nitro v3 is itself a Vite plugin, so
+			 * this builds through the project's own `vite.config.*`/{@link StarsConfig.vite} the same way `build.tool:
+			 * 'vite'` does, with a generated server entry that wraps the entry's default export (the `Client`
+			 * instance, already `load()`ed rather than `listen()`ed — `stars build`/`stars dev` own the socket) in a
+			 * call to `Client#fetch` — no per-preset adapter to maintain.
 			 *
-			 * Output goes to `.output/` (Nitro's own convention) instead of `build.outDir`. The entry's default
-			 * export must be the `Client` instance, the same as `enableExternalVite`.
+			 * Output goes to `.output/` (Nitro's own convention) instead of `build.outDir`. `stars dev` rebuilds and
+			 * restarts on every change, the same as the other build tools.
 			 */
 			enableNitro: true;
 			/** Nitro-specific options, reachable only with `enableNitro: true`. */

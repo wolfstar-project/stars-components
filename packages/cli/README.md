@@ -203,11 +203,11 @@ and which options the block sets.
 `experimental` in `stars.config.*` turns on work that is still landing (see the
 [framework README](../http-framework#experimental-flags) for the full reference):
 
-| Flag                 | What it changes                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------------ |
-| `enableVite`         | Builds through the project's own `vite` (and allows `build.tool: 'vite'`) instead of `tsdown`          |
-| `enableExternalVite` | The project runs Vite itself; `stars dev` only watches the build output and restarts the bot           |
-| `enableNitro`        | Declared, not implemented: `stars dev`/`stars build` fail with `EXPERIMENT_UNAVAILABLE` until it lands |
+| Flag                 | What it changes                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `enableVite`         | Builds through the project's own `vite` (and allows `build.tool: 'vite'`) instead of `tsdown`                             |
+| `enableExternalVite` | The project runs Vite itself; `stars dev` only watches the build output and restarts the bot                              |
+| `enableNitro`        | Builds through [Nitro](https://nitro.build) (itself a Vite plugin) instead of `node:http`, deployable to any Nitro preset |
 
 `stars info` prints which flags are on.
 

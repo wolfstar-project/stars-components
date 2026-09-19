@@ -27,6 +27,17 @@ export async function prepareTsconfig(config: ResolvedStarsConfig, check = false
 			paths[alias] = [resolved];
 			paths[`${alias}/*`] = [`${resolved}/*`];
 		}
+	} else if (config.experimental.enableNitro) {
+		// `NitroBuilder` turns on Vite's native `resolve.tsconfigPaths` (see https://nitro.build/examples/import-alias),
+		// which reads these `paths` straight out of the generated tsconfig — no `tsdown.alias` equivalent to merge
+		// with, `vite`/Nitro projects only have this file's own `compilerOptions.paths` to extend or replace.
+		const source = dirname(config.entry);
+		const defaults = { '~': source, '@': source, '~~': config.root, '@@': config.root };
+		for (const [alias, target] of Object.entries(defaults)) {
+			const resolved = fromGenerated(resolve(config.root, target));
+			paths[alias] = [resolved];
+			paths[`${alias}/*`] = [`${resolved}/*`];
+		}
 	}
 	const content = `${JSON.stringify(
 		{
