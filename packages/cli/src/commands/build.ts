@@ -1,7 +1,7 @@
 import { displayPath, loadStarsConfig } from '@wolfstar/http-framework/config';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
-import { assertSupportedExperiments, createBuilder } from '../builders/index.js';
+import { createBuilder } from '../builders/index.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { Locales } from '../utils/locales.js';
@@ -16,7 +16,6 @@ export async function runBuild(options: BuildTaskOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: shouldUseColor() });
 	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
-	assertSupportedExperiments(config);
 	await prepareProject(config);
 
 	if (config.build.tool === 'none') {
