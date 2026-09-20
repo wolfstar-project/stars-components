@@ -475,9 +475,24 @@ client.on(Events.HmrPieceReloaded, async (piece) => {
 
 ### Project configuration (`stars.config.*`)
 
-`@wolfstar/http-framework` owns the typed project configuration consumed by the [`stars` CLI](../cli) — the
-`defineConfig` helper and the config loader live here, not in the CLI, so any tool can resolve a project's
-configuration without pulling in `@wolfstar/cli`.
+The typed project configuration consumed by the [`stars` CLI](../cli) — the `defineConfig` helper and the config
+loader — lives in [`@wolfstar/schema`](../schema), a small package shared by `@wolfstar/http-framework`
+and `@wolfstar/cli` so neither depends on the other's runtime. `@wolfstar/http-framework` re-exports its public
+surface unchanged as `@wolfstar/http-framework/config`, so any tool can resolve a project's configuration without
+pulling in `@wolfstar/cli` — most projects should keep importing it from here rather than depending on
+`@wolfstar/schema` directly.
+
+The package also exposes `@wolfstar/http-framework/schema`, forwarding the shared schema's types and loader,
+like Nuxt's `nuxt/schema`. Both facades preserve the same exports and function identities; existing `/config`
+imports remain supported. Tooling can read the package metadata through `@wolfstar/http-framework/package.json`.
+
+```typescript
+import type { StarsConfig, ResolvedStarsConfig } from '@wolfstar/http-framework/schema';
+```
+
+Installing `@wolfstar/http-framework` also gives a project the `stars` binary (it depends on `@wolfstar/cli` and
+exposes it as `stars`, the way `nuxt` exposes `nuxi`'s binary), so a project needs no separate `@wolfstar/cli`
+install to run `stars dev`/`stars build`.
 
 ```typescript
 // stars.config.ts

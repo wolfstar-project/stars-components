@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import type { ReactNode } from 'react';
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import type { DevStatus } from '../../../dev-service.js';
 import { readOwnPackageJson } from '../../../../utils/version.js';
 import type { LogCounters } from '../hooks/useLogCounters.js';

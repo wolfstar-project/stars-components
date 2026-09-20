@@ -1,0 +1,74 @@
+{
+	"name": "@wolfstar/schema",
+	"version": "0.1.0",
+	"description": "Typed stars.config.* schema and loader shared by @wolfstar/http-framework and @wolfstar/cli",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"pnpm",
+		"stars",
+		"ts",
+		"typescript",
+		"wolfstar"
+	],
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/schema"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./config": {
+			"import": {
+				"types": "./dist/esm/config.d.ts",
+				"default": "./dist/esm/config.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"c12": "^3.3.4",
+		"nostics": "^1.2.0"
+	},
+	"devDependencies": {
+		"@vitest/coverage-v8": "^4.1.11",
+		"golar": "^0.1.10",
+		"tsdown": "^0.23.0",
+		"typescript": "~7.0.2",
+		"vitest": "^4.1.11"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

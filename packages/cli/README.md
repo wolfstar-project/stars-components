@@ -12,9 +12,14 @@
 ## Description
 
 `stars` is a small, fast CLI that owns the developer workflow of a bot built with `@wolfstar/http-framework`. Like
-Nuxt splits `nuxt.config`/`defineNuxtConfig` (owned by the `nuxt` framework) from `nuxi` (a separate CLI package that
-calls into it), the typed `stars.config.*` schema and loader live in [`@wolfstar/http-framework`](../http-framework)
-(`@wolfstar/http-framework/config`) — this package only consumes it to drive its commands:
+Nuxt splits `nuxt.config`/`defineNuxtConfig` (owned by `@nuxt/schema`, which both `nuxt` and the separate `@nuxt/cli`
+package depend on) from `nuxi`, the typed `stars.config.*` schema and loader live in their own package,
+[`@wolfstar/schema`](../schema), which both [`@wolfstar/http-framework`](../http-framework) (re-exported
+as `@wolfstar/http-framework/config`) and this package depend on — this package only consumes it to drive its
+commands. `@wolfstar/http-framework` also depends on this package and exposes it as its own `stars` binary (the way
+`nuxt` exposes `nuxi`'s), so installing it is enough to get `stars` without a separate `@wolfstar/cli` install; this
+package has no install-time dependency on `@wolfstar/http-framework` in return, the same way `@nuxt/cli` has none on
+`nuxt` — its own commands:
 
 - `stars dev` builds the project, starts the bot, restarts it on changes and shows what is happening in an interactive terminal UI (or plain logs).
 - `stars build` runs the configured build tool once.
@@ -30,6 +35,10 @@ Everything is driven by a typed `stars.config.ts` file.
 ```sh
 pnpm add -D @wolfstar/cli
 ```
+
+Installing [`@wolfstar/http-framework`](../http-framework) already gives a project the `stars` binary, so this
+explicit install is only needed to depend on this package directly — for its programmatic exports (`loadStarsConfig`,
+diagnostics), or to pin its version independently of the framework's.
 
 Projects scaffolded with [`@wolfstar/create-http-framework`](../create-http-framework) come with `@wolfstar/cli`, a `stars.config.ts` file and `dev`/`build` scripts already wired up.
 
@@ -257,3 +266,11 @@ location. Explicit `include` or `compilerOptions.paths` in your own tsconfig rep
 remove manually duplicated paths to use the generated aliases. Generation works with `imports: false` too.
 Use `stars prepare --check` to check both generated files without writing them. Do not edit `.stars/tsconfig.json`
 by hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.
+
+## Server integrations
+
+`@wolfstar/vite-server` and `@wolfstar/nitro-server` provide the Vite and Nitro builders. The CLI loads the
+selected integration lazily, passes the resolved `stars.config` and supplies project dependency loading and
+plugin registration through `BuilderContext` from `@wolfstar/schema`. Neither server package depends on the CLI
+or framework. Existing experimental flags, presets, output directories and `stars dev`/`stars build` commands
+are unchanged; install Vite/Nitro in the consuming project as before.

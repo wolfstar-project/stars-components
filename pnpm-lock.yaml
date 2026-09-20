@@ -510,9 +510,15 @@ importers:
       '@sapphire/ts-config':
         specifier: ^5.0.3
         version: 5.0.3
-      '@wolfstar/http-framework':
+      '@wolfstar/nitro-server':
         specifier: workspace:^
-        version: link:../http-framework
+        version: link:../nitro-server
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
+      '@wolfstar/vite-server':
+        specifier: workspace:^
+        version: link:../vite-server
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -525,6 +531,9 @@ importers:
       ink:
         specifier: ^7.1.1
         version: 7.1.1(@types/react@19.3.0)(react@19.3.0)
+      mlly:
+        specifier: ^1.8.2
+        version: 1.8.2
       my-bad:
         specifier: ^0.2.2
         version: 0.2.3(vite@8.3.0)
@@ -727,9 +736,12 @@ importers:
       '@vladfrangu/async_event_emitter':
         specifier: ^2.4.7
         version: 2.4.7
-      c12:
-        specifier: ^3.3.4
-        version: 3.3.4(magicast@0.5.5)
+      '@wolfstar/cli':
+        specifier: workspace:^
+        version: link:../cli
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
@@ -739,9 +751,6 @@ importers:
       mlly:
         specifier: ^1.8.2
         version: 1.8.2
-      nostics:
-        specifier: ^1.2.0
-        version: 1.2.0
       unimport:
         specifier: ^7.0.2
         version: 7.0.2(acorn@8.18.0)(oxc-parser@0.148.0)(rolldown@1.2.9)(vite@8.3.0)
@@ -927,6 +936,46 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
+  packages/nitro-server:
+    dependencies:
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
+      '@wolfstar/vite-server':
+        specifier: workspace:^
+        version: link:../vite-server
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+      picomatch:
+        specifier: ^4.0.4
+        version: 4.0.7
+    devDependencies:
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      nitro:
+        specifier: ^3.0.260903-beta
+        version: 3.0.260903-beta
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.2
+        version: 8.3.0(@types/node@22.15.21)(jiti@2.7.0)(yaml@2.9.1)
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
+
   packages/oxfmt-config:
     devDependencies:
       golar:
@@ -1028,6 +1077,31 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
+
+  packages/schema:
+    dependencies:
+      c12:
+        specifier: ^3.3.4
+        version: 3.3.4(magicast@0.5.5)
+      nostics:
+        specifier: ^1.2.0
+        version: 1.2.0
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
   packages/shared-http-pieces:
     dependencies:
@@ -1157,6 +1231,34 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
+
+  packages/vite-server:
+    dependencies:
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
+      srvx:
+        specifier: ^1.0.5
+        version: 1.0.5
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^4.1.11
+        version: 4.1.11(vitest@4.1.11)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.2.2
+        version: 8.3.0(@types/node@22.15.21)(jiti@2.7.0)(yaml@2.9.1)
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@4.1.11)(vite@8.3.0)
 
   packages/weather-helpers:
     dependencies:
@@ -2558,6 +2660,9 @@ packages:
 
   '@types/node@22.15.21':
     resolution: {integrity: sha512-EV/37Td6c+MgKAbkcLG6vqZ2zEYHD7bvSrzqqs2RIhbA6w3x+Dqz8MZM3sP6kGTeLrdoOgKZe+Xja7tUB2DNkQ==}
+
+  '@types/picomatch@4.0.3':
+    resolution: {integrity: sha512-iG0T6+nYJ9FAPmx9SsUlnwcq1ZVRuCXcVEvWnntoPlrOpwtSTKNDC9uVAxTsC3PUvJ+99n4RpAcNgBbHX3JSnQ==}
 
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
@@ -6532,6 +6637,8 @@ snapshots:
   '@types/node@22.15.21':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/picomatch@4.0.3': {}
 
   '@types/react@19.3.0':
     dependencies:

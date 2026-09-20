@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';

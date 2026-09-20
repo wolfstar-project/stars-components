@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import type { StarsConfig } from '../../config.js';
+import type { StarsConfig } from '../types/config.js';
 import { configDiagnostics } from './errors.js';
 
 export const CONFIG_EXTENSIONS = ['ts', 'mts', 'cts', 'js', 'mjs', 'cjs'] as const;

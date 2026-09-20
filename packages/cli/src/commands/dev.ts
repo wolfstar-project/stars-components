@@ -1,4 +1,4 @@
-import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev/dev-service.js';

@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { stripVTControlCharacters } from 'node:util';
 
 export type LogSource = 'stars' | 'build' | 'app' | 'tsc' | 'tunnel';
-export type LogLevel = 'debug' | 'info' | 'success' | 'warn' | 'error';
+export type LogLevel = import('@wolfstar/schema').BuilderLogLevel;
 
 export interface LogEntry {
 	readonly id: number;

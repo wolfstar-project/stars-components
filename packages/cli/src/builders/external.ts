@@ -1,7 +1,7 @@
-import type { ResolvedStarsConfig, StarsBuildTool } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig, StarsBuildTool } from '@wolfstar/schema';
 import { dirname } from 'node:path';
 import { EventEmitter } from 'node:events';
-import { displayPath } from '@wolfstar/http-framework/config';
+import { displayPath } from '@wolfstar/schema';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
 
 /**

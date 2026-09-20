@@ -13,3 +13,5 @@ package:
     - '@wolfstar/start-banner'
     - '@wolfstar/twitch-helpers'
     - '@wolfstar/weather-helpers'
+    - '@wolfstar/nitro-server'
+    - '@wolfstar/vite-server'

@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/http-framework/config';
+import { loadStarsConfig } from '@wolfstar/schema';
 import { TscBuilder } from '../src/builders/tsc.js';
 import { createFixture, type Fixture } from './helpers.js';
 

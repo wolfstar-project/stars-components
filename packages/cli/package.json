@@ -42,6 +42,11 @@
 				"default": "./dist/index.js"
 			}
 		},
+		"./cli": {
+			"import": {
+				"default": "./dist/cli.js"
+			}
+		},
 		"./package.json": "./package.json"
 	},
 	"publishConfig": {
@@ -59,11 +64,14 @@
 	"dependencies": {
 		"@clack/prompts": "^1.8.0",
 		"@sapphire/ts-config": "^5.0.3",
-		"@wolfstar/http-framework": "workspace:^",
+		"@wolfstar/nitro-server": "workspace:^",
+		"@wolfstar/schema": "workspace:^",
+		"@wolfstar/vite-server": "workspace:^",
 		"chokidar": "^5.0.0",
 		"citty": "^0.2.2",
 		"colorette": "^2.0.20",
 		"ink": "^7.1.1",
+		"mlly": "^1.8.2",
 		"my-bad": "^0.2.2",
 		"nostics": "^1.2.0",
 		"react": "^19.3.0",
