@@ -1,4 +1,4 @@
-import { displayPath, loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { displayPath, loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { spawn } from 'node:child_process';

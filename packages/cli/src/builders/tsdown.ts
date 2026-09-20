@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { dirname, extname, relative, resolve } from 'node:path';
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
+import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { pluginRegistrations } from '../utils/plugin-registrations.js';
 import { importFromProject } from '../utils/project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
@@ -161,7 +162,7 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 	async #plugins(): Promise<unknown[]> {
 		if (!this.config.imports.enabled) return [];
 
-		const { autoImports } = await import('@wolfstar/http-framework/auto-imports');
+		const { autoImports } = await loadAutoImportsModule(this.config.root);
 		const { dirs, presets, exclude, dts } = this.config.imports;
 		return [await autoImports({ root: this.config.root, dirs, presets, exclude, dts })];
 	}

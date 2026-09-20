@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import type { LogLevel } from './log-buffer.js';
 
 export interface LocalesEvents {

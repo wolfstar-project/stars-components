@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from '../builders/types.js';
-import { displayPath, type ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import { displayPath, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from '../utils/log-buffer.js';
 import { Locales } from '../utils/locales.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from '../utils/process-supervisor.js';

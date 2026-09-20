@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig } from '@wolfstar/http-framework/config';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { cliDiagnostics } from './diagnostics.js';
 import { readDiscordCredentials } from '../dev/tunnel.js';
 

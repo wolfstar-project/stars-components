@@ -10,13 +10,19 @@ export default mergeConfig(
 	defineProject({
 		resolve: {
 			alias: [
+				{ find: '@wolfstar/vite-server/internal', replacement: fileURLToPath(new URL('../vite-server/src/internal.ts', import.meta.url)) },
+				{ find: '@wolfstar/vite-server', replacement: fileURLToPath(new URL('../vite-server/src/index.ts', import.meta.url)) },
+				{ find: '@wolfstar/nitro-server', replacement: fileURLToPath(new URL('../nitro-server/src/index.ts', import.meta.url)) },
 				{
 					// The CI `unit` job runs tests without building first; alias to source like
 					// packages/http-framework/vitest.config.ts does for its own workspace deps.
-					find: '@wolfstar/http-framework/config',
-					replacement: fileURLToPath(new URL('../http-framework/src/config.ts', import.meta.url))
+					find: '@wolfstar/schema',
+					replacement: fileURLToPath(new URL('../schema/src/index.ts', import.meta.url))
 				},
 				{
+					// Not a dependency of this package (see utils/framework-auto-imports.ts): `@wolfstar/cli` has no
+					// install-time edge to `@wolfstar/http-framework`, the way `@nuxt/cli` has none to `nuxt`. Aliased
+					// here purely so the specifier resolves in tests without a `pnpm build` first.
 					find: '@wolfstar/http-framework/auto-imports',
 					replacement: fileURLToPath(new URL('../http-framework/src/auto-imports.ts', import.meta.url))
 				}
