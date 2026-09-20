@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/oxfmt-config",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Shareable oxfmt base configuration for Star Network packages",
 	"keywords": [
 		"config",
