@@ -62,7 +62,7 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@clack/prompts": "^1.8.0",
+		"@clack/prompts": "^1.8.1",
 		"@sapphire/ts-config": "^5.0.3",
 		"@wolfstar/nitro-server": "workspace:^",
 		"@wolfstar/schema": "workspace:^",
@@ -85,7 +85,7 @@
 		"nitro": "^3.0.260903-beta",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
-		"vite": "^8.2.2",
+		"vite": "^8.3.0",
 		"vitest": "^4.1.11"
 	},
 	"peerDependencies": {
