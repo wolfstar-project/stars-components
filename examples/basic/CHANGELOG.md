@@ -1,5 +1,12 @@
 # basic
 
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`7f15974`](https://github.com/wolfstar-project/stars-components/commit/7f159741397a26412ba4cd7f0b5b1d5324326335)]:
+    - @wolfstar/shared-http-pieces@2.0.6
+
 ## 0.0.17
 
 ### Patch Changes
