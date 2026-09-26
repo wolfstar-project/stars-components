@@ -1,5 +1,5 @@
 import { Command, RegisterCommand, RegisterSubcommand } from '@wolfstar/http-framework';
-import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/http-framework-i18n';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
 import { ApplicationIntegrationType, InteractionContextType } from 'discord-api-types/v10';
 
 @RegisterCommand((builder) =>
@@ -14,9 +14,9 @@ export class UserCommand extends Command {
 			.addNumberOption((option) => applyLocalizedBuilder(option, 'commands/math:optionsRight').setRequired(true))
 	)
 	public add(interaction: Command.ChatInputInteraction, { left, right }: Options) {
-		const t = getSupportedUserLanguageT(interaction, 'commands/math');
+		const t = getSupportedUserLanguageT(interaction);
 		return interaction.reply({
-			content: t('result', { left, right, result: left + right })
+			content: t('commands/math:result', { left, right, result: left + right })
 		});
 	}
 
@@ -26,9 +26,9 @@ export class UserCommand extends Command {
 			.addNumberOption((option) => applyLocalizedBuilder(option, 'commands/math:optionsRight').setRequired(true))
 	)
 	public subtract(interaction: Command.ChatInputInteraction, { left, right }: Options) {
-		const t = getSupportedUserLanguageT(interaction, 'commands/math');
+		const t = getSupportedUserLanguageT(interaction);
 		return interaction.reply({
-			content: t('result', { left, right, result: left - right })
+			content: t('commands/math:result', { left, right, result: left - right })
 		});
 	}
 }

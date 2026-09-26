@@ -1,7 +1,8 @@
 # with-i18n
 
-Full `http-framework-i18n` flow: `LanguageKeys` with `T`/`FT`, `applyLocalizedBuilder`,
-and locale JSON under `src/locales/{{lng}}/{{ns}}.json`.
+Full [`@wolfstar/plugin-i18next`](https://www.npmjs.com/package/@wolfstar/plugin-i18next) flow: the `i18n` client
+option, `applyLocalizedBuilder`, `getSupportedUserLanguageT`, and locale JSON under
+`src/locales/{{lng}}/{{ns}}.json`.
 
 Ships `en-US` and `es-ES`. Change your Discord client language (or the guild preferred
 locale) to see `/greet` switch.
@@ -11,5 +12,5 @@ cp .env.example src/.env
 pnpm --filter with-i18n dev
 ```
 
-The create CLI `--i18n` flag only adds the dependency; this example shows the full
-`load` → `init` → `resolveUserKey` path.
+The plugin is activated by the `stars` CLI (it is a runtime dependency with a `register` entry) and by
+`@wolfstar/shared-http-pieces/register`; its `preLoad` hook initializes i18next before the commands are localized.

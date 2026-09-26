@@ -1,5 +1,5 @@
 import { Command, RegisterCommand } from '@wolfstar/http-framework';
-import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/http-framework-i18n';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
 import { ApplicationIntegrationType, InteractionContextType, MessageFlags } from 'discord-api-types/v10';
 
 @RegisterCommand((builder) =>
@@ -9,9 +9,9 @@ import { ApplicationIntegrationType, InteractionContextType, MessageFlags } from
 )
 export class UserCommand extends Command {
 	public override chatInputRun(interaction: Command.ChatInputInteraction) {
-		const t = getSupportedUserLanguageT(interaction, 'commands/ping');
+		const t = getSupportedUserLanguageT(interaction);
 		return interaction.reply({
-			content: t('reply'),
+			content: t('commands/ping:reply'),
 			flags: MessageFlags.Ephemeral
 		});
 	}

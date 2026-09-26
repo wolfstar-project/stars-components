@@ -19,22 +19,22 @@
 		"examples/*": {
 			"entry": ["src/**/*.{ts,js}"],
 			"project": ["src/**/*.{ts,js}"],
-			"ignoreDependencies": ["@sapphire/pieces"]
+			"ignoreDependencies": ["@wolfstar/cli", "tsdown", "vite", "nitro"]
 		},
 		"examples/basic": {
 			"entry": ["src/**/*.ts", "stars.config.ts"],
-			"project": ["src/**/*.ts", "stars.config.ts"],
-			"ignoreDependencies": ["@sapphire/pieces", "@wolfstar/cli", "tsdown"]
+			"project": ["src/**/*.ts"],
+			"ignoreDependencies": ["@wolfstar/cli", "tsdown"]
 		},
 		"examples/with-subcommands": {
-			"entry": ["src/**/*.ts"],
-			"project": ["src/**/*.ts", "tsdown.config.ts"],
-			"ignoreDependencies": ["@sapphire/pieces"]
+			"entry": ["src/**/*.ts", "stars.config.ts"],
+			"project": ["src/**/*.ts"],
+			"ignoreDependencies": ["@wolfstar/cli", "tsdown"]
 		},
 		"examples/with-i18n": {
-			"entry": ["src/**/*.ts"],
-			"project": ["src/**/*.ts", "tsdown.config.ts"],
-			"ignoreDependencies": ["@sapphire/pieces"]
+			"entry": ["src/**/*.ts", "stars.config.ts"],
+			"project": ["src/**/*.ts"],
+			"ignoreDependencies": ["@wolfstar/cli", "tsdown"]
 		},
 		"examples/with-testing": {
 			"entry": ["src/**/*.ts", "tests/**/*.ts"],
