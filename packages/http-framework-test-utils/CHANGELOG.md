@@ -1,5 +1,11 @@
 # @wolfstar/http-framework-test-utils
 
+## 4.0.0
+
+### Major Changes
+
+- [#179](https://github.com/wolfstar-project/stars-components/pull/179) [`ffd7670`](https://github.com/wolfstar-project/stars-components/commit/ffd76705fd3a09120a0e18a5205fc7f71be6f871) - Require `vitest >=5.0.0` as optional peer dependency. The `Assertion` augmentation in `@wolfstar/http-framework-test-utils/vitest` now matches Vitest 5's `Assertion<R, T>` type parameters. Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 3.0.9
 
 ### Patch Changes
