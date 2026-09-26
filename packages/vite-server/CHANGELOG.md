@@ -1,5 +1,11 @@
 # @wolfstar/vite-server
 
+## 0.2.2
+
+### Patch Changes
+
+- [#222](https://github.com/wolfstar-project/stars-components/pull/222) [`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d) - fix: only auto-register installed `@wolfstar/plugin-*` packages that export a `/register` entrypoint, so library packages such as `@wolfstar/plugin-cache`, `@wolfstar/plugin-gateway` and `@wolfstar/plugin-sharder` no longer break `stars build`/`stars dev` ([#217](https://github.com/wolfstar-project/stars-components/issues/217)) Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.2.1
 
 ### Patch Changes

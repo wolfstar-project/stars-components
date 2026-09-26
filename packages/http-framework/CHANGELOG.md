@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.1.1
+
+### Patch Changes
+
+- [#222](https://github.com/wolfstar-project/stars-components/pull/222) [`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d) - fix(auto-imports): stop auto-importing `@wolfstar/env-utilities`' `setup`, which clashed with the `setup()` scaffolded projects export from `src/lib/setup/all.ts` and printed a duplicated import warning on every build ([#219](https://github.com/wolfstar-project/stars-components/issues/219)) Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 5.1.0
 
 ### Minor Changes
