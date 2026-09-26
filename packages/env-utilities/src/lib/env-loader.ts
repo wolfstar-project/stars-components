@@ -83,7 +83,7 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	const suffixes = [`.${env}.local`, ...(process.env.NODE_ENV === 'test' ? [] : ['.local']), `.${env}`, ''];
 	// Specific files win over generic ones, while `src/.env*` wins over the corresponding root file. This keeps the
 	// historical source-local convention working without configuration and still supports the ecosystem-standard
-	// root files. dotenv itself preserves the first value loaded into process.env.
+	// root files. The merge below keeps the first value found, so the order of this list is the precedence order.
 	const dotenvFiles = suffixes.flatMap((suffix) => dotenvPaths.map((path) => appendSuffix(path, suffix)));
 
 	/**
@@ -93,8 +93,10 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 
 	// Parse every file first without expanding anything: expanding file by file would resolve references against
 	// the files loaded so far only, so a specific file (e.g. `.env.local`) could never reference a variable defined
-	// in a more generic one (e.g. `.env`). Each file is parsed into a scratch object so `process.env` stays untouched
-	// until all files are merged.
+	// in a more generic one (e.g. `.env`). Files are parsed into one shared scratch object so `process.env` stays
+	// untouched until all files are merged, while dotenv still sees its own `DOTENV_CONFIG_*` switches (from the real
+	// environment or from an earlier file) the way it would when writing to `process.env`.
+	const scratch = dotenvSettingsFromProcessEnv();
 	for (const dotenvFile of dotenvFiles) {
 		const dotenvFileString = typeof dotenvFile === 'string' ? dotenvFile : fileURLToPath(dotenvFile);
 
@@ -104,7 +106,7 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 			debug: options?.debug,
 			encoding: options?.encoding,
 			path: dotenvFile,
-			processEnv: dotenvSettingsFromProcessEnv()
+			processEnv: scratch
 		});
 
 		if (result.error) {
@@ -124,6 +126,12 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	// (dotenv never overwrites them) and makes every variable visible to `expand`, so references resolve regardless
 	// of the file, or the position within a file, they are defined in. `expand` itself also leaves a non-empty
 	// process.env value untouched.
+	const alreadySet = new Set(Object.keys(parsed).filter((key) => process.env[key]));
+	for (const key of findReferenceCycles(parsed, alreadySet)) {
+		log(`\`${key}\` is part of a circular reference and resolves to an empty string`);
+		parsed[key] = '';
+	}
+
 	populate(process.env, parsed, { debug: options?.debug });
 	parsed = expand({ parsed }).parsed!;
 
@@ -210,6 +218,73 @@ function dotenvSettingsFromProcessEnv(): Record<string, string> {
 	}
 
 	return settings;
+}
+
+/**
+ * Finds the variables that take part in a reference cycle spanning several variables (`A=${B}`, `B=${A}`).
+ *
+ * dotenv-expand only stops a cycle when a substituted value equals a whole intermediate result, so once a value
+ * around the cycle carries a prefix or suffix (e.g. `C=${B}z`) it never terminates. Resolving the variables of such
+ * a cycle to an empty string beforehand keeps loading bounded. Variables already set in `process.env` are left out,
+ * as `expand` uses their existing value instead of expanding the one from the file. A variable referencing itself
+ * is left alone too: dotenv-expand handles that case on its own.
+ */
+function findReferenceCycles(parsed: DotenvParseOutput, alreadySet: ReadonlySet<string>): Set<string> {
+	const references = new Map<string, string[]>();
+	for (const [key, value] of Object.entries(parsed)) {
+		if (alreadySet.has(key)) continue;
+
+		const targets = new Set<string>();
+		for (const match of value.matchAll(/(?<!\\)\$\{?([A-Za-z_][A-Za-z0-9_]*)/g)) {
+			const target = match[1];
+			if (target !== key && target in parsed && !alreadySet.has(target)) targets.add(target);
+		}
+
+		references.set(key, [...targets]);
+	}
+
+	// Tarjan's strongly connected components: every component with more than one variable is a cycle.
+	const cyclic = new Set<string>();
+	const indexes = new Map<string, number>();
+	const lowLinks = new Map<string, number>();
+	const stack: string[] = [];
+	const onStack = new Set<string>();
+	let counter = 0;
+
+	const visit = (key: string): void => {
+		indexes.set(key, counter);
+		lowLinks.set(key, counter);
+		counter++;
+		stack.push(key);
+		onStack.add(key);
+
+		for (const target of references.get(key) ?? []) {
+			if (!indexes.has(target)) {
+				visit(target);
+				lowLinks.set(key, Math.min(lowLinks.get(key)!, lowLinks.get(target)!));
+			} else if (onStack.has(target)) {
+				lowLinks.set(key, Math.min(lowLinks.get(key)!, indexes.get(target)!));
+			}
+		}
+
+		if (lowLinks.get(key) !== indexes.get(key)) return;
+
+		const component: string[] = [];
+		let member: string;
+		do {
+			member = stack.pop()!;
+			onStack.delete(member);
+			component.push(member);
+		} while (member !== key);
+
+		if (component.length > 1) for (const item of component) cyclic.add(item);
+	};
+
+	for (const key of references.keys()) {
+		if (!indexes.has(key)) visit(key);
+	}
+
+	return cyclic;
 }
 
 function appendSuffix(path: string | URL, suffix: string): string | URL {
