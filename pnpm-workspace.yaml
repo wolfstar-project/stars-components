@@ -23,3 +23,8 @@ allowBuilds:
     sharp: true
 
 minimumReleaseAge: 1440
+
+# Plugins published from wolfstar-project/plugins (the examples install them) come from this organization's own
+# trusted-publishing workflows, so they skip the supply-chain quarantine above. Other first-party packages keep it.
+minimumReleaseAgeExclude:
+    - '@wolfstar/plugin-*'

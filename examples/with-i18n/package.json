@@ -2,24 +2,19 @@
 	"name": "with-i18n",
 	"version": "0.0.19",
 	"private": true,
-	"description": "WolfStar HTTP bot example with multi-locale http-framework-i18n",
+	"description": "WolfStar HTTP bot example with multi-locale @wolfstar/plugin-i18next",
 	"type": "module",
 	"main": "dist/main.js",
-	"imports": {
-		"#lib/*": "./dist/lib/*.js"
-	},
 	"scripts": {
-		"build": "tsdown --config-loader unrun",
-		"dev": "pnpm build && pnpm start",
+		"build": "node ../../packages/cli/dist/cli.js build",
+		"dev": "node ../../packages/cli/dist/cli.js dev",
 		"start": "node --enable-source-maps dist/main.js",
-		"typecheck": "golar tsc -p tsconfig.json --noEmit",
-		"watch": "tsdown --config-loader unrun --watch --onSuccess \"node --enable-source-maps dist/main.js\""
+		"typecheck": "node ../../packages/cli/dist/cli.js prepare && golar tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
-		"@sapphire/pieces": "^4.4.1",
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
-		"@wolfstar/http-framework-i18n": "workspace:*",
+		"@wolfstar/plugin-i18next": "2.0.3",
 		"@wolfstar/shared-http-pieces": "workspace:*",
 		"@wolfstar/start-banner": "workspace:*",
 		"discord-api-types": "^0.38.8",
@@ -27,6 +22,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",
+		"@wolfstar/cli": "workspace:^",
 		"golar": "^0.1.10",
 		"tsdown": "^0.22.14",
 		"typescript": "~7.0.2"

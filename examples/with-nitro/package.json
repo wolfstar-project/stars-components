@@ -1,0 +1,29 @@
+{
+	"name": "with-nitro",
+	"version": "0.0.0",
+	"private": true,
+	"description": "WolfStar HTTP bot example built and served by Nitro through experimental.enableNitro",
+	"type": "module",
+	"main": ".output/server/index.mjs",
+	"scripts": {
+		"build": "node ../../packages/cli/dist/cli.js build",
+		"dev": "node ../../packages/cli/dist/cli.js dev",
+		"start": "node --enable-source-maps .output/server/index.mjs",
+		"typecheck": "node ../../packages/cli/dist/cli.js prepare && golar tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@wolfstar/http-framework": "workspace:*",
+		"discord-api-types": "^0.38.8"
+	},
+	"devDependencies": {
+		"@types/node": "22.15.21",
+		"@wolfstar/cli": "workspace:^",
+		"golar": "^0.1.10",
+		"nitro": "^3.0.260903-beta",
+		"typescript": "~7.0.2",
+		"vite": "^8.3.0"
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}
