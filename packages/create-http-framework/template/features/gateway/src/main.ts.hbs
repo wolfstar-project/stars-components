@@ -7,12 +7,19 @@ import { existsSync } from 'node:fs';
 import '@wolfstar/plugin-i18next/register';
 {{/if}}
 import { setup } from './lib/setup/all.js';
+{{#if cache}}
+import { createCache } from './lib/cache.js';
+{{/if}}
 {{#unless nitro}}
 import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
 {{/unless}}
-import { Client, container } from '@wolfstar/http-framework';
+import { container } from '@wolfstar/http-framework';
+import { GatewayClient } from '@wolfstar/plugin-gateway';
 {{#unless nitro}}
 import { createStarsBanner } from '@wolfstar/start-banner';
+{{/unless}}
+import { GatewayIntentBits } from 'discord-api-types/v10';
+{{#unless nitro}}
 import { morning } from 'gradient-string';
 {{/unless}}
 {{#if vite}}
@@ -32,32 +39,44 @@ const localesDirectory = existsSync(bundledLocales) ? bundledLocales.pathname : 
 {{/if}}
 {{/if}}
 
-const client = new Client({{#if i18n}}{
+const client = new GatewayClient({
+{{#if i18n}}
 	i18n: {
 		defaultLanguageDirectory: {{#if nitro}}localesDirectory{{else}}new URL('locales', import.meta.url).pathname{{/if}},
 		defaultName: 'en-US'
-	}
-}{{/if}});
+	},
+{{/if}}
+{{#if cache}}
+	// Every dispatch is written into the cache before its event is emitted.
+	cache: createCache(),
+{{/if}}
+	// Add the intents your listeners need, privileged ones (`MessageContent`, `GuildMembers`, `GuildPresences`) must also
+	// be enabled under Bot → Privileged Gateway Intents in the Developer Portal.
+	intents: GatewayIntentBits.Guilds
+});
+
+client.on('error', (error) => container.logger.error(error));
 {{#if vite}}
 
 // The bundle is a single file, so there is no `commands` directory next to it to scan: load the pieces explicitly.
 {{#each commands}}
 await container.stores.loadPiece({ name: '{{file}}', piece: {{className}}, store: 'commands' });
 {{/each}}
-await client.load({ baseUserDirectory: null });
-{{else}}
-await client.load();
 {{/if}}
 {{#if nitro}}
 
-// No `listen()`: the server entry Nitro generates imports this default export and forwards every request to
-// `client.fetch(request)`, which verifies the signature and answers the interaction. Nitro serves on `PORT`.
+await client.load({ baseUserDirectory: null });
+// Nitro answers the HTTP interactions (see the default export), the gateway connection stays with this process: run it
+// on a preset that keeps a server alive, such as `node-server`.
+await client.connect();
+
 export default client;
 {{else}}
 
 const address = envParseString('HTTP_ADDRESS', '0.0.0.0');
 const port = envParseInteger('HTTP_PORT', {{port}});
-await client.listen({ address, port });
+// Loads the pieces, starts the HTTP interactions endpoint, then connects every gateway shard.
+await client.start({ listen: { address, port }{{#if vite}}, load: { baseUserDirectory: null }{{/if}} });
 
 console.log(
 	morning.multiline(

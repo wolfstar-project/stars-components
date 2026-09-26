@@ -1,4 +1,4 @@
-import { TYPESCRIPT_RC_VERSION, type BuildTool, type Formatter, type Language, type Linter } from './options.js';
+import { isNitroBuild, TYPESCRIPT_RC_VERSION, type BuildTool, type Formatter, type Language, type Linter } from './options.js';
 
 async function fetchVersion(packageName: string): Promise<string> {
 	const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
@@ -17,6 +17,10 @@ export interface VersionSelections {
 	subcommands: boolean;
 	subcommandsAdvanced: boolean;
 	testing: boolean;
+	gateway: boolean;
+	cache: boolean;
+	redis: boolean;
+	sharder: boolean;
 	language: Language;
 	buildTool: BuildTool;
 	linter: Linter;
@@ -26,7 +30,7 @@ export interface VersionSelections {
 /**
  * Resolves the latest versions of only the packages required by the chosen selections.
  * `ts-node` is intentionally never included. TypeScript 7.0 (tsc7) is pinned to the rc instead
- * of being fetched, because `typescript@latest` resolves to the 6.x line.
+ * of being fetched, because `typescript@latest` resolves to the 6.x line. Nitro v3 is still a beta, so callers pin it exactly.
  */
 export async function fetchDependencyVersions(selections: VersionSelections): Promise<DependencyVersions> {
 	const names = new Set<string>([
@@ -42,6 +46,10 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 
 	if (selections.i18n) names.add('@wolfstar/plugin-i18next').add('@wolfstar/i18next-type-generator');
 	if (selections.testing) names.add('vitest').add('@wolfstar/http-framework-test-utils');
+	if (selections.gateway) names.add('@wolfstar/plugin-gateway');
+	if (selections.cache) names.add('@wolfstar/plugin-cache');
+	if (selections.redis) names.add('ioredis');
+	if (selections.sharder) names.add('@wolfstar/plugin-sharder');
 
 	// TypeScript toolchain (skipped entirely for plain JavaScript projects).
 	if (selections.language === 'ts') {
@@ -55,6 +63,11 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 				break;
 			case 'tsdown':
 				names.add('tsdown').add('typescript');
+				break;
+			case 'vite':
+			case 'vite-nitro':
+				names.add('vite').add('typescript');
+				if (isNitroBuild(selections.buildTool)) names.add('nitro');
 				break;
 		}
 	}

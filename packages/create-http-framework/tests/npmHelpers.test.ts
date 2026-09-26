@@ -6,6 +6,10 @@ function makeSelections(overrides: Partial<VersionSelections> = {}): VersionSele
 		subcommands: false,
 		subcommandsAdvanced: false,
 		testing: false,
+		gateway: false,
+		cache: false,
+		redis: false,
+		sharder: false,
 		language: 'ts',
 		buildTool: 'tsdown',
 		linter: 'oxlint',
@@ -109,5 +113,48 @@ describe('fetchDependencyVersions', () => {
 		await fetchDependencyVersions(selections);
 
 		expect(requestedPackageNames(fetchMock)).toContain('@wolfstar/cli');
+	});
+
+	test.each([
+		['gateway', { gateway: true }, ['@wolfstar/plugin-gateway'], ['@wolfstar/plugin-cache', '@wolfstar/plugin-sharder', 'ioredis']],
+		['cache', { gateway: true, cache: true }, ['@wolfstar/plugin-gateway', '@wolfstar/plugin-cache'], ['ioredis']],
+		['redis', { gateway: true, cache: true, redis: true }, ['@wolfstar/plugin-cache', 'ioredis'], ['@wolfstar/plugin-sharder']],
+		['sharder', { gateway: true, sharder: true }, ['@wolfstar/plugin-gateway', '@wolfstar/plugin-sharder'], ['@wolfstar/plugin-cache', 'ioredis']]
+	] as const)('GIVEN the %s feature THEN requests only its own packages', async (_name, selections, expected, unexpected) => {
+		await fetchDependencyVersions(makeSelections(selections));
+
+		const names = requestedPackageNames(fetchMock);
+		for (const name of expected) expect(names).toContain(name);
+		for (const name of unexpected) expect(names).not.toContain(name);
+	});
+
+	test('GIVEN no gateway feature THEN requests none of the gateway packages', async () => {
+		await fetchDependencyVersions(makeSelections());
+
+		const names = requestedPackageNames(fetchMock);
+		expect(names.filter((name) => /plugin-(gateway|cache|sharder)|ioredis/.test(name))).toStrictEqual([]);
+	});
+
+	test('GIVEN the vite build tool THEN requests vite and typescript but neither nitro nor tsdown', async () => {
+		await fetchDependencyVersions(makeSelections({ buildTool: 'vite' }));
+
+		const names = requestedPackageNames(fetchMock);
+		expect(names).toStrictEqual(expect.arrayContaining(['vite', 'typescript']));
+		expect(names).not.toContain('nitro');
+		expect(names).not.toContain('tsdown');
+	});
+
+	test('GIVEN the vite-nitro build tool THEN also requests nitro', async () => {
+		await fetchDependencyVersions(makeSelections({ buildTool: 'vite-nitro' }));
+
+		expect(requestedPackageNames(fetchMock)).toStrictEqual(expect.arrayContaining(['vite', 'nitro', 'typescript']));
+	});
+
+	test('GIVEN a JavaScript project with vite-nitro selected THEN requests neither vite nor nitro', async () => {
+		await fetchDependencyVersions(makeSelections({ language: 'js', buildTool: 'vite-nitro' }));
+
+		const names = requestedPackageNames(fetchMock);
+		expect(names).not.toContain('vite');
+		expect(names).not.toContain('nitro');
 	});
 });

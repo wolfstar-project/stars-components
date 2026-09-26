@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFile } from './fileSystem.js';
-import type { Language } from './options.js';
+import { isNitroBuild, isViteBuild, type BuildTool, type Language } from './options.js';
 
 const templateDir = join(fileURLToPath(import.meta.url), '../..', 'template');
 const baseDir = join(templateDir, 'base');
@@ -56,6 +56,36 @@ export interface TemplateContext {
 	subcommands: boolean;
 	subcommandsAdvanced: boolean;
 	testing: boolean;
+	gateway: boolean;
+	cache: boolean;
+	redis: boolean;
+	sharder: boolean;
+	/** Only meaningful when `language === 'ts'`. */
+	buildTool: BuildTool;
+}
+
+/** A command the bundled builds (Vite, Nitro) import and load explicitly, since there is no `commands` directory to scan. */
+interface CommandImport {
+	className: string;
+	file: string;
+}
+
+/**
+ * What the Handlebars sources see: the persisted {@link TemplateContext} plus values derived from it. Deriving at render
+ * time keeps the manifest small and lets manifests written before these fields existed still render.
+ */
+function toRenderContext(context: TemplateContext): TemplateContext & { vite: boolean; nitro: boolean; commands: CommandImport[] } {
+	const typescript = context.language === 'ts';
+	const commands: CommandImport[] = [{ className: 'PingCommand', file: 'ping' }];
+	if (context.subcommandsAdvanced) commands.push({ className: 'SettingsCommand', file: 'settings' });
+	else if (context.subcommands) commands.push({ className: 'MathCommand', file: 'math' });
+
+	return {
+		...context,
+		vite: typescript && isViteBuild(context.buildTool),
+		nitro: typescript && isNitroBuild(context.buildTool),
+		commands
+	};
 }
 
 function walkDir(dir: string): string[] {
@@ -78,9 +108,17 @@ function walkDir(dir: string): string[] {
  * Resolves which `template/features/*` directories should be layered on top of `template/base/`,
  * in application order. Later entries overwrite earlier ones (and `base/`) on path collisions.
  */
-export function resolveFeatureDirs(ctx: Pick<TemplateContext, 'i18n' | 'subcommands' | 'subcommandsAdvanced' | 'testing'>): string[] {
+export function resolveFeatureDirs(
+	ctx: Pick<TemplateContext, 'i18n' | 'subcommands' | 'subcommandsAdvanced' | 'testing'> &
+		Partial<Pick<TemplateContext, 'gateway' | 'cache' | 'redis' | 'sharder'>>
+): string[] {
 	const dirs: string[] = [];
 	if (ctx.i18n) dirs.push('i18n');
+	// `gateway` replaces `main.*` with a `GatewayClient` entry, `sharder` replaces it once more with the manager entry.
+	if (ctx.gateway) dirs.push('gateway');
+	if (ctx.cache) dirs.push('cache');
+	if (ctx.redis) dirs.push('redis');
+	if (ctx.sharder) dirs.push('sharder');
 	if (ctx.subcommandsAdvanced) {
 		dirs.push(ctx.i18n ? 'subcommands-advanced-i18n' : 'subcommands-advanced');
 	} else if (ctx.subcommands) {
@@ -119,7 +157,7 @@ function collectOutputPaths(root: string, language: Language): Set<string> {
 
 function renderSource(absoluteSource: string, context: TemplateContext): string {
 	const rawContent = readFileSync(absoluteSource, 'utf-8');
-	return absoluteSource.endsWith('.hbs') ? Handlebars.compile(rawContent)(context) : rawContent;
+	return absoluteSource.endsWith('.hbs') ? Handlebars.compile(rawContent)(toRenderContext(context)) : rawContent;
 }
 
 function escapeRegExp(text: string): string {
@@ -141,8 +179,7 @@ function isSimpleInterpolationOnly(rawSource: string): boolean {
  * existed — every run after this one writes a manifest, closing the gap for good.
  *
  * `null` for files with block helpers (`{{#if}}`, …), which can't be turned into a simple wildcard
- * pattern this way; none currently end up in "stale candidate" position, but this keeps the caller's
- * exact-render fallback available if that changes.
+ * pattern this way; the caller compares those against {@link buildLegacyVariantMatchers} instead.
  */
 function buildStaleFileMatcher(absoluteSource: string): RegExp | null {
 	const rawContent = readFileSync(absoluteSource, 'utf-8');
@@ -151,6 +188,30 @@ function buildStaleFileMatcher(absoluteSource: string): RegExp | null {
 
 	const literalChunks = rawContent.split(/\{\{\s*[\w.]+\s*\}\}/g).map(escapeRegExp);
 	return new RegExp(`^${literalChunks.join('[\\s\\S]*?')}$`);
+}
+
+/**
+ * Matchers for a source using block helpers (`main.*` is the one that matters), covering exactly the ways the generator
+ * that predated the manifest could have written it: `tsdown`, with or without i18n, and none of the later features.
+ * Anything older than that renders differently and is preserved rather than cleaned, which is the safe direction to
+ * be wrong in. Like {@link buildStaleFileMatcher} it leaves the interpolated name and port as wildcards, by rendering
+ * placeholders there.
+ */
+function buildLegacyVariantMatchers(absoluteSource: string, context: TemplateContext): RegExp[] {
+	const placeholder = '\u0000';
+	const legacy = {
+		...context,
+		name: placeholder,
+		port: placeholder as unknown as number,
+		gateway: false,
+		cache: false,
+		redis: false,
+		sharder: false
+	};
+	return [false, true].map((i18n) => {
+		const rendered = renderSource(absoluteSource, { ...legacy, buildTool: 'tsdown', i18n });
+		return new RegExp(`^${rendered.split(placeholder).map(escapeRegExp).join('[\\s\\S]*?')}$`);
+	});
 }
 
 /**
@@ -220,7 +281,7 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
 			? sources.some((source) => renderSource(source, manifestContext) === actual)
 			: sources.some((source) => {
 					const matcher = buildStaleFileMatcher(source);
-					return matcher ? matcher.test(actual) : renderSource(source, context) === actual;
+					return (matcher ? [matcher] : buildLegacyVariantMatchers(source, context)).some((candidate) => candidate.test(actual));
 				});
 		if (isUnmodifiedGeneratorOutput) rmSync(target);
 		else preserved.push(path);
@@ -246,7 +307,7 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
 		const rawContent = readFileSync(absoluteSource, 'utf-8');
 		const isHandlebars = absoluteSource.endsWith('.hbs');
 		const outputPath = join(outputDir, outputRelative);
-		const content = isHandlebars ? Handlebars.compile(rawContent)(context) : rawContent;
+		const content = isHandlebars ? Handlebars.compile(rawContent)(toRenderContext(context)) : rawContent;
 		writeFile(outputPath, content);
 	}
 }

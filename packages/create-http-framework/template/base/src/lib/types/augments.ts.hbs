@@ -9,5 +9,13 @@ declare module '@wolfstar/env-utilities' {
 		HTTP_ADDRESS: string;
 		HTTP_PORT: IntegerString;
 		HTTP_POST_PATH: string;
+{{#if redis}}
+
+		REDIS_URL: string;
+{{/if}}
+{{#if sharder}}
+
+		SHARDER_CLUSTERS: IntegerString;
+{{/if}}
 	}
 }
