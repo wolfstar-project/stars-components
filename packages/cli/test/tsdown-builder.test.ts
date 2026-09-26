@@ -253,4 +253,41 @@ describe('TsdownBuilder', () => {
 		expect(outcome).toMatchObject({ ok: true, message: null });
 		expect(await run(config.build.output)).toContain('example');
 	});
+
+	test('does not activate @wolfstar/plugin-* libraries that export no /register entrypoint', async () => {
+		const packageJson = JSON.stringify({
+			name: 'tsdown-fixture',
+			type: 'module',
+			main: 'dist/main.js',
+			dependencies: {
+				'@wolfstar/plugin-example': '1.0.0',
+				'@wolfstar/plugin-library': '1.0.0'
+			}
+		});
+		fixture = await createFixture({
+			'package.json': packageJson,
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, future: { compatibilityVersion: 4 } };",
+			'node_modules/@wolfstar/plugin-example/package.json': JSON.stringify({
+				name: '@wolfstar/plugin-example',
+				type: 'module',
+				exports: { '.': './index.js', './register': './register.js' }
+			}),
+			'node_modules/@wolfstar/plugin-example/index.js': 'export {};\n',
+			'node_modules/@wolfstar/plugin-example/register.js':
+				"globalThis.registeredWolfstarPlugins = [...(globalThis.registeredWolfstarPlugins ?? []), 'example'];\n",
+			'node_modules/@wolfstar/plugin-library/package.json': JSON.stringify({
+				name: '@wolfstar/plugin-library',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/@wolfstar/plugin-library/index.js': "export const library = 'library';\n",
+			'src/main.ts': "console.log((globalThis as { registeredWolfstarPlugins?: string[] }).registeredWolfstarPlugins?.join(','));\n"
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const outcome = await new TsdownBuilder(config).build();
+
+		expect(outcome).toMatchObject({ ok: true, message: null });
+		expect((await run(config.build.output)).trim()).toBe('example');
+	});
 });
