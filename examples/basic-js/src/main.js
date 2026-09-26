@@ -1,22 +1,19 @@
 import { setup } from '#lib/setup/all.js';
 import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
 import { Client, container } from '@wolfstar/http-framework';
-import { init, load } from '@wolfstar/http-framework-i18n';
 import { registerCommands } from '@wolfstar/shared-http-pieces';
 import { createStarsBanner } from '@wolfstar/start-banner';
 import { morning } from 'gradient-string';
+import { fileURLToPath } from 'node:url';
 
 await setup();
 
-await load(new URL('./locales', import.meta.url));
-await init({
-	fallbackLng: 'en-US',
-	returnNull: false,
-	returnEmptyString: false,
-	returnObjects: true
+const client = new Client({
+	i18n: {
+		defaultLanguageDirectory: fileURLToPath(new URL('./locales', import.meta.url)),
+		defaultName: 'en-US'
+	}
 });
-
-const client = new Client();
 await client.load();
 
 void registerCommands();

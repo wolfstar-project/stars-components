@@ -2,25 +2,27 @@
 	"name": "with-i18n-js",
 	"version": "0.0.19",
 	"private": true,
-	"description": "WolfStar HTTP bot example with multi-locale i18n in plain JavaScript (ESM)",
+	"description": "WolfStar HTTP bot example with multi-locale @wolfstar/plugin-i18next in plain JavaScript (ESM)",
 	"type": "module",
 	"main": "src/main.js",
 	"imports": {
 		"#lib/*": "./src/lib/*"
 	},
 	"scripts": {
-		"dev": "node --watch src/main.js",
+		"dev": "node ../../packages/cli/dist/cli.js dev",
 		"start": "node --enable-source-maps src/main.js"
 	},
 	"dependencies": {
-		"@sapphire/pieces": "^4.4.1",
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
-		"@wolfstar/http-framework-i18n": "workspace:*",
+		"@wolfstar/plugin-i18next": "2.0.3",
 		"@wolfstar/shared-http-pieces": "workspace:*",
 		"@wolfstar/start-banner": "workspace:*",
 		"discord-api-types": "^0.38.8",
 		"gradient-string": "^3.0.0"
+	},
+	"devDependencies": {
+		"@wolfstar/cli": "workspace:^"
 	},
 	"engines": {
 		"node": ">=20"

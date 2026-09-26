@@ -1,6 +1,6 @@
 import { LanguageKeys } from '#lib/i18n/LanguageKeys.js';
 import { Command } from '@wolfstar/http-framework';
-import { applyLocalizedBuilder, resolveUserKey } from '@wolfstar/http-framework-i18n';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
 import { ApplicationIntegrationType, InteractionContextType } from 'discord-api-types/v10';
 
 const Root = LanguageKeys.Commands.Math;
@@ -31,13 +31,13 @@ export class UserCommand extends Command {
 
 	add(interaction, { left, right }) {
 		return interaction.reply({
-			content: resolveUserKey(interaction, Root.Result, { left, right, result: left + right })
+			content: getSupportedUserLanguageT(interaction, Root.Result, { left, right, result: left + right })
 		});
 	}
 
 	subtract(interaction, { left, right }) {
 		return interaction.reply({
-			content: resolveUserKey(interaction, Root.Result, { left, right, result: left - right })
+			content: getSupportedUserLanguageT(interaction, Root.Result, { left, right, result: left - right })
 		});
 	}
 }

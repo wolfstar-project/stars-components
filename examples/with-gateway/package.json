@@ -1,0 +1,31 @@
+{
+	"name": "with-gateway",
+	"version": "0.0.0",
+	"private": true,
+	"description": "WolfStar HTTP bot example receiving gateway events through @wolfstar/plugin-gateway",
+	"type": "module",
+	"main": "dist/main.js",
+	"scripts": {
+		"build": "node ../../packages/cli/dist/cli.js build",
+		"dev": "node ../../packages/cli/dist/cli.js dev",
+		"start": "node --enable-source-maps dist/main.js",
+		"typecheck": "node ../../packages/cli/dist/cli.js prepare && golar tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@wolfstar/env-utilities": "workspace:*",
+		"@wolfstar/http-framework": "workspace:*",
+		"@wolfstar/plugin-cache": "^0.0.0",
+		"@wolfstar/plugin-gateway": "^0.0.0",
+		"discord-api-types": "^0.38.8"
+	},
+	"devDependencies": {
+		"@types/node": "22.15.21",
+		"@wolfstar/cli": "workspace:^",
+		"golar": "^0.1.10",
+		"tsdown": "^0.22.14",
+		"typescript": "~7.0.2"
+	},
+	"engines": {
+		"node": ">=24.17.0"
+	}
+}

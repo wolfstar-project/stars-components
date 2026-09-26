@@ -1,0 +1,6 @@
+{
+	"extends": "./.stars/tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"]
+	}
+}
