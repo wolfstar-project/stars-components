@@ -1,6 +1,10 @@
-export { CliError, ExitCode, exitCodeOf, formatError } from './lib/errors.js';
-export type { CliErrorOptions } from './lib/errors.js';
-export { ConfigError, loadStarsConfig } from '@wolfstar/http-framework/config';
-export type { ConfigErrorOptions, ResolvedStarsConfig } from '@wolfstar/http-framework/config';
-export { isCIEnvironment, prefersReducedMotion, resolveOutputMode, shouldUseColor } from './lib/output-mode.js';
-export type { OutputMode, ResolveOutputModeOptions } from './lib/output-mode.js';
+export { runMain } from './run.js';
+export { ExitCode, exitCodeOf, formatError } from './utils/errors.js';
+export { cliDiagnostics } from './utils/diagnostics.js';
+export type { CliDiagnosticCode } from './utils/diagnostics.js';
+export { configDiagnostics, loadStarsConfig } from '@wolfstar/schema';
+export type { ConfigDiagnosticCode, ResolvedStarsConfig } from '@wolfstar/schema';
+export { isCIEnvironment, prefersReducedMotion, resolveOutputMode, shouldUseColor } from './utils/output-mode.js';
+export type { OutputMode, ResolveOutputModeOptions } from './utils/output-mode.js';
+export { THEME_SETTINGS, THEMES, resolveTheme, resolveThemeSetting } from './utils/theme.js';
+export type { Theme, ThemeName, ThemeSetting, ThemeToken } from './utils/theme.js';

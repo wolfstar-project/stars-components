@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/oxfmt-config",
-	"version": "0.1.0",
+	"version": "0.2.1",
 	"description": "Shareable oxfmt base configuration for Star Network packages",
 	"keywords": [
 		"config",
@@ -22,20 +22,38 @@
 		"directory": "packages/oxfmt-config"
 	},
 	"files": [
-		"index.json"
+		"dist/"
 	],
 	"type": "module",
 	"sideEffects": false,
-	"main": "index.json",
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
 	"exports": {
-		".": "./index.json"
+		"import": {
+			"types": "./dist/esm/index.d.ts",
+			"default": "./dist/esm/index.js"
+		}
 	},
 	"publishConfig": {
 		"access": "public",
 		"provenance": true
 	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"devDependencies": {
+		"golar": "^0.1.10",
+		"oxfmt": "0.68.0",
+		"tsdown": "^0.23.0",
+		"typescript": "~7.0.2"
+	},
 	"peerDependencies": {
-		"oxfmt": ">=0.60.0"
+		"oxfmt": ">=0.67.0"
 	},
 	"engines": {
 		"node": ">=20"

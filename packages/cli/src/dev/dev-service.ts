@@ -1,0 +1,355 @@
+import { EventEmitter } from 'node:events';
+import type { Builder, BuildOutcome } from '../builders/types.js';
+import { displayPath, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from '../utils/log-buffer.js';
+import { Locales } from '../utils/locales.js';
+import { ProcessSupervisor, type ProcessExit, type ProcessState } from '../utils/process-supervisor.js';
+import { Tunnel, type TunnelState } from './tunnel.js';
+import { Typechecker, type TypecheckState } from './typechecker.js';
+
+export type BuildState = 'idle' | 'building' | 'ok' | 'failed';
+export type HealthState = 'unknown' | 'ok' | 'down';
+export type RestartReason = 'initial' | 'build' | 'manual' | 'crash';
+
+export interface DevStatus {
+	readonly progress: { readonly fraction: number; readonly message: string; readonly startedAt: number; readonly readyMs: number | null };
+	readonly process: ProcessState;
+	readonly build: BuildState;
+	readonly health: HealthState;
+	readonly pid: number | null;
+	readonly startedAt: number | null;
+	readonly restarts: number;
+	readonly lastRestartReason: RestartReason | null;
+	readonly lastBuild: BuildOutcome | null;
+	readonly lastExit: ProcessExit | null;
+	readonly url: string | null;
+	readonly typecheck: TypecheckState;
+	readonly typeErrors: number;
+	readonly tunnel: TunnelState;
+	readonly tunnelUrl: string | null;
+}
+
+export interface DevServiceEvents {
+	status: [status: DevStatus];
+}
+
+export interface DevServiceOptions {
+	builder: Builder;
+	logs?: LogBuffer;
+	/** Overrides for tests. */
+	supervisor?: ProcessSupervisor;
+	typechecker?: Typechecker;
+	tunnel?: Tunnel;
+	healthInterval?: number;
+}
+
+/**
+ * The headless heart of `stars dev`: builds, (re)starts the bot and exposes state and logs.
+ * Renderers (plain or TUI) only subscribe to it, they never own behaviour.
+ */
+export class DevService extends EventEmitter<DevServiceEvents> {
+	public readonly logs: LogBuffer;
+	public readonly builder: Builder;
+	public readonly supervisor: ProcessSupervisor;
+	public readonly typechecker: Typechecker;
+	public readonly tunnel: Tunnel;
+	public readonly locales: Locales;
+
+	#build: BuildState = 'idle';
+	#health: HealthState = 'unknown';
+	#restarts = 0;
+	#lastRestartReason: RestartReason | null = null;
+	#lastBuild: BuildOutcome | null = null;
+	#lastExit: ProcessExit | null = null;
+	#restartTimer: NodeJS.Timeout | null = null;
+	#healthTimer: NodeJS.Timeout | null = null;
+	#pendingReason: RestartReason | null = null;
+	#stopped = false;
+	#queue: Promise<void> = Promise.resolve();
+	#progress = { fraction: 0, message: 'preparing your app', startedAt: Date.now(), readyMs: null as number | null };
+
+	public constructor(
+		public readonly config: ResolvedStarsConfig,
+		options: DevServiceOptions
+	) {
+		super();
+		this.logs = options.logs ?? new LogBuffer();
+		this.builder = options.builder;
+		this.supervisor = options.supervisor ?? createSupervisor(config);
+		this.typechecker = options.typechecker ?? new Typechecker(config);
+		this.tunnel = options.tunnel ?? new Tunnel(config);
+		this.locales = new Locales(config);
+
+		this.builder.on('start', () => {
+			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
+			this.#setBuild('building');
+		});
+		this.builder.on('progress', (fraction, message) => {
+			this.#progress = { ...this.#progress, fraction: Math.max(this.#progress.fraction, Math.min(0.75, fraction)), message };
+			this.#emitStatus();
+		});
+		this.builder.on('success', (outcome) => this.#onBuildSuccess(outcome));
+		this.builder.on('failure', (outcome) => this.#onBuildFailure(outcome));
+		this.builder.on('log', (level, text) => this.log('build', level, text));
+
+		this.supervisor.on('state', () => {
+			if (this.supervisor.state === 'running') {
+				this.#settleProgress();
+				void this.#checkHealth();
+			}
+			this.#emitStatus();
+		});
+		this.supervisor.on('stdout', (line) => this.log('app', classifyAppLine(line, 'info'), line));
+		this.supervisor.on('stderr', (line) => this.log('app', classifyAppLine(line, 'error'), line));
+		this.supervisor.on('error', (error) => this.log('stars', 'error', `Failed to start the bot: ${error.message}`));
+		this.supervisor.on('exit', (exit) => this.#onExit(exit));
+
+		this.typechecker.on('log', (level, text) => this.log('tsc', level, text));
+		this.typechecker.on('state', () => this.#emitStatus());
+		this.tunnel.on('log', (level, text) => this.log('tunnel', level, text));
+		this.tunnel.on('state', () => this.#emitStatus());
+		this.locales.on('log', (level, text) => this.log('build', level, text));
+		this.locales.on('change', () => {
+			if (this.#build === 'ok') this.#scheduleRestart('build');
+		});
+
+		if (config.dev.url && config.dev.health) {
+			const interval = options.healthInterval ?? 5000;
+			this.#healthTimer = setInterval(() => void this.#checkHealth(), interval);
+			this.#healthTimer.unref();
+		}
+	}
+
+	public get status(): DevStatus {
+		return {
+			progress: this.#progress,
+			process: this.supervisor.state,
+			build: this.#build,
+			health: this.#health,
+			pid: this.supervisor.pid,
+			startedAt: this.supervisor.startedAt,
+			restarts: this.#restarts,
+			lastRestartReason: this.#lastRestartReason,
+			lastBuild: this.#lastBuild,
+			lastExit: this.#lastExit,
+			url: this.config.dev.url,
+			typecheck: this.typechecker.state,
+			typeErrors: this.typechecker.errors,
+			tunnel: this.tunnel.state,
+			tunnelUrl: this.tunnel.url
+		};
+	}
+
+	public log(source: LogSource, level: LogLevel, text: string): void {
+		this.logs.push({ source, level, text });
+	}
+
+	/**
+	 * Starts watching; the bot starts after the first successful build.
+	 */
+	public async start(): Promise<void> {
+		this.#stopped = false;
+		const entry = displayPath(this.config.root, this.config.entry);
+		this.log('stars', 'info', this.config.build.tool === 'none' ? `Watching ${entry}` : `Watching ${entry} with ${this.config.build.tool}`);
+		if (this.config.dev.typecheck.enabled) this.typechecker.start();
+		await this.locales.watch();
+		// The tunnel comes up next to the build: neither waits for the other, and a failed tunnel never stops the bot.
+		void this.tunnel.start();
+		await this.builder.watch();
+	}
+
+	/**
+	 * Restarts the bot immediately (used by the `r` key and by `SIGUSR2`).
+	 */
+	public restart(reason: RestartReason = 'manual'): Promise<void> {
+		this.#clearRestartTimer();
+		return this.#enqueue(async () => {
+			if (this.#stopped) return;
+			if (reason === 'manual' || reason === 'crash') {
+				this.#progress = { fraction: 0, message: 'restarting the bot', startedAt: Date.now(), readyMs: null };
+			}
+			this.#lastRestartReason = reason;
+			if (this.supervisor.running) {
+				this.#restarts++;
+				this.log('stars', 'info', `Restarting (${describeReason(reason)})`);
+				await this.supervisor.stop();
+			} else {
+				this.log('stars', 'info', `Starting (${describeReason(reason)})`);
+			}
+
+			if (this.#stopped) return;
+			this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
+			this.#health = 'unknown';
+			this.supervisor.start();
+			this.#emitStatus();
+		});
+	}
+
+	/** Opens or closes the public tunnel (used by the `t` key). */
+	public toggleTunnel(): Promise<void> {
+		return this.tunnel.toggle();
+	}
+
+	/**
+	 * Stops the watcher and the bot. Safe to call more than once.
+	 */
+	public async stop(): Promise<void> {
+		this.#stopped = true;
+		this.#clearRestartTimer();
+		if (this.#healthTimer) clearInterval(this.#healthTimer);
+		this.#healthTimer = null;
+		await this.#enqueue(async () => {
+			await Promise.allSettled([
+				this.builder.close(),
+				this.supervisor.stop(),
+				this.typechecker.close(),
+				this.tunnel.close(),
+				this.locales.close()
+			]);
+		});
+	}
+
+	/**
+	 * Kills the bot and the helper processes without waiting for them. Only for a forced shutdown, {@link stop} is the graceful path.
+	 */
+	public kill(): void {
+		this.#stopped = true;
+		this.#clearRestartTimer();
+		this.supervisor.kill();
+		void this.typechecker.close();
+		void this.tunnel.close();
+	}
+
+	public clearLogs(): void {
+		this.logs.clear();
+	}
+
+	#onBuildSuccess(outcome: BuildOutcome): void {
+		try {
+			this.locales.copy();
+		} catch (error) {
+			this.#onBuildFailure({
+				...outcome,
+				ok: false,
+				message: `Failed to copy locales: ${error instanceof Error ? error.message : String(error)}`
+			});
+			return;
+		}
+		this.#lastBuild = outcome;
+		this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
+		this.#setBuild('ok');
+		if (this.#stopped) return;
+		// A checker without a watch mode (`tsz`) only knows about the change once the build is through.
+		this.typechecker.check();
+		this.log('stars', 'success', this.builder.tool === 'none' ? 'Sources changed' : `Build succeeded in ${outcome.durationMs}ms`);
+		this.#scheduleRestart(this.supervisor.state === 'idle' ? 'initial' : 'build');
+	}
+
+	#onBuildFailure(outcome: BuildOutcome): void {
+		this.#lastBuild = outcome;
+		this.#setBuild('failed');
+		this.#clearRestartTimer();
+		this.log('stars', 'error', `Build failed${outcome.message ? `: ${outcome.message}` : ''}, waiting for changes`);
+	}
+
+	#onExit(exit: ProcessExit): void {
+		this.#lastExit = exit;
+		this.#health = 'unknown';
+		if (!exit.requested) {
+			const how = exit.signal ? `signal ${exit.signal}` : `code ${exit.code}`;
+			this.log('stars', exit.code === 0 ? 'warn' : 'error', `The bot exited with ${how}, waiting for changes (press r to restart)`);
+		}
+		this.#emitStatus();
+	}
+
+	#scheduleRestart(reason: RestartReason): void {
+		this.#pendingReason = reason;
+		this.#clearRestartTimer();
+		this.#restartTimer = setTimeout(() => {
+			this.#restartTimer = null;
+			const pending = this.#pendingReason ?? reason;
+			this.#pendingReason = null;
+			void this.restart(pending);
+		}, this.config.dev.debounce);
+	}
+
+	#clearRestartTimer(): void {
+		if (this.#restartTimer) clearTimeout(this.#restartTimer);
+		this.#restartTimer = null;
+	}
+
+	#enqueue(task: () => Promise<void>): Promise<void> {
+		this.#queue = this.#queue.then(task, task);
+		return this.#queue;
+	}
+
+	#setBuild(state: BuildState): void {
+		if (this.#build === state) return;
+		this.#build = state;
+		this.#emitStatus();
+	}
+
+	async #checkHealth(): Promise<void> {
+		if (!this.supervisor.running || !this.config.dev.url || !this.config.dev.health) return;
+		const pid = this.supervisor.pid;
+
+		let next: HealthState;
+		try {
+			const response = await fetch(new URL(this.config.dev.health, this.config.dev.url), { signal: AbortSignal.timeout(2000) });
+			next = response.status < 500 ? 'ok' : 'down';
+		} catch {
+			next = 'down';
+		}
+
+		if (this.#stopped || pid !== this.supervisor.pid) return;
+		if (next !== this.#health) {
+			this.#health = next;
+			if (next === 'ok') this.#settleProgress();
+			this.#emitStatus();
+		}
+	}
+
+	#settleProgress(): void {
+		if (this.config.dev.health && this.#health !== 'ok') return;
+		if (this.#build !== 'ok') return;
+		this.#progress = {
+			...this.#progress,
+			fraction: 1,
+			message: 'watching for changes',
+			readyMs: this.#progress.readyMs ?? Date.now() - this.#progress.startedAt
+		};
+	}
+
+	#emitStatus(): void {
+		this.emit('status', this.status);
+	}
+}
+
+export function createSupervisor(config: ResolvedStarsConfig): ProcessSupervisor {
+	return new ProcessSupervisor({
+		command: process.execPath,
+		args: [...config.dev.nodeArgs, config.build.output, ...config.dev.args],
+		cwd: config.root,
+		env: {
+			...process.env,
+			...config.dev.env,
+			STARS_DEV: '1',
+			NODE_ENV: 'development',
+			FORCE_COLOR: process.env.NO_COLOR !== undefined ? undefined : (process.env.FORCE_COLOR ?? (process.stdout.isTTY ? '1' : undefined))
+		},
+		killTimeout: config.dev.killTimeout
+	});
+}
+
+export function describeReason(reason: RestartReason): string {
+	switch (reason) {
+		case 'initial':
+			return 'first build';
+		case 'build':
+			return 'sources changed';
+		case 'manual':
+			return 'manual restart';
+		case 'crash':
+			return 'after crash';
+	}
+}

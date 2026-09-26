@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/prettier-config",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Shareable Prettier configuration for Star Network projects",
 	"keywords": [
 		"config",
@@ -48,7 +48,7 @@
 	},
 	"devDependencies": {
 		"golar": "^0.1.10",
-		"prettier": "^3.9.6",
+		"prettier": "^3.9.7",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2"
 	},

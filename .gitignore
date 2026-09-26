@@ -37,6 +37,12 @@ test_out/
 coverage/
 *.junit.xml
 /docs-output/
+# packages/cli/test/nitro-builder.test.ts creates fixtures under here; a crashed run before cleanup
+# would otherwise leave these tracked.
+packages/cli/test/fixtures/
+# packages/{vite,nitro}-server tests/helpers.ts fixture() creates these next to src/; a crashed run
+# before cleanup would otherwise leave these tracked.
+packages/*/.server-test-*/
 
 # Ignore package locks
 package-lock.json

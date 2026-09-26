@@ -18,6 +18,7 @@ import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js
 import { ListenerStore } from './structures/ListenerStore.js';
 import { PluginHook } from './types/Enums.js';
 import { ErrorMessages, Payloads } from './utils/constants.js';
+import { FetchServerResponse, toIncomingMessage } from './utils/fetch-bridge.js';
 import { LogLevel, type ILogger } from './utils/logger/ILogger.js';
 import { Logger } from './utils/logger/Logger.js';
 import { makeKey, verifyBody, type Key } from './utils/security.js';
@@ -53,6 +54,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public readonly bodySizeLimit: number;
 	public readonly httpReplyOnError: boolean;
 	#discordPublicKey: string;
+	#fetchKey: Promise<Key> | null = null;
 
 	public constructor(options: ClientOptions = {}) {
 		super();
@@ -182,6 +184,29 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			await new Promise<void>((resolve) => this.server.close(() => resolve()));
 			throw error;
 		}
+	}
+
+	/**
+	 * Handles a single Web `Request`/`Response` interaction — the exact same signature verification, routing and
+	 * replies `listen()`'s `node:http` server runs, `handleRawHttpMessage` called exactly the way it calls it on
+	 * every request — without binding a port. This is `node:http`'s replacement whenever something else (Nitro, a
+	 * Worker, `Bun.serve`) owns the actual listener instead of `Client`: build a `Request` from whatever that
+	 * transport gives you and hand it here.
+	 *
+	 * The Discord public key given at construction is imported once and reused across every call, the same lifetime
+	 * `listen()` gives its own signing key.
+	 * @param request The interaction request.
+	 * @param options The fetch options.
+	 */
+	public async fetch(request: Request, options: FetchOptions = {}): Promise<Response> {
+		this.#fetchKey ??= makeKey(this.#discordPublicKey);
+		const key = await this.#fetchKey;
+		const path = options.postPath ?? process.env.HTTP_POST_PATH ?? '/';
+
+		const incoming = toIncomingMessage(request);
+		const outgoing = new FetchServerResponse();
+		await this.handleRawHttpMessage(incoming, outgoing as unknown as ServerResponse, path, key);
+		return outgoing.toResponse();
 	}
 
 	protected async handleRawHttpMessage(request: IncomingMessage, response: ServerResponse, path: string, key: Key) {
@@ -363,11 +388,20 @@ export interface ListenOptions extends Omit<NetListenOptions, 'path' | 'readable
 	serverOptions?: ServerOptions;
 }
 
+export interface FetchOptions {
+	/**
+	 * The path interactions are posted to.
+	 * @default process.env.HTTP_POST_PATH ?? '/'
+	 */
+	postPath?: string;
+}
+
 export namespace Client {
 	export type Options = ClientOptions;
 	export type LoggerOptions = ClientLoggerOptions;
 	export type PieceLoadOptions = LoadOptions;
 	export type ServerListenOptions = ListenOptions;
+	export type ServerFetchOptions = FetchOptions;
 }
 
 declare module '@sapphire/pieces' {

@@ -20,7 +20,7 @@ The oxlint rule set used across `@wolfstar/*` projects, published so downstream 
 It intentionally ships **no** `ignorePatterns`: those are project-specific and belong in your own config.
 
 > [!NOTE]
-> oxlint's `extends` merge behaviour for `jsPlugins` isn't documented as precisely as it is for `rules`. If, after extending this config, `wolfstar/*` rules don't appear to run, declare `jsPlugins` and the `wolfstar/*` entries directly in your own `.oxlintrc.json` (see [`@wolfstar/eslint-plugin-http-framework`](../eslint-plugin-http-framework) for the full rule list) instead of relying on `extends` to carry them over.
+> oxlint's `extends` merge behaviour for `jsPlugins` isn't documented as precisely as it is for `rules`. If, after extending this config, `wolfstar/*` rules don't appear to run, declare `jsPlugins` and the `wolfstar/*` entries directly in your own `oxlint.config.ts` (see [`@wolfstar/eslint-plugin-http-framework`](../eslint-plugin-http-framework) for the full rule list) instead of relying on `extends` to carry them over.
 
 ## Installation
 
@@ -30,17 +30,19 @@ pnpm add -D oxlint @wolfstar/oxlint-config
 
 ## Usage
 
-In your project's `.oxlintrc.json`:
+The package default-exports a config object created with `defineConfig` from `oxlint`. In your project's `oxlint.config.ts`, pass it to `extends`:
 
-```json
-{
-	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"extends": ["./node_modules/@wolfstar/oxlint-config/.oxlintrc.json"],
-	"ignorePatterns": ["**/dist/**", "**/node_modules/**"]
-}
+```typescript
+import { defineConfig } from 'oxlint';
+import baseConfig from '@wolfstar/oxlint-config';
+
+export default defineConfig({
+	extends: [baseConfig],
+	ignorePatterns: ['**/dist/**', '**/node_modules/**']
+});
 ```
 
-oxlint resolves `extends` entries as **file paths** relative to the config file that declares them — bare package specifiers such as `"@wolfstar/oxlint-config"` are not supported. Rules declared in your own config are merged last and therefore win over the base.
+In `oxlint.config.ts`, `extends` takes config objects rather than file paths. Rules declared in your own config are merged last and therefore win over the base.
 
 ## Buy us some doughnuts
 

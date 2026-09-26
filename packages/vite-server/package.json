@@ -1,0 +1,84 @@
+{
+	"name": "@wolfstar/vite-server",
+	"version": "0.2.2",
+	"description": "Vite build and watch integration for Stars projects",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"pnpm",
+		"stars",
+		"ts",
+		"typescript",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/vite-server",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/vite-server"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./package.json": "./package.json",
+		"./internal": {
+			"import": {
+				"types": "./dist/esm/internal.d.ts",
+				"default": "./dist/esm/internal.js"
+			}
+		}
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"scripts": {
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@wolfstar/schema": "workspace:^",
+		"srvx": "^1.0.5"
+	},
+	"devDependencies": {
+		"@vitest/coverage-v8": "^5.0.0",
+		"golar": "^0.1.10",
+		"tsdown": "^0.23.0",
+		"typescript": "~7.0.2",
+		"vite": "^8.3.0",
+		"vitest": "^5.0.0"
+	},
+	"peerDependencies": {
+		"vite": ">=6.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vite": {
+			"optional": true
+		}
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}

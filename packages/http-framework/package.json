@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework",
-	"version": "4.0.1",
+	"version": "5.1.1",
 	"description": "The framework for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -21,8 +21,16 @@
 		"url": "git+https://github.com/wolfstar-project/stars-components.git",
 		"directory": "packages/http-framework"
 	},
+	"bin": {
+		"stars": "./bin/stars.mjs"
+	},
 	"files": [
-		"dist/"
+		"dist/",
+		"bin/",
+		"config.js",
+		"config.d.ts",
+		"schema.js",
+		"schema.d.ts"
 	],
 	"type": "module",
 	"sideEffects": false,
@@ -38,8 +46,8 @@
 		},
 		"./config": {
 			"import": {
-				"types": "./dist/esm/config.d.ts",
-				"default": "./dist/esm/config.js"
+				"types": "./config.d.ts",
+				"default": "./config.js"
 			}
 		},
 		"./auto-imports": {
@@ -48,12 +56,13 @@
 				"default": "./dist/esm/auto-imports.js"
 			}
 		},
-		"./fetch": {
+		"./schema": {
 			"import": {
-				"types": "./dist/esm/fetch.d.ts",
-				"default": "./dist/esm/fetch.js"
+				"types": "./schema.d.ts",
+				"default": "./schema.js"
 			}
-		}
+		},
+		"./package.json": "./package.json"
 	},
 	"publishConfig": {
 		"access": "public",
@@ -76,11 +85,12 @@
 		"@sapphire/result": "^2.8.0",
 		"@sapphire/utilities": "^3.18.2",
 		"@vladfrangu/async_event_emitter": "^2.4.7",
-		"c12": "^3.3.4",
+		"@wolfstar/cli": "workspace:^",
+		"@wolfstar/schema": "workspace:^",
 		"chokidar": "^5.0.0",
 		"discord-api-types": "^0.38.8",
 		"mlly": "^1.8.2",
-		"unimport": "^6.5.0"
+		"unimport": "^7.0.2"
 	},
 	"devDependencies": {
 		"@vitest/coverage-v8": "^5.0.0",

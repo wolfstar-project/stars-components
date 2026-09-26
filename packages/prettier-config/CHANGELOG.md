@@ -1,5 +1,11 @@
 # @wolfstar/prettier-config
 
+## 0.1.2
+
+### Patch Changes
+
+- [#210](https://github.com/wolfstar-project/stars-components/pull/210) [`7f15974`](https://github.com/wolfstar-project/stars-components/commit/7f159741397a26412ba4cd7f0b5b1d5324326335) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 0.1.1
 
 ### Patch Changes

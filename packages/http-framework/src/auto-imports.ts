@@ -14,13 +14,17 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createUnimport, type Import } from 'unimport';
 import unplugin from 'unimport/unplugin';
-import type { ResolvedImportsConfig } from './lib/config/resolve.js';
+import type { ResolvedImportsConfig } from '@wolfstar/schema';
 
 /**
  * Export names never auto-imported, even when a preset re-exports them under that name: names generic enough that
  * project code is likely to declare or import its own value with the same identifier.
+ *
+ * `setup` is `@wolfstar/env-utilities`' env loader, which scaffolded projects import explicitly (as `envRun`) from
+ * their own `src/lib/setup/all.ts` — a file that exports a `setup()` of its own, which the default `src/lib/**` dir
+ * would otherwise auto-import alongside it and have `unimport` warn about the duplicate on every build.
  */
-const BLOCKED_EXPORTS: ReadonlySet<string> = new Set(['Client', 'Message', 'Plugin', 'Store']);
+const BLOCKED_EXPORTS: ReadonlySet<string> = new Set(['Client', 'Message', 'Plugin', 'Store', 'setup']);
 
 /**
  * Nuxt matches its own auto-import transform against every JS/TS file variant (`.js .mjs .cjs .ts .mts .cts .jsx

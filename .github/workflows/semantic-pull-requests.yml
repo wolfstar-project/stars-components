@@ -50,6 +50,9 @@ jobs:
                       logger
                       reddit-helpers
                       safe-fetch
+                      schema
+                      nitro-server
+                      vite-server
                       shared-http-pieces
                       shared-influx-pieces
                       start-banner

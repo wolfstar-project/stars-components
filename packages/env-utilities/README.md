@@ -61,6 +61,29 @@ Files on the left have more priority than files on the right:
 
 [CRA Reference](https://create-react-app.dev/docs/adding-custom-environment-variables/#what-other-env-files-can-be-used)
 
+### Experimental: [varlock](https://varlock.dev) support
+
+`@wolfstar/env-utilities` can optionally delegate environment variable resolution to
+[varlock](https://varlock.dev), a schema-based alternative to `dotenv` with built-in validation, type-safety, and
+secret protection. Support for it is **experimental**.
+
+To use it, first set up varlock in your project (`npx varlock init`) and install the optional `varlock` package, then
+opt in via the `loader` option or the `DOTENV_LOADER` environment variable:
+
+```typescript
+import { setup } from '@wolfstar/env-utilities';
+
+setup({ loader: 'varlock' });
+```
+
+```
+DOTENV_LOADER=varlock
+```
+
+When `loader: 'varlock'` is set, varlock resolves your checked-in `.env.schema` (with its own `.env*` file discovery
+and validation) and injects the result into `process.env`; the dotenv-specific options above (`encoding`, `path`,
+`env`) are ignored in favour of the schema. `prefix` still applies to the resolved variables.
+
 ### Typing Environment Variables
 
 To add new entries, you augment `Env` from `@wolfstar/env-utilities/dist/lib/types` using any of the following types:

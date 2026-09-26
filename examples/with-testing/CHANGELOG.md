@@ -1,5 +1,33 @@
 # with-testing
 
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d)]:
+    - @wolfstar/http-framework@5.1.1
+
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41), [`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41)]:
+    - @wolfstar/http-framework@5.1.0
+
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`9b71e86`](https://github.com/wolfstar-project/stars-components/commit/9b71e86b2a53b6467991764efb2e2c211c4a4131), [`18eda16`](https://github.com/wolfstar-project/stars-components/commit/18eda168cd486c24913feddd83f132b4f84739bb)]:
+    - @wolfstar/http-framework@5.0.0
+
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`a33c03d`](https://github.com/wolfstar-project/stars-components/commit/a33c03d42b0380fcf9841a58e66aa3ad0fa5b4bb)]:
+    - @wolfstar/http-framework@4.0.2
+
 ## 0.0.12
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
 	"name": "with-subcommands",
-	"version": "0.0.13",
+	"version": "0.0.19",
 	"private": true,
 	"description": "WolfStar HTTP bot example with chat-input subcommands",
 	"type": "module",

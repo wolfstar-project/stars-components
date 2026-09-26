@@ -12,9 +12,14 @@
 ## Description
 
 `stars` is a small, fast CLI that owns the developer workflow of a bot built with `@wolfstar/http-framework`. Like
-Nuxt splits `nuxt.config`/`defineNuxtConfig` (owned by the `nuxt` framework) from `nuxi` (a separate CLI package that
-calls into it), the typed `stars.config.*` schema and loader live in [`@wolfstar/http-framework`](../http-framework)
-(`@wolfstar/http-framework/config`) — this package only consumes it to drive its commands:
+Nuxt splits `nuxt.config`/`defineNuxtConfig` (owned by `@nuxt/schema`, which both `nuxt` and the separate `@nuxt/cli`
+package depend on) from `nuxi`, the typed `stars.config.*` schema and loader live in their own package,
+[`@wolfstar/schema`](../schema), which both [`@wolfstar/http-framework`](../http-framework) (re-exported
+as `@wolfstar/http-framework/config`) and this package depend on — this package only consumes it to drive its
+commands. `@wolfstar/http-framework` also depends on this package and exposes it as its own `stars` binary (the way
+`nuxt` exposes `nuxi`'s), so installing it is enough to get `stars` without a separate `@wolfstar/cli` install; this
+package has no install-time dependency on `@wolfstar/http-framework` in return, the same way `@nuxt/cli` has none on
+`nuxt` — its own commands:
 
 - `stars dev` builds the project, starts the bot, restarts it on changes and shows what is happening in an interactive terminal UI (or plain logs).
 - `stars build` runs the configured build tool once.
@@ -30,6 +35,10 @@ Everything is driven by a typed `stars.config.ts` file.
 ```sh
 pnpm add -D @wolfstar/cli
 ```
+
+Installing [`@wolfstar/http-framework`](../http-framework) already gives a project the `stars` binary, so this
+explicit install is only needed to depend on this package directly — for its programmatic exports (`loadStarsConfig`,
+diagnostics), or to pin its version independently of the framework's.
 
 Projects scaffolded with [`@wolfstar/create-http-framework`](../create-http-framework) come with `@wolfstar/cli`, a `stars.config.ts` file and `dev`/`build` scripts already wired up.
 
@@ -91,6 +100,7 @@ that every application plugin loaded successfully. Logged errors switch the badg
 | `o`            | open the local URL in a browser                              |
 | `t`            | toggle a public `cloudflared` tunnel                         |
 | `i`            | show project, versions, URLs, health, types and session info |
+| `T`            | pick a colour theme (see **Themes** below)                   |
 | `l`            | browse logs                                                  |
 | `e`            | select the last error with its surrounding context           |
 | `c` / `Ctrl+L` | clear log history                                            |
@@ -114,6 +124,14 @@ export default defineConfig({
 
 `dev.banner` also accepts a string containing newlines, or `false` to hide the wordmark. Omit it for Stars branding.
 For the application's standalone banner outside the TUI, use `createStarsBanner` from `@wolfstar/start-banner`.
+
+**Themes.** Press `T` to pick a colour theme, like Claude Code's `/theme`: arrows preview it live, `Enter` keeps and saves
+it, `Esc` restores the previous one. Available themes are `auto` (follows the terminal background through
+`COLORFGBG`, dark when unknown), `dark`, `light`, `dark-daltonized` and `light-daltonized` (blue/orange instead of
+green/red, for colour-blind users), and `dark-ansi` and `light-ansi` (only the 16 ANSI colours, so your terminal
+palette decides). The theme resolves as `--theme <name>` › `STARS_THEME` › the saved choice › `auto`. It is saved in
+`preferences.json` under `$STARS_CONFIG_DIR`, `$XDG_CONFIG_HOME/stars`, `%APPDATA%\stars` or `~/.config/stars`.
+`NO_COLOR` still disables colour altogether.
 
 **Plain mode** prints prefixed lines instead and is selected by `--no-tui`, `STARS_TUI=plain`, redirected input/output,
 CI, `TERM=dumb`, or terminals smaller than 40×10. `STARS_TUI=1` overrides CI/size checks, never redirected streams or
@@ -194,11 +212,11 @@ and which options the block sets.
 `experimental` in `stars.config.*` turns on work that is still landing (see the
 [framework README](../http-framework#experimental-flags) for the full reference):
 
-| Flag                 | What it changes                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------------ |
-| `enableVite`         | Builds through the project's own `vite` (and allows `build.tool: 'vite'`) instead of `tsdown`          |
-| `enableExternalVite` | The project runs Vite itself; `stars dev` only watches the build output and restarts the bot           |
-| `enableNitro`        | Declared, not implemented: `stars dev`/`stars build` fail with `EXPERIMENT_UNAVAILABLE` until it lands |
+| Flag                 | What it changes                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `enableVite`         | Builds through the project's own `vite` (and allows `build.tool: 'vite'`) instead of `tsdown`                             |
+| `enableExternalVite` | The project runs Vite itself; `stars dev` only watches the build output and restarts the bot                              |
+| `enableNitro`        | Builds through [Nitro](https://nitro.build) (itself a Vite plugin) instead of `node:http`, deployable to any Nitro preset |
 
 `stars info` prints which flags are on.
 
@@ -248,3 +266,11 @@ location. Explicit `include` or `compilerOptions.paths` in your own tsconfig rep
 remove manually duplicated paths to use the generated aliases. Generation works with `imports: false` too.
 Use `stars prepare --check` to check both generated files without writing them. Do not edit `.stars/tsconfig.json`
 by hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.
+
+## Server integrations
+
+`@wolfstar/vite-server` and `@wolfstar/nitro-server` provide the Vite and Nitro builders. The CLI loads the
+selected integration lazily, passes the resolved `stars.config` and supplies project dependency loading and
+plugin registration through `BuilderContext` from `@wolfstar/schema`. Neither server package depends on the CLI
+or framework. Existing experimental flags, presets, output directories and `stars dev`/`stars build` commands
+are unchanged; install Vite/Nitro in the consuming project as before.

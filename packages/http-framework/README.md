@@ -312,6 +312,19 @@ await client.load();
 await client.listen({ port: 3000 });
 ```
 
+`Client#fetch` is the Web `Request`/`Response` counterpart of `listen()` — the same signature verification, routing
+and replies, without binding a port. Use it to serve interactions from anything that speaks Fetch instead of
+`node:http` (Nitro, a Worker, `Bun.serve`, `Deno.serve`, Vite's own dev middleware):
+
+```typescript
+export default {
+	fetch: (request: Request) => client.fetch(request, { postPath: '/interactions' })
+};
+```
+
+This is what `@wolfstar/cli`'s `experimental.enableNitro` uses under the hood: the generated Nitro server entry calls
+`client.fetch(request)` directly instead of `listen()`, so `node:http` is swapped for whatever preset Nitro targets.
+
 ### Logger
 
 The framework ships a minimal logger, available as `container.logger` (and as `client.logger`) as soon as
@@ -462,9 +475,24 @@ client.on(Events.HmrPieceReloaded, async (piece) => {
 
 ### Project configuration (`stars.config.*`)
 
-`@wolfstar/http-framework` owns the typed project configuration consumed by the [`stars` CLI](../cli) — the
-`defineConfig` helper and the config loader live here, not in the CLI, so any tool can resolve a project's
-configuration without pulling in `@wolfstar/cli`.
+The typed project configuration consumed by the [`stars` CLI](../cli) — the `defineConfig` helper and the config
+loader — lives in [`@wolfstar/schema`](../schema), a small package shared by `@wolfstar/http-framework`
+and `@wolfstar/cli` so neither depends on the other's runtime. `@wolfstar/http-framework` re-exports its public
+surface unchanged as `@wolfstar/http-framework/config`, so any tool can resolve a project's configuration without
+pulling in `@wolfstar/cli` — most projects should keep importing it from here rather than depending on
+`@wolfstar/schema` directly.
+
+The package also exposes `@wolfstar/http-framework/schema`, forwarding the shared schema's types and loader,
+like Nuxt's `nuxt/schema`. Both facades preserve the same exports and function identities; existing `/config`
+imports remain supported. Tooling can read the package metadata through `@wolfstar/http-framework/package.json`.
+
+```typescript
+import type { StarsConfig, ResolvedStarsConfig } from '@wolfstar/http-framework/schema';
+```
+
+Installing `@wolfstar/http-framework` also gives a project the `stars` binary (it depends on `@wolfstar/cli` and
+exposes it as `stars`, the way `nuxt` exposes `nuxi`'s binary), so a project needs no separate `@wolfstar/cli`
+install to run `stars dev`/`stars build`.
 
 ```typescript
 // stars.config.ts
@@ -618,8 +646,8 @@ export default defineConfig({
 		enableVite: true,
 		// The project runs Vite itself: `stars dev` only watches the output and restarts the bot.
 		enableExternalVite: false,
-		// Build and serve through Nitro. Needs the framework's Fetch adapter, so `stars dev`/`stars build` still
-		// refuse it with an actionable error for now.
+		// Build and serve through Nitro (itself a Vite plugin) instead of node:http, deployable to any of its
+		// presets; the entry's default export must be the `Client` instance, served through `client.fetch(request)`.
 		enableNitro: false
 	}
 });

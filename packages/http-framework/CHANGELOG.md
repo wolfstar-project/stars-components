@@ -1,5 +1,99 @@
 # Changelog
 
+## 5.1.1
+
+### Patch Changes
+
+- [#222](https://github.com/wolfstar-project/stars-components/pull/222) [`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d) - fix(auto-imports): stop auto-importing `@wolfstar/env-utilities`' `setup`, which clashed with the `setup()` scaffolded projects export from `src/lib/setup/all.ts` and printed a duplicated import warning on every build ([#219](https://github.com/wolfstar-project/stars-components/issues/219)) Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 5.1.0
+
+### Minor Changes
+
+- [#209](https://github.com/wolfstar-project/stars-components/pull/209) [`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41) - Align configuration entry points with Nuxt: add framework schema and package metadata exports, provide a lightweight schema/config helper, and separate schema input types from config resolution while preserving existing exports. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#209](https://github.com/wolfstar-project/stars-components/pull/209) [`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41) - Split the `stars.config.*` schema and loader (`defineConfig`, `loadStarsConfig`, `configDiagnostics` and friends) out
+  of `@wolfstar/http-framework` into a new package, [`@wolfstar/schema`](https://npmx.dev/package/@wolfstar/schema),
+  and made `@wolfstar/http-framework` depend on `@wolfstar/cli` for its own `stars` binary — the same split Nuxt has
+  between `nuxt`, `@nuxt/cli` and `@nuxt/schema`.
+
+    - `@wolfstar/http-framework/config` re-exports `@wolfstar/schema`'s public surface unchanged, so existing
+      `import { defineConfig } from '@wolfstar/http-framework/config'` code keeps working with no changes needed.
+    - `@wolfstar/http-framework` now depends on `@wolfstar/cli` and ships a `stars` bin (`bin/stars.mjs`, re-exporting
+      `@wolfstar/cli/cli`), the way `nuxt` ships `nuxi`'s binary — installing `@wolfstar/http-framework` is now enough to
+      get the `stars` command, no separate `@wolfstar/cli` install required.
+    - **Breaking for `@wolfstar/cli`:** it no longer depends on `@wolfstar/http-framework` (matching `@nuxt/cli` having no
+      dependency on `nuxt`) — it now depends on `@wolfstar/schema` for the config schema/loader instead. Projects
+      that installed `@wolfstar/cli` without also depending on `@wolfstar/http-framework` directly (uncommon, since the
+      CLI has nothing to build without it) now need to add `@wolfstar/http-framework` themselves; every project scaffolded
+      by `@wolfstar/create-http-framework`, or that already depends on `@wolfstar/http-framework`, is unaffected.
+      `@wolfstar/cli`'s own public exports (`loadStarsConfig`, `configDiagnostics`, `ConfigDiagnosticCode`,
+      `ResolvedStarsConfig`, re-exported from `@wolfstar/schema`) are unchanged.
+
+    This was needed because `@wolfstar/cli` already depended on `@wolfstar/http-framework`: adding the reverse dependency
+    (for the new `stars` bin) without this split would have made the two packages depend on each other, which this
+    monorepo's build graph (and any tool resolving workspace dependencies) cannot build. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41), [`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41), [`6d970e5`](https://github.com/wolfstar-project/stars-components/commit/6d970e5e3e93f5a229d3f49a33b494cbe698df41)]:
+    - @wolfstar/cli@2.0.0
+    - @wolfstar/schema@0.2.0
+
+## 5.0.0
+
+### Major Changes
+
+- [#207](https://github.com/wolfstar-project/stars-components/pull/207) [`9b71e86`](https://github.com/wolfstar-project/stars-components/commit/9b71e86b2a53b6467991764efb2e2c211c4a4131) - Implemented `experimental.enableNitro`: `stars dev`/`stars build` now build the bot through
+  [Nitro](https://nitro.build) v3's own Vite plugin (`nitro/vite`, requires Vite 8) instead of refusing with
+  `EXPERIMENT_UNAVAILABLE`.
+
+    - `@wolfstar/http-framework`: `Client` now has a `fetch(request, options?)` method — the Web `Request`/`Response`
+      counterpart of `listen()`, running the exact same signature verification, routing and replies without binding a
+      port, for anything that speaks Fetch instead of `node:http` (Nitro, a Worker, `Bun.serve`, `Deno.serve`, Vite's own
+      dev middleware). The Discord public key is imported once and reused across calls, the same lifetime `listen()`
+      gives its own signing key. The previously-unannounced `@wolfstar/http-framework/fetch` submodule
+      (`createFetchHandler`/`FetchHandler`/`FetchHandlerOptions`) is removed in favour of this — a method on `Client`
+      itself rather than a separate adapter module to import and wire up.
+    - `@wolfstar/cli`: Nitro v3 is itself a Vite plugin — there is no separate `nitro build` step — so the new
+      `NitroBuilder` reuses the project's own `vite.config.*`/`stars.config#vite` the same way `build.tool: 'vite'` does,
+      and adds a generated server entry on top: it imports the entry's default export (the `Client` instance, already
+      `load()`ed rather than `listen()`ed) and calls `client.fetch(request)`, in the plain
+      `{ fetch(Request): Promise<Response> }` shape Nitro's own server entry convention expects. `stars build` now
+      produces `.output/` laid out for the configured `experimental.nitro.preset` (`node-server` by default, deployable
+      to anything Nitro targets — `cloudflare-module`, `aws-lambda`, `vercel`, `netlify`, `bun`, `deno-deploy`, and more)
+      instead of a `node:http` process; `stars dev` rebuilds and restarts on every change, the same as the other build
+      tools. Install `nitro` (and `vite`) as a dev dependency to use it. The now-implemented `EXPERIMENT_UNAVAILABLE`
+      diagnostic code is removed from `cliDiagnostics`/`CliDiagnosticCode`.
+    - `@wolfstar/cli`: `NitroBuilder` also turns on Vite's native `resolve.tsconfigPaths` (see
+      https://nitro.build/examples/import-alias), and `stars prepare`'s generated `.stars/tsconfig.json` now emits the
+      same `~`/`@`/`~~`/`@@` aliases `build.tool: 'tsdown'` already gets whenever `experimental.enableNitro` is on — a
+      project's own `tsconfig.json#paths`/package.json `imports` just work under Nitro too, without a
+      `vite-tsconfig-paths` plugin. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#205](https://github.com/wolfstar-project/stars-components/pull/205) [`18eda16`](https://github.com/wolfstar-project/stars-components/commit/18eda168cd486c24913feddd83f132b4f84739bb) - Replaced the hand-rolled `ConfigError` (`@wolfstar/http-framework/config`) and `CliError` (`@wolfstar/cli`) error
+  classes with [`nostics`](https://github.com/vercel-labs/nostics) `Diagnostic`s: stable, typed diagnostic codes with a
+  `why`, an actionable `fix`, and a docs link, instead of ad hoc `code`/`hint`/`path`/`file` fields.
+
+    - `@wolfstar/http-framework/config` no longer exports `ConfigError`/`ConfigErrorOptions`. Every `stars.config.*`
+      validation and load failure is now built from `configDiagnostics` (also exported) and thrown as a `nostics`
+      `Diagnostic` — catch it with `instanceof Diagnostic` (from `nostics`) instead of `instanceof ConfigError`. The
+      option path that used to live on `.path` is folded into the diagnostic's message; the configuration file that used
+      to live on `.file` is now in `.sources`.
+    - `@wolfstar/cli` no longer exports `CliError`/`CliErrorOptions`. Its own errors are now built from the new
+      `cliDiagnostics` catalog (also exported) and are `Diagnostic` instances too. `formatError` renders a `Diagnostic`
+      with `nostics`' own ANSI formatter; `exitCodeOf` maps `stars.config.*` diagnostic codes to exit code `2` and
+      `BUILD_FAILED` to `3`, the same as before.
+
+    `ExitCode`, `exitCodeOf` and `formatError` keep their existing exports and behaviour for every other case (an
+    unexpected error still renders as a crash report, a non-`Error` value still stringifies). Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 4.0.2
+
+### Patch Changes
+
+- [#180](https://github.com/wolfstar-project/stars-components/pull/180) [`a33c03d`](https://github.com/wolfstar-project/stars-components/commit/a33c03d42b0380fcf9841a58e66aa3ad0fa5b4bb) - fix(deps): update dependency unimport to v7 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 4.0.1
 
 ### Patch Changes

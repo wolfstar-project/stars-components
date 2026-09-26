@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.7
+
+### Patch Changes
+
+- [#222](https://github.com/wolfstar-project/stars-components/pull/222) [`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d) - fix: keep the bundled locales when `@wolfstar/plugin-i18next/register` is imported before `@wolfstar/shared-http-pieces/register` ([#218](https://github.com/wolfstar-project/stars-components/issues/218)) Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d)]:
+    - @wolfstar/http-framework@5.1.1
+
+## 2.0.6
+
+### Patch Changes
+
+- [#210](https://github.com/wolfstar-project/stars-components/pull/210) [`7f15974`](https://github.com/wolfstar-project/stars-components/commit/7f159741397a26412ba4cd7f0b5b1d5324326335) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+## 2.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`9b71e86`](https://github.com/wolfstar-project/stars-components/commit/9b71e86b2a53b6467991764efb2e2c211c4a4131), [`18eda16`](https://github.com/wolfstar-project/stars-components/commit/18eda168cd486c24913feddd83f132b4f84739bb)]:
+    - @wolfstar/http-framework@5.0.0
+
 ## 2.0.4
 
 ### Patch Changes
