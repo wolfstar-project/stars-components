@@ -8,8 +8,7 @@ export interface HttpFrameworkMatchers<R = unknown> {
 }
 
 declare module 'vitest' {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	interface Assertion<T = any> extends HttpFrameworkMatchers<T> {}
+	interface Assertion<R extends void | Promise<void> = void, T = unknown> extends HttpFrameworkMatchers<R> {}
 	interface AsymmetricMatchersContaining extends HttpFrameworkMatchers {}
 }
 
