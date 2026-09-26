@@ -1,0 +1,25 @@
+import { setup } from './lib/setup/all.js';
+import { envParseInteger } from '@wolfstar/env-utilities';
+import { ShardClient, ShardManager } from '@wolfstar/plugin-sharder';
+
+await setup();
+
+// The manager and the shards share this script: `ShardClient.context` is only set in the processes the manager
+// spawned.
+if (ShardClient.context === null) {
+	// Discord's recommended gateway shard count (fetched with `DISCORD_TOKEN`), split across `SHARDER_CLUSTERS`
+	// `node:cluster` workers. Cluster workers share the HTTP port, so Node balances the interactions across them.
+	const manager = new ShardManager({
+		strategy: 'cluster',
+		clusters: envParseInteger('SHARDER_CLUSTERS', 2),
+		// Identifies are paced by the manager across every worker, see `identifyThrottler` in `src/shard.ts`.
+		spawn: { delay: 0 }
+	});
+
+	manager.on('shardReady', (channel) => console.log(`Worker ${channel.id} is ready (gateway shards ${channel.shards.join(', ')})`));
+	manager.on('shardGiveUp', (channel) => console.error(`Worker ${channel.id} keeps crashing, giving up on it`));
+
+	await manager.spawn();
+} else {
+	await import('./shard.js');
+}

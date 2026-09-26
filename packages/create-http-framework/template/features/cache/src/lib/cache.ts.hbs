@@ -1,0 +1,27 @@
+{{#if redis}}
+import { envParseString } from '@wolfstar/env-utilities';
+{{/if}}
+import { {{#if redis}}createRedisCache{{else}}createInMemoryCache{{/if}}, type Cache } from '@wolfstar/plugin-cache';
+{{#if redis}}
+import { Redis } from 'ioredis';
+{{/if}}
+
+{{#if redis}}
+/** Caches the gateway's entities in the Redis server at `REDIS_URL`, see `compose.yaml` to start one locally. */
+export function createCache(): Cache {
+	return createRedisCache({
+		redis: new Redis(envParseString('REDIS_URL')),
+		// Entries live at `<prefix>:<entity>:<key>`, so several bots can share one database.
+		prefix: '{{name}}'
+	});
+}
+{{else}}
+/**
+ * Keeps the gateway's entities in memory: nothing outlives the process. Swapping the store never changes the call sites,
+ * the gateway client and its managers only see the `Cache` interface (`createRedisCache` is the persistent one).
+ */
+export function createCache(): Cache {
+	// Keep the latest 1,000 messages, every other entity is unbounded.
+	return createInMemoryCache({ maxSize: { messages: 1_000 } });
+}
+{{/if}}

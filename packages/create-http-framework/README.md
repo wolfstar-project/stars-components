@@ -34,13 +34,16 @@ The CLI will guide you through the following prompts:
 - **Project name** — an npm-compatible name for your bot
 - **Package manager** — npm, yarn, pnpm, or bun
 - **Language** — TypeScript or JavaScript
-- **Build tool** — tsdown, TypeScript 6, or the TypeScript 7 release candidate
+- **Build tool** — tsdown, Vite, Vite + Nitro, TypeScript 6, or the TypeScript 7 release candidate (Vite and Vite + Nitro are experimental)
 - **Linter and formatter** — Oxlint / ESLint and Oxfmt / Prettier
 - **Port** — the port the HTTP server will listen on (default: `3000`)
 - **Optional features** (multiselect) —
     - **i18n** — add [`@wolfstar/plugin-i18next`](https://github.com/wolfstar-project/stars-components/tree/main/packages/plugin-i18next)
     - **Subcommands** — add an example command that uses subcommands
     - **Testing** — set up Vitest with [`@wolfstar/http-framework-test-utils`](https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework-test-utils)
+    - **Gateway** — receive gateway events next to the HTTP interactions with [`@wolfstar/plugin-gateway`](https://github.com/wolfstar-project/plugins/tree/main/packages/plugin-gateway)
+    - **Cache** — cache gateway entities with [`@wolfstar/plugin-cache`](https://github.com/wolfstar-project/plugins/tree/main/packages/plugin-cache), in memory or in Redis (asked as a follow-up)
+    - **Sharder** — spread gateway shards across cluster workers with [`@wolfstar/plugin-sharder`](https://github.com/wolfstar-project/plugins/tree/main/packages/plugin-sharder)
 - **Auto-install** — install dependencies immediately after scaffolding
 
 ## Options
@@ -52,13 +55,17 @@ The CLI will guide you through the following prompts:
 | `--interactive`                      | `-i`  | Force interactive prompts even when an AI agent is detected                |
 | `--package-manager <pm>`             |       | Choose npm, yarn, pnpm, or bun                                             |
 | `--language <lang>`                  |       | Choose TypeScript (`ts`) or JavaScript (`js`)                              |
-| `--build <tool>`                     |       | Choose `tsc6`, `tsc7`, or `tsdown` for TypeScript                          |
+| `--build <tool>`                     |       | Choose `tsc6`, `tsc7`, `tsdown`, `vite`, or `vite-nitro` for TypeScript    |
 | `--lint <linter>`                    |       | Choose `none`, `eslint`, or `oxlint`                                       |
 | `--format <formatter>`               |       | Choose `none`, `prettier`, or `oxfmt`                                      |
 | `--port <number>`                    |       | Set the HTTP port (default: `3000`)                                        |
 | `--i18n` / `--no-i18n`               |       | Enable or disable `@wolfstar/plugin-i18next` scaffolding                   |
 | `--subcommands` / `--no-subcommands` |       | Enable or disable the example subcommand command                           |
 | `--testing` / `--no-testing`         |       | Enable or disable the Vitest + `@wolfstar/http-framework-test-utils` setup |
+| `--gateway` / `--no-gateway`         |       | Enable or disable `@wolfstar/plugin-gateway` scaffolding                   |
+| `--cache` / `--no-cache`             |       | Enable or disable `@wolfstar/plugin-cache` (turns `--gateway` on)          |
+| `--redis` / `--no-redis`             |       | Cache in Redis instead of memory (turns `--cache` on)                      |
+| `--sharder` / `--no-sharder`         |       | Enable or disable `@wolfstar/plugin-sharder` (turns `--gateway` on)        |
 | `--install` / `--no-install`         |       | Enable or disable dependency installation                                  |
 | `--help`                             | `-h`  | Print usage and exit                                                       |
 
@@ -82,6 +89,7 @@ my-discord-bot/
 │   │   ├── setup/
 │   │   │   ├── all.ts            # Aggregates setup imports
 │   │   │   └── logger.ts         # Logger configuration
+│   │   ├── cache.ts              # Gateway entity cache (--cache)
 │   │   └── types/
 │   │       └── augments.ts       # Module augmentations (TypeScript only)
 │   ├── locales/
@@ -90,11 +98,13 @@ my-discord-bot/
 │   │           └── ping.json     # Example locale resource (--i18n)
 │   ├── @types/
 │   │   └── i18next.d.ts          # Generated i18next augmentation (--i18n)
+│   ├── shard.ts                  # Gateway client run by each shard worker (--sharder)
 │   └── main.ts                   # Entry point — starts the HTTP server
 ├── tests/
 │   └── ping.test.ts              # Example test (--testing)
 ├── vitest.config.ts              # Vitest configuration (--testing)
 ├── vitest.setup.ts               # Vitest setup file (--testing)
+├── compose.yaml                  # Local Redis server (--redis)
 ├── README.md                     # Generated project README
 ├── .env                          # Environment variables (DISCORD_TOKEN, DISCORD_PUBLIC_KEY)
 ├── .gitignore
@@ -105,7 +115,25 @@ my-discord-bot/
 - `src/locales/en-US/commands/ping.json` and `src/@types/i18next.d.ts` are only generated when **i18n** is enabled.
 - `src/@types/i18next.d.ts` is produced by `@wolfstar/i18next-type-generator`; the CLI runs it automatically at the end of scaffolding, and it can be re-run any time locale files change (see [`generate:i18n`](#i18n-type-generation) below).
 - `src/commands/math.ts` is only generated when **Subcommands** is enabled.
+- `src/lib/cache.ts` is only generated with **Cache**, `src/shard.ts` with **Sharder**, and `compose.yaml` with **Redis**.
 - `tests/ping.test.ts`, `vitest.config.ts`, and `vitest.setup.ts` are only generated when **Testing** is enabled.
+
+### Vite and Nitro
+
+`--build vite` bundles the bot with [Vite](https://vite.dev) into a single `dist/main.js`, and `--build vite-nitro` hands it to [Nitro](https://nitro.build), which writes a deployable `.output/` (the `node-server` preset by default, change `nitro.preset` in `stars.config.ts` to target another platform). Both are TypeScript only and turn on `experimental.enableVite` (and `enableNitro`) in the generated `stars.config.ts`.
+
+- A bundle has no `commands` directory to scan, so `src/main.ts` imports and loads the example commands explicitly. Add your own commands there.
+- With Nitro, `src/main.ts` default-exports the client instead of calling `listen()`, and the port comes from `PORT` in `.env`.
+- Nitro cannot be combined with `--sharder`: the sharder's manager process has no client for Nitro to forward requests to.
+
+### Gateway, cache and sharder
+
+The gateway plugins are for bots that also need gateway events, so they require a long-lived process and Node.js `>=24.17.0`.
+
+- `--gateway` makes `src/main.*` create a `GatewayClient` (it still answers HTTP interactions).
+- `--cache` adds `src/lib/cache.*`, an in-memory cache by default. `--redis` (or the follow-up prompt) swaps it for `ioredis`, adds a `compose.yaml` to start a local Redis, and `REDIS_URL` to `.env`.
+- `--sharder` turns `src/main.*` into the shard manager and adds `src/shard.*`, which runs in every cluster worker (`SHARDER_CLUSTERS` in `.env`).
+- `--cache` and `--sharder` switch `--gateway` on, and `--redis` switches `--cache` on.
 
 ### i18n type generation
 
@@ -119,4 +147,4 @@ The CLI runs this script automatically once at the end of scaffolding; re-run it
 
 ## Requirements
 
-- Node.js `>=20`
+- Node.js `>=20` (`>=24.17.0` for projects using the gateway)

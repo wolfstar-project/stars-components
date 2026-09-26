@@ -7,9 +7,12 @@ import { fetchDependencyVersions } from './tools/npmHelpers.js';
 import {
 	BUILD_TOOLS,
 	FORMATTERS,
+	isNitroBuild,
 	LANGUAGES,
 	LINTERS,
 	PACKAGE_MANAGERS,
+	resolveGatewayFeatures,
+	SHARDER_WITH_NITRO_ERROR,
 	type BuildTool,
 	type Formatter,
 	type Language,
@@ -49,7 +52,7 @@ Options:
   --interactive, -i            Force interactive prompts even when an AI agent is detected
   --package-manager <pm>       npm | yarn | pnpm | bun (defaults to the detected one)
   --language <lang>            ts | js (default: ts)
-  --build <tool>               tsc6 | tsc7 | tsdown — TypeScript only (default: tsdown)
+  --build <tool>               tsc6 | tsc7 | tsdown | vite | vite-nitro — TypeScript only (default: tsdown)
   --lint <linter>              none | eslint | oxlint (default: oxlint)
   --format <formatter>         none | prettier | oxfmt (default: oxfmt)
   --port <number>              HTTP port (default: 3000)
@@ -57,6 +60,10 @@ Options:
   --subcommands / --no-subcommands  Toggle the subcommands example command (default: off)
   --subcommands-advanced / --no-subcommands-advanced  Toggle the subcommand groups example command (default: off; overrides --subcommands)
   --testing / --no-testing     Toggle the testing setup (vitest) (default: off)
+  --gateway / --no-gateway     Toggle @wolfstar/plugin-gateway, gateway events next to the HTTP interactions (default: off)
+  --cache / --no-cache         Toggle @wolfstar/plugin-cache, the gateway entity cache (default: off; enables --gateway)
+  --redis / --no-redis         Store the cache in Redis instead of memory (default: off; enables --cache)
+  --sharder / --no-sharder     Toggle @wolfstar/plugin-sharder, gateway shards across cluster workers (default: off; enables --gateway)
   --install / --no-install     Toggle dependency installation (default: on)
   --ignore                     Write into an existing, non-empty directory without clearing it
   --help, -h                   Print this message and exit
@@ -102,6 +109,10 @@ async function main(): Promise<void> {
 	const cliSubcommands = argv['subcommands'] as boolean | undefined;
 	const cliSubcommandsAdvanced = argv['subcommands-advanced'] as boolean | undefined;
 	const cliTesting = argv['testing'] as boolean | undefined;
+	const cliGateway = argv['gateway'] as boolean | undefined;
+	const cliCache = argv['cache'] as boolean | undefined;
+	const cliRedis = argv['redis'] as boolean | undefined;
+	const cliSharder = argv['sharder'] as boolean | undefined;
 	const cliInstall = argv['install'] as boolean;
 
 	// Detect whether a known AI agent is driving this session
@@ -327,12 +338,23 @@ async function main(): Promise<void> {
 	let wantsSubcommands: boolean;
 	let wantsSubcommandsAdvanced: boolean;
 	let wantsTesting: boolean;
+	let wantsGateway: boolean;
+	let wantsCache: boolean;
+	let wantsRedis: boolean;
+	let wantsSharder: boolean;
+
+	// Nitro forwards requests to a default-exported client, which the sharder's manager process never has.
+	const nitro = language === 'ts' && isNitroBuild(buildTool);
 
 	if (nonInteractive) {
 		wantsI18n = cliI18n ?? false;
 		wantsSubcommands = cliSubcommands ?? false;
 		wantsSubcommandsAdvanced = cliSubcommandsAdvanced ?? false;
 		wantsTesting = cliTesting ?? false;
+		wantsGateway = cliGateway ?? false;
+		wantsCache = cliCache ?? false;
+		wantsRedis = cliRedis ?? false;
+		wantsSharder = cliSharder ?? false;
 	} else {
 		const featuresResult = await multiselect({
 			message: 'Which optional features would you like to add?',
@@ -340,7 +362,10 @@ async function main(): Promise<void> {
 				{ value: 'i18n', label: 'i18n support (@wolfstar/plugin-i18next)' },
 				{ value: 'subcommands', label: 'Subcommands example command' },
 				{ value: 'subcommands-advanced', label: 'Subcommands example command (with groups)' },
-				{ value: 'testing', label: 'Testing setup (vitest)' }
+				{ value: 'testing', label: 'Testing setup (vitest)' },
+				{ value: 'gateway', label: 'Gateway events (@wolfstar/plugin-gateway)' },
+				{ value: 'cache', label: 'Gateway entity cache (@wolfstar/plugin-cache)' },
+				...(nitro ? [] : [{ value: 'sharder', label: 'Gateway sharding across cluster workers (@wolfstar/plugin-sharder)' }])
 			],
 			initialValues: [],
 			required: false
@@ -354,12 +379,40 @@ async function main(): Promise<void> {
 		wantsSubcommands = features.has('subcommands');
 		wantsSubcommandsAdvanced = features.has('subcommands-advanced');
 		wantsTesting = features.has('testing');
+		wantsGateway = features.has('gateway');
+		wantsCache = features.has('cache');
+		wantsSharder = features.has('sharder');
+		wantsRedis = cliRedis ?? false;
+
+		// `--redis` already answers whether to use Redis, only ask when the flag was left out.
+		if (wantsCache && cliRedis === undefined) {
+			const redisResult = await confirm({
+				message: 'Would you like to store the cache in Redis (ioredis) instead of memory?',
+				initialValue: false
+			});
+			if (isCancel(redisResult)) {
+				cancel('Operation cancelled.');
+				process.exit(0);
+			}
+			wantsRedis = Boolean(redisResult);
+		}
 	}
 
 	if (wantsSubcommands && wantsSubcommandsAdvanced) {
 		log.warn('Both --subcommands and --subcommands-advanced were selected; using the advanced example (with groups).');
 		wantsSubcommands = false;
 	}
+
+	if (wantsSharder && nitro) {
+		cancel(SHARDER_WITH_NITRO_ERROR);
+		process.exit(1);
+	}
+
+	const gatewayFeatures = resolveGatewayFeatures({ gateway: wantsGateway, cache: wantsCache, redis: wantsRedis, sharder: wantsSharder });
+	if (gatewayFeatures.implied.length > 0) {
+		log.warn(`Enabling ${gatewayFeatures.implied.map((feature) => `--${feature}`).join(' and ')}, which the selected features depend on.`);
+	}
+	({ gateway: wantsGateway, cache: wantsCache, redis: wantsRedis, sharder: wantsSharder } = gatewayFeatures.features);
 
 	// ── Install ───────────────────────────────────────────────────────────────
 	let wantsInstall: boolean;
@@ -387,6 +440,10 @@ async function main(): Promise<void> {
 		subcommands: wantsSubcommands,
 		subcommandsAdvanced: wantsSubcommandsAdvanced,
 		testing: wantsTesting,
+		gateway: wantsGateway,
+		cache: wantsCache,
+		redis: wantsRedis,
+		sharder: wantsSharder,
 		language,
 		buildTool,
 		linter,
@@ -403,7 +460,12 @@ async function main(): Promise<void> {
 		i18n: wantsI18n,
 		subcommands: wantsSubcommands,
 		subcommandsAdvanced: wantsSubcommandsAdvanced,
-		testing: wantsTesting
+		testing: wantsTesting,
+		gateway: wantsGateway,
+		cache: wantsCache,
+		redis: wantsRedis,
+		sharder: wantsSharder,
+		buildTool
 	});
 	writeProjectFiles(targetDir, {
 		name: projectName,
@@ -412,6 +474,10 @@ async function main(): Promise<void> {
 		subcommands: wantsSubcommands,
 		subcommandsAdvanced: wantsSubcommandsAdvanced,
 		testing: wantsTesting,
+		gateway: wantsGateway,
+		cache: wantsCache,
+		redis: wantsRedis,
+		sharder: wantsSharder,
 		packageManager,
 		language,
 		buildTool,
@@ -456,6 +522,7 @@ async function main(): Promise<void> {
 
 	const extraNotes: string[] = [];
 	if (wantsI18n) extraNotes.push(`  After editing locale files, regenerate i18next types with: ${getRunScript(packageManager, 'generate:i18n')}`);
+	if (wantsRedis) extraNotes.push('  Start a local Redis server with: docker compose up -d');
 	if (wantsTesting) extraNotes.push(`  Run the test suite with: ${getRunScript(packageManager, 'test')}`);
 
 	outro(

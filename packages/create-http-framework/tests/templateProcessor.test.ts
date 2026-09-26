@@ -115,6 +115,11 @@ describe('processTemplate', () => {
 			subcommands: false,
 			subcommandsAdvanced: false,
 			testing: false,
+			gateway: false,
+			cache: false,
+			redis: false,
+			sharder: false,
+			buildTool: 'tsdown',
 			...overrides
 		};
 	}
@@ -288,5 +293,170 @@ describe('processTemplate', () => {
 		await processTemplate(outputDir, makeContext({ i18n: false }));
 
 		expect(existsSync(declaration)).toBe(false);
+	});
+});
+
+describe('gateway, cache and sharder templates', () => {
+	let outputDir: string;
+
+	beforeEach(async () => {
+		outputDir = await mkdtemp(join(tmpdir(), 'create-http-framework-template-'));
+	});
+
+	afterEach(async () => {
+		await rm(outputDir, { recursive: true, force: true });
+	});
+
+	function makeContext(overrides: Partial<TemplateContext> = {}): TemplateContext {
+		return {
+			name: 'test-project',
+			port: 3000,
+			language: 'ts',
+			i18n: false,
+			subcommands: false,
+			subcommandsAdvanced: false,
+			testing: false,
+			gateway: false,
+			cache: false,
+			redis: false,
+			sharder: false,
+			buildTool: 'tsdown',
+			...overrides
+		};
+	}
+
+	const read = (path: string) => readFile(join(outputDir, path), 'utf8');
+
+	test('GIVEN the gateway feature dirs THEN gateway, cache, redis and sharder layer in that order after i18n', () => {
+		const dirs = resolveFeatureDirs({
+			i18n: true,
+			subcommands: false,
+			subcommandsAdvanced: false,
+			testing: false,
+			gateway: true,
+			cache: true,
+			redis: true,
+			sharder: true
+		});
+
+		expect(dirs).toStrictEqual(['i18n', 'gateway', 'cache', 'redis', 'sharder']);
+	});
+
+	test.each(['ts', 'js'] as const)('GIVEN a %s gateway project THEN main starts a GatewayClient', async (language) => {
+		await processTemplate(outputDir, makeContext({ language, gateway: true }));
+
+		const main = await read(`src/main.${language}`);
+		expect(main).toContain("import { GatewayClient } from '@wolfstar/plugin-gateway';");
+		expect(main).toContain('await client.start({ listen: { address, port } });');
+		expect(main).not.toContain('createCache');
+		expect(existsSync(join(outputDir, 'compose.yaml'))).toBe(false);
+	});
+
+	test.each(['ts', 'js'] as const)('GIVEN a %s in-memory cache THEN lib/cache uses createInMemoryCache only', async (language) => {
+		await processTemplate(outputDir, makeContext({ language, gateway: true, cache: true }));
+
+		const cache = await read(`src/lib/cache.${language}`);
+		expect(cache).toContain('createInMemoryCache');
+		expect(cache).not.toContain('ioredis');
+		expect(await read(`src/main.${language}`)).toContain('cache: createCache(),');
+		expect(existsSync(join(outputDir, 'compose.yaml'))).toBe(false);
+		expect(await read('.env')).not.toContain('REDIS_URL');
+	});
+
+	test.each(['ts', 'js'] as const)(
+		'GIVEN a %s Redis cache THEN lib/cache uses ioredis and a compose file and REDIS_URL are written',
+		async (language) => {
+			await processTemplate(outputDir, makeContext({ language, gateway: true, cache: true, redis: true }));
+
+			const cache = await read(`src/lib/cache.${language}`);
+			expect(cache).toContain("import { Redis } from 'ioredis';");
+			expect(cache).toContain("prefix: 'test-project'");
+			expect(await read('compose.yaml')).toContain('redis:8-alpine');
+			expect(await read('.env')).toContain('REDIS_URL=redis://localhost:6379');
+		}
+	);
+
+	test.each(['ts', 'js'] as const)('GIVEN a %s sharder project THEN main is the manager and shard.* runs the gateway client', async (language) => {
+		await processTemplate(outputDir, makeContext({ language, gateway: true, sharder: true }));
+
+		expect(await read(`src/main.${language}`)).toContain('new ShardManager(');
+		const shard = await read(`src/shard.${language}`);
+		expect(shard).toContain('new GatewayClient({');
+		expect(shard).toContain('new ShardClient()');
+		expect(await read('.env')).toContain('SHARDER_CLUSTERS=2');
+	});
+
+	test('GIVEN i18n and the gateway THEN the GatewayClient gets the i18n options and the plugin is registered', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, gateway: true }));
+
+		const main = await read('src/main.ts');
+		expect(main).toContain("import '@wolfstar/plugin-i18next/register';");
+		expect(main).toContain("defaultName: 'en-US'");
+	});
+
+	test('GIVEN vite THEN main loads the commands explicitly and starts without scanning a directory', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'vite', subcommands: true }));
+
+		const main = await read('src/main.ts');
+		expect(main).toContain("import { PingCommand } from './commands/ping.js';");
+		expect(main).toContain("import { MathCommand } from './commands/math.js';");
+		expect(main).toContain("await container.stores.loadPiece({ name: 'math', piece: MathCommand, store: 'commands' });");
+		expect(main).toContain('await client.load({ baseUserDirectory: null });');
+		expect(main).toContain('await client.listen({ address, port });');
+	});
+
+	test('GIVEN vite and the advanced subcommands THEN loads the settings command, not math', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'vite', subcommandsAdvanced: true }));
+
+		const main = await read('src/main.ts');
+		expect(main).toContain("import { SettingsCommand } from './commands/settings.js';");
+		expect(main).not.toContain('MathCommand');
+	});
+
+	test('GIVEN vite and the gateway THEN start loads no directory', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'vite', gateway: true }));
+
+		const main = await read('src/main.ts');
+		expect(main).toContain("import { PingCommand } from './commands/ping.js';");
+		expect(main).toContain('await client.start({ listen: { address, port }, load: { baseUserDirectory: null } });');
+	});
+
+	test('GIVEN vite-nitro THEN main default-exports the client and never listens', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'vite-nitro' }));
+
+		const main = await read('src/main.ts');
+		expect(main).toContain('export default client;');
+		expect(main).not.toContain('client.listen');
+		expect(main).not.toContain('createStarsBanner');
+		expect(await read('.env')).toContain('PORT=3000');
+		expect(await read('.env')).not.toContain('HTTP_PORT');
+		expect(await read('.gitignore')).toContain('.output/');
+	});
+
+	test('GIVEN vite-nitro and the gateway THEN the gateway connects and the client is default-exported', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'vite-nitro', gateway: true }));
+
+		const main = await read('src/main.ts');
+		expect(main).toContain('await client.connect();');
+		expect(main).toContain('export default client;');
+		expect(main).not.toContain('client.start');
+	});
+
+	test('GIVEN a JavaScript project THEN the build tool is ignored', async () => {
+		await processTemplate(outputDir, makeContext({ language: 'js', buildTool: 'vite-nitro' }));
+
+		const main = await read('src/main.js');
+		expect(main).toContain('await client.load();');
+		expect(main).not.toContain('export default');
+	});
+
+	test('GIVEN a rerun with the gateway disabled THEN removes the pristine shard and cache files', async () => {
+		await processTemplate(outputDir, makeContext({ gateway: true, cache: true, redis: true, sharder: true }));
+		await processTemplate(outputDir, makeContext());
+
+		expect(existsSync(join(outputDir, 'src', 'shard.ts'))).toBe(false);
+		expect(existsSync(join(outputDir, 'src', 'lib', 'cache.ts'))).toBe(false);
+		expect(existsSync(join(outputDir, 'compose.yaml'))).toBe(false);
+		expect(await read('src/main.ts')).not.toContain('plugin-gateway');
 	});
 });
