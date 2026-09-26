@@ -1,5 +1,5 @@
 import { container } from '@sapphire/pieces';
-import { config, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
+import { config, populate, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -91,18 +91,21 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	 */
 	let parsed: DotenvParseOutput = {};
 
+	// Parse every file first without expanding anything: expanding file by file would resolve references against
+	// the files loaded so far only, so a specific file (e.g. `.env.local`) could never reference a variable defined
+	// in a more generic one (e.g. `.env`). Each file is parsed into a scratch object so `process.env` stays untouched
+	// until all files are merged.
 	for (const dotenvFile of dotenvFiles) {
 		const dotenvFileString = typeof dotenvFile === 'string' ? dotenvFile : fileURLToPath(dotenvFile);
 
 		log(`loading \`${basename(dotenvFileString)}\``);
 
-		const result = expand(
-			config({
-				debug: options?.debug,
-				encoding: options?.encoding,
-				path: dotenvFile
-			})
-		);
+		const result = config({
+			debug: options?.debug,
+			encoding: options?.encoding,
+			path: dotenvFile,
+			processEnv: dotenvSettingsFromProcessEnv()
+		});
 
 		if (result.error) {
 			if ((result.error as FSError).code === 'ENOENT') {
@@ -113,8 +116,16 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 			throw result.error;
 		}
 
+		// Files are loaded from the most specific to the most generic one, so the first value found wins.
 		parsed = { ...result.parsed, ...parsed };
 	}
+
+	// Then inject the merged variables and expand them once. `populate` keeps values already present in process.env
+	// (dotenv never overwrites them) and makes every variable visible to `expand`, so references resolve regardless
+	// of the file, or the position within a file, they are defined in. `expand` itself also leaves a non-empty
+	// process.env value untouched.
+	populate(process.env, parsed, { debug: options?.debug });
+	parsed = expand({ parsed }).parsed!;
 
 	/**
 	 * @see {@linkplain https://github.com/facebook/create-react-app/blob/d960b9e38c062584ff6cfb1a70e1512509a966e7/packages/react-scripts/config/env.js#L72-L89}
@@ -185,6 +196,20 @@ function filterByPrefix(parsed: DotenvParseOutput, prefix: string, log: (message
 			obj[key] = parsed[key];
 			return obj;
 		}, {});
+}
+
+/**
+ * dotenv reads its own `DOTENV_CONFIG_DEBUG` and `DOTENV_CONFIG_QUIET` switches from the `processEnv` it writes to,
+ * so forward the ones set in the real environment to the scratch object used while parsing.
+ */
+function dotenvSettingsFromProcessEnv(): Record<string, string> {
+	const settings: Record<string, string> = {};
+	for (const key of ['DOTENV_CONFIG_DEBUG', 'DOTENV_CONFIG_QUIET']) {
+		const value = process.env[key];
+		if (value !== undefined) settings[key] = value;
+	}
+
+	return settings;
 }
 
 function appendSuffix(path: string | URL, suffix: string): string | URL {
