@@ -96,7 +96,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - The docs site was moved out of this repo to `wolfstar-project/website`; don't reintroduce a docs app or `netlify.toml` here.
 - `pnpm lint` / `pnpm lint:fix` run `oxlint`/`oxfmt` across both `packages` and `examples`; keep the runnable example apps under `examples/*` lint-clean too.
 - `examples/*` build through the `stars` CLI by path (`node ../../packages/cli/dist/cli.js …`) and use `@wolfstar/plugin-i18next` pinned to the exact version `@wolfstar/shared-http-pieces` depends on (two copies would register the plugin's hooks twice). `with-gateway`/`with-cache`/`with-sharder` use the external `@wolfstar/plugin-gateway`/`-cache`/`-sharder` libraries (no `/register` entry, Node `>=24.17`); `with-vite`/`with-nitro` exercise `experimental.enableVite`/`enableNitro` and load pieces with `container.stores.loadPiece`, since their bundles have no `commands` directory to scan.
-- `pnpm-workspace.yaml` exempts `@wolfstar/*` from `minimumReleaseAge` (`minimumReleaseAgeExclude`), so freshly published first-party plugins install without the one-day quarantine.
+- `pnpm-workspace.yaml` exempts `@wolfstar/plugin-*` from `minimumReleaseAge` (`minimumReleaseAgeExclude`), so freshly published first-party plugins install without the one-day quarantine.
 
 ## Cursor Cloud specific instructions
 

@@ -24,7 +24,7 @@ allowBuilds:
 
 minimumReleaseAge: 1440
 
-# First-party packages (including the wolfstar-project/plugins releases the examples use) are published by this
-# organization's own trusted-publishing workflows, so they skip the supply-chain quarantine above.
+# Plugins published from wolfstar-project/plugins (the examples install them) come from this organization's own
+# trusted-publishing workflows, so they skip the supply-chain quarantine above. Other first-party packages keep it.
 minimumReleaseAgeExclude:
-    - '@wolfstar/*'
+    - '@wolfstar/plugin-*'
