@@ -283,6 +283,19 @@ describe('processTemplate', () => {
 		expect(content).not.toContain('@wolfstar/plugin-i18next');
 	});
 
+	test('GIVEN a legacy project with no manifest AND a hand-edited entrypoint THEN preserves it and reports its path', async () => {
+		await processTemplate(outputDir, makeContext({ i18n: true, language: 'ts' }));
+		const mainTs = join(outputDir, 'src', 'main.ts');
+		// Edit away from every `{{variable}}` slot, so the wildcard matchers cannot absorb the difference.
+		await writeFile(mainTs, `${await readFile(mainTs, 'utf8')}\n// hand-edited by the user\n`, 'utf8');
+		await rm(join(outputDir, '.create-http-framework.json'), { force: true });
+
+		const preserved = await processTemplate(outputDir, makeContext({ i18n: false, language: 'js' }));
+
+		expect(preserved).toContain('src/main.ts');
+		expect(await readFile(mainTs, 'utf8')).toContain('// hand-edited by the user');
+	});
+
 	test('GIVEN a rerun with i18n disabled THEN removes the generated i18next.d.ts declaration', async () => {
 		await processTemplate(outputDir, makeContext({ i18n: true }));
 		// `generate:i18n` (not processTemplate) writes this in real usage — simulate its output.
@@ -384,6 +397,29 @@ describe('gateway, cache and sharder templates', () => {
 		expect(shard).toContain('new GatewayClient({');
 		expect(shard).toContain('new ShardClient()');
 		expect(await read('.env')).toContain('SHARDER_CLUSTERS=2');
+	});
+
+	// The manager spawns the next worker only once this one reports ready and kills one that has not at
+	// `spawn.timeout`, so a worker the layout assigned no gateway shard to has to report in on its own.
+	test.each(['ts', 'js'] as const)(
+		'GIVEN a %s sharder project THEN a worker with no assigned shard reports ready immediately',
+		async (language) => {
+			await processTemplate(outputDir, makeContext({ language, gateway: true, sharder: true }));
+
+			const shard = await read(`src/shard.${language}`);
+			expect(shard).toContain('if (pending === 0) void shard.ready();');
+			expect(shard.indexOf('if (pending === 0) void shard.ready();')).toBeLessThan(shard.indexOf("client.on('shardReady'"));
+		}
+	);
+
+	// `IntegerString` is a module export of `@wolfstar/env-utilities`, not a global, so dropping the import
+	// leaves both `HTTP_PORT` and `SHARDER_CLUSTERS` dangling and the generated project fails `tsc --noEmit`.
+	test.each([{}, { sharder: true }])('GIVEN the env augments THEN IntegerString stays imported (%o)', async (overrides) => {
+		await processTemplate(outputDir, makeContext({ gateway: true, ...overrides }));
+
+		const augments = await read('src/lib/types/augments.ts');
+		expect(augments).toContain("import type { IntegerString } from '@wolfstar/env-utilities';");
+		expect(augments).toContain('HTTP_PORT: IntegerString;');
 	});
 
 	test('GIVEN i18n and the gateway THEN the GatewayClient gets the i18n options and the plugin is registered', async () => {

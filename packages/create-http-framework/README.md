@@ -120,10 +120,11 @@ my-discord-bot/
 
 ### Vite and Nitro
 
-`--build vite` bundles the bot with [Vite](https://vite.dev) into a single `dist/main.js`, and `--build vite-nitro` hands it to [Nitro](https://nitro.build), which writes a deployable `.output/` (the `node-server` preset by default, change `nitro.preset` in `stars.config.ts` to target another platform). Both are TypeScript only and turn on `experimental.enableVite` (and `enableNitro`) in the generated `stars.config.ts`.
+`--build vite` bundles the bot with [Vite](https://vite.dev) into a single `dist/main.js`, and `--build vite-nitro` hands it to [Nitro](https://nitro.build), which writes a deployable `.output/` (the `node-server` preset, pinned in `stars.config.ts`). Both are TypeScript only and turn on `experimental.enableVite` (and `enableNitro`) in the generated `stars.config.ts`.
 
 - A bundle has no `commands` directory to scan, so `src/main.ts` imports and loads the example commands explicitly. Add your own commands there.
 - With Nitro, `src/main.ts` default-exports the client instead of calling `listen()`, and the port comes from `PORT` in `.env`.
+- `main` and `start` are wired to the `node-server` preset's output, `.output/server/index.mjs`. Changing `nitro.preset` to target another platform means deploying that platform's `.output/` instead of running `npm start` — and with `--gateway`, only a preset that keeps a server alive will hold the gateway connection open.
 - Nitro cannot be combined with `--sharder`: the sharder's manager process has no client for Nitro to forward requests to.
 
 ### Gateway, cache and sharder

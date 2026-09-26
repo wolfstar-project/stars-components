@@ -277,7 +277,9 @@ async function main(): Promise<void> {
 				options: [
 					{ value: 'tsdown', label: 'tsdown (bundler)' },
 					{ value: 'tsc6', label: 'TypeScript 6.0 (tsc)' },
-					{ value: 'tsc7', label: 'TypeScript 7.0 rc (tsc)' }
+					{ value: 'tsc7', label: 'TypeScript 7.0 rc (tsc)' },
+					{ value: 'vite', label: 'Vite (experimental)' },
+					{ value: 'vite-nitro', label: 'Vite + Nitro (experimental)' }
 				],
 				initialValue: 'tsdown'
 			});

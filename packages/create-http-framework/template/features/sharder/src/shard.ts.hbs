@@ -40,8 +40,11 @@ client.on('error', (error) => container.logger.error(error));
 
 shard.setCloseHandler(() => client.destroy());
 
-// The worker is ready once every gateway shard it runs is.
+// The worker is ready once every gateway shard it runs is. The manager only starts the next worker once this one
+// reports in, so a worker it assigned no gateway shard to (a layout can hand every shard to one channel of the
+// cluster) reports in right away instead of waiting for a `shardReady` that never fires.
 let pending = shard.shards.length;
+if (pending === 0) void shard.ready();
 client.on('shardReady', () => {
 	if (--pending === 0) void shard.ready();
 });

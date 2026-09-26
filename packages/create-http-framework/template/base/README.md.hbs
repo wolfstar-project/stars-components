@@ -33,7 +33,7 @@ The project is bundled with [Vite](https://vite.dev) into a single file, so the 
 {{/if}}
 {{#if nitro}}
 
-[Nitro](https://nitro.build) serves the bot: `npm run build` writes a deployable `.output/` and `PORT` in `.env` sets the port. Change `nitro.preset` in `stars.config.ts` to target another platform, such as `cloudflare-module` or `vercel`.
+[Nitro](https://nitro.build) serves the bot: `npm run build` writes a deployable `.output/` and `PORT` in `.env` sets the port. `package.json`'s `main` and `start` point at the `node-server` preset's output, `.output/server/index.mjs`, so `npm start` only works on that preset. Targeting another platform means changing `nitro.preset` in `stars.config.ts` and deploying the `.output/` that preset writes, not running it with `npm start`.{{#if gateway}} The gateway connection is held open by the process, so a preset that keeps a server alive is required — the edge presets do not qualify.{{/if}}
 {{/if}}
 
 ## Scripts

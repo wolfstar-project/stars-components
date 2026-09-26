@@ -191,9 +191,11 @@ function buildStaleFileMatcher(absoluteSource: string): RegExp | null {
 }
 
 /**
- * Matchers for a source using block helpers (`main.*` is the one that matters), covering the ways a generator that
- * predates the manifest could have written it: with or without i18n, none of the later features. Like
- * {@link buildStaleFileMatcher} it leaves the interpolated name and port as wildcards, by rendering placeholders there.
+ * Matchers for a source using block helpers (`main.*` is the one that matters), covering exactly the ways the generator
+ * that predated the manifest could have written it: `tsdown`, with or without i18n, and none of the later features.
+ * Anything older than that renders differently and is preserved rather than cleaned, which is the safe direction to
+ * be wrong in. Like {@link buildStaleFileMatcher} it leaves the interpolated name and port as wildcards, by rendering
+ * placeholders there.
  */
 function buildLegacyVariantMatchers(absoluteSource: string, context: TemplateContext): RegExp[] {
 	const placeholder = '\u0000';
