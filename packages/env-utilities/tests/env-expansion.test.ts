@@ -17,7 +17,12 @@ const KEYS = [
 	'MY_APP_URL',
 	'HOST',
 	'FORWARD',
-	'LATER'
+	'LATER',
+	'SELF',
+	'CYCLE_A',
+	'CYCLE_B',
+	'CYCLE_C',
+	'DOTENV_CONFIG_QUIET'
 ];
 
 let directory: string;
@@ -123,17 +128,62 @@ describe('Env file loader cross-file expansion', () => {
 
 	test('ignores missing files without an error', () => {
 		write('.env', 'BASE=base\n');
+		const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
 
-		const output = loadEnvFiles({ path: join(directory, '.env') });
+		let output: ReturnType<typeof loadEnvFiles> | undefined;
+		expect(() => (output = loadEnvFiles({ path: join(directory, '.env'), debug: true }))).not.toThrow();
 
-		expect(output.error).toBeUndefined();
-		expect(output.parsed).toEqual({ BASE: 'base' });
+		expect(output?.parsed).toEqual({ BASE: 'base' });
+		expect(debug.mock.calls.some(([message]) => String(message).includes('`.env.development.local` file not found'))).toBe(true);
 	});
 
-	test('returns no variables and no error when no file exists', () => {
+	test('returns no variables when no file exists', () => {
+		expect(loadEnvFiles({ path: join(directory, '.env') }).parsed).toEqual({});
+	});
+
+	test('resolves a reference cycle spanning several files to empty strings instead of never terminating', () => {
+		write('.env.local', 'CYCLE_A=${CYCLE_B}\nCYCLE_C=${CYCLE_B}z\n');
+		write('.env', 'CYCLE_B=${CYCLE_A}\n');
+
 		const output = loadEnvFiles({ path: join(directory, '.env') });
 
-		expect(output.error).toBeUndefined();
-		expect(output.parsed).toEqual({});
+		expect(output.parsed).toEqual({ CYCLE_A: '', CYCLE_B: '', CYCLE_C: 'z' });
+	});
+
+	test('keeps handling a variable that references itself', () => {
+		write('.env', 'SELF=${SELF}-x\n');
+
+		expect(loadEnvFiles({ path: join(directory, '.env') }).parsed).toEqual({ SELF: '-x' });
+	});
+
+	test('does not treat a cycle through a variable already set in process.env as a cycle', () => {
+		process.env.CYCLE_B = 'from-shell';
+		write('.env.local', 'CYCLE_A=${CYCLE_B}-a\n');
+		write('.env', 'CYCLE_B=${CYCLE_A}\n');
+
+		const output = loadEnvFiles({ path: join(directory, '.env') });
+
+		expect(output.parsed).toEqual({ CYCLE_A: 'from-shell-a', CYCLE_B: 'from-shell' });
+	});
+
+	describe('dotenv logging switches', () => {
+		test('logs the injected variables of every file by default', () => {
+			write('.env', 'BASE=base\n');
+			const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+			loadEnvFiles({ path: join(directory, '.env') });
+
+			expect(log.mock.calls.some(([message]) => String(message).includes('injected env'))).toBe(true);
+		});
+
+		test('honours DOTENV_CONFIG_QUIET from the real environment', () => {
+			process.env.DOTENV_CONFIG_QUIET = 'true';
+			write('.env', 'BASE=base\n');
+			const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+			loadEnvFiles({ path: join(directory, '.env') });
+
+			expect(log.mock.calls.some(([message]) => String(message).includes('injected env'))).toBe(false);
+		});
 	});
 });
