@@ -14,10 +14,9 @@
 </div>
 
 > [!WARNING]
-> **This package is deprecated.** It will be replaced by `@wolfstar/plugin-logger`, a future official plugin
-> living in [`wolfstar-project/plugins`](https://github.com/wolfstar-project/plugins). The new package does not
-> exist yet — only a proposed issue does — so there is nothing to migrate to today; see
-> [Migration](#migration) below for details.
+> **This package is deprecated** in favour of [`@wolfstar/plugin-logger`](https://www.npmjs.com/package/@wolfstar/plugin-logger),
+> published from [`wolfstar-project/plugins`](https://github.com/wolfstar-project/plugins). See
+> [Migration](#migration) below.
 
 ## Description
 
@@ -49,15 +48,17 @@ For ease of use, `@wolfstar/logger` re-exports all the functions from [`colorett
 
 ## Migration
 
-`@wolfstar/logger` is deprecated in favour of the future `@wolfstar/plugin-logger`, which will live in the
-[`wolfstar-project/plugins`](https://github.com/wolfstar-project/plugins) repository alongside the other
-`@wolfstar/plugin-*` packages. It is not implemented yet — at this stage only a proposed issue exists in that
-repository — so there is no package to install and no migration steps to follow today.
+`@wolfstar/logger` is deprecated in favour of
+[`@wolfstar/plugin-logger`](https://www.npmjs.com/package/@wolfstar/plugin-logger), which replaces the built-in
+`container.logger` of `@wolfstar/http-framework` with a pluggable logger (console, Sentry, and optional
+`consola`/`evlog`/`winston` transports). It implements the framework's `ILogger` contract, so code logging
+through `container.logger` (`trace`/`debug`/`info`/`warn`/`error`/`fatal`) keeps working unchanged.
 
-The plan for `@wolfstar/plugin-logger` is to offer interchangeable adapters/backends (`evlog`, `consola`,
-`winston`) behind pluggable transports, with optional Sentry integration, while keeping an API compatible in
-style with the current `Logger` class (`trace`/`debug`/`info`/`warn`/`error`/`fatal`).
+1. Install it: `pnpm add @wolfstar/plugin-logger`, and remove `@wolfstar/logger`.
+2. Register it before creating your `Client`. Projects built with the `stars` CLI register installed
+   `@wolfstar/plugin-*` packages automatically; otherwise add `import '@wolfstar/plugin-logger/register';` to your
+   entry point.
+3. Replace direct `Logger` instances from `@wolfstar/logger` with `container.logger`, and pick transports as
+   described in the [`@wolfstar/plugin-logger` README](https://github.com/wolfstar-project/plugins/tree/main/packages/plugin-logger#readme).
 
-In the meantime, `@wolfstar/logger` remains fully functional and will **not** be removed until the migration
-path to `@wolfstar/plugin-logger` is ready. This README will be updated with concrete migration steps once that
-package is published.
+`@wolfstar/logger` stays installable but is no longer developed; new logging features land in `@wolfstar/plugin-logger`.
