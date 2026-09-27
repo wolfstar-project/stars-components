@@ -1,6 +1,6 @@
 {
 	"name": "with-sharder",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"private": true,
 	"description": "WolfStar gateway bot example spreading shards across cluster workers with @wolfstar/plugin-sharder",
 	"type": "module",
