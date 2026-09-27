@@ -8,7 +8,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - **Package manager:** `pnpm` (corepack-pinned via `packageManager` in root `package.json`; Renovate bumps the patch version often — check that file for the exact pin, don't hardcode it here). Workspaces via `pnpm-workspace.yaml`.
 - **Monorepo runner:** `turbo` (`turbo run build|typecheck`).
 - **Bundler:** `tsdown` per package.
-- **Typecheck:** `golar tsc` (each package/example has its own `golar.config.ts`, and a root one too) — `typecheck` scripts run `golar tsc -p ../../tsconfig.json` instead of bare `tsc`; `dev.typecheck.checker: 'auto'` in `stars.config` also picks `golar` whenever the project depends on it, `tsc` otherwise.
+- **Typecheck:** `golar tsc` (each package and TypeScript example has its own `golar.config.ts`, and a root one too; the `*-js` examples have none) — `typecheck` scripts run `golar tsc -p ../../tsconfig.json` instead of bare `tsc`; `dev.typecheck.checker: 'auto'` in `stars.config` also picks `golar` whenever the project depends on it, `tsc` otherwise.
 - **Tests:** `vitest` (workspace config at root).
 - **Lint:** `oxlint` with `oxlint-tsgolint`.
 - **Format:** `oxfmt`.
@@ -102,6 +102,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 
 - This repo is a **library monorepo** (25 publishable `@wolfstar/*` packages, see `packages/`). There is no app/server/GUI to run; "running" the product means exercising packages via the quality gates and/or importing built `dist/` outputs.
 - Dependencies are pre-installed by the startup update script (`pnpm install --frozen-lockfile`). Standard commands live in root `package.json`: `pnpm lint`, `pnpm build`, `pnpm typecheck`, `pnpm test`.
+- Running as root (as cloud VMs do), `@wolfstar/env-utilities`' "inaccessible file" test fails: it `chmod 000`s a fixture, which root can still read. That failure is environmental, not a regression.
 - **Run `pnpm build` before `pnpm typecheck`.** `typecheck` resolves cross-package imports (e.g. `@wolfstar/env-utilities`) against each package's built `dist/*.d.ts`; without a prior build, `golar tsc` fails with `TS2307: Cannot find module`. CI's "Build & Typecheck" job runs build then typecheck for this reason.
 - Node: CI and `mise.toml` pin Node 24; root `engines` require `^22.11 || ^24 || >=26`. The VM's default Node (v22.x via `/exec-daemon/node`) satisfies that and works for all gates. `pnpm` is provided via corepack, pinned by the `packageManager` field in root `package.json` (check that file for the current exact version; Renovate bumps it often).
 
