@@ -141,6 +141,9 @@ describe('Env file loader cross-file expansion', () => {
 		expect(loadEnvFiles({ path: join(directory, '.env') }).parsed).toEqual({});
 	});
 
+	// If `findReferenceCycles` regresses to a no-op, `expand` loops synchronously on this input: there is no
+	// microtask boundary for vitest's timer to preempt, so the run wedges instead of failing red. A hang here
+	// means check `findReferenceCycles` first, not this assertion.
 	test('resolves a reference cycle spanning several files to empty strings instead of never terminating', () => {
 		write('.env.local', 'CYCLE_A=${CYCLE_B}\nCYCLE_C=${CYCLE_B}z\n');
 		write('.env', 'CYCLE_B=${CYCLE_A}\n');
@@ -167,7 +170,7 @@ describe('Env file loader cross-file expansion', () => {
 	});
 
 	describe('dotenv logging switches', () => {
-		test('logs the injected variables of every file by default', () => {
+		test('logs an injected env line by default', () => {
 			write('.env', 'BASE=base\n');
 			const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
