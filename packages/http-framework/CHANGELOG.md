@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.1.3
+
+### Patch Changes
+
+- [#227](https://github.com/wolfstar-project/stars-components/pull/227) [`ae15eef`](https://github.com/wolfstar-project/stars-components/commit/ae15eef45d0f85c630b8563b5436b9cd6379e64d) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`ae15eef`](https://github.com/wolfstar-project/stars-components/commit/ae15eef45d0f85c630b8563b5436b9cd6379e64d)]:
+    - @wolfstar/cli@2.0.3
+    - @wolfstar/schema@0.2.1
+
 ## 5.1.2
 
 ### Patch Changes
