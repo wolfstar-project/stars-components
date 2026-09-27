@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.1.2
+
+### Patch Changes
+
+- [#231](https://github.com/wolfstar-project/stars-components/pull/231) [`909c96a`](https://github.com/wolfstar-project/stars-components/commit/909c96a8f63d8f14100aee17063cffe723a6855e) - fix: require the `@wolfstar/cli` release with the plugin registration fix from [#222](https://github.com/wolfstar-project/stars-components/issues/222), so upgrading the framework alone also stops `stars build`/`stars dev` from crashing with `ERR_PACKAGE_PATH_NOT_EXPORTED` on `@wolfstar/plugin-cache`, `@wolfstar/plugin-gateway` or `@wolfstar/plugin-sharder` Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`909c96a`](https://github.com/wolfstar-project/stars-components/commit/909c96a8f63d8f14100aee17063cffe723a6855e)]:
+    - @wolfstar/cli@2.0.2
+
 ## 5.1.1
 
 ### Patch Changes
