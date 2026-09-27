@@ -1,5 +1,11 @@
 # @wolfstar/cli
 
+## 2.0.2
+
+### Patch Changes
+
+- [#231](https://github.com/wolfstar-project/stars-components/pull/231) [`909c96a`](https://github.com/wolfstar-project/stars-components/commit/909c96a8f63d8f14100aee17063cffe723a6855e) - fix: require `@wolfstar/vite-server` `^0.2.2`, so upgrading the CLI always brings the plugin registration fix from [#222](https://github.com/wolfstar-project/stars-components/issues/222) (only packages exporting `/register` get their registration injected) instead of keeping a locked `0.2.1` that crashes builds depending on `@wolfstar/plugin-cache`, `@wolfstar/plugin-gateway` or `@wolfstar/plugin-sharder` with `ERR_PACKAGE_PATH_NOT_EXPORTED` Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.0.1
 
 ### Patch Changes
