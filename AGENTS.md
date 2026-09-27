@@ -108,8 +108,8 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 Applies to any agent running in a cloud VM (Cursor Cloud, Claude Code on the web, …), not to local development.
 
 - Dependencies are pre-installed by the startup script (`pnpm install --frozen-lockfile`).
-- The VM's default Node may differ from the Node 24 pinned by CI and `mise.toml` (Cursor Cloud has shipped v22.x);
-  check `node -v`. Any version in `engines` works for every gate.
+- The VM's default Node may differ from the Node 24 pinned by CI and `mise.toml`; check `node -v`. Any version in
+  `engines` works for every gate.
 - Running as root, `@wolfstar/env-utilities`' "inaccessible file" test fails: it `chmod 000`s a fixture, which root
   can still read. That failure is environmental, not a regression.
 
