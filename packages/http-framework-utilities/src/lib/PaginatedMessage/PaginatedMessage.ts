@@ -44,6 +44,14 @@ export interface PaginatedMessageStart {
 	payload: APIInteractionResponseCallbackData;
 }
 
+function validateIdle(idle: number): number {
+	if (!Number.isInteger(idle) || idle <= 0) {
+		throw new RangeError(`idle must be a positive integer, received ${idle}`);
+	}
+
+	return idle;
+}
+
 function toPage(value: PaginatedMessagePage | MessageBuilder): PaginatedMessagePage {
 	const { content, embeds, allowed_mentions } = value instanceof MessageBuilder ? value.toJSON() : value;
 	const page: PaginatedMessagePage = {};
@@ -85,7 +93,7 @@ export class PaginatedMessage {
 	readonly #resolved = new Map<number, PaginatedMessagePage>();
 
 	public constructor(options: PaginatedMessageOptions = {}) {
-		this.idle = options.idle ?? PaginatedMessage.defaultIdle;
+		this.idle = validateIdle(options.idle ?? PaginatedMessage.defaultIdle);
 		this.ownerOnly = options.ownerOnly ?? true;
 		this.wrongUserReply = options.wrongUserReply ?? DefaultWrongUserReply;
 		this.store = options.store;
@@ -125,6 +133,10 @@ export class PaginatedMessage {
 			throw new TypeError(`Invalid action id "${action.id}": it must be non-empty and must not contain "."`);
 		}
 
+		if (action.type === 'button' && !action.label && !action.emoji) {
+			throw new TypeError(`Invalid button action "${action.id}": it must have a label or an emoji`);
+		}
+
 		this.actions.set(action.id, action);
 		return this;
 	}
@@ -140,7 +152,7 @@ export class PaginatedMessage {
 	}
 
 	public setIdle(idle: number): this {
-		this.idle = idle;
+		this.idle = validateIdle(idle);
 		return this;
 	}
 

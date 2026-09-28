@@ -17,6 +17,32 @@ const id = (sessionId: string, action: string) => encodeCustomId(PaginatedMessag
 
 beforeEach(() => setSessionStore(new MemorySessionStore({ sweepInterval: 0 })));
 
+describe('PaginatedMessage validation', () => {
+	test.each([0, -1, 1.5, Number.NaN])('GIVEN idle %p in the constructor THEN throws a RangeError', (idle) => {
+		expect(() => new PaginatedMessage({ idle })).toThrow(RangeError);
+	});
+
+	test.each([0, -1, 1.5, Number.NaN])('GIVEN idle %p passed to setIdle THEN throws a RangeError', (idle) => {
+		expect(() => new PaginatedMessage().setIdle(idle)).toThrow(RangeError);
+	});
+
+	test('GIVEN a positive integer idle THEN it is accepted', () => {
+		expect(() => new PaginatedMessage().setIdle(1000)).not.toThrow();
+	});
+
+	test('GIVEN a button action with neither label nor emoji THEN addAction throws a TypeError', () => {
+		expect(() => new PaginatedMessage().addAction({ id: 'bare', type: 'button' })).toThrow(TypeError);
+	});
+
+	test('GIVEN a button action with only a label THEN addAction accepts it', () => {
+		expect(() => new PaginatedMessage().addAction({ id: 'labelled', type: 'button', label: 'Go' })).not.toThrow();
+	});
+
+	test('GIVEN a button action with only an emoji THEN addAction accepts it', () => {
+		expect(() => new PaginatedMessage().addAction({ id: 'emoji', type: 'button', emoji: { name: '➡️' } })).not.toThrow();
+	});
+});
+
 describe('PaginatedMessage#run', () => {
 	test('GIVEN pages THEN replies with the first page and components', async () => {
 		const interaction = fakeCommandInteraction(owner);
