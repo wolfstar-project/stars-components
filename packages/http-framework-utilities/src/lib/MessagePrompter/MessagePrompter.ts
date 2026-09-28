@@ -65,11 +65,13 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 		await registerUtilityHandlers();
 
 		const waiters = getPromptWaiters();
+		let timer: ReturnType<typeof setTimeout>;
 		const answer = new Promise<MessagePrompterStrategyReturns[S] | null>((resolve) => {
-			const timer = setTimeout(() => {
+			timer = setTimeout(() => {
 				waiters.delete(sessionId);
 				resolve(null);
 			}, this.options.timeout ?? 60_000);
+			timer.unref?.();
 
 			waiters.set(sessionId, {
 				ownerId: interaction.user.id,
@@ -85,7 +87,7 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 		try {
 			await interaction.reply({ ...this.message, components });
 		} catch (error) {
-			// The caller gets the rejection; the pending timer later settles the unobserved promise with `null`.
+			clearTimeout(timer!);
 			waiters.delete(sessionId);
 			throw error;
 		}

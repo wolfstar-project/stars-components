@@ -89,6 +89,17 @@ describe('MessagePrompter', () => {
 		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
 	});
 
+	test('GIVEN reply rejects THEN run rejects and clears the pending timer', async () => {
+		vi.useFakeTimers();
+		const interaction = fakeCommandInteraction(UserData.id);
+		interaction.reply = vi.fn(async () => {
+			throw new Error('failed to reply');
+		});
+
+		await expect(new MessagePrompter('Sure?').run(interaction)).rejects.toThrow('failed to reply');
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
 	test('GIVEN the handler name THEN custom ids target wolfstar-mp', () => {
 		expect(encodeCustomId(MessagePrompterHandlerName, 'abcDEF123456', 'yes')).toBe('wolfstar-mp.abcDEF123456.yes');
 	});
