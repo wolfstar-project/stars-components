@@ -6,9 +6,28 @@ export default mergeConfig(
 	configShared,
 	defineProject({
 		resolve: {
-			alias: {
-				'@wolfstar/discord-utilities': fileURLToPath(new URL('../discord-utilities/src/index.ts', import.meta.url))
-			}
+			alias: [
+				{
+					find: '@wolfstar/http-framework-test-utils/vitest',
+					replacement: fileURLToPath(new URL('../http-framework-test-utils/src/vitest.ts', import.meta.url))
+				},
+				{
+					find: '@wolfstar/http-framework-test-utils',
+					replacement: fileURLToPath(new URL('../http-framework-test-utils/src/index.ts', import.meta.url))
+				},
+				{
+					find: '@wolfstar/schema',
+					replacement: fileURLToPath(new URL('../schema/src/index.ts', import.meta.url))
+				},
+				{
+					find: '@wolfstar/http-framework',
+					replacement: fileURLToPath(new URL('../http-framework/src/index.ts', import.meta.url))
+				},
+				{
+					find: '@wolfstar/discord-utilities',
+					replacement: fileURLToPath(new URL('../discord-utilities/src/index.ts', import.meta.url))
+				}
+			]
 		}
 	})
 );
