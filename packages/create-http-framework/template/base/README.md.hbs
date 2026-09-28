@@ -10,13 +10,38 @@ A Discord bot built with [`@wolfstar/http-framework`](https://www.npmjs.com/pack
 {{#if i18n}}
 3. This project uses [`@wolfstar/plugin-i18next`](https://www.npmjs.com/package/@wolfstar/plugin-i18next). Locale resources live under `src/locales/`; after editing them, regenerate the typed i18next resources with `npm run generate:i18n`.
 {{/if}}
+{{#if gateway}}
+
+This project also connects to the Discord gateway with [`@wolfstar/plugin-gateway`](https://www.npmjs.com/package/@wolfstar/plugin-gateway): `src/main.*` creates a `GatewayClient` that answers HTTP interactions and emits gateway events. It needs a long-lived process and Node.js 24.17 or newer. Add the intents your listeners need to the client options, privileged ones must also be enabled in the Discord Developer Portal.
+{{#if cache}}
+{{#if redis}}
+
+Entities are cached in Redis with [`@wolfstar/plugin-cache`](https://www.npmjs.com/package/@wolfstar/plugin-cache): start a local server with `docker compose up -d` (it listens on `REDIS_URL` from `.env`), or point `REDIS_URL` at your own.
+{{else}}
+
+Entities are cached in memory with [`@wolfstar/plugin-cache`](https://www.npmjs.com/package/@wolfstar/plugin-cache), so nothing outlives the process. Swap `createInMemoryCache` for `createRedisCache` in `src/lib/cache.*` to persist them.
+{{/if}}
+{{/if}}
+{{#if sharder}}
+
+Gateway shards are spread across `SHARDER_CLUSTERS` cluster workers by [`@wolfstar/plugin-sharder`](https://www.npmjs.com/package/@wolfstar/plugin-sharder): `src/main.*` is the manager and `src/shard.*` runs in every worker.
+{{/if}}
+{{/if}}
+{{#if vite}}
+
+The project is bundled with [Vite](https://vite.dev) into a single file, so the commands are loaded explicitly in `src/main.*`: import every new command there and load it with `container.stores.loadPiece`.
+{{/if}}
+{{#if nitro}}
+
+[Nitro](https://nitro.build) serves the bot: `npm run build` writes a deployable `.output/` and `PORT` in `.env` sets the port. `package.json`'s `main` and `start` point at the `node-server` preset's output, `.output/server/index.mjs`, so `npm start` only works on that preset. Targeting another platform means changing `nitro.preset` in `stars.config.ts` and deploying the `.output/` that preset writes, not running it with `npm start`.{{#if gateway}} The gateway connection is held open by the process, so a preset that keeps a server alive is required — the edge presets do not qualify.{{/if}}
+{{/if}}
 
 ## Scripts
 
 The `dev` and `build` scripts are powered by the [`stars`](https://www.npmjs.com/package/@wolfstar/cli) CLI and read the `stars.config` file at the project root.
 
 - `npm run dev` — build, run and restart the bot on changes, with an interactive terminal UI (`npm run dev -- --no-tui` for plain logs).
-- `npm run build` — compile the project (TypeScript projects only).
+- `npm run build` — {{#if nitro}}build the deployable `.output/` directory{{else}}compile the project{{/if}} (TypeScript projects only).
 - `npm start` — run the bot.
 - `npx stars info` — print the resolved configuration.
 {{#if testing}}
@@ -33,4 +58,8 @@ The `dev` and `build` scripts are powered by the [`stars`](https://www.npmjs.com
 - `/settings profile get` / `/settings profile set` / `/settings notifications enable` / `/settings notifications disable` — subcommand groups example.
 {{/if}}
 
+{{#if nitro}}
+The HTTP server listens on `PORT` from `.env` — `{{port}}` by default.
+{{else}}
 The HTTP server listens on `HTTP_ADDRESS`:`HTTP_PORT` from `.env` — `{{port}}` by default.
+{{/if}}

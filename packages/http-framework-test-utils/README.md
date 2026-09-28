@@ -124,4 +124,4 @@ const entry = getAndDelete(MyCommand);
 
 - Node.js `>=20`
 - `@wolfstar/http-framework` (peer dependency)
-- `vitest >=4.0.0` (optional peer dependency — only needed for the `/vitest` entry point)
+- `vitest >=5.0.0` (optional peer dependency — only needed for the `/vitest` entry point)

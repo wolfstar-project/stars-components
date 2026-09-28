@@ -1,6 +1,6 @@
 import { LanguageKeys } from '#lib/i18n/LanguageKeys.js';
 import { Command } from '@wolfstar/http-framework';
-import { applyLocalizedBuilder, resolveUserKey } from '@wolfstar/http-framework-i18n';
+import { applyLocalizedBuilder, getSupportedUserLanguageT } from '@wolfstar/plugin-i18next';
 import { ApplicationIntegrationType, InteractionContextType, MessageFlags } from 'discord-api-types/v10';
 
 const Root = LanguageKeys.Commands.Ping;
@@ -16,7 +16,7 @@ export class UserCommand extends Command {
 
 	chatInputRun(interaction) {
 		return interaction.reply({
-			content: resolveUserKey(interaction, Root.Reply),
+			content: getSupportedUserLanguageT(interaction, Root.Reply),
 			flags: MessageFlags.Ephemeral
 		});
 	}

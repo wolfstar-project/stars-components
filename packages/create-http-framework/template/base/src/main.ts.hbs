@@ -1,13 +1,59 @@
+{{#if nitro}}
+{{#if i18n}}
+import { existsSync } from 'node:fs';
+{{/if}}
+{{/if}}
+{{#if i18n}}
+import '@wolfstar/plugin-i18next/register';
+{{/if}}
 import { setup } from './lib/setup/all.js';
+{{#unless nitro}}
 import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
+{{/unless}}
 import { Client, container } from '@wolfstar/http-framework';
+{{#unless nitro}}
 import { createStarsBanner } from '@wolfstar/start-banner';
 import { morning } from 'gradient-string';
+{{/unless}}
+{{#if vite}}
+{{#each commands}}
+import { {{className}} } from './commands/{{file}}.js';
+{{/each}}
+{{/if}}
 
 await setup();
+{{#if nitro}}
+{{#if i18n}}
 
-const client = new Client();
+// Nitro bundles this file into `.output/server`, next to the `.output/locales` copy `stars build` makes; in development
+// it runs from `src`, where the locales sit beside it.
+const bundledLocales = new URL('../locales', import.meta.url);
+const localesDirectory = existsSync(bundledLocales) ? bundledLocales.pathname : new URL('locales', import.meta.url).pathname;
+{{/if}}
+{{/if}}
+
+const client = new Client({{#if i18n}}{
+	i18n: {
+		defaultLanguageDirectory: {{#if nitro}}localesDirectory{{else}}new URL('locales', import.meta.url).pathname{{/if}},
+		defaultName: 'en-US'
+	}
+}{{/if}});
+{{#if vite}}
+
+// The bundle is a single file, so there is no `commands` directory next to it to scan: load the pieces explicitly.
+{{#each commands}}
+await container.stores.loadPiece({ name: '{{file}}', piece: {{className}}, store: 'commands' });
+{{/each}}
+await client.load({ baseUserDirectory: null });
+{{else}}
 await client.load();
+{{/if}}
+{{#if nitro}}
+
+// No `listen()`: the server entry Nitro generates imports this default export and forwards every request to
+// `client.fetch(request)`, which verifies the signature and answers the interaction. Nitro serves on `PORT`.
+export default client;
+{{else}}
 
 const address = envParseString('HTTP_ADDRESS', '0.0.0.0');
 const port = envParseInteger('HTTP_PORT', {{port}});
@@ -28,3 +74,4 @@ console.log(
 );
 
 container.logger.info('Ready');
+{{/if}}

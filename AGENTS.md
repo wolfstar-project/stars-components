@@ -8,7 +8,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - **Package manager:** `pnpm` (corepack-pinned via `packageManager` in root `package.json`; Renovate bumps the patch version often — check that file for the exact pin, don't hardcode it here). Workspaces via `pnpm-workspace.yaml`.
 - **Monorepo runner:** `turbo` (`turbo run build|typecheck`).
 - **Bundler:** `tsdown` per package.
-- **Typecheck:** `golar tsc` (each package/example has its own `golar.config.ts`, and a root one too) — `typecheck` scripts run `golar tsc -p ../../tsconfig.json` instead of bare `tsc`; `dev.typecheck.checker: 'auto'` in `stars.config` also picks `golar` whenever the project depends on it, `tsc` otherwise.
+- **Typecheck:** `golar tsc` (each package and TypeScript example has its own `golar.config.ts`, and a root one too; the `*-js` examples have none) — `typecheck` scripts run `golar tsc -p ../../tsconfig.json` instead of bare `tsc`; `dev.typecheck.checker: 'auto'` in `stars.config` also picks `golar` whenever the project depends on it, `tsc` otherwise.
 - **Tests:** `vitest` (workspace config at root).
 - **Lint:** `oxlint` with `oxlint-tsgolint`.
 - **Format:** `oxfmt`.
@@ -35,7 +35,7 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   `packages/cli/src` follows `nuxt/cli`'s layout: `commands/*` are self-contained command modules sharing `commands/_shared.ts`; `utils/` holds generic helpers (`framework-auto-imports.ts`, `locales.ts`, `plugin-registrations.ts`); `dev/` holds the dev server and its terminal UI (`dev/tui/*`); `builders/` holds the tsdown/vite/nitro builder adapters. `main.ts` defines the root command, `run.ts` exports `runMain`, `cli.ts` is the bin shim, and `index.ts` re-exports the public API (including `runMain`). Tests live under `test/` (renamed from `tests/`).
 - Shareable tooling configs, extracted from this repo's own root config and published for external `@wolfstar/*` consumers: `@wolfstar/oxlint-config`, `@wolfstar/oxfmt-config`, `@wolfstar/eslint-config`, `@wolfstar/prettier-config`, and `@wolfstar/eslint-plugin-http-framework` (custom oxlint/ESLint rules for `@wolfstar/http-framework` and `@wolfstar/plugin-*` consumers, namespaced `wolfstar/*`). This repo's own root `.oxlintrc.json`/`.oxfmtrc.json` are the source these were extracted from, not consumers of them — the root config is not migrated to `extends`/depend on the published packages. `@wolfstar/oxlint-config` and `@wolfstar/oxfmt-config` are built TypeScript modules (`tsdown`, same layout as `@wolfstar/prettier-config`) whose default export is built with oxlint's/oxfmt's own `defineConfig` helper, not raw JSON — consumers write `import baseConfig from '@wolfstar/oxfmt-config'` / `extends: [baseConfig]` in an `oxlint.config.ts`, not `with { type: 'json' }` imports or file-path `extends`.
 - i18n: `@wolfstar/plugin-i18next` (external, published from `wolfstar-project/plugins`) is the standard `@wolfstar/http-framework` i18n plugin — `@wolfstar/shared-http-pieces` consumes it directly. `@wolfstar/http-framework-i18n` is deprecated in favour of it (npm description carries a `DEPRECATED:` prefix, README has a `## Migration` section, and it's dropped from `.npm-deprecaterc.yml` so no further `@next` snapshots publish); `@wolfstar/i18next-backend` remains published as `http-framework-i18n`'s backend dependency. `@wolfstar/i18next-type-generator` is a CLI (`i18next-type-generator <locales-dir> <output.d.ts>`) that generates the i18next `CustomTypeOptions` augmentation from locale JSON, replacing hand-maintained `LanguageKeys`/`T`/`FT` helpers; consuming packages wire it up via a `generate:i18n` script (see `packages/shared-http-pieces/package.json`). The CLI auto-registers installed `@wolfstar/plugin-*` packages (`packages/cli/src/utils/plugin-registrations.ts`, which re-exports the discovery logic from `@wolfstar/vite-server/internal`): it discovers them from the app's dependencies/optionalDependencies and injects each plugin's `/register` side-effect entrypoint before the app entry in tsdown and Vite builds, so consumers no longer need a manual `import '@wolfstar/plugin-i18next/register'`.
-- Logging: `@wolfstar/http-framework` now has a built-in logger (`container.logger`), so `@wolfstar/logger` is deprecated the same way `@wolfstar/http-framework-i18n` was — npm description prefixed `DEPRECATED:`, README carries a migration warning, dropped from `.npm-deprecaterc.yml` — in favour of a future `@wolfstar/plugin-logger` (not published yet, only proposed).
+- Logging: `@wolfstar/http-framework` now has a built-in logger (`container.logger`), so `@wolfstar/logger` is deprecated the same way `@wolfstar/http-framework-i18n` was — npm description prefixed `DEPRECATED:`, README carries a migration warning, dropped from `.npm-deprecaterc.yml` — in favour of `@wolfstar/plugin-logger` (published from `wolfstar-project/plugins`).
 - Tolgee sync is configured at root (`.tolgeerc.cjs`) and only targets `packages/shared-http-pieces/src/locales/**`.
   Scripts: `pnpm tolgee:push` (base `en`), `pnpm tolgee:pull` (pull + remap), `pnpm tolgee:ensure-languages`.
   Discord locale folders (en-US, es-ES, …) map to shorter Tolgee tags (en, es, …); see `LOCALE_MAP` in `.tolgeerc.cjs`.
@@ -73,35 +73,51 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   imports disabled. Scaffolded `tsdown`-tool projects extend the generated `tsconfig.json` and run `stars prepare`
   after install.
 
-## Branding (target state after rebrand)
+## Branding
 
-- **npm scope:** `@wolfstar`
-- **GitHub org:** `wolfstar-project`
-- **Repo name:** `stars-components` (already renamed locally; remote URLs must follow)
+- **npm scope:** `@wolfstar`; **GitHub org:** `wolfstar-project`; **repo:** `stars-components`
 - **Primary domain:** `wolfstar.rocks` (subdomains: `join.`, `donate.`, `cdn.`, `influxdb.`, `contact@`)
-- **CI secret:** `WOLFSTAR_TOKEN`
 - **Influx org string:** `Wolfstar-Project`
 - **CDN asset path:** `cdn.wolfstar.rocks/wolfstar-assets/...`
+- READMEs use a generic Tolgee badge, not per-project Crowdin-era slugs.
 
-## Out of scope for the rebrand
+## Design specifications
 
-- Per-project Tolgee badge slugs on Crowdin-era READMEs are replaced by a generic Tolgee badge.
-  The Tolgee project is **Shared HTTP Pieces** (`projectId` `33773` in `.tolgeerc.cjs`).
+- [Discord utilities design](docs/superpowers/specs/2026-09-28-discord-utilities-design.md) defines the proposed
+  utility packages, registration, session constraints, and cleanup contract. Implementation is pending; this is
+  repository design documentation, not the external docs site.
 
 ## Notes for agents
 
 - Do NOT touch `pnpm-lock.yaml` manually; let `pnpm install` regenerate it after `package.json` edits.
 - Do not edit `package.json#version` or a package's `CHANGELOG.md` by hand; both are owned by Changesets. Add a changeset via `pnpm changeset` for any user-facing change instead. Manual/hotfix publishes are done by re-running the `Release` workflow via `workflow_dispatch`.
-- Folder names under `packages/` do not contain `skyra`; only package `name`, `author`, scoped imports, and `keywords` need updating.
 - The docs site was moved out of this repo to `wolfstar-project/website`; don't reintroduce a docs app or `netlify.toml` here.
 - `pnpm lint` / `pnpm lint:fix` run `oxlint`/`oxfmt` across both `packages` and `examples`; keep the runnable example apps under `examples/*` lint-clean too.
+- `examples/*` build through the `stars` CLI by path (`node ../../packages/cli/dist/cli.js …`) and use `@wolfstar/plugin-i18next` pinned to the exact version `@wolfstar/shared-http-pieces` depends on (two copies would register the plugin's hooks twice). `with-gateway`/`with-cache`/`with-sharder` use the external `@wolfstar/plugin-gateway`/`-cache`/`-sharder` libraries (no `/register` entry, Node `>=24.17`); `with-vite`/`with-nitro` exercise `experimental.enableVite`/`enableNitro` and load pieces with `container.stores.loadPiece`, since their bundles have no `commands` directory to scan.
+- `pnpm-workspace.yaml` exempts `@wolfstar/plugin-*` from `minimumReleaseAge` (`minimumReleaseAgeExclude`), so freshly published first-party plugins install without the one-day quarantine.
 
-## Cursor Cloud specific instructions
+## Secrets, approvals, and definition of done
 
-- This repo is a **library monorepo** (25 publishable `@wolfstar/*` packages, see `packages/`). There is no app/server/GUI to run; "running" the product means exercising packages via the quality gates and/or importing built `dist/` outputs.
-- Dependencies are pre-installed by the startup update script (`pnpm install --frozen-lockfile`). Standard commands live in root `package.json`: `pnpm lint`, `pnpm build`, `pnpm typecheck`, `pnpm test`.
-- **Run `pnpm build` before `pnpm typecheck`.** `typecheck` resolves cross-package imports (e.g. `@wolfstar/env-utilities`) against each package's built `dist/*.d.ts`; without a prior build, `golar tsc` fails with `TS2307: Cannot find module`. CI's "Build & Typecheck" job runs build then typecheck for this reason.
-- Node: CI and `mise.toml` pin Node 24; root `engines` require `^22.11 || ^24 || >=26`. The VM's default Node (v22.x via `/exec-daemon/node`) satisfies that and works for all gates. `pnpm` is provided via corepack, pinned by the `packageManager` field in root `package.json` (check that file for the current exact version; Renovate bumps it often).
+- **Secrets:** never commit them. Local values go in gitignored `.env*.local` files (and
+  `examples/**/.env`); only `.env.example` templates are tracked. CI secrets (`WOLFSTAR_TOKEN`, `CODECOV_TOKEN`, AI
+  provider keys for the review workflows) live in GitHub Actions secrets. npm publishing uses OIDC trusted publishing,
+  so no npm token exists anywhere.
+- **Ask before:** publishing to npm or running `pnpm publish`/`publish:snapshot` locally, dispatching the `Release`
+  workflow, force-pushing or rewriting history on shared branches, deleting branches/tags/releases, running
+  `pnpm tolgee:push` (writes to the shared Tolgee project), and deprecating packages (`npm-deprecate`).
+- **Done** means: the four quality gates above pass locally; a changeset exists for every user-facing package change
+  (CI's `🦋 Verify changesets` runs `changeset status --since=origin/<base>` and fails without one); tests are added or
+  updated for behaviour changes; and this file is updated when commands, directories, CI, or release flow change.
+
+## Cloud VM notes
+
+Applies to any agent running in a cloud VM (Cursor Cloud, Claude Code on the web, …), not to local development.
+
+- Dependencies are pre-installed by the startup script (`pnpm install --frozen-lockfile`).
+- The VM's default Node may differ from the Node 24 pinned by CI and `mise.toml`; check `node -v`. Any version in
+  `engines` works for every gate.
+- Running as root, `@wolfstar/env-utilities`' "inaccessible file" test fails: it `chmod 000`s a fixture, which root
+  can still read. That failure is environmental, not a regression.
 
 ## Server integration packages
 

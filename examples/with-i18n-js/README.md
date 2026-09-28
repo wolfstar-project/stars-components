@@ -1,7 +1,8 @@
 # with-i18n-js
 
-JavaScript (ESM) counterpart of [`with-i18n`](../with-i18n). Uses `LanguageKeys` with
-`T`/`FT`, `applyLocalizedBuilder`, and locale JSON for `en-US` / `es-ES`.
+JavaScript (ESM) counterpart of [`with-i18n`](../with-i18n). Uses `LanguageKeys` key
+constants, `applyLocalizedBuilder`, `getSupportedUserLanguageT` from `@wolfstar/plugin-i18next`, and locale JSON for
+`en-US` / `es-ES`.
 
 ```bash
 cp .env.example src/.env

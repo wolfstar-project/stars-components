@@ -6,10 +6,10 @@ Minimal HTTP Discord bot using the `@wolfstar/*` HTTP framework stack.
 
 - `@wolfstar/env-utilities` — load `src/.env` and typed parsers
 - `@wolfstar/shared-http-pieces/register` — shared `/info` + error listeners
-- `@wolfstar/http-framework-i18n` — locale load + `init`
+- `@wolfstar/plugin-i18next` — the `i18n` client option; `src/locales` is copied next to the build output
 - `@wolfstar/http-framework` — `Client` → `load()` → `listen()`
 - `registerCommands()` — guild push when `REGISTRY_GUILD_ID` is set, else global
-- `@wolfstar/logger` + `@wolfstar/start-banner` — container logger and startup banner
+- `container.logger` (built into the framework) + `@wolfstar/start-banner` — logger and startup banner
 
 ## The build
 

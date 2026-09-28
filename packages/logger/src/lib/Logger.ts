@@ -2,7 +2,7 @@ import { blue, gray, magenta, red, redBright, yellow, type Color } from 'coloret
 import { format, inspect } from 'node:util';
 
 /**
- * @deprecated Use `@wolfstar/plugin-logger` instead once available (see wolfstar-project/plugins). This package
+ * @deprecated Use `@wolfstar/plugin-logger` instead (published from wolfstar-project/plugins). This package
  * remains functional but will not receive new features.
  */
 export class Logger {
@@ -89,7 +89,7 @@ export class Logger {
 }
 
 /**
- * @deprecated Use `@wolfstar/plugin-logger` instead once available (see wolfstar-project/plugins). This package
+ * @deprecated Use `@wolfstar/plugin-logger` instead (published from wolfstar-project/plugins). This package
  * remains functional but will not receive new features.
  */
 export namespace Logger {

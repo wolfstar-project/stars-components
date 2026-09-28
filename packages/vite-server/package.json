@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/vite-server",
-	"version": "0.2.1",
+	"version": "0.2.3",
 	"description": "Vite build and watch integration for Stars projects",
 	"keywords": [
 		"api",
@@ -63,12 +63,12 @@
 		"srvx": "^1.0.5"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.1",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
 		"vite": "^8.3.0",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.1"
 	},
 	"peerDependencies": {
 		"vite": ">=6.0.0"

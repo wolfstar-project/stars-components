@@ -1,3 +1,6 @@
+{{#if i18n}}
+import '@wolfstar/plugin-i18next/register';
+{{/if}}
 import { setup } from './lib/setup/all.js';
 import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
 import { Client, container } from '@wolfstar/http-framework';
@@ -6,7 +9,12 @@ import { morning } from 'gradient-string';
 
 await setup();
 
-const client = new Client();
+const client = new Client({{#if i18n}}{
+	i18n: {
+		defaultLanguageDirectory: new URL('locales', import.meta.url).pathname,
+		defaultName: 'en-US'
+	}
+}{{/if}});
 await client.load();
 
 const address = envParseString('HTTP_ADDRESS', '0.0.0.0');

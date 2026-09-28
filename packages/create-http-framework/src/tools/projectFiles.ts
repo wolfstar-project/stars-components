@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { writeFile } from './fileSystem.js';
 import type { DependencyVersions } from './npmHelpers.js';
-import type { BuildTool, Formatter, Language, Linter } from './options.js';
+import { isNitroBuild, isViteBuild, type BuildTool, type Formatter, type Language, type Linter } from './options.js';
 import type { PackageManager } from './packageManager.js';
 
 export interface ProjectContext {
@@ -11,6 +11,10 @@ export interface ProjectContext {
 	subcommands: boolean;
 	subcommandsAdvanced: boolean;
 	testing: boolean;
+	gateway: boolean;
+	cache: boolean;
+	redis: boolean;
+	sharder: boolean;
 	packageManager: PackageManager;
 	language: Language;
 	/** Only meaningful when `language === 'ts'`. */
@@ -30,14 +34,20 @@ function json(value: unknown): string {
 	return `${JSON.stringify(value, null, '\t')}\n`;
 }
 
+/** The file `start` runs and `main` points at: sources for JavaScript, the build output for TypeScript. */
+function entryFile(ctx: ProjectContext): string {
+	if (ctx.language === 'js') return 'src/main.js';
+	return isNitroBuild(ctx.buildTool) ? '.output/server/index.mjs' : 'dist/main.js';
+}
+
 export function buildScripts(ctx: ProjectContext): Record<string, string> {
 	// `stars dev` / `stars build` (from @wolfstar/cli) read stars.config.* and drive the build tool chosen below, so
 	// the scripts are the same for every language and build tool.
 	const scripts: Record<string, string> = {
 		dev: 'stars dev',
-		...(ctx.language === 'ts' && ctx.buildTool === 'tsdown' ? { postinstall: 'stars prepare' } : {}),
+		...(ctx.language === 'ts' && (ctx.buildTool === 'tsdown' || isViteBuild(ctx.buildTool)) ? { postinstall: 'stars prepare' } : {}),
 		...(ctx.language === 'js' ? {} : { build: 'stars build' }),
-		start: ctx.language === 'js' ? 'node src/main.js' : 'node dist/main.js'
+		start: `node ${entryFile(ctx)}`
 	};
 
 	if (ctx.linter === 'oxlint') {
@@ -73,6 +83,10 @@ export function buildDependencies(ctx: ProjectContext): Record<string, string> {
 		'gradient-string': caret(v['gradient-string']!)
 	};
 	if (ctx.i18n) dependencies['@wolfstar/plugin-i18next'] = caret(v['@wolfstar/plugin-i18next']!);
+	if (ctx.gateway) dependencies['@wolfstar/plugin-gateway'] = caret(v['@wolfstar/plugin-gateway']!);
+	if (ctx.cache) dependencies['@wolfstar/plugin-cache'] = caret(v['@wolfstar/plugin-cache']!);
+	if (ctx.redis) dependencies['ioredis'] = caret(v['ioredis']!);
+	if (ctx.sharder) dependencies['@wolfstar/plugin-sharder'] = caret(v['@wolfstar/plugin-sharder']!);
 	return sortKeys(dependencies);
 }
 
@@ -93,6 +107,13 @@ export function buildDevDependencies(ctx: ProjectContext): Record<string, string
 			case 'tsdown':
 				dev['tsdown'] = caret(v['tsdown']!);
 				dev['typescript'] = caret(v['typescript']!);
+				break;
+			case 'vite':
+			case 'vite-nitro':
+				dev['vite'] = caret(v['vite']!);
+				dev['typescript'] = caret(v['typescript']!);
+				// Nitro v3 is a beta prerelease — pin exactly rather than with a caret range.
+				if (isNitroBuild(ctx.buildTool)) dev['nitro'] = v['nitro']!;
 				break;
 		}
 	}
@@ -125,7 +146,7 @@ export function packageJson(ctx: ProjectContext): string {
 	const devDependencies = buildDevDependencies(ctx);
 	// client.load() locates the commands directory relative to this field (dirname(main) + 'commands'), not relative
 	// to the running file, so it must point at whichever file `start` actually runs.
-	const main = ctx.language === 'js' ? 'src/main.js' : 'dist/main.js';
+	const main = entryFile(ctx);
 	return json({
 		name: ctx.name,
 		version: '1.0.0',
@@ -135,7 +156,8 @@ export function packageJson(ctx: ProjectContext): string {
 		scripts: buildScripts(ctx),
 		dependencies: buildDependencies(ctx),
 		...(Object.keys(devDependencies).length > 0 ? { devDependencies } : {}),
-		engines: { node: '>=20' }
+		// `@wolfstar/plugin-gateway` requires it.
+		engines: { node: ctx.gateway ? '>=24.17.0' : '>=20' }
 	});
 }
 
@@ -156,6 +178,20 @@ const sharedCompilerOptions = {
 /** Writes the tsconfig(s). The tsc branches use a composite build so `tsc -b src` resolves `src/tsconfig.json`. */
 function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 	if (ctx.language === 'js') return;
+
+	if (isViteBuild(ctx.buildTool)) {
+		writeFile(
+			join(targetDir, 'tsconfig.json'),
+			json({
+				extends: './.stars/tsconfig.json',
+				compilerOptions: { types: ['node'] },
+				// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
+				include: ['src/**/*.ts', '.stars/*.d.ts'],
+				exclude: ['node_modules', 'dist', '.output']
+			})
+		);
+		return;
+	}
 
 	if (ctx.buildTool === 'tsdown') {
 		writeFile(
@@ -192,12 +228,17 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 
 /**
  * Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). Conventional
- * JavaScript and tsdown projects need no options; an explicit tsc selection is the only generated override.
+ * JavaScript and tsdown projects need no options; an explicit tsc, Vite or Nitro selection is the only generated override.
  */
 function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
 	const isJs = ctx.language === 'js';
-	const usesTsc = !isJs && ctx.buildTool !== 'tsdown';
-	const options = usesTsc ? "{ build: { tool: 'tsc' } }" : '{}';
+	const usesTsc = !isJs && (ctx.buildTool === 'tsc6' || ctx.buildTool === 'tsc7');
+	let options = usesTsc ? "{ build: { tool: 'tsc' } }" : '{}';
+	if (!isJs && isViteBuild(ctx.buildTool)) {
+		// Nitro v3 is itself a Vite plugin, so `enableNitro` also needs `enableVite`.
+		const nitro = isNitroBuild(ctx.buildTool) ? ", enableNitro: true, nitro: { preset: 'node-server' }" : '';
+		options = `{ build: { tool: 'vite' }, experimental: { enableVite: true${nitro} } }`;
+	}
 	const content = ["import { defineConfig } from '@wolfstar/http-framework/config';", '', `export default defineConfig(${options});`, ''].join(
 		'\n'
 	);

@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/oxlint-config",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Shareable oxlint base configuration for Star Network packages",
 	"keywords": [
 		"config",
@@ -51,7 +51,7 @@
 	},
 	"devDependencies": {
 		"golar": "^0.1.10",
-		"oxlint": "1.83.0",
+		"oxlint": "1.85.0",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2"
 	},

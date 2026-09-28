@@ -1,0 +1,54 @@
+{{#if i18n}}
+import '@wolfstar/plugin-i18next/register';
+{{/if}}
+import { setup } from './lib/setup/all.js';
+{{#if cache}}
+import { createCache } from './lib/cache.js';
+{{/if}}
+import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
+import { container } from '@wolfstar/http-framework';
+import { GatewayClient } from '@wolfstar/plugin-gateway';
+import { createStarsBanner } from '@wolfstar/start-banner';
+import { GatewayIntentBits } from 'discord-api-types/v10';
+import { morning } from 'gradient-string';
+
+await setup();
+
+const client = new GatewayClient({
+{{#if i18n}}
+	i18n: {
+		defaultLanguageDirectory: new URL('locales', import.meta.url).pathname,
+		defaultName: 'en-US'
+	},
+{{/if}}
+{{#if cache}}
+	// Every dispatch is written into the cache before its event is emitted.
+	cache: createCache(),
+{{/if}}
+	// Add the intents your listeners need, privileged ones (`MessageContent`, `GuildMembers`, `GuildPresences`) must also
+	// be enabled under Bot → Privileged Gateway Intents in the Developer Portal.
+	intents: GatewayIntentBits.Guilds
+});
+
+client.on('error', (error) => container.logger.error(error));
+
+const address = envParseString('HTTP_ADDRESS', '0.0.0.0');
+const port = envParseInteger('HTTP_PORT', {{port}});
+// Loads the pieces, starts the HTTP interactions endpoint, then connects every gateway shard.
+await client.start({ listen: { address, port } });
+
+console.log(
+	morning.multiline(
+		createStarsBanner({
+			name: ['{{name}}'],
+			extra: [
+				'',
+				`Loaded: ${container.stores.get('commands').size} commands`,
+				`      : ${container.stores.get('interaction-handlers').size} interaction handlers`,
+				`Listening: ${address}:${port}`
+			]
+		})
+	)
+);
+
+container.logger.info('Ready');

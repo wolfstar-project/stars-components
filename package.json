@@ -26,30 +26,30 @@
 		"@changesets/cli": "^3.0.3",
 		"@changesets/get-github-info": "^1.0.1",
 		"@changesets/types": "^7.0.0",
-		"@commitlint/cli": "^21.2.2",
-		"@commitlint/config-conventional": "^21.2.2",
+		"@commitlint/cli": "^21.2.3",
+		"@commitlint/config-conventional": "^21.2.3",
 		"@favware/npm-deprecate": "^2.0.0",
 		"@sapphire/ts-config": "^5.0.3",
 		"@swc/core": "^1.16.2",
 		"@tolgee/cli": "^2.20.0",
 		"@types/node": "22.15.21",
 		"@types/ws": "^8.18.1",
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.1",
 		"cz-conventional-changelog": "^3.3.0",
 		"golar": "^0.1.10",
 		"husky": "9.1.7",
-		"knip": "6.36.0",
+		"knip": "6.38.0",
 		"nano-staged": "1.0.2",
-		"oxfmt": "0.68.0",
-		"oxlint": "1.83.0",
+		"oxfmt": "0.70.0",
+		"oxlint": "1.85.0",
 		"pkg-pr-new": "^0.0.88",
 		"publint": "^0.3.24",
 		"tsdown": "^0.23.0",
-		"turbo": "^2.10.13",
+		"turbo": "^2.11.3",
 		"typedoc": "^0.28.20",
 		"typescript": "~5.8.3",
 		"unrun": "0.3.1",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.1"
 	},
 	"nano-staged": {
 		"*.{ts,mts,cts,tsx,mjs,cjs,js,jsx,json,jsonc,yml,yaml,md}": "oxfmt --no-error-on-unmatched-pattern",
@@ -68,5 +68,5 @@
 	"engines": {
 		"node": "^22.11 || ^24 || >=26"
 	},
-	"packageManager": "pnpm@12.4.2"
+	"packageManager": "pnpm@12.6.0"
 }

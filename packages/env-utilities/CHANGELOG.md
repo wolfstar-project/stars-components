@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.1
+
+### Patch Changes
+
+- [#227](https://github.com/wolfstar-project/stars-components/pull/227) [`ae15eef`](https://github.com/wolfstar-project/stars-components/commit/ae15eef45d0f85c630b8563b5436b9cd6379e64d) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+- [#226](https://github.com/wolfstar-project/stars-components/pull/226) [`3533b4d`](https://github.com/wolfstar-project/stars-components/commit/3533b4d15b15bb96954ca8ec1928b44c9f670ae9) - Fix `${VAR}` references between `.env*` files: `loadEnvFiles()` used to expand every file right after loading it, so a specific file (e.g. `.env.local`) referencing a variable defined only in a more generic one (e.g. `.env`) silently resolved to an empty string. All files are now parsed first and expanded once, so references resolve regardless of load order. Precedence (specific over generic, `src/.env*` over root, existing `process.env` values kept) and the `prefix` filter (applied after expansion) are unchanged.
+
+    Because a variable is now resolved from the merged result and no longer from the file that defined it, a specific file whose value expands to an empty string (e.g. `K=${MISSING}`) now ends up as `''` in `process.env` instead of falling back to the value from a more generic file. Variables that are part of a circular reference spanning several variables now resolve to an empty string instead of hanging the process, including cycle shapes that previously terminated with a non-empty value (e.g. `A=${B}` / `B=${A:-fallback}`, or `A=${B:+alt}` / `B=${A}`). Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.2.0
 
 ### Minor Changes

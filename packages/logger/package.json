@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/logger",
-	"version": "2.1.9",
+	"version": "2.1.10",
 	"description": "DEPRECATED: use @wolfstar/plugin-logger instead. A lightweight logger system with level support",
 	"keywords": [
 		"api",
@@ -51,11 +51,11 @@
 		"colorette": "^2.0.20"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.11",
+		"@vitest/coverage-v8": "^5.0.1",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.1"
 	},
 	"engines": {
 		"node": ">=20"

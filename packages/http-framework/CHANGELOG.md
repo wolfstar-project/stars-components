@@ -1,5 +1,28 @@
 # Changelog
 
+## 5.1.3
+
+### Patch Changes
+
+- [#227](https://github.com/wolfstar-project/stars-components/pull/227) [`ae15eef`](https://github.com/wolfstar-project/stars-components/commit/ae15eef45d0f85c630b8563b5436b9cd6379e64d) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`ae15eef`](https://github.com/wolfstar-project/stars-components/commit/ae15eef45d0f85c630b8563b5436b9cd6379e64d)]:
+    - @wolfstar/cli@2.0.3
+    - @wolfstar/schema@0.2.1
+
+## 5.1.2
+
+### Patch Changes
+
+- [#231](https://github.com/wolfstar-project/stars-components/pull/231) [`909c96a`](https://github.com/wolfstar-project/stars-components/commit/909c96a8f63d8f14100aee17063cffe723a6855e) - fix: require the `@wolfstar/cli` release with the plugin registration fix from [#222](https://github.com/wolfstar-project/stars-components/issues/222), so upgrading the framework alone also stops `stars build`/`stars dev` from crashing with `ERR_PACKAGE_PATH_NOT_EXPORTED` on `@wolfstar/plugin-cache`, `@wolfstar/plugin-gateway` or `@wolfstar/plugin-sharder` Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`909c96a`](https://github.com/wolfstar-project/stars-components/commit/909c96a8f63d8f14100aee17063cffe723a6855e)]:
+    - @wolfstar/cli@2.0.2
+
+## 5.1.1
+
+### Patch Changes
+
+- [#222](https://github.com/wolfstar-project/stars-components/pull/222) [`4c4138e`](https://github.com/wolfstar-project/stars-components/commit/4c4138e9e46012344b3b65b0e4ca94d70021bf5d) - fix(auto-imports): stop auto-importing `@wolfstar/env-utilities`' `setup`, which clashed with the `setup()` scaffolded projects export from `src/lib/setup/all.ts` and printed a duplicated import warning on every build ([#219](https://github.com/wolfstar-project/stars-components/issues/219)) Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 5.1.0
 
 ### Minor Changes

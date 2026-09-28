@@ -30,7 +30,13 @@ const versions: ProjectContext['versions'] = {
 	prettier: '1.0.0',
 	oxfmt: '1.0.0',
 	vitest: '1.0.0',
-	'@wolfstar/http-framework-test-utils': '1.0.0'
+	'@wolfstar/http-framework-test-utils': '1.0.0',
+	'@wolfstar/plugin-gateway': '1.0.0',
+	'@wolfstar/plugin-cache': '1.0.0',
+	'@wolfstar/plugin-sharder': '1.0.0',
+	ioredis: '1.0.0',
+	vite: '1.0.0',
+	nitro: '3.0.0-beta'
 };
 
 function makeContext(overrides: Partial<ProjectContext> = {}): ProjectContext {
@@ -41,6 +47,10 @@ function makeContext(overrides: Partial<ProjectContext> = {}): ProjectContext {
 		subcommands: false,
 		subcommandsAdvanced: false,
 		testing: false,
+		gateway: false,
+		cache: false,
+		redis: false,
+		sharder: false,
 		packageManager: 'pnpm',
 		language: 'ts',
 		buildTool: 'tsdown',
@@ -251,5 +261,96 @@ describe('writeProjectFiles', () => {
 		expect(config).toContain("defineConfig({ build: { tool: 'tsc' } })");
 		expect(config).not.toContain('compatibilityVersion');
 		expect(config).not.toContain('tsdown:');
+	});
+});
+
+describe('gateway features', () => {
+	test.each([
+		['gateway', { gateway: true }, ['@wolfstar/plugin-gateway'], ['@wolfstar/plugin-cache', '@wolfstar/plugin-sharder', 'ioredis']],
+		['cache', { gateway: true, cache: true }, ['@wolfstar/plugin-gateway', '@wolfstar/plugin-cache'], ['ioredis']],
+		['redis', { gateway: true, cache: true, redis: true }, ['@wolfstar/plugin-cache', 'ioredis'], ['@wolfstar/plugin-sharder']],
+		['sharder', { gateway: true, sharder: true }, ['@wolfstar/plugin-gateway', '@wolfstar/plugin-sharder'], ['@wolfstar/plugin-cache', 'ioredis']]
+	] as const)('GIVEN the %s feature THEN lists only its own dependencies', (_name, features, expected, unexpected) => {
+		const dependencies = buildDependencies(makeContext(features));
+
+		for (const name of expected) expect(dependencies).toHaveProperty(name);
+		for (const name of unexpected) expect(dependencies).not.toHaveProperty(name);
+	});
+
+	test('GIVEN the gateway THEN engines.node requires the version @wolfstar/plugin-gateway needs', () => {
+		expect(JSON.parse(packageJson(makeContext({ gateway: true }))).engines.node).toBe('>=24.17.0');
+		expect(JSON.parse(packageJson(makeContext())).engines.node).toBe('>=20');
+	});
+});
+
+describe('vite build tools', () => {
+	test('GIVEN vite THEN builds with vite, keeps dist/main.js and needs neither tsdown nor nitro', () => {
+		const ctx = makeContext({ buildTool: 'vite' });
+		const parsed = JSON.parse(packageJson(ctx));
+
+		expect(parsed.main).toBe('dist/main.js');
+		expect(parsed.scripts.start).toBe('node dist/main.js');
+		expect(parsed.scripts.postinstall).toBe('stars prepare');
+		expect(parsed.devDependencies).toHaveProperty('vite', '^1.0.0');
+		expect(parsed.devDependencies).not.toHaveProperty('nitro');
+		expect(parsed.devDependencies).not.toHaveProperty('tsdown');
+	});
+
+	test('GIVEN vite-nitro THEN runs the Nitro output and pins the beta exactly', () => {
+		const parsed = JSON.parse(packageJson(makeContext({ buildTool: 'vite-nitro' })));
+
+		expect(parsed.main).toBe('.output/server/index.mjs');
+		expect(parsed.scripts.start).toBe('node .output/server/index.mjs');
+		expect(parsed.devDependencies).toHaveProperty('vite', '^1.0.0');
+		expect(parsed.devDependencies).toHaveProperty('nitro', '3.0.0-beta');
+	});
+
+	test('GIVEN a JavaScript project THEN vite-nitro changes nothing', () => {
+		const parsed = JSON.parse(packageJson(makeContext({ language: 'js', buildTool: 'vite-nitro' })));
+
+		expect(parsed.main).toBe('src/main.js');
+		expect(parsed.devDependencies).not.toHaveProperty('vite');
+		expect(parsed.devDependencies).not.toHaveProperty('nitro');
+	});
+
+	describe('writeProjectFiles', () => {
+		let target: string;
+
+		beforeEach(async () => {
+			target = await mkdtemp(join(tmpdir(), 'create-http-framework-'));
+		});
+
+		afterEach(async () => {
+			await rm(target, { recursive: true, force: true });
+		});
+
+		test('GIVEN vite THEN stars.config.ts enables Vite and selects it as the build tool', async () => {
+			writeProjectFiles(target, makeContext({ buildTool: 'vite' }));
+
+			const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
+			expect(config).toContain("build: { tool: 'vite' }");
+			expect(config).toContain('experimental: { enableVite: true }');
+			expect(config).not.toContain('enableNitro');
+
+			const tsconfig = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
+			expect(tsconfig.extends).toBe('./.stars/tsconfig.json');
+			expect(tsconfig.include).toContain('.stars/*.d.ts');
+		});
+
+		test('GIVEN vite-nitro THEN stars.config.ts also enables Nitro, which needs Vite, with the node-server preset', async () => {
+			writeProjectFiles(target, makeContext({ buildTool: 'vite-nitro' }));
+
+			const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
+			expect(config).toContain('enableVite: true');
+			expect(config).toContain('enableNitro: true');
+			expect(config).toContain("preset: 'node-server'");
+		});
+
+		test('GIVEN JavaScript THEN a vite selection never reaches stars.config.js', async () => {
+			writeProjectFiles(target, makeContext({ language: 'js', buildTool: 'vite-nitro' }));
+
+			const config = await readFile(join(target, 'stars.config.js'), 'utf-8');
+			expect(config).toContain('defineConfig({})');
+		});
 	});
 });

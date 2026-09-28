@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-test-utils",
-	"version": "3.0.9",
+	"version": "4.0.1",
 	"description": "Test utilities for @wolfstar/http-framework",
 	"keywords": [
 		"discord",
@@ -62,11 +62,11 @@
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.1"
 	},
 	"peerDependencies": {
 		"@wolfstar/http-framework": "workspace:^",
-		"vitest": ">=4.1.10"
+		"vitest": ">=5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"vitest": {

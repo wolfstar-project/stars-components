@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.6.1
+
+### Patch Changes
+
+- [#227](https://github.com/wolfstar-project/stars-components/pull/227) [`ae15eef`](https://github.com/wolfstar-project/stars-components/commit/ae15eef45d0f85c630b8563b5436b9cd6379e64d) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+## 2.6.0
+
+### Minor Changes
+
+- [#225](https://github.com/wolfstar-project/stars-components/pull/225) [`f77580a`](https://github.com/wolfstar-project/stars-components/commit/f77580a27f5f678461cb82b13f3f31007fbf6f61) - Add the `vite` and `vite-nitro` build tools to `--build`, and scaffolding for `@wolfstar/plugin-gateway`, `@wolfstar/plugin-cache` (in memory or Redis) and `@wolfstar/plugin-sharder` through the new `--gateway`, `--cache`, `--redis` and `--sharder` options. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.5.2
 
 ### Patch Changes
