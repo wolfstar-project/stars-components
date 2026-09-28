@@ -30,9 +30,10 @@ export class PaginatedMessageEmbedFields extends PaginatedMessage {
 	}
 
 	/**
-	 * Builds the pages. Call it after the setters.
+	 * Builds the pages. Call it after the setters. Replaces every existing page.
 	 */
 	public make(): this {
+		this.pages = [];
 		for (let i = 0; i < this.#items.length; i += this.#itemsPerPage) {
 			this.addPageEmbed({ ...this.#template, fields: this.#items.slice(i, i + this.#itemsPerPage) });
 		}

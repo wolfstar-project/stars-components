@@ -40,6 +40,16 @@ describe('PaginatedMessageEmbedFields', () => {
 	test('GIVEN more than 25 per page THEN throws', () => {
 		expect(() => new PaginatedMessageEmbedFields().setItemsPerPage(26)).toThrow(RangeError);
 	});
+
+	test('GIVEN make is called twice THEN the second call replaces the pages from the first', async () => {
+		const first = Array.from({ length: 4 }, (_, i) => ({ name: `first${i}`, value: `v${i}` }));
+		const second = Array.from({ length: 2 }, (_, i) => ({ name: `second${i}`, value: `v${i}` }));
+		const message = new PaginatedMessageEmbedFields().setTemplate({ title: 'List' }).setItems(first).setItemsPerPage(2).make();
+		message.setItems(second).make();
+
+		expect(message.pages).toHaveLength(1);
+		expect(await message.resolvePage(0)).toEqual({ embeds: [{ title: 'List', fields: second }] });
+	});
 });
 
 describe('PaginatedFieldMessageEmbed', () => {
@@ -58,5 +68,19 @@ describe('PaginatedFieldMessageEmbed', () => {
 
 	test('GIVEN no title field THEN make throws', () => {
 		expect(() => new PaginatedFieldMessageEmbed<string>().setItems(['a']).make()).toThrow('PaginatedFieldMessageEmbed requires a title field');
+	});
+
+	test('GIVEN make is called twice THEN the second call replaces the pages from the first', async () => {
+		const message = new PaginatedFieldMessageEmbed<number>()
+			.setTemplate({ color: 2 })
+			.setTitleField('Numbers')
+			.setItems([1, 2, 3])
+			.formatItems((item) => `${item}`)
+			.setItemsPerPage(2)
+			.make();
+		message.setItems([4, 5]).setItemsPerPage(2).make();
+
+		expect(message.pages).toHaveLength(1);
+		expect(await message.resolvePage(0)).toEqual({ embeds: [{ color: 2, fields: [{ name: 'Numbers', value: '4\n5' }] }] });
 	});
 });
