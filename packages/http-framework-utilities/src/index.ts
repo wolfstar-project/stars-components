@@ -4,6 +4,8 @@ export * from './lib/handlers/MessagePrompterHandler.js';
 export * from './lib/handlers/PaginatedMessageHandler.js';
 export * from './lib/interactions.js';
 export * from './lib/MessageBuilder.js';
+export * from './lib/MessagePrompter/MessagePrompter.js';
+export * from './lib/MessagePrompter/waiters.js';
 export * from './lib/PaginatedMessage/LazyPaginatedMessage.js';
 export * from './lib/PaginatedMessage/PaginatedFieldMessageEmbed.js';
 export * from './lib/PaginatedMessage/PaginatedMessage.js';
