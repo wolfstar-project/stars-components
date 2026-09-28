@@ -103,7 +103,7 @@ export class AutocompleteInteractionOptionResolver {
 			throw new Error('No focused option for autocomplete interaction');
 		}
 
-		const { focused, ...option } = focusedOption;
+		const { focused: _focused, ...option } = focusedOption;
 
 		return option;
 	}
