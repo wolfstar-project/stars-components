@@ -1,7 +1,7 @@
 import { ButtonStyle, type APIEmbed, type APIInteractionResponseCallbackData } from 'discord-api-types/v10';
 import { createSessionId } from '../custom-id.js';
 import { DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
-import { MessageBuilder } from '../MessageBuilder.js';
+import { MessageBuilder, validateMessage } from '../MessageBuilder.js';
 import { registerUtilityHandlers } from '../registration.js';
 import { getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
@@ -50,6 +50,7 @@ function toPage(value: PaginatedMessagePage | MessageBuilder): PaginatedMessageP
 	if (content !== undefined) page.content = content;
 	if (embeds !== undefined) page.embeds = embeds;
 	if (allowed_mentions !== undefined) page.allowed_mentions = allowed_mentions;
+	validateMessage(page);
 	return page;
 }
 

@@ -41,6 +41,10 @@ describe('PaginatedMessage#run', () => {
 	test('GIVEN an out of range index THEN throws', async () => {
 		await expect(new PaginatedMessage().addPageContent('a').setIndex(3).run(fakeCommandInteraction(owner))).rejects.toThrow(RangeError);
 	});
+
+	test('GIVEN an over-limit plain object page THEN throws a RangeError', async () => {
+		await expect(new PaginatedMessage().addPageContent('a'.repeat(2001)).run(fakeCommandInteraction(owner))).rejects.toThrow(RangeError);
+	});
 });
 
 describe('handlePaginatedMessageInteraction', () => {

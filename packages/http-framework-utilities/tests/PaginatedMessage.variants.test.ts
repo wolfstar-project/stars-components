@@ -85,4 +85,14 @@ describe('PaginatedFieldMessageEmbed', () => {
 		expect(message.pages).toHaveLength(1);
 		expect(await message.resolvePage(0)).toEqual({ embeds: [{ color: 2, fields: [{ name: 'Numbers', value: '4\n5' }] }] });
 	});
+
+	test('GIVEN a field value over 1024 characters THEN resolving the page throws a RangeError', async () => {
+		const message = new PaginatedFieldMessageEmbed<string>()
+			.setTitleField('Long')
+			.setItems(['x'.repeat(1025)])
+			.formatItems((item) => item)
+			.setItemsPerPage(1)
+			.make();
+		await expect(message.resolvePage(0)).rejects.toThrow(RangeError);
+	});
 });
