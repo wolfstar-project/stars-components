@@ -47,6 +47,21 @@ describe('channel guards', () => {
 		expect(isVoiceBasedChannel(channel(ChannelType.GuildStageVoice))).toBe(true);
 	});
 
+	test('GIVEN a channel THEN isTextBasedChannel narrows the type', () => {
+		const c = channel(ChannelType.GuildVoice);
+		if (isTextBasedChannel(c)) {
+			expectTypeOf(c.type).toEqualTypeOf<
+				| ChannelType.GuildText
+				| ChannelType.DM
+				| ChannelType.GuildAnnouncement
+				| ChannelType.GuildVoice
+				| ChannelType.AnnouncementThread
+				| ChannelType.PublicThread
+				| ChannelType.PrivateThread
+			>();
+		}
+	});
+
 	test('GIVEN nsfw flag THEN isNsfwChannel reads it', () => {
 		expect(isNsfwChannel(channel(ChannelType.GuildText, { nsfw: true }))).toBe(true);
 		expect(isNsfwChannel(channel(ChannelType.GuildText))).toBe(false);

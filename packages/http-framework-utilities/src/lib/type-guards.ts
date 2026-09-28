@@ -67,7 +67,18 @@ export function isThreadChannel<T extends ChannelLike>(
  * Whether the channel can hold messages sent by the application. Group DMs and stage channels are excluded, matching
  * `@sapphire/discord.js-utilities`.
  */
-export function isTextBasedChannel<T extends ChannelLike>(channel: T | Nullish): channel is T {
+export function isTextBasedChannel<T extends ChannelLike>(
+	channel: T | Nullish
+): channel is Narrow<
+	T,
+	| ChannelType.GuildText
+	| ChannelType.DM
+	| ChannelType.GuildAnnouncement
+	| ChannelType.GuildVoice
+	| ChannelType.AnnouncementThread
+	| ChannelType.PublicThread
+	| ChannelType.PrivateThread
+> {
 	return channel != null && TextBasedTypes.has(channel.type);
 }
 
