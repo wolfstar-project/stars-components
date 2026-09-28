@@ -1,6 +1,14 @@
 import { UserData } from '@wolfstar/http-framework-test-utils';
 import { InteractionResponseType, MessageFlags } from 'discord-api-types/v10';
-import { encodeCustomId, MemorySessionStore, MessageBuilder, PaginatedMessage, PaginatedMessageHandlerName, setSessionStore } from '../src/index.js';
+import {
+	encodeCustomId,
+	getSessionStore,
+	MemorySessionStore,
+	MessageBuilder,
+	PaginatedMessage,
+	PaginatedMessageHandlerName,
+	setSessionStore
+} from '../src/index.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
 import { clickButton, fakeCommandInteraction, selectOption } from './helpers.js';
 
@@ -98,6 +106,16 @@ describe('handlePaginatedMessageInteraction', () => {
 		const again = clickButton(id(sessionId, 'next'));
 		await handlePaginatedMessageInteraction(again.interaction, again.value);
 		expect(again.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+	});
+
+	test('GIVEN stop and a store whose delete rejects THEN still disables the components', async () => {
+		const { sessionId } = await started();
+		vi.spyOn(getSessionStore(), 'delete').mockRejectedValue(new Error('down'));
+		const stop = clickButton(id(sessionId, 'stop'));
+		await handlePaginatedMessageInteraction(stop.interaction, stop.value);
+		expect(stop.body().type).toBe(InteractionResponseType.UpdateMessage);
+		const rows = (stop.body().data.components as { components: { disabled: boolean }[] }[]).flatMap((row) => row.components);
+		expect(rows.every((component) => component.disabled)).toBe(true);
 	});
 
 	test('GIVEN a custom action THEN runs it and renders the chosen page', async () => {

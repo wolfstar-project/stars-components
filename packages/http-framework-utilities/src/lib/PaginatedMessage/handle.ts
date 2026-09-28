@@ -65,9 +65,14 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	}
 
 	if (stopped) {
-		await store.delete(sessionId);
-		runtimes.delete(sessionId);
 		if (!interaction.replied) await interaction.update({ components: renderComponents(sessionId, session, { disabled: true }) });
+		runtimes.delete(sessionId);
+		try {
+			await store.delete(sessionId);
+		} catch (error) {
+			container.logger.error('[http-framework-utilities] Failed to delete a paginated message session', error);
+		}
+
 		return;
 	}
 
