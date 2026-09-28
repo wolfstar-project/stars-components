@@ -6,6 +6,9 @@ export const SessionIdLength = 12;
 
 const Alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
+/**
+ * @internal
+ */
 export function createSessionId(): string {
 	let id = '';
 	for (const byte of crypto.getRandomValues(new Uint8Array(SessionIdLength))) id += Alphabet[byte % Alphabet.length];

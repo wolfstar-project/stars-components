@@ -183,7 +183,8 @@ export class PaginatedMessage {
 	/**
 	 * Creates the session and returns the first payload, for flows that send it themselves (deferred replies,
 	 * follow-ups).
-	 * @param ownerId The user allowed to use the components; ignored when {@linkcode ownerOnly} is `false`.
+	 * @param ownerId The user allowed to use the components; ignored when {@linkcode ownerOnly} is `false`. Passing
+	 * `null` lets anyone use the components even when {@linkcode ownerOnly} is `true`.
 	 */
 	public async start(ownerId: string | null): Promise<PaginatedMessageStart> {
 		if (this.pages.length === 0) throw new Error('PaginatedMessage has no pages');
