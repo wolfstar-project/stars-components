@@ -89,6 +89,12 @@ describe('MessagePrompter', () => {
 		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
 	});
 
+	test('GIVEN a component interaction with an undecodable custom id THEN removes the components', async () => {
+		const click = clickButton(encodeCustomId(MessagePrompterHandlerName, '000000000000', 'yes'));
+		await handleMessagePrompterInteraction(click.interaction, 'not-decodable');
+		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+	});
+
 	test('GIVEN reply rejects THEN run rejects and clears the pending timer', async () => {
 		vi.useFakeTimers();
 		const interaction = fakeCommandInteraction(UserData.id);

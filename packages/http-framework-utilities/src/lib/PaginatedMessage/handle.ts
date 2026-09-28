@@ -26,8 +26,10 @@ async function load(store: SessionStore, sessionId: string): Promise<PaginatedMe
  * Handles a click on a paginated message component (`wolfstar-pm.<sessionId>.<action>`).
  */
 export async function handlePaginatedMessageInteraction(interaction: InteractionHandler.Interaction, customIdValue: unknown): Promise<void> {
+	if (!isComponentInteraction(interaction)) return;
+
 	const decoded = decodeCustomIdContent(customIdValue);
-	if (decoded === null || !isComponentInteraction(interaction)) return;
+	if (decoded === null) return expire(interaction);
 
 	const { sessionId, action } = decoded;
 	const runtimes = getPaginatedMessageRuntime();

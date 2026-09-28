@@ -96,6 +96,12 @@ describe('handlePaginatedMessageInteraction', () => {
 		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
 	});
 
+	test('GIVEN a component interaction with an undecodable custom id THEN removes the components', async () => {
+		const click = clickButton(id('000000000000', 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, 'not-decodable');
+		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+	});
+
 	test('GIVEN stop THEN disables the components and ends the session', async () => {
 		const { sessionId } = await started();
 		const stop = clickButton(id(sessionId, 'stop'));

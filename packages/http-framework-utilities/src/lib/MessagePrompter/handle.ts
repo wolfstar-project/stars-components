@@ -8,8 +8,13 @@ import { getPromptWaiters } from './waiters.js';
  * Handles a click on a prompt button (`wolfstar-mp.<sessionId>.<answer>`).
  */
 export async function handleMessagePrompterInteraction(interaction: InteractionHandler.Interaction, customIdValue: unknown): Promise<void> {
+	if (!isComponentInteraction(interaction)) return;
+
 	const decoded = decodeCustomIdContent(customIdValue);
-	if (decoded === null || !isComponentInteraction(interaction)) return;
+	if (decoded === null) {
+		await interaction.update({ components: [] });
+		return;
+	}
 
 	const waiter = getPromptWaiters().get(decoded.sessionId);
 	if (waiter === undefined) {
