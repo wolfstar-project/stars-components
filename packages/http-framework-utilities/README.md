@@ -79,6 +79,21 @@ export function run(interaction: Interactions.ApplicationCommand) {
 buttons use to browse pages, later interaction clicks resolved by the package's own interaction handlers. Custom
 `actions` must use ids other than those reserved built-in ones.
 
+`run` always sends a fresh reply. For a deferred reply or a follow-up, call `start(ownerId)` instead: it creates the
+session without sending anything and returns `{ sessionId, payload }`, so you send `payload` yourself:
+
+```ts
+export async function run(interaction: Interactions.ApplicationCommand) {
+	await interaction.defer();
+
+	const { payload } = await new PaginatedMessage().addPageEmbed({ title: 'Page 1' }).addPageEmbed({ title: 'Page 2' }).start(interaction.user.id);
+
+	await interaction.followup(payload);
+}
+```
+
+Pass `null` as `ownerId` to let anyone use the components even when `ownerOnly` is `true` (the default).
+
 ### `PaginatedFieldMessageEmbed`
 
 ```ts
@@ -110,12 +125,20 @@ if (confirmed) await interaction.followup({ content: 'Deleted' });
 The reply to the button click is used to remove the prompt's buttons (an HTTP interaction gets exactly one
 response), so any follow-up message for the user's answer must be sent with `followup`, not `reply`.
 
+### `flags` are not applied
+
+`PaginatedMessage` and `MessagePrompter` only read `content` / `embeds` / `allowed_mentions` (and `components`, which
+they render themselves) off a page or a `MessageBuilder`. `flags` set on a page object or via
+`MessageBuilder#setFlags` — e.g. `MessageFlags.Ephemeral` — are dropped: neither `toPage` (used by `PaginatedMessage`)
+nor `MessagePrompter#run` forward them to the interaction response. If you need an ephemeral paginated message or
+prompt, pass `flags` in the `reply`/`update` call yourself instead of relying on the builder/page.
+
 ## Sessions and multiple processes
 
-By default, `PaginatedMessage` and `MessagePrompter` sessions are kept in an in-memory `MemorySessionStore`, scoped
-to the current process. If your bot runs several replicas behind a shared gateway/load balancer, a click may land on
-a process that did not create the session. Use `setSessionStore` with a `RedisSessionStore` to share
-`PaginatedMessage` sessions across processes:
+By default, `PaginatedMessage` sessions are kept in an in-memory `MemorySessionStore`, scoped to the current
+process. If your bot runs several replicas behind a shared gateway/load balancer, a click may land on a process that
+did not create the session. Use `setSessionStore` with a `RedisSessionStore` to share `PaginatedMessage` sessions
+across processes:
 
 ```ts
 import { RedisSessionStore, setSessionStore } from '@wolfstar/http-framework-utilities';
@@ -123,6 +146,13 @@ import Redis from 'ioredis';
 
 setSessionStore(new RedisSessionStore({ redis: new Redis(process.env.REDIS_URL) }));
 ```
+
+`setSessionStore` configures the store used process-wide by anything that does not pass its own `store` option.
+Passing `store` to a `PaginatedMessage` instance only overrides the store on the process that called `run`/`start`;
+a click reaching a different process still resolves through whatever store that other process has configured (its
+own `setSessionStore` call, or the default `MemorySessionStore` if it never called it), not the instance's `store`
+option — so a per-instance `store` only works for single-process bots or when every process is given the same
+option. Configure the shared store globally with `setSessionStore` for multi-process bots instead.
 
 `RedisSessionStore` only needs `get`/`set(key, value, 'PX', ms)`/`del`, satisfied by an `ioredis` `Redis` or
 `Cluster` instance without depending on `ioredis` itself.
@@ -134,10 +164,15 @@ the interaction handlers at startup, instead of only the process that first call
 import '@wolfstar/http-framework-utilities/register';
 ```
 
-Lazy pages, custom action `run` callbacks, and `MessagePrompter` sessions stay process-local even with a shared
-store: their state includes functions, which are not JSON-serialisable. A `MessagePrompter`'s answer must reach the
-process that called `run`; a multi-replica bot should prefer `PaginatedMessage`-style store-backed actions for
-anything that must survive a click landing on a different process.
+Lazy pages and custom action `run` callbacks stay process-local even with a shared store: their state includes
+functions, which are not JSON-serialisable. A multi-replica bot should prefer store-backed actions (no `run`
+callback, no lazy pages) for anything that must survive a click landing on a different process.
+
+`MessagePrompter` sessions are **not** kept in a `SessionStore` at all: waiters live in an in-process `Map`,
+independent of `setSessionStore`/`RedisSessionStore`. A `MessagePrompter`'s answer must reach the exact process that
+called `run` — there is no way to share it across processes. A multi-replica bot should use `PaginatedMessage`-style
+store-backed actions instead of `MessagePrompter` for anything that must survive a click landing on a different
+process.
 
 ## Migrating from `@sapphire/discord.js-utilities`
 
