@@ -170,6 +170,17 @@ export class PaginatedMessage {
 	}
 
 	/**
+	 * Resets the page list and any already-resolved pages. Subclasses that rebuild their pages from scratch (e.g. a
+	 * `make()` method) should call this instead of resetting {@linkcode pages} directly, so stale resolved pages
+	 * from a previous build are not served by {@linkcode resolvePage}.
+	 */
+	protected clearPages(): this {
+		this.pages = [];
+		this.#resolved.clear();
+		return this;
+	}
+
+	/**
 	 * Creates the session and returns the first payload, for flows that send it themselves (deferred replies,
 	 * follow-ups).
 	 * @param ownerId The user allowed to use the components; ignored when {@linkcode ownerOnly} is `false`.

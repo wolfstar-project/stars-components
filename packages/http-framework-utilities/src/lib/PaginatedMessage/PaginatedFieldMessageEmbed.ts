@@ -43,7 +43,7 @@ export class PaginatedFieldMessageEmbed<T> extends PaginatedMessage {
 	public make(): this {
 		if (this.#title === null) throw new Error('PaginatedFieldMessageEmbed requires a title field');
 
-		this.pages = [];
+		this.clearPages();
 		for (let i = 0; i < this.#items.length; i += this.#itemsPerPage) {
 			const value = this.#items
 				.slice(i, i + this.#itemsPerPage)
