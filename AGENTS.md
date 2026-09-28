@@ -81,6 +81,12 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - **CDN asset path:** `cdn.wolfstar.rocks/wolfstar-assets/...`
 - READMEs use a generic Tolgee badge, not per-project Crowdin-era slugs.
 
+## Design specifications
+
+- [Discord utilities design](docs/superpowers/specs/2026-09-28-discord-utilities-design.md) defines the proposed
+  utility packages, registration, session constraints, and cleanup contract. Implementation is pending; this is
+  repository design documentation, not the external docs site.
+
 ## Notes for agents
 
 - Do NOT touch `pnpm-lock.yaml` manually; let `pnpm install` regenerate it after `package.json` edits.

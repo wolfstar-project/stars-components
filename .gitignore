@@ -13,6 +13,7 @@ examples/**/.env
 .pnpm-store/
 
 # Build Artifacts
+.output/
 dist/
 .stars/
 build/
