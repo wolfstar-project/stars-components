@@ -10,3 +10,4 @@ export {
 } from './lib/gateway/permissions.js';
 export * from './lib/gateway/type-guards.js';
 export * from './lib/gateway/GatewayPaginatedMessage.js';
+export * from './lib/gateway/GatewayMessagePrompter.js';

@@ -3,9 +3,17 @@ import {
 	ComponentType,
 	type APIActionRowComponent,
 	type APIButtonComponentWithCustomId,
-	type APIComponentInMessageActionRow
+	type APIComponentInMessageActionRow,
+	type APIInteractionResponseCallbackData
 } from 'discord-api-types/v10';
-import { InteractionTokenLifetime, MaximumTokenLifetime, scheduleCleanup, type TimeoutBehavior } from '../cleanup.js';
+import {
+	InteractionTokenLifetime,
+	MaximumTokenLifetime,
+	scheduleCleanup,
+	type CleanupCredentials,
+	type CleanupTarget,
+	type TimeoutBehavior
+} from '../cleanup.js';
 import { createSessionId, encodeCustomId, MessagePrompterHandlerName } from '../custom-id.js';
 import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder } from '../MessageBuilder.js';
@@ -80,18 +88,70 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 	 * @returns The answer, or `null` when the timeout elapsed.
 	 */
 	public async run(interaction: RunnableInteraction): Promise<MessagePrompterStrategyReturns[S] | null> {
+		const timeout = this.prepareRun(true);
+		return this.#prompt(interaction.user.id, timeout, async (payload, createdAt) => {
+			await interaction.reply(payload);
+			return {
+				target: { messageId: '@original', channelId: interaction.channel?.id ?? null, ephemeral: false },
+				credentials:
+					interaction.applicationId && interaction.token
+						? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + InteractionTokenLifetime }
+						: null
+			};
+		});
+	}
+
+	/**
+	 * Checks what every prompt needs before anything is sent: a process-scoped session store, and a valid timeout.
+	 * @param tokenBound Whether the prompt is only editable with an interaction token, which bounds the timeout by
+	 * {@linkcode MaximumTokenLifetime}.
+	 * @returns The timeout, in milliseconds.
+	 */
+	protected prepareRun(tokenBound: boolean): number {
 		if ((this.options.store ?? getSessionStore()).scope === 'shared') {
 			throw new TypeError('MessagePrompter needs a process-scoped session store: its answer is delivered to the process that called run');
 		}
 
 		const timeout = this.options.timeout ?? 60_000;
-		// A prompt always edits its '@original' response, so the interaction token is its only edit credential.
-		if (!Number.isFinite(timeout) || timeout <= 0 || timeout > MaximumTokenLifetime) {
+		// An interaction prompt always edits its '@original' response, so the interaction token is its only edit credential.
+		if (!Number.isFinite(timeout) || timeout <= 0 || (tokenBound && timeout > MaximumTokenLifetime)) {
 			throw new RangeError(
-				`timeout must be a positive number of at most ${MaximumTokenLifetime} ms (MaximumTokenLifetime), received ${timeout}`
+				tokenBound
+					? `timeout must be a positive number of at most ${MaximumTokenLifetime} ms (MaximumTokenLifetime), received ${timeout}`
+					: `timeout must be a positive finite number, received ${timeout}`
 			);
 		}
 
+		return timeout;
+	}
+
+	/**
+	 * Sends the question with its buttons as a bot-owned, non-ephemeral message through `send` (e.g. a gateway reply or
+	 * a channel message) and waits for the answer. Its timeout cleanup edits the returned message through the bot's REST
+	 * route, so the timeout is not bound by {@linkcode MaximumTokenLifetime}.
+	 * @param ownerId The user allowed to answer.
+	 * @param send Sends the payload and resolves with the created message's id and channel id.
+	 * @returns The answer, or `null` when the timeout elapsed.
+	 */
+	protected async sendBotPrompt(
+		ownerId: string,
+		send: (payload: APIInteractionResponseCallbackData) => Promise<{ messageId: string; channelId: string }>
+	): Promise<MessagePrompterStrategyReturns[S] | null> {
+		const timeout = this.prepareRun(false);
+		return this.#prompt(ownerId, timeout, async (payload) => {
+			const { messageId, channelId } = await send(payload);
+			return { target: { messageId, channelId, ephemeral: false }, credentials: null };
+		});
+	}
+
+	async #prompt(
+		ownerId: string,
+		timeout: number,
+		send: (
+			payload: APIInteractionResponseCallbackData,
+			createdAt: number
+		) => Promise<{ target: CleanupTarget; credentials: CleanupCredentials | null }>
+	): Promise<MessagePrompterStrategyReturns[S] | null> {
 		const sessionId = createSessionId();
 		const components = this.#components(sessionId);
 		await registerUtilityHandlers();
@@ -103,7 +163,7 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 		});
 
 		waiters.set(sessionId, {
-			ownerId: interaction.user.id,
+			ownerId,
 			wrongUserReply: this.options.wrongUserReply ?? DefaultWrongUserReply,
 			expiredReply: this.options.expiredReply ?? DefaultExpiredReply,
 			resolve: (action) => {
@@ -113,8 +173,9 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 		});
 
 		const createdAt = Date.now();
+		let sent: { target: CleanupTarget; credentials: CleanupCredentials | null };
 		try {
-			await interaction.reply({ ...this.message, components });
+			sent = await send({ ...this.message, components }, createdAt);
 		} catch (error) {
 			waiters.delete(sessionId);
 			throw error;
@@ -122,11 +183,7 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 
 		// The cleanup timer is the prompt's timeout: it settles the waiter with `null` on release, even when the edit fails.
 		scheduleCleanup(sessionId, {
-			target: { messageId: '@original', channelId: interaction.channel?.id ?? null, ephemeral: false },
-			credentials:
-				interaction.applicationId && interaction.token
-					? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + InteractionTokenLifetime }
-					: null,
+			...sent,
 			components,
 			behavior: this.options.timeoutBehavior ?? 'disable',
 			deadline: createdAt + timeout,

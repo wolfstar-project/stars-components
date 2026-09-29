@@ -1,31 +1,14 @@
 import { container } from '@wolfstar/http-framework';
-import type { Message, MessageCreateOptions } from '@wolfstar/plugin-gateway';
-import { Routes, type APIInteractionResponseCallbackData, type APIMessage } from 'discord-api-types/v10';
-import type { RunnableInteraction } from '../interactions.js';
+import { Routes, type APIMessage } from 'discord-api-types/v10';
 import { PaginatedMessage } from '../PaginatedMessage/PaginatedMessage.js';
-import { isMessageInstance, type TextBasedChannel } from './type-guards.js';
+import { isInteraction, toReplyOptions, type GatewayTarget } from './targets.js';
+import { isMessageInstance } from './type-guards.js';
 
 /**
  * Where a {@linkcode GatewayPaginatedMessage} is sent: an HTTP interaction (replied to), a gateway message (replied
  * to), or a text-based channel (sent to).
  */
-export type GatewayPaginatedMessageTarget = RunnableInteraction | Message | TextBasedChannel;
-
-function isInteraction(target: GatewayPaginatedMessageTarget): target is RunnableInteraction {
-	return 'user' in target && typeof (target as { reply?: unknown }).reply === 'function';
-}
-
-/**
- * Converts the first page into `Message#reply` options. The page's `allowed_mentions` become camel-cased
- * `allowedMentions`, so they win over the client's default allowed mentions like they do for a raw REST body.
- */
-function toReplyOptions({ allowed_mentions, ...rest }: APIInteractionResponseCallbackData): MessageCreateOptions {
-	const options = rest as MessageCreateOptions;
-	if (allowed_mentions === undefined) return options;
-
-	const { replied_user, ...mentions } = allowed_mentions;
-	return { ...options, allowedMentions: replied_user === undefined ? mentions : { ...mentions, repliedUser: replied_user } };
-}
+export type GatewayPaginatedMessageTarget = GatewayTarget;
 
 /**
  * A {@linkcode PaginatedMessage} that can also be sent from `@wolfstar/plugin-gateway`: as a reply to a gateway
