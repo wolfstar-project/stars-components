@@ -1,3 +1,9 @@
+packages:decorators:
+    - changed-files:
+          - any-glob-to-any-file:
+                - packages/decorators/*
+                - packages/decorators/**/*
+
 packages:env-utilities:
     - changed-files:
           - any-glob-to-any-file:
