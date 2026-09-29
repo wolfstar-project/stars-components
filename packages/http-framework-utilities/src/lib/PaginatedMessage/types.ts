@@ -74,6 +74,11 @@ export interface PaginatedMessageSession {
 }
 
 export interface PaginatedMessageActionContext {
+	/**
+	 * The click. When it arrived while another click on the same message was still being handled, it was already
+	 * acknowledged with `deferUpdate` (`replied` is `true`): do not `reply`/`update` it, send anything else as a
+	 * `followup`. The handler then edits the message itself through the deferred response.
+	 */
 	readonly interaction: ComponentInteraction;
 	readonly session: Readonly<PaginatedMessageSession>;
 	setIndex(index: number): void;

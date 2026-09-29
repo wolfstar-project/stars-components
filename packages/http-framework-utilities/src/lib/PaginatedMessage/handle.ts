@@ -1,9 +1,9 @@
 import { container, type InteractionHandler } from '@wolfstar/http-framework';
-import { MessageFlags } from 'discord-api-types/v10';
+import { MessageFlags, type APIInteractionResponseCallbackData } from 'discord-api-types/v10';
 import { cancelCleanup, refreshCleanup } from '../cleanup.js';
 import { decodeCustomIdContent } from '../custom-id.js';
 import { describeRestError } from '../errors.js';
-import { expireInteraction } from '../expire.js';
+import { disableMessageComponents, expireInteraction } from '../expire.js';
 import {
 	getDefaultExpiredReply,
 	getDefaultSaveFailedReply,
@@ -63,26 +63,86 @@ function serialize(sessionId: string, task: () => Promise<void>): Promise<void> 
 	return current;
 }
 
-/**
- * Answers a click whose new state could not be saved: the message keeps the stored page (showing the new one would
- * desync it from the store), then an ephemeral followup asks the user to try again.
- */
-async function keepCurrentPage(interaction: ComponentInteraction, sessionId: string, session: PaginatedMessageSession): Promise<void> {
-	if (!interaction.replied) {
-		await interaction.update({
-			...session.pages[session.index],
-			components: session.components ?? renderComponents(sessionId, session)
-		});
-	}
+type UpdateBody = Pick<APIInteractionResponseCallbackData, 'content' | 'embeds' | 'allowed_mentions' | 'components'>;
 
+/**
+ * Where a click's responses go. A click handled at once answers directly: one `update` (or an ephemeral `reply`), with
+ * anything else as a `followup`. A click that had to wait for a previous click on the same session was acknowledged
+ * with `deferUpdate` before waiting, so its message is edited through the deferred response (`PATCH @original`) and
+ * every notice is an ephemeral `followup`.
+ */
+interface Responder {
+	/**
+	 * Whether the click's response was already sent by a custom action, so the handler must not send another one.
+	 * Always `false` for a deferred click: the handler owns the edit of the deferred response.
+	 */
+	readonly answered: boolean;
+	update(body: UpdateBody): Promise<void>;
+	notify(content: string, failure: string): Promise<void>;
+}
+
+async function followupNotice(interaction: ComponentInteraction, content: string, failure: string): Promise<void> {
 	try {
-		const result = await interaction.followup({ content: getDefaultSaveFailedReply(), flags: MessageFlags.Ephemeral });
-		if (result.isErr()) {
-			container.logger.error('[http-framework-utilities] Failed to send a save failure notice', describeRestError(result.unwrapErr()));
-		}
+		const result = await interaction.followup({ content, flags: MessageFlags.Ephemeral });
+		if (result.isErr()) container.logger.error(`[http-framework-utilities] ${failure}`, describeRestError(result.unwrapErr()));
 	} catch (error) {
-		container.logger.error('[http-framework-utilities] Failed to send a save failure notice', describeRestError(error));
+		container.logger.error(`[http-framework-utilities] ${failure}`, describeRestError(error));
 	}
+}
+
+function directResponder(interaction: ComponentInteraction): Responder {
+	return {
+		get answered() {
+			return interaction.replied;
+		},
+		async update(body) {
+			await interaction.update(body);
+		},
+		async notify(content, failure) {
+			if (interaction.replied) return followupNotice(interaction, content, failure);
+			await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+		}
+	};
+}
+
+type Deferred = Awaited<ReturnType<ComponentInteraction['deferUpdate']>>;
+
+function deferredResponder(interaction: ComponentInteraction, message: Deferred): Responder {
+	return {
+		answered: false,
+		async update(body) {
+			try {
+				const result = await message.update(body);
+				if (result.isErr()) {
+					container.logger.error('[http-framework-utilities] Failed to update a paginated message', describeRestError(result.unwrapErr()));
+				}
+			} catch (error) {
+				container.logger.error('[http-framework-utilities] Failed to update a paginated message', describeRestError(error));
+			}
+		},
+		notify: (content, failure) => followupNotice(interaction, content, failure)
+	};
+}
+
+/**
+ * Acknowledges a click that has to wait for a previous one, so it does not miss Discord's 3-second response deadline.
+ * @returns The deferred response, or `null` when the acknowledgement failed (logged).
+ */
+async function acknowledge(interaction: ComponentInteraction): Promise<Deferred | null> {
+	try {
+		return await interaction.deferUpdate();
+	} catch (error) {
+		container.logger.error('[http-framework-utilities] Failed to acknowledge a paginated message click', describeRestError(error));
+		return null;
+	}
+}
+
+/**
+ * Disables the clicked message's components, then sends `content` as an ephemeral notice.
+ */
+async function expire(interaction: ComponentInteraction, responder: Responder, content: string): Promise<void> {
+	if (!responder.answered) await responder.update({ components: disableMessageComponents(interaction.message.components) });
+	await responder.notify(content, 'Failed to send an expiry notice');
 }
 
 /**
@@ -94,17 +154,25 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	const decoded = decodeCustomIdContent(customIdValue);
 	if (decoded === null) return expireInteraction(interaction, getDefaultExpiredReply());
 
-	return serialize(decoded.sessionId, () => handle(interaction, decoded.sessionId, decoded.action));
+	const { sessionId, action } = decoded;
+	if (!queues.has(sessionId)) return serialize(sessionId, () => handle(interaction, directResponder(interaction), sessionId, action));
+
+	// Another click on this session is still being handled: acknowledge now, answer through the deferred response later.
+	const acknowledged = acknowledge(interaction);
+	return serialize(sessionId, async () => {
+		const message = await acknowledged;
+		if (message !== null) await handle(interaction, deferredResponder(interaction, message), sessionId, action);
+	});
 }
 
-async function handle(interaction: ComponentInteraction, sessionId: string, action: string): Promise<void> {
+async function handle(interaction: ComponentInteraction, responder: Responder, sessionId: string, action: string): Promise<void> {
 	const runtimes = getPaginatedMessageRuntime();
 	const loadedRuntime = runtimes.get(sessionId);
 	// The runtime entry is the only way this process knows about a per-instance store, so it is always read for it.
 	const runtimeStore = loadedRuntime === null ? null : (loadedRuntime.store ?? getSessionStore());
 
 	const loaded = await load(sessionId, runtimeStore);
-	if (loaded === null) return expireInteraction(interaction, getDefaultExpiredReply());
+	if (loaded === null) return expire(interaction, responder, getDefaultExpiredReply());
 
 	const { session, store } = loaded;
 	// A shared store is visible to every replica; a runtime entry only ever describes this process, so it must not
@@ -113,8 +181,7 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 	const runtime = store.scope === 'shared' || store !== runtimeStore ? null : loadedRuntime;
 
 	if (session.ownerId !== null && interaction.user.id !== session.ownerId) {
-		await interaction.reply({ content: session.wrongUserReply, flags: MessageFlags.Ephemeral });
-		return;
+		return responder.notify(session.wrongUserReply, 'Failed to send a wrong user notice');
 	}
 
 	let index = session.index;
@@ -126,7 +193,7 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 	} else {
 		const custom = runtime?.actions.get(action);
 		if (custom === undefined || custom.type !== 'button' || custom.run === undefined) {
-			return expireInteraction(interaction, session.expiredReply);
+			return expire(interaction, responder, session.expiredReply);
 		}
 
 		await custom.run({
@@ -142,7 +209,7 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 	}
 
 	if (stopped) {
-		if (!interaction.replied) await interaction.update({ components: renderComponents(sessionId, session, { disabled: true }) });
+		if (!responder.answered) await responder.update({ components: renderComponents(sessionId, session, { disabled: true }) });
 		cancelCleanup(sessionId);
 		runtimes.delete(sessionId);
 		// A tombstone, not a delete: a click that loaded the session before the stop must not save it back afterwards.
@@ -159,15 +226,15 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 
 	let page: PaginatedMessagePage | null = session.pages[index] ?? null;
 	if (page === null) {
-		if (runtime === null) return expireInteraction(interaction, session.expiredReply);
+		if (runtime === null) return expire(interaction, responder, session.expiredReply);
 		page = await runtime.resolvePage(index);
 	}
 
 	// Stopped (or expired) while this click was handled, e.g. by another replica: saving would bring it back.
 	const latest = await read(store, sessionId);
 	if (latest.ok && (latest.value === null || isStoppedSession(latest.value))) {
-		if (interaction.replied) return;
-		return expireInteraction(interaction, getDefaultExpiredReply());
+		if (responder.answered) return;
+		return expire(interaction, responder, getDefaultExpiredReply());
 	}
 
 	const now = Date.now();
@@ -180,13 +247,18 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 		await store.set(sessionId, next, ttl);
 	} catch (error) {
 		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
-		return keepCurrentPage(interaction, sessionId, session);
+		// Keep the stored page: showing the new one would desync the message from the store.
+		if (!responder.answered) {
+			await responder.update({ ...session.pages[session.index], components: session.components ?? renderComponents(sessionId, session) });
+		}
+
+		return responder.notify(getDefaultSaveFailedReply(), 'Failed to send a save failure notice');
 	}
 
 	// Only the process that ran the message holds a cleanup record; other replicas are picked up by its recheck.
 	refreshCleanup(sessionId, expiresAt, components);
 	if (loadedRuntime !== null) runtimes.set(sessionId, loadedRuntime, ttl);
-	if (interaction.replied) return;
+	if (responder.answered) return;
 
-	await interaction.update({ ...page, components });
+	await responder.update({ ...page, components });
 }

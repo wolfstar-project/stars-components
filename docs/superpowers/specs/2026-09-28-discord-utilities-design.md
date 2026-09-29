@@ -244,7 +244,9 @@ Decisions taken while aligning the implementation with this spec and adding gate
   `select`) always run the built-in behaviour, so `addAction` rejects a button action with a `run` callback and one of
   those ids (`TypeError`). An action with a built-in id and no `run` restyles the default button.
 - **Concurrent clicks.** A process handles clicks on the same session one at a time (a per-session promise chain),
-  so overlapping clicks all apply. `stop` replaces the session with a JSON tombstone `{ stopped: true }` for the
+  so overlapping clicks all apply. A click that must wait is acknowledged immediately with `deferUpdate`; after the
+  wait, its message edits go through the deferred response (`PATCH @original`) and its notices (wrong user, expired,
+  save failed) are ephemeral `followup`s. Custom actions on such a click receive an already-acknowledged interaction. `stop` replaces the session with a JSON tombstone `{ stopped: true }` for the
   session's remaining lifetime instead of deleting it; the handler treats a tombstone like an expired session, and a
   navigation re-reads the session right before saving and expires instead of saving when it is now a tombstone or
   missing. Across replicas the store stays last-write-wins for simultaneous clicks on the same message: the re-read

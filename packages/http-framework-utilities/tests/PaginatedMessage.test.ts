@@ -1,5 +1,6 @@
 import { UserData } from '@wolfstar/http-framework-test-utils';
-import { InteractionResponseType, MessageFlags } from 'discord-api-types/v10';
+import { container } from '@wolfstar/http-framework';
+import { InteractionResponseType, MessageFlags, Routes } from 'discord-api-types/v10';
 import {
 	encodeCustomId,
 	getSessionStore,
@@ -169,36 +170,6 @@ describe('handlePaginatedMessageInteraction', () => {
 		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
 	});
 
-	test('GIVEN two concurrent next clicks THEN both apply', async () => {
-		const { sessionId } = await started();
-		const first = clickButton(id(sessionId, 'next'));
-		const second = clickButton(id(sessionId, 'next'));
-		await Promise.all([
-			handlePaginatedMessageInteraction(first.interaction, first.value),
-			handlePaginatedMessageInteraction(second.interaction, second.value)
-		]);
-
-		expect(first.body().data.content).toBe('two');
-		expect(second.body().data.content).toBe('three');
-		expect(await getSessionStore().get(sessionId)).toMatchObject({ index: 2 });
-	});
-
-	test('GIVEN a next click racing a stop THEN the stop wins and later clicks expire', async () => {
-		const { sessionId } = await started();
-		const next = clickButton(id(sessionId, 'next'));
-		const stop = clickButton(id(sessionId, 'stop'));
-		await Promise.all([
-			handlePaginatedMessageInteraction(next.interaction, next.value),
-			handlePaginatedMessageInteraction(stop.interaction, stop.value)
-		]);
-
-		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
-		const again = clickButton(id(sessionId, 'next'));
-		await handlePaginatedMessageInteraction(again.interaction, again.value);
-		expect(again.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
-		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
-	});
-
 	test('GIVEN another replica stops the session while a click is handled THEN the click does not resurrect it', async () => {
 		const { sessionId } = await started();
 		const store = getSessionStore();
@@ -253,5 +224,126 @@ describe('handlePaginatedMessageInteraction', () => {
 		const click = clickButton(id(sessionId, 'next'));
 		await handlePaginatedMessageInteraction(click.interaction, click.value);
 		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+	});
+});
+
+describe('handlePaginatedMessageInteraction with a queued click', () => {
+	const AppId = '737141877803057244';
+	const Token = 'my-very-nice-token';
+	let previousRest: typeof container.rest;
+	let patch: ReturnType<typeof vi.fn>;
+
+	beforeEach(() => {
+		previousRest = container.rest;
+		patch = vi.fn(async () => ({ id: '1', channel_id: '2' }));
+		container.rest = { patch } as unknown as typeof container.rest;
+	});
+
+	afterEach(() => {
+		container.rest = previousRest;
+		vi.restoreAllMocks();
+	});
+
+	async function slowSession() {
+		let release!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const { sessionId } = await new PaginatedMessage()
+			.addPages([{ content: 'one' }, { content: 'two' }, { content: 'three' }])
+			.addAction({ id: 'wait', type: 'button', label: 'Wait', run: () => gate })
+			.start(owner);
+		const slow = clickButton(id(sessionId, 'wait'));
+		const first = handlePaginatedMessageInteraction(slow.interaction, slow.value);
+		return { sessionId, release, first, slow };
+	}
+
+	const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+	test('GIVEN a click behind a slow click THEN it is deferred at once and applied through the original response', async () => {
+		const { sessionId, release, first, slow } = await slowSession();
+		const queued = clickButton(id(sessionId, 'next'));
+		const second = handlePaginatedMessageInteraction(queued.interaction, queued.value);
+		await tick();
+
+		expect(queued.body()).toEqual({ type: InteractionResponseType.DeferredMessageUpdate });
+		expect(patch).not.toHaveBeenCalled();
+
+		release();
+		await Promise.all([first, second]);
+		expect(slow.body().data.content).toBe('one');
+		expect(patch).toHaveBeenCalledOnce();
+		const [route, options] = patch.mock.calls[0]! as unknown as [string, { body: { content: string; components: unknown[] }; auth: boolean }];
+		expect(route).toBe(Routes.webhookMessage(AppId, Token, '@original'));
+		expect(options.auth).toBe(false);
+		expect(options.body.content).toBe('two');
+		expect(options.body.components.length).toBeGreaterThan(0);
+		expect(await getSessionStore().get(sessionId)).toMatchObject({ index: 1 });
+	});
+
+	test('GIVEN another user clicks behind a slow click THEN it is deferred and gets an ephemeral followup', async () => {
+		const { sessionId, release, first } = await slowSession();
+		const intruder = clickButton(id(sessionId, 'next'), '111111111111111111');
+		const followup = vi.spyOn(intruder.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		const second = handlePaginatedMessageInteraction(intruder.interaction, intruder.value);
+		await tick();
+		expect(intruder.body()).toEqual({ type: InteractionResponseType.DeferredMessageUpdate });
+
+		release();
+		await Promise.all([first, second]);
+		expect(followup).toHaveBeenCalledWith({ content: 'These buttons are not for you.', flags: MessageFlags.Ephemeral });
+		expect(patch).not.toHaveBeenCalled();
+	});
+
+	test('GIVEN a queued click on a stopped session THEN disables the components through the original response', async () => {
+		const { sessionId, release, first } = await slowSession();
+		const stop = clickButton(id(sessionId, 'stop'));
+		const stopping = handlePaginatedMessageInteraction(stop.interaction, stop.value);
+		const late = clickButton(id(sessionId, 'next'));
+		const followup = vi.spyOn(late.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		const third = handlePaginatedMessageInteraction(late.interaction, late.value);
+		await tick();
+
+		release();
+		await Promise.all([first, stopping, third]);
+		expect(late.body()).toEqual({ type: InteractionResponseType.DeferredMessageUpdate });
+		expect(followup).toHaveBeenCalledWith({ content: 'This interaction has expired.', flags: MessageFlags.Ephemeral });
+		expect(patch).toHaveBeenCalledTimes(2);
+	});
+
+	function started() {
+		return new PaginatedMessage().addPages([{ content: 'one' }, { content: 'two' }, new MessageBuilder().setContent('three')]).start(owner);
+	}
+
+	test('GIVEN two concurrent next clicks THEN both apply', async () => {
+		const { sessionId } = await started();
+		const first = clickButton(id(sessionId, 'next'));
+		const second = clickButton(id(sessionId, 'next'));
+		await Promise.all([
+			handlePaginatedMessageInteraction(first.interaction, first.value),
+			handlePaginatedMessageInteraction(second.interaction, second.value)
+		]);
+
+		expect(first.body().data.content).toBe('two');
+		// The second click waited for the first: it was deferred, then applied through the original response.
+		expect(second.body()).toEqual({ type: InteractionResponseType.DeferredMessageUpdate });
+		expect((patch.mock.calls[0]![1] as { body: { content: string } }).body.content).toBe('three');
+		expect(await getSessionStore().get(sessionId)).toMatchObject({ index: 2 });
+	});
+
+	test('GIVEN a next click racing a stop THEN the stop wins and later clicks expire', async () => {
+		const { sessionId } = await started();
+		const next = clickButton(id(sessionId, 'next'));
+		const stop = clickButton(id(sessionId, 'stop'));
+		await Promise.all([
+			handlePaginatedMessageInteraction(next.interaction, next.value),
+			handlePaginatedMessageInteraction(stop.interaction, stop.value)
+		]);
+
+		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
+		const again = clickButton(id(sessionId, 'next'));
+		await handlePaginatedMessageInteraction(again.interaction, again.value);
+		expect(again.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
 	});
 });

@@ -96,7 +96,11 @@ buttons use to browse pages, later interaction clicks resolved by the package's 
 runs the built-in behaviour. An action with a built-in id and no `run` is allowed, to restyle a default button (e.g.
 `{ id: 'next', type: 'button', emoji: { name: '👉' } }`).
 
-Clicks on the same message are handled one at a time within a process, so two quick `next` clicks both apply. `stop`
+Clicks on the same message are handled one at a time within a process, so two quick `next` clicks both apply. A
+click that has to wait for a previous one is acknowledged at once with `deferUpdate` (so it cannot miss Discord's
+3-second response deadline), then applied by editing the original response, with any notice sent as an ephemeral
+`followup`. A custom action `run` on such a click receives an interaction that is already acknowledged
+(`interaction.replied` is `true`): it must not `reply`/`update` it, only `followup`. `stop`
 leaves a small `{ stopped: true }` tombstone in the store until the session would have expired, instead of deleting it:
 a click that was already being handled (on this process or another replica) re-reads the session right before saving
 and expires instead of bringing the stopped session back. If saving a click fails, the message keeps showing the page
