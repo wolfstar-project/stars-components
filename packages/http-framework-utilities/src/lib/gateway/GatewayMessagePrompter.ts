@@ -222,6 +222,8 @@ export class GatewayMessagePrompter<S extends GatewayMessagePrompterStrategy = '
 			max: 1,
 			time: timeout
 		});
+		// Still awaited below; this only keeps a rejection while the bot is reacting from being reported as unhandled.
+		collected.catch(() => {});
 
 		for (const emoji of reactions) {
 			try {
