@@ -105,7 +105,7 @@ function emitMessage(authorId: string, content = 'answer', channelId = ChannelId
 	return message;
 }
 
-function emitReaction(userId: string, emoji: { id: string | null; name: string }, messageId = CreatedId) {
+function emitReaction(userId: string, emoji: { id: string | null; name: string }, messageId = CreatedId, cached = true) {
 	const reaction = new MessageReaction({
 		channel_id: ChannelId,
 		message_id: messageId,
@@ -114,7 +114,8 @@ function emitReaction(userId: string, emoji: { id: string | null; name: string }
 		me_burst: false,
 		burst_colors: []
 	} as never);
-	emitter.emit('messageReactionAdd', reaction, createGatewayUser({ id: userId }), { userId });
+	// plugin-gateway emits a `null` user when neither the payload nor the cache has it (e.g. DMs without a cache).
+	emitter.emit('messageReactionAdd', reaction, cached ? createGatewayUser({ id: userId }) : null, { userId });
 }
 
 describe('GatewayMessagePrompter', () => {
@@ -335,6 +336,15 @@ describe('GatewayMessagePrompter', () => {
 			expect(interaction.reply).toHaveBeenCalledOnce();
 			expect(put.mock.calls[0]![0]).toBe(Routes.channelMessageOwnReaction(ChannelId, CreatedId, encodeURIComponent('✅')));
 			emitReaction(UserId, { id: null, name: '✅' });
+			await expect(result).resolves.toBe('✅');
+		});
+
+		test('GIVEN the author reaction arrives with an uncached (null) user THEN resolves it by the event userId', async () => {
+			const result = new GatewayMessagePrompter('Sure?', 'reaction').run(dmChannel(), { id: UserId });
+			await settle();
+
+			emitReaction(OtherUserId, { id: null, name: '❌' }, CreatedId, false);
+			emitReaction(UserId, { id: null, name: '✅' }, CreatedId, false);
 			await expect(result).resolves.toBe('✅');
 		});
 

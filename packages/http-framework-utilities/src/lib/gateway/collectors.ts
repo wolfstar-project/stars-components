@@ -21,7 +21,15 @@ export interface AwaitOptions<T> {
 
 export interface CollectedReaction {
 	reaction: MessageReaction;
-	user: User;
+	/**
+	 * The user who reacted, `null` when plugin-gateway knows neither from the payload nor from its cache (e.g. in DMs
+	 * without a user cache). Use {@linkcode userId} to identify them.
+	 */
+	user: User | null;
+	/**
+	 * The ID of the user who reacted, always known.
+	 */
+	userId: string;
 }
 
 type EventName = 'messageCreate' | 'messageReactionAdd';
@@ -111,15 +119,16 @@ export function awaitMessages(channel: { id: string }, options: AwaitOptions<Mes
 }
 
 /**
- * Collects the reactions added to a message, from the client's `messageReactionAdd` events. Reactions whose user is
- * unknown (an uncached user outside of guilds) are skipped.
+ * Collects the reactions added to a message, from the client's `messageReactionAdd` events. Reactions from uncached
+ * users are collected too, with a `null` {@linkcode CollectedReaction.user}: filter on
+ * {@linkcode CollectedReaction.userId}.
  *
  * @returns The collected reactions, once `max` of them are collected or `time` elapses.
  * @throws {RangeError} When `time` or `max` is not a positive integer.
  * @remarks Rejects when `container.client` is not a `GatewayClient`.
  */
 export function awaitReactions(message: { id: string; channelId: string }, options: AwaitOptions<CollectedReaction>): Promise<CollectedReaction[]> {
-	return collect('awaitReactions', 'messageReactionAdd', options, (reaction, user) =>
-		user !== null && reaction.messageId === message.id && reaction.channelId === message.channelId ? { reaction, user } : null
+	return collect('awaitReactions', 'messageReactionAdd', options, (reaction, user, { userId }) =>
+		reaction.messageId === message.id && reaction.channelId === message.channelId ? { reaction, user, userId } : null
 	);
 }

@@ -281,6 +281,9 @@ Available helpers: `canReadMessages`, `canSendMessages`, `canSendEmbeds`, `canSe
 they collected once `max` (default `1`) values pass `filter` or `time` (milliseconds, required) elapses. `time` and `max`
 must be positive integers, and they reject without a `GatewayClient`.
 
+`awaitReactions` collects `{ reaction, user, userId }`. `user` is `null` when `@wolfstar/plugin-gateway` knows the user
+neither from the payload nor from its cache (e.g. DMs without a user cache), so filter on `userId`, which is always set.
+
 ```ts
 import { awaitMessages } from '@wolfstar/http-framework-utilities/gateway';
 

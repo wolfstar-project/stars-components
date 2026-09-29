@@ -117,8 +117,8 @@ describe('gateway collectors', () => {
 
 		test('GIVEN max reactions arrive THEN resolves early and removes its listener', async () => {
 			const promise = awaitReactions(target, { max: 2, time: 60_000 });
-			const first = { reaction: reaction(), user: user() };
-			const second = { reaction: reaction({ name: '👎' }), user: user(OtherId) };
+			const first = { reaction: reaction(), user: user(), userId: rawUser().id };
+			const second = { reaction: reaction({ name: '👎' }), user: user(OtherId), userId: OtherId };
 			emitter.emit('messageReactionAdd', first.reaction, first.user, { userId: first.user.id });
 			emitter.emit('messageReactionAdd', second.reaction, second.user, { userId: OtherId });
 
@@ -128,7 +128,7 @@ describe('gateway collectors', () => {
 
 		test('GIVEN time elapses THEN resolves with the partial results and removes its listener', async () => {
 			const promise = awaitReactions(target, { max: 5, time: 1000 });
-			const first = { reaction: reaction(), user: user() };
+			const first = { reaction: reaction(), user: user(), userId: rawUser().id };
 			emitter.emit('messageReactionAdd', first.reaction, first.user, { userId: first.user.id });
 
 			await vi.advanceTimersByTimeAsync(1000);
@@ -136,20 +136,27 @@ describe('gateway collectors', () => {
 			expect(emitter.listenerCount('messageReactionAdd')).toBe(0);
 		});
 
-		test('GIVEN reactions on another message or channel, or without a user THEN ignores them', async () => {
+		test('GIVEN reactions on another message or channel THEN ignores them', async () => {
 			const promise = awaitReactions(target, { time: 1000 });
 			emitter.emit('messageReactionAdd', reaction({ messageId: OtherId }), user(), { userId: rawUser().id });
 			emitter.emit('messageReactionAdd', reaction({ channelId: OtherId }), user(), { userId: rawUser().id });
-			emitter.emit('messageReactionAdd', reaction(), null, { userId: rawUser().id });
 
 			await vi.advanceTimersByTimeAsync(1000);
 			await expect(promise).resolves.toEqual([]);
 		});
 
+		test('GIVEN a reaction from an uncached user (user is null) THEN collects it with the userId from the event details', async () => {
+			const promise = awaitReactions(target, { filter: ({ userId }) => userId === OtherId, time: 60_000 });
+			const collected = reaction();
+			emitter.emit('messageReactionAdd', collected, null, { userId: OtherId });
+
+			await expect(promise).resolves.toEqual([{ reaction: collected, user: null, userId: OtherId }]);
+		});
+
 		test('GIVEN a filter THEN only collects the reactions it accepts', async () => {
 			const promise = awaitReactions(target, { filter: ({ reaction }) => reaction.emoji.name === '✅', time: 60_000 });
 			emitter.emit('messageReactionAdd', reaction({ name: '❌' }), user(), { userId: rawUser().id });
-			const accepted = { reaction: reaction({ name: '✅' }), user: user() };
+			const accepted = { reaction: reaction({ name: '✅' }), user: user(), userId: rawUser().id };
 			emitter.emit('messageReactionAdd', accepted.reaction, accepted.user, { userId: rawUser().id });
 
 			await expect(promise).resolves.toEqual([accepted]);

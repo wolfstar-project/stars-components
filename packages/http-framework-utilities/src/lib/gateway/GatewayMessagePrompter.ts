@@ -211,7 +211,7 @@ export class GatewayMessagePrompter<S extends GatewayMessagePrompterStrategy = '
 		const prompt = { id: messageId!, channelId };
 		// Listen before reacting, so an answer given while the bot is still reacting is not missed.
 		const collected = awaitReactions(prompt, {
-			filter: ({ reaction, user }) => user.id === ownerId && keys.includes(emojiKey(reaction.emoji)),
+			filter: ({ reaction, userId }) => userId === ownerId && keys.includes(emojiKey(reaction.emoji)),
 			max: 1,
 			time: timeout
 		});
