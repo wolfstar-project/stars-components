@@ -1,6 +1,6 @@
-import type { BaseInteraction } from '../../src/index.js';
+import { Identifiers, PreconditionError, type BaseInteraction } from '@wolfstar/http-framework';
 import { PermissionFlagsBits } from 'discord-api-types/v10';
-import { Identifiers, PreconditionError, RequiresClientPermissions, RequiresUserPermissions } from '../../src/index.js';
+import { RequiresClientPermissions, RequiresUserPermissions } from '../src/index.js';
 import { makeFakeInteraction } from './fixtures.js';
 
 describe('RequiresUserPermissions', () => {

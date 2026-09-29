@@ -1,5 +1,5 @@
 import { ApplicationCommandType } from 'discord-api-types/v10';
-import { createMethodDecorator } from '../../decorators/utils.js';
+import { createMethodDecorator } from '../../utils/decorators.js';
 import type { Command } from '../../structures/Command';
 import type { ContextMenuCommandResolver } from '../resolvers/ContextMenuCommandResolver';
 import { ensureContextMenuCommandResolver } from './_shared';

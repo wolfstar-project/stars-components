@@ -1,6 +1,7 @@
 name: '*next*'
 package:
     - '@wolfstar/cli'
+    - '@wolfstar/decorators'
     - '@wolfstar/env-utilities'
     - '@wolfstar/http-framework'
     - '@wolfstar/i18next-backend'

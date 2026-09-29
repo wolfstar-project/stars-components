@@ -1,8 +1,13 @@
-import type { BaseInteraction } from '../interactions/structures/interactions/base/BaseInteraction.js';
-import { Identifiers } from '../errors/Identifiers.js';
-import { PreconditionError } from '../errors/PreconditionError.js';
+import {
+	getMissingPermissions,
+	Identifiers,
+	PreconditionError,
+	resolvePermissions,
+	toPermissionNames,
+	type BaseInteraction,
+	type PermissionResolvable
+} from '@wolfstar/http-framework';
 import { createFunctionPrecondition } from './utils.js';
-import { getMissingPermissions, resolvePermissions, toPermissionNames, type PermissionResolvable } from '../utils/permissions.js';
 
 /**
  * Reads the permissions the invoking user has in the channel the interaction was sent from.
@@ -27,7 +32,8 @@ function getUserPermissions(interaction: BaseInteraction): bigint | null {
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand, RequiresClientPermissions } from '@wolfstar/http-framework';
+ * import { RequiresClientPermissions } from '@wolfstar/decorators';
+ * import { Command, RegisterCommand } from '@wolfstar/http-framework';
  *
  * (at)RegisterCommand({ name: 'purge', description: 'Deletes messages' })
  * export class UserCommand extends Command {
@@ -73,7 +79,8 @@ export function RequiresClientPermissions(...permissions: PermissionResolvable[]
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand, RequiresUserPermissions } from '@wolfstar/http-framework';
+ * import { RequiresUserPermissions } from '@wolfstar/decorators';
+ * import { Command, RegisterCommand } from '@wolfstar/http-framework';
  *
  * (at)RegisterCommand({ name: 'ban', description: 'Bans a member' })
  * export class UserCommand extends Command {

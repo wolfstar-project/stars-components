@@ -23,8 +23,8 @@ export function createMethodDecorator<TFunction extends (...args: any[]) => unkn
  * Utility to make a class decorator from a function.
  *
  * @remarks The decorator is returned with the signature it was given, rather than widened to `ClassDecorator`, so a
- * decorator built on top of this keeps whatever constraint it declares on its target. This is what lets
- * {@linkcode RegisterCommand} and its siblings reject a target that is not a `Command`.
+ * decorator built on top of this keeps whatever constraint it declares on its target, such as only accepting a
+ * `Command` subclass.
  * @param fn The class to decorate.
  * @returns The decorator.
  * @see {@linkcode ApplyOptions}
@@ -61,7 +61,8 @@ export function createProxy<T extends object>(target: T, handler: Omit<ProxyHand
  * @returns The decorator.
  * @example
  * ```typescript
- * import { Command, RegisterCommand, createFunctionPrecondition } from '@wolfstar/http-framework';
+ * import { createFunctionPrecondition } from '@wolfstar/decorators';
+ * import type { Command } from '@wolfstar/http-framework';
  *
  * const RequiresOwner = createFunctionPrecondition(
  * 	(interaction: Command.ChatInputInteraction) => interaction.user.id === process.env.OWNER_ID,
