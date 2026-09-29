@@ -10,6 +10,18 @@ export const DefaultExpiredReply = 'This interaction has expired.';
  */
 export interface RunnableInteraction {
 	readonly user: { readonly id: string };
+	/**
+	 * With {@linkcode token}, used to edit the response when it times out. Without either, timeout cleanup is skipped.
+	 */
+	readonly applicationId?: string;
+	/**
+	 * The interaction token. Kept in process memory only, never stored in a session store or logged.
+	 */
+	readonly token?: string;
+	readonly channel?: { readonly id: string } | undefined;
+	/**
+	 * `@wolfstar/http-framework` resolves a `PartialMessage` whose `get()` fetches the real message.
+	 */
 	reply(data: APIInteractionResponseCallbackData): Promise<unknown>;
 }
 

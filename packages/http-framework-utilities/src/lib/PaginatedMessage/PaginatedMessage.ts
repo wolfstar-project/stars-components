@@ -1,5 +1,8 @@
-import { ButtonStyle, type APIEmbed, type APIInteractionResponseCallbackData } from 'discord-api-types/v10';
+import { container } from '@wolfstar/http-framework';
+import { ButtonStyle, MessageFlags, type APIEmbed, type APIInteractionResponseCallbackData } from 'discord-api-types/v10';
+import { MaximumTokenLifetime, scheduleCleanup, updateCleanupComponents, type CleanupTarget, type TimeoutBehavior } from '../cleanup.js';
 import { createSessionId } from '../custom-id.js';
+import { describeRestError } from '../errors.js';
 import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder, validateMessage } from '../MessageBuilder.js';
 import { registerUtilityHandlers } from '../registration.js';
@@ -40,9 +43,22 @@ export interface PaginatedMessageOptions {
 	 */
 	expiredReply?: string;
 	/**
+	 * What {@linkcode PaginatedMessage.run} does to the controls when the session times out.
+	 * @default 'disable'
+	 */
+	timeoutBehavior?: TimeoutBehavior;
+	/**
 	 * @default getSessionStore()
 	 */
 	store?: SessionStore;
+}
+
+interface PreparedSession {
+	sessionId: string;
+	session: PaginatedMessageSession;
+	payload: APIInteractionResponseCallbackData;
+	store: SessionStore;
+	shared: boolean;
 }
 
 export interface PaginatedMessageStart {
@@ -90,6 +106,7 @@ export class PaginatedMessage {
 	public ownerOnly: boolean;
 	public wrongUserReply: string;
 	public expiredReply: string;
+	public timeoutBehavior: TimeoutBehavior;
 	public store: SessionStore | undefined;
 
 	/**
@@ -104,6 +121,7 @@ export class PaginatedMessage {
 		this.ownerOnly = options.ownerOnly ?? true;
 		this.wrongUserReply = options.wrongUserReply ?? DefaultWrongUserReply;
 		this.expiredReply = options.expiredReply ?? DefaultExpiredReply;
+		this.timeoutBehavior = options.timeoutBehavior ?? 'disable';
 		this.store = options.store;
 		if (options.pages) this.addPages(options.pages);
 		this.addActions(options.actions ?? PaginatedMessage.defaultActions);
@@ -179,6 +197,11 @@ export class PaginatedMessage {
 		return this;
 	}
 
+	public setTimeoutBehavior(behavior: TimeoutBehavior): this {
+		this.timeoutBehavior = behavior;
+		return this;
+	}
+
 	/**
 	 * Resolves a page, calling its function the first time for function pages.
 	 * @internal Used by the interaction handler for lazy pages.
@@ -213,6 +236,78 @@ export class PaginatedMessage {
 	 * `null` lets anyone use the components even when {@linkcode ownerOnly} is `true`.
 	 */
 	public async start(ownerId: string | null): Promise<PaginatedMessageStart> {
+		const prepared = await this.#prepare(ownerId);
+		await this.#save(prepared, this.idle);
+		return { sessionId: prepared.sessionId, payload: prepared.payload };
+	}
+
+	/**
+	 * Replies to the interaction with the first page and schedules the timeout cleanup of the reply.
+	 * @returns The session id.
+	 * @throws {RangeError} When {@linkcode idle} exceeds {@linkcode MaximumTokenLifetime} and the reply can only be
+	 * edited with the interaction token (ephemeral, or no channel), before replying.
+	 */
+	public async run(interaction: RunnableInteraction): Promise<string> {
+		const createdAt = Date.now();
+		const prepared = await this.#prepare(interaction.user.id);
+		const { sessionId, session, payload, store } = prepared;
+
+		const ephemeral = ((payload.flags ?? 0) & MessageFlags.Ephemeral) !== 0;
+		const channelId = interaction.channel?.id ?? null;
+		const longLived = this.idle > MaximumTokenLifetime;
+		if (longLived && (ephemeral || channelId === null)) {
+			throw new RangeError(
+				`idle must be at most ${MaximumTokenLifetime} ms (MaximumTokenLifetime) for ${ephemeral ? 'an ephemeral reply' : 'a reply without a channel'}, received ${this.idle}`
+			);
+		}
+
+		const target: CleanupTarget = { messageId: '@original', channelId, ephemeral };
+		// The message is only editable with the token until it expires, unless the real id is fetched below.
+		session.maximumExpiresAt = longLived ? null : createdAt + MaximumTokenLifetime;
+		session.expiresAt = Math.min(createdAt + this.idle, session.maximumExpiresAt ?? Number.POSITIVE_INFINITY);
+		session.cleanupTarget = target;
+		session.components = payload.components as PaginatedMessageSession['components'];
+		await this.#save(prepared, session.expiresAt - createdAt);
+
+		const response = await interaction.reply(payload);
+		if (longLived) {
+			target.messageId = await fetchMessageId(response, sessionId);
+			if (target.messageId === '@original') {
+				// Without the real id the token is the only edit credential again: cap the lifetime like a short session.
+				session.maximumExpiresAt = createdAt + MaximumTokenLifetime;
+				session.expiresAt = Math.min(session.expiresAt, session.maximumExpiresAt);
+			}
+
+			try {
+				await store.set(sessionId, { ...session, cleanupTarget: target }, Math.max(session.expiresAt - Date.now(), 1));
+			} catch (error) {
+				container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
+			}
+		}
+
+		const credentials =
+			interaction.applicationId && interaction.token
+				? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + MaximumTokenLifetime }
+				: null;
+
+		scheduleCleanup(sessionId, {
+			target: { ...target },
+			credentials,
+			components: session.components!,
+			behavior: this.timeoutBehavior,
+			deadline: session.expiresAt,
+			recheck: async () => {
+				const current = (await store.get(sessionId)) as PaginatedMessageSession | null;
+				if (current === null) return null;
+				if (current.components) updateCleanupComponents(sessionId, current.components);
+				return current.expiresAt !== undefined && current.expiresAt > Date.now() ? current.expiresAt : null;
+			}
+		});
+
+		return sessionId;
+	}
+
+	async #prepare(ownerId: string | null): Promise<PreparedSession> {
 		if (this.pages.length === 0) throw new Error('PaginatedMessage has no pages');
 		if (!Number.isInteger(this.index) || this.index < 0 || this.index >= this.pages.length) {
 			throw new RangeError(`The index ${this.index} is outside of the ${this.pages.length} pages`);
@@ -258,19 +353,38 @@ export class PaginatedMessage {
 		if (shared) assertSharedSessionState(session);
 
 		const sessionId = createSessionId();
-		await store.set(sessionId, session, this.idle);
-		if (!shared) getPaginatedMessageRuntime().set(sessionId, this, this.idle);
-
-		return { sessionId, payload: { ...pages[this.index]!, components: renderComponents(sessionId, session) } };
+		return { sessionId, session, payload: { ...pages[this.index]!, components: renderComponents(sessionId, session) }, store, shared };
 	}
 
-	/**
-	 * Replies to the interaction with the first page.
-	 * @returns The session id.
-	 */
-	public async run(interaction: RunnableInteraction): Promise<string> {
-		const { sessionId, payload } = await this.start(interaction.user.id);
-		await interaction.reply(payload);
-		return sessionId;
+	async #save({ sessionId, session, store, shared }: PreparedSession, ttl: number): Promise<void> {
+		await store.set(sessionId, session, ttl);
+		if (!shared) getPaginatedMessageRuntime().set(sessionId, this, ttl);
 	}
+}
+
+interface MessageResult {
+	isOk(): boolean;
+	unwrap(): { id: string };
+	unwrapErr(): unknown;
+}
+
+/**
+ * Fetches the real id of a reply through the `PartialMessage#get()` it resolved with, falling back to `'@original'`.
+ */
+async function fetchMessageId(response: unknown, sessionId: string): Promise<string> {
+	const get = (response as { get?: unknown } | null | undefined)?.get;
+	if (typeof get !== 'function') return '@original';
+
+	try {
+		const result = (await get.call(response)) as MessageResult;
+		if (result.isOk()) return result.unwrap().id;
+		container.logger.error('[http-framework-utilities] Failed to fetch a paginated message', {
+			sessionId,
+			error: describeRestError(result.unwrapErr())
+		});
+	} catch (error) {
+		container.logger.error('[http-framework-utilities] Failed to fetch a paginated message', { sessionId, error: describeRestError(error) });
+	}
+
+	return '@original';
 }

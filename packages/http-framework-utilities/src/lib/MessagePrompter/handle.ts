@@ -1,5 +1,6 @@
 import type { InteractionHandler } from '@wolfstar/http-framework';
 import { MessageFlags } from 'discord-api-types/v10';
+import { cancelCleanup } from '../cleanup.js';
 import { decodeCustomIdContent } from '../custom-id.js';
 import { expireInteraction } from '../expire.js';
 import { DefaultExpiredReply, isComponentInteraction } from '../interactions.js';
@@ -24,4 +25,5 @@ export async function handleMessagePrompterInteraction(interaction: InteractionH
 
 	await interaction.update({ components: [] });
 	waiter.resolve(decoded.action);
+	cancelCleanup(decoded.sessionId);
 }

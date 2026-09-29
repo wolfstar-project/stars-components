@@ -5,6 +5,7 @@ import {
 	type APIButtonComponentWithCustomId,
 	type APIComponentInMessageActionRow
 } from 'discord-api-types/v10';
+import { MaximumTokenLifetime, scheduleCleanup, type TimeoutBehavior } from '../cleanup.js';
 import { createSessionId, encodeCustomId, MessagePrompterHandlerName } from '../custom-id.js';
 import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder } from '../MessageBuilder.js';
@@ -33,6 +34,11 @@ export interface MessagePrompterOptions {
 	 * @default DefaultExpiredReply
 	 */
 	expiredReply?: string;
+	/**
+	 * What happens to the buttons when the prompt times out.
+	 * @default 'disable'
+	 */
+	timeoutBehavior?: TimeoutBehavior;
 	/** @default 'Yes' */
 	confirmLabel?: string;
 	/** @default 'No' */
@@ -82,33 +88,45 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 		await registerUtilityHandlers();
 
 		const waiters = getPromptWaiters();
-		let timer: ReturnType<typeof setTimeout>;
+		let settle!: (value: MessagePrompterStrategyReturns[S] | null) => void;
 		const answer = new Promise<MessagePrompterStrategyReturns[S] | null>((resolve) => {
-			timer = setTimeout(() => {
-				waiters.delete(sessionId);
-				resolve(null);
-			}, this.options.timeout ?? 60_000);
-			timer.unref?.();
-
-			waiters.set(sessionId, {
-				ownerId: interaction.user.id,
-				wrongUserReply: this.options.wrongUserReply ?? DefaultWrongUserReply,
-				expiredReply: this.options.expiredReply ?? DefaultExpiredReply,
-				resolve: (action) => {
-					clearTimeout(timer);
-					waiters.delete(sessionId);
-					resolve(this.#parse(action));
-				}
-			});
+			settle = resolve;
 		});
 
+		waiters.set(sessionId, {
+			ownerId: interaction.user.id,
+			wrongUserReply: this.options.wrongUserReply ?? DefaultWrongUserReply,
+			expiredReply: this.options.expiredReply ?? DefaultExpiredReply,
+			resolve: (action) => {
+				waiters.delete(sessionId);
+				settle(this.#parse(action));
+			}
+		});
+
+		const createdAt = Date.now();
 		try {
 			await interaction.reply({ ...this.message, components });
 		} catch (error) {
-			clearTimeout(timer!);
 			waiters.delete(sessionId);
 			throw error;
 		}
+
+		// The cleanup timer is the prompt's timeout: it settles the waiter with `null` on release, even when the edit fails.
+		scheduleCleanup(sessionId, {
+			target: { messageId: '@original', channelId: interaction.channel?.id ?? null, ephemeral: false },
+			credentials:
+				interaction.applicationId && interaction.token
+					? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + MaximumTokenLifetime }
+					: null,
+			components,
+			behavior: this.options.timeoutBehavior ?? 'disable',
+			deadline: createdAt + (this.options.timeout ?? 60_000),
+			onRelease: () => {
+				if (!waiters.has(sessionId)) return;
+				waiters.delete(sessionId);
+				settle(null);
+			}
+		});
 
 		return answer;
 	}

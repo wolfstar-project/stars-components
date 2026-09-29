@@ -1,5 +1,6 @@
 import { container, type InteractionHandler } from '@wolfstar/http-framework';
 import { MessageFlags } from 'discord-api-types/v10';
+import { cancelCleanup, refreshCleanup } from '../cleanup.js';
 import { decodeCustomIdContent } from '../custom-id.js';
 import { expireInteraction } from '../expire.js';
 import { DefaultExpiredReply, getSelectedValues, isComponentInteraction } from '../interactions.js';
@@ -70,6 +71,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 
 	if (stopped) {
 		if (!interaction.replied) await interaction.update({ components: renderComponents(sessionId, session, { disabled: true }) });
+		cancelCleanup(sessionId);
 		runtimes.delete(sessionId);
 		try {
 			await store.delete(sessionId);
@@ -86,15 +88,22 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 		page = await runtime.resolvePage(index);
 	}
 
-	const next: PaginatedMessageSession = { ...session, index, pages: session.pages.map((entry, i) => (i === index ? page : entry)) };
+	const now = Date.now();
+	const expiresAt = Math.min(now + session.idle, session.maximumExpiresAt ?? Number.POSITIVE_INFINITY);
+	const ttl = Math.max(expiresAt - now, 1);
+	const next: PaginatedMessageSession = { ...session, index, pages: session.pages.map((entry, i) => (i === index ? page : entry)), expiresAt };
+	const components = renderComponents(sessionId, next);
+	next.components = components;
 	try {
-		await store.set(sessionId, next, session.idle);
+		await store.set(sessionId, next, ttl);
 	} catch (error) {
 		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', error);
 	}
 
-	if (runtime !== null) runtimes.set(sessionId, runtime, session.idle);
+	// Only the process that ran the message holds a cleanup record; other replicas are picked up by its recheck.
+	refreshCleanup(sessionId, expiresAt, components);
+	if (runtime !== null) runtimes.set(sessionId, runtime, ttl);
 	if (interaction.replied) return;
 
-	await interaction.update({ ...page, components: renderComponents(sessionId, next) });
+	await interaction.update({ ...page, components });
 }

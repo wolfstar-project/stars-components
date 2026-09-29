@@ -1,4 +1,11 @@
-import type { APIInteractionResponseCallbackData, APIMessageComponentEmoji, ButtonStyle } from 'discord-api-types/v10';
+import type {
+	APIActionRowComponent,
+	APIComponentInMessageActionRow,
+	APIInteractionResponseCallbackData,
+	APIMessageComponentEmoji,
+	ButtonStyle
+} from 'discord-api-types/v10';
+import type { CleanupTarget } from '../cleanup.js';
 import type { ComponentInteraction } from '../interactions.js';
 import type { MessageBuilder } from '../MessageBuilder.js';
 import type { Awaitable } from '../sessions/SessionStore.js';
@@ -48,6 +55,23 @@ export interface PaginatedMessageSession {
 	idle: number;
 	wrongUserReply: string;
 	expiredReply: string;
+	/**
+	 * When the session expires unless clicked again, in milliseconds since the epoch.
+	 */
+	expiresAt?: number;
+	/**
+	 * The latest `expiresAt` allowed, for sessions whose only edit credential is the interaction token; `null` when
+	 * unbounded. Set by `run`.
+	 */
+	maximumExpiresAt?: number | null;
+	/**
+	 * The message timeout cleanup edits. Set by `run`; `start` flows have no timeout cleanup.
+	 */
+	cleanupTarget?: CleanupTarget;
+	/**
+	 * The last rendered components.
+	 */
+	components?: APIActionRowComponent<APIComponentInMessageActionRow>[];
 }
 
 export interface PaginatedMessageActionContext {
