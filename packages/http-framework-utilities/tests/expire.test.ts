@@ -3,14 +3,18 @@ import { UserData } from '@wolfstar/http-framework-test-utils';
 import { ButtonStyle, ComponentType, InteractionResponseType, MessageFlags, type APIMessageTopLevelComponent } from 'discord-api-types/v10';
 import {
 	DefaultExpiredReply,
+	DefaultSaveFailedReply,
 	disableMessageComponents,
 	encodeCustomId,
 	expireInteraction,
 	getDefaultExpiredReply,
+	getDefaultSaveFailedReply,
+	getSessionStore,
 	MessagePrompterHandlerName,
 	PaginatedMessage,
 	PaginatedMessageHandlerName,
-	setDefaultExpiredReply
+	setDefaultExpiredReply,
+	setDefaultSaveFailedReply
 } from '../src/index.js';
 import { handleMessagePrompterInteraction } from '../src/lib/MessagePrompter/handle.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
@@ -246,5 +250,41 @@ describe('setDefaultExpiredReply', () => {
 		setDefaultExpiredReply(Custom);
 		expect(new PaginatedMessage().expiredReply).toBe(Custom);
 		expect(new PaginatedMessage({ expiredReply: 'mine' }).expiredReply).toBe('mine');
+	});
+});
+
+describe('paginated message save failures', () => {
+	async function failingClick() {
+		const { sessionId } = await new PaginatedMessage().addPageContent('one').addPageContent('two').start(owner);
+		const store = getSessionStore();
+		vi.spyOn(store, 'set').mockRejectedValue(new Error('down'));
+		const click = clickButton(pmId(sessionId, 'next'));
+		const followup = vi.spyOn(click.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		const error = vi.spyOn(container.logger, 'error').mockImplementation(() => undefined);
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		return { click, followup, error, store, sessionId };
+	}
+
+	test('GIVEN the session cannot be saved THEN keeps the current page and sends the save-failed notice', async () => {
+		const { click, followup, error, store, sessionId } = await failingClick();
+
+		const body = click.body();
+		expect(body.type).toBe(InteractionResponseType.UpdateMessage);
+		expect(body.data.content).toBe('one');
+		expect(followup).toHaveBeenCalledOnce();
+		expect(followup).toHaveBeenCalledWith({ content: DefaultSaveFailedReply, flags: MessageFlags.Ephemeral });
+		expect(error).toHaveBeenCalledWith('[http-framework-utilities] Failed to save a paginated message session', { name: 'Error' });
+		expect(await store.get(sessionId)).toMatchObject({ index: 0 });
+	});
+
+	test('GIVEN setDefaultSaveFailedReply THEN the notice uses it', async () => {
+		expect(getDefaultSaveFailedReply()).toBe('Something went wrong, please try again.');
+		setDefaultSaveFailedReply('Try that again later.');
+		try {
+			const { followup } = await failingClick();
+			expect(followup).toHaveBeenCalledWith({ content: 'Try that again later.', flags: MessageFlags.Ephemeral });
+		} finally {
+			setDefaultSaveFailedReply(DefaultSaveFailedReply);
+		}
 	});
 });

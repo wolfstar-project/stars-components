@@ -25,6 +25,27 @@ export function getDefaultExpiredReply(): string {
 	return defaultExpiredReply;
 }
 
+export const DefaultSaveFailedReply = 'Something went wrong, please try again.';
+
+let defaultSaveFailedReply = DefaultSaveFailedReply;
+
+/**
+ * Sets the process-wide notice sent as an ephemeral followup when a paginated message click cannot be saved to its
+ * session store: the message keeps showing the page it was on, and the user is asked to try again.
+ * @param reply The notice; {@linkcode DefaultSaveFailedReply} restores the built-in one.
+ */
+export function setDefaultSaveFailedReply(reply: string): void {
+	defaultSaveFailedReply = reply;
+}
+
+/**
+ * The process-wide save-failed notice, {@linkcode DefaultSaveFailedReply} unless changed with
+ * {@linkcode setDefaultSaveFailedReply}.
+ */
+export function getDefaultSaveFailedReply(): string {
+	return defaultSaveFailedReply;
+}
+
 /**
  * Anything an interactive message can be sent from: command and component interactions of `@wolfstar/http-framework`.
  */

@@ -4,7 +4,13 @@ import { cancelCleanup, refreshCleanup } from '../cleanup.js';
 import { decodeCustomIdContent } from '../custom-id.js';
 import { describeRestError } from '../errors.js';
 import { expireInteraction } from '../expire.js';
-import { getDefaultExpiredReply, getSelectedValues, isComponentInteraction, type ComponentInteraction } from '../interactions.js';
+import {
+	getDefaultExpiredReply,
+	getDefaultSaveFailedReply,
+	getSelectedValues,
+	isComponentInteraction,
+	type ComponentInteraction
+} from '../interactions.js';
 import { getRegisteredSessionStores, getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
 import { renderComponents } from './render.js';
@@ -55,6 +61,28 @@ function serialize(sessionId: string, task: () => Promise<void>): Promise<void> 
 		if (queues.get(sessionId) === tail) queues.delete(sessionId);
 	});
 	return current;
+}
+
+/**
+ * Answers a click whose new state could not be saved: the message keeps the stored page (showing the new one would
+ * desync it from the store), then an ephemeral followup asks the user to try again.
+ */
+async function keepCurrentPage(interaction: ComponentInteraction, sessionId: string, session: PaginatedMessageSession): Promise<void> {
+	if (!interaction.replied) {
+		await interaction.update({
+			...session.pages[session.index],
+			components: session.components ?? renderComponents(sessionId, session)
+		});
+	}
+
+	try {
+		const result = await interaction.followup({ content: getDefaultSaveFailedReply(), flags: MessageFlags.Ephemeral });
+		if (result.isErr()) {
+			container.logger.error('[http-framework-utilities] Failed to send a save failure notice', describeRestError(result.unwrapErr()));
+		}
+	} catch (error) {
+		container.logger.error('[http-framework-utilities] Failed to send a save failure notice', describeRestError(error));
+	}
 }
 
 /**
@@ -152,6 +180,7 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 		await store.set(sessionId, next, ttl);
 	} catch (error) {
 		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
+		return keepCurrentPage(interaction, sessionId, session);
 	}
 
 	// Only the process that ran the message holds a cleanup record; other replicas are picked up by its recheck.
