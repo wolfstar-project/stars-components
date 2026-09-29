@@ -196,7 +196,15 @@ store cannot carry between processes:
   other than plain objects/arrays, and circular references.
 
 `MessagePrompter` rejects a shared store outright (see above): it requires a process-scoped store regardless of
-what its message/strategy look like, because its answer is never written to the store at all.
+what its message/strategy look like, because its answer is never written to the store at all. A bot whose default
+store is shared can still prompt by passing a process-scoped store to the prompter, provided its load balancer routes
+the click back to the process that called `run` (sticky routing):
+
+```ts
+import { MemorySessionStore, MessagePrompter } from '@wolfstar/http-framework-utilities';
+
+const confirmed = await new MessagePrompter('Delete?', 'confirm', { store: new MemorySessionStore() }).run(interaction);
+```
 
 A multi-replica bot should prefer store-backed, eager-page `PaginatedMessage`s (no `run` callback, no lazy pages)
 over `MessagePrompter` for anything that must survive a click landing on a different process.
@@ -218,7 +226,8 @@ still goes through the expired-session handling below.
 - For a **non-ephemeral** `PaginatedMessage#run` reply, an `idle` above `MaximumTokenLifetime` is allowed: `run`
   fetches the real message id after replying, and cleanup after the interaction token expires falls back to the
   bot's own `container.rest` credentials on `Routes.channelMessage(channelId, messageId)` instead of the (by then
-  expired) webhook token.
+  expired) webhook token. That late edit needs the bot itself to access the channel: for a user-installed app, or a
+  guild the bot is not in, it fails, is logged, and the controls stay visible (cleanup is best effort).
 - `MessagePrompter#run`'s `timeout` always caps at `MaximumTokenLifetime`: a prompt always edits its `'@original'`
   reply, so it never gets the non-ephemeral bot-REST fallback above.
 - Cleanup is **best effort**: process shutdown, serverless suspension, missing permissions, or API failures can
@@ -330,7 +339,8 @@ or `null` when `timeout` (default 60 seconds) elapses.
 
 The `message` and `reaction` strategies throw before sending when the gateway client lacks their intents. `reaction`
 reacts with `reactions` (default `['✅', '❌']`; Unicode emojis or custom ones as `name:id`) in order and matches a
-reaction by the custom emoji's id, else by the Unicode emoji.
+reaction by the custom emoji's id, else by the Unicode emoji. Unicode matching is exact, variation selectors included:
+`'❤'` and `'❤️'` (with `U+FE0F`) are different entries, so configure the form Discord sends for the emoji.
 
 ```ts
 import { GatewayMessagePrompter } from '@wolfstar/http-framework-utilities/gateway';
@@ -343,7 +353,9 @@ const choice = await new GatewayMessagePrompter('Proceed?', 'reaction', { reacti
 ```
 
 On gateway targets the button strategies' timeout is not bound by `MaximumTokenLifetime`; on an HTTP interaction it is,
-for every strategy. Like `MessagePrompter`, every strategy needs a process-scoped session store.
+for every strategy — including `message` and `reaction`, whose question is the interaction's reply and so is only
+editable with the interaction token. `timeout` must be a positive integer, and at most 2^31 − 1 ms for `message` and
+`reaction`. Like `MessagePrompter`, every strategy needs a process-scoped session store.
 
 ## Migrating from `@sapphire/discord.js-utilities`
 
