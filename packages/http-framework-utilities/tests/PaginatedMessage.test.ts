@@ -1,6 +1,14 @@
 import { UserData } from '@wolfstar/http-framework-test-utils';
 import { InteractionResponseType, MessageFlags } from 'discord-api-types/v10';
-import { encodeCustomId, getSessionStore, MessageBuilder, PaginatedMessage, PaginatedMessageHandlerName, setSessionStore } from '../src/index.js';
+import {
+	encodeCustomId,
+	getSessionStore,
+	MessageBuilder,
+	PaginatedMessage,
+	PaginatedMessageBuiltinActionIds,
+	PaginatedMessageHandlerName,
+	setSessionStore
+} from '../src/index.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
 import { clickButton, fakeCommandInteraction, selectOption, useMemorySessionStore } from './helpers.js';
 
@@ -32,6 +40,24 @@ describe('PaginatedMessage validation', () => {
 
 	test('GIVEN a button action with only an emoji THEN addAction accepts it', () => {
 		expect(() => new PaginatedMessage().addAction({ id: 'emoji', type: 'button', emoji: { name: '➡️' } })).not.toThrow();
+	});
+
+	test.each(PaginatedMessageBuiltinActionIds)(
+		'GIVEN a custom action with run and the built-in id %p THEN addAction throws a TypeError',
+		(actionId) => {
+			expect(() => new PaginatedMessage().addAction({ id: actionId, type: 'button', label: 'Mine', run: () => undefined })).toThrow(
+				`Action id "${actionId}" is reserved for a built-in action; custom actions with a run callback need another id`
+			);
+		}
+	);
+
+	test('GIVEN a built-in id without run THEN addAction accepts it as a restyled default', () => {
+		const message = new PaginatedMessage().addAction({ id: 'next', type: 'button', emoji: { name: '👉' } });
+		expect(message.actions.get('next')).toEqual({ id: 'next', type: 'button', emoji: { name: '👉' } });
+	});
+
+	test('GIVEN PaginatedMessageBuiltinActionIds THEN lists every built-in id', () => {
+		expect(PaginatedMessageBuiltinActionIds).toEqual(['first', 'previous', 'next', 'last', 'stop', 'select']);
 	});
 });
 

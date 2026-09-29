@@ -21,11 +21,25 @@ import { renderComponents } from './render.js';
 import { getPaginatedMessageRuntime } from './runtime.js';
 import type {
 	PaginatedMessageAction,
+	PaginatedMessageBuiltinActionId,
 	PaginatedMessagePage,
 	PaginatedMessagePageResolvable,
 	PaginatedMessageSelectActionData,
 	PaginatedMessageSession
 } from './types.js';
+
+/**
+ * The ids of the built-in actions. The handler always applies the built-in behaviour for them, so a custom action with
+ * a `run` callback cannot use one; an action without `run` can, to restyle the default (e.g. another emoji).
+ */
+export const PaginatedMessageBuiltinActionIds: readonly PaginatedMessageBuiltinActionId[] = Object.freeze([
+	'first',
+	'previous',
+	'next',
+	'last',
+	'stop',
+	'select'
+] as const);
 
 export type PaginatedMessageActionEntry = PaginatedMessageAction | PaginatedMessageSelectActionData;
 
@@ -170,6 +184,10 @@ export class PaginatedMessage {
 
 		if (action.type === 'button' && !action.label && !action.emoji) {
 			throw new TypeError(`Invalid button action "${action.id}": it must have a label or an emoji`);
+		}
+
+		if (action.type === 'button' && action.run !== undefined && (PaginatedMessageBuiltinActionIds as readonly string[]).includes(action.id)) {
+			throw new TypeError(`Action id "${action.id}" is reserved for a built-in action; custom actions with a run callback need another id`);
 		}
 
 		this.actions.set(action.id, action);
