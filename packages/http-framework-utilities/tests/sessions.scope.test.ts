@@ -2,11 +2,13 @@ import { UserData } from '@wolfstar/http-framework-test-utils';
 import {
 	assertSharedSessionState,
 	encodeCustomId,
+	getRegisteredSessionStores,
 	MemorySessionStore,
 	MessagePrompter,
 	PaginatedMessage,
 	PaginatedMessageHandlerName,
 	RedisSessionStore,
+	registerSessionStore,
 	setSessionStore,
 	type RedisSessionClientLike
 } from '../src/index.js';
@@ -201,6 +203,53 @@ describe('PaginatedMessage with a per-instance shared store and the default memo
 		await handlePaginatedMessageInteraction(click.interaction, click.value);
 		expect(click.body()).toMatchObject({ data: { components: [] } });
 		expect(run).not.toHaveBeenCalled();
+	});
+});
+
+describe('PaginatedMessage with a per-instance shared store on another replica', () => {
+	const registered: RedisSessionStore[] = [];
+	afterEach(() => {
+		for (const store of registered.splice(0)) getRegisteredSessionStores().delete(store);
+	});
+
+	async function startOnReplicaA() {
+		const { client } = fakeRedis();
+		const store = new RedisSessionStore({ redis: client });
+		const sessionId = await new PaginatedMessage({ store }).addPageContent('a').addPageContent('b').run(fakeCommandInteraction(UserData.id));
+		// Replica B never ran the message: it has no runtime entry pointing at the instance store.
+		getPaginatedMessageRuntime().delete(sessionId);
+		return { store, sessionId };
+	}
+
+	test('GIVEN the store is not registered THEN the click expires', async () => {
+		const { sessionId } = await startOnReplicaA();
+		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		expect(click.body()).toMatchObject({ data: { components: [] } });
+	});
+
+	test('GIVEN the store is registered with registerSessionStore THEN the click navigates and saves to it', async () => {
+		const { store, sessionId } = await startOnReplicaA();
+		registered.push(store);
+		registerSessionStore(store);
+		registerSessionStore(store);
+		expect([...getRegisteredSessionStores()].filter((entry) => entry === store)).toHaveLength(1);
+
+		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		expect(click.body()).toMatchObject({ data: { content: 'b' } });
+		await expect(store.get(sessionId)).resolves.toMatchObject({ index: 1 });
+	});
+
+	test('GIVEN the default store fails to read THEN the registered stores are still tried', async () => {
+		const { store, sessionId } = await startOnReplicaA();
+		registered.push(store);
+		registerSessionStore(store);
+		setSessionStore({ scope: 'process', get: () => Promise.reject(new Error('down')), set: () => undefined, delete: () => undefined });
+
+		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		expect(click.body()).toMatchObject({ data: { content: 'b' } });
 	});
 });
 

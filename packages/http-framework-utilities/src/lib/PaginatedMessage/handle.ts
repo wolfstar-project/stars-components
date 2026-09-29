@@ -5,7 +5,7 @@ import { decodeCustomIdContent } from '../custom-id.js';
 import { describeRestError } from '../errors.js';
 import { expireInteraction } from '../expire.js';
 import { getDefaultExpiredReply, getSelectedValues, isComponentInteraction, type ComponentInteraction } from '../interactions.js';
-import { getSessionStore } from '../sessions/config.js';
+import { getRegisteredSessionStores, getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
 import { renderComponents } from './render.js';
 import { getPaginatedMessageRuntime } from './runtime.js';
@@ -21,10 +21,25 @@ async function read(store: SessionStore, sessionId: string): Promise<{ ok: true;
 	}
 }
 
-async function load(store: SessionStore, sessionId: string): Promise<PaginatedMessageSession | null> {
-	const result = await read(store, sessionId);
-	if (!result.ok || result.value === null || isStoppedSession(result.value)) return null;
-	return result.value as PaginatedMessageSession;
+/**
+ * Looks the session up in the store of the process that ran the message (when this is it), then in the default
+ * store, then in every registered store. A store that fails to read is logged and skipped.
+ * @returns The session and the store it was found in, or `null` when no store has it (or it was stopped).
+ */
+async function load(sessionId: string, runtimeStore: SessionStore | null): Promise<{ session: PaginatedMessageSession; store: SessionStore } | null> {
+	const stores = new Set<SessionStore>();
+	if (runtimeStore !== null) stores.add(runtimeStore);
+	stores.add(getSessionStore());
+	for (const store of getRegisteredSessionStores()) stores.add(store);
+
+	for (const store of stores) {
+		const result = await read(store, sessionId);
+		if (!result.ok || result.value === null) continue;
+		if (isStoppedSession(result.value)) return null;
+		return { session: result.value as PaginatedMessageSession, store };
+	}
+
+	return null;
 }
 
 // The clicks being handled in this process, by session id: each one waits for the previous click on the same session,
@@ -58,13 +73,16 @@ async function handle(interaction: ComponentInteraction, sessionId: string, acti
 	const runtimes = getPaginatedMessageRuntime();
 	const loadedRuntime = runtimes.get(sessionId);
 	// The runtime entry is the only way this process knows about a per-instance store, so it is always read for it.
-	const store = loadedRuntime?.store ?? getSessionStore();
-	// A shared store is visible to every replica; a runtime entry only ever describes this process, so it must not
-	// be trusted for custom actions or lazy page resolution once the store says the session can be handled anywhere.
-	const runtime = store.scope === 'shared' ? null : loadedRuntime;
+	const runtimeStore = loadedRuntime === null ? null : (loadedRuntime.store ?? getSessionStore());
 
-	const session = await load(store, sessionId);
-	if (session === null) return expireInteraction(interaction, getDefaultExpiredReply());
+	const loaded = await load(sessionId, runtimeStore);
+	if (loaded === null) return expireInteraction(interaction, getDefaultExpiredReply());
+
+	const { session, store } = loaded;
+	// A shared store is visible to every replica; a runtime entry only ever describes this process, so it must not
+	// be trusted for custom actions or lazy page resolution once the store says the session can be handled anywhere,
+	// nor when the session was found in another store than the runtime's.
+	const runtime = store.scope === 'shared' || store !== runtimeStore ? null : loadedRuntime;
 
 	if (session.ownerId !== null && interaction.user.id !== session.ownerId) {
 		await interaction.reply({ content: session.wrongUserReply, flags: MessageFlags.Ephemeral });
