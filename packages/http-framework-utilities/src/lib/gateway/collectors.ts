@@ -42,7 +42,7 @@ function assertPositiveInteger(name: string, value: number): void {
 
 /**
  * Listens to a client event until `max` values pass the filter or `time` elapses, and always removes its listener.
- * A throwing filter rejects the collector.
+ * Values are filtered sequentially, in the order their events arrived. A throwing filter rejects the collector.
  *
  * @param name The public function's name, for the error thrown without a gateway client.
  * @param pick Maps an event to the value to collect, `null` when the event is not about the target.
@@ -86,6 +86,7 @@ function collect<Event extends EventName, T>(
 		};
 
 		const accept = async (value: T) => {
+			if (settled) return;
 			try {
 				if (filter && !(await filter(value))) return;
 			} catch (error) {
@@ -97,10 +98,13 @@ function collect<Event extends EventName, T>(
 			if (collected.length >= max) finish();
 		};
 
+		// Events are filtered one at a time in arrival order, so a slow (async) filter cannot let a later event overtake
+		// an earlier one: with `max: 1` the first qualifying event by arrival wins, and results keep arrival order.
+		let queue = Promise.resolve();
 		const listener: Listener<Event> = (...args) => {
 			if (settled) return;
 			const value = pick(...args);
-			if (value !== null) void accept(value);
+			if (value !== null) queue = queue.then(() => accept(value));
 		};
 
 		const timer = setTimeout(() => finish(), time);

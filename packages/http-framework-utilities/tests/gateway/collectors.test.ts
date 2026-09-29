@@ -59,6 +59,32 @@ describe('gateway collectors', () => {
 			await expect(promise).resolves.toEqual([first]);
 		});
 
+		test('GIVEN a slow filter on the first message and a fast one on the second THEN max 1 resolves with the first', async () => {
+			const first = message('1');
+			const second = message('2');
+			const filter = (value: Message) =>
+				value === first ? new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 100)) : Promise.resolve(true);
+			const promise = awaitMessages({ id: ChannelId }, { max: 1, time: 60_000, filter });
+			emitter.emit('messageCreate', first);
+			emitter.emit('messageCreate', second);
+
+			await vi.advanceTimersByTimeAsync(100);
+			await expect(promise).resolves.toEqual([first]);
+		});
+
+		test('GIVEN a slow filter on the first message THEN the collected messages keep their arrival order', async () => {
+			const first = message('1');
+			const second = message('2');
+			const filter = (value: Message) =>
+				value === first ? new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 100)) : Promise.resolve(true);
+			const promise = awaitMessages({ id: ChannelId }, { max: 2, time: 60_000, filter });
+			emitter.emit('messageCreate', first);
+			emitter.emit('messageCreate', second);
+
+			await vi.advanceTimersByTimeAsync(100);
+			await expect(promise).resolves.toEqual([first, second]);
+		});
+
 		test('GIVEN time elapses THEN resolves with the partial results and removes its listener', async () => {
 			const promise = awaitMessages({ id: ChannelId }, { max: 3, time: 1000 });
 			const first = message('1');
