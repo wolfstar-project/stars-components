@@ -5,6 +5,7 @@ import {
 	MaximumTokenLifetime,
 	scheduleCleanup,
 	updateCleanupComponents,
+	type CleanupCredentials,
 	type CleanupTarget,
 	type TimeoutBehavior
 } from '../cleanup.js';
@@ -297,12 +298,44 @@ export class PaginatedMessage {
 				? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + InteractionTokenLifetime }
 				: null;
 
+		this.#track(prepared, { ...target }, credentials);
+		return sessionId;
+	}
+
+	/**
+	 * Sends the first page as a bot-owned, non-ephemeral message through `send` (e.g. a gateway reply or a channel
+	 * message) and schedules its timeout cleanup through the bot's REST route on the returned message, so
+	 * {@linkcode idle} is not bound by {@linkcode MaximumTokenLifetime}.
+	 * @param ownerId The user allowed to use the components, see {@linkcode start}.
+	 * @param send Sends the payload and resolves with the created message's id and channel id.
+	 * @returns The session id.
+	 */
+	protected async sendBotMessage(
+		ownerId: string | null,
+		send: (payload: APIInteractionResponseCallbackData) => Promise<{ messageId: string; channelId: string }>
+	): Promise<string> {
+		const createdAt = Date.now();
+		const prepared = await this.#prepare(ownerId);
+		const { session, payload } = prepared;
+
+		// Bot-owned messages are edited with the bot's credentials, so the lifetime has no token cap.
+		session.maximumExpiresAt = null;
+		session.expiresAt = createdAt + this.idle;
+		session.components = payload.components as PaginatedMessageSession['components'];
+		await this.#save(prepared, this.idle);
+
+		const { messageId, channelId } = await send(payload);
+		this.#track(prepared, { messageId, channelId, ephemeral: false }, null);
+		return prepared.sessionId;
+	}
+
+	#track({ sessionId, session, store }: PreparedSession, target: CleanupTarget, credentials: CleanupCredentials | null): void {
 		scheduleCleanup(sessionId, {
-			target: { ...target },
+			target,
 			credentials,
 			components: session.components!,
 			behavior: this.timeoutBehavior,
-			deadline: session.expiresAt,
+			deadline: session.expiresAt!,
 			recheck: async () => {
 				const current = (await store.get(sessionId)) as PaginatedMessageSession | null;
 				if (current === null) return null;
@@ -310,8 +343,6 @@ export class PaginatedMessage {
 				return current.expiresAt !== undefined && current.expiresAt > Date.now() ? current.expiresAt : null;
 			}
 		});
-
-		return sessionId;
 	}
 
 	async #prepare(ownerId: string | null): Promise<PreparedSession> {
