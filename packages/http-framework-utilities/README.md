@@ -30,6 +30,20 @@ pnpm add @wolfstar/http-framework-utilities
 
 `@wolfstar/http-framework` and `discord-api-types` are peer dependencies.
 
+## Setup
+
+Import the `/register` entrypoint in your setup module, before constructing the client, so this package's
+`wolfstar-pm` (paginated message) and `wolfstar-mp` (message prompter) interaction handlers are registered on every
+process — not only the one that happens to call `PaginatedMessage#run` / `MessagePrompter#run` first:
+
+```ts
+import '@wolfstar/http-framework-utilities/register';
+```
+
+This import is **required**, including when building with the `stars` CLI: CLI auto-registration only discovers
+`@wolfstar/plugin-*` packages, so it does not pick up `@wolfstar/http-framework-utilities` and this import cannot be
+skipped.
+
 ## Usage
 
 ### Type guards and permissions
@@ -125,6 +139,13 @@ if (confirmed) await interaction.followup({ content: 'Deleted' });
 The reply to the button click is used to remove the prompt's buttons (an HTTP interaction gets exactly one
 response), so any follow-up message for the user's answer must be sent with `followup`, not `reply`.
 
+`run` resolves with the user's answer, or `null` when `timeout` (default `60_000` ms) elapses first. `timeout` must
+be at most `MaximumTokenLifetime` (see below): a prompt always edits its own `'@original'` reply, so the interaction
+token is its only edit credential. `MessagePrompter` requires a **process-scoped** session store — `run` throws a
+`TypeError` before replying if the configured store's `scope` is `'shared'` — because the answer is delivered to an
+in-process waiter in the process that called `run`; there is no way to move a pending answer to another process. See
+[Session stores and process scope](#session-stores-and-process-scope) below.
+
 ### `flags` are not applied
 
 `PaginatedMessage` and `MessagePrompter` only read `content` / `embeds` / `allowed_mentions` (and `components`, which
@@ -133,12 +154,12 @@ they render themselves) off a page or a `MessageBuilder`. `flags` set on a page 
 nor `MessagePrompter#run` forward them to the interaction response. If you need an ephemeral paginated message or
 prompt, pass `flags` in the `reply`/`update` call yourself instead of relying on the builder/page.
 
-## Sessions and multiple processes
+## Session stores and process scope
 
 By default, `PaginatedMessage` sessions are kept in an in-memory `MemorySessionStore`, scoped to the current
-process. If your bot runs several replicas behind a shared gateway/load balancer, a click may land on a process that
-did not create the session. Use `setSessionStore` with a `RedisSessionStore` to share `PaginatedMessage` sessions
-across processes:
+process (`scope: 'process'`). If your bot runs several replicas behind a shared gateway/load balancer, a click may
+land on a process that did not create the session. Use `setSessionStore` with a `RedisSessionStore`
+(`scope: 'shared'`) to share `PaginatedMessage` sessions across processes:
 
 ```ts
 import { RedisSessionStore, setSessionStore } from '@wolfstar/http-framework-utilities';
@@ -157,22 +178,67 @@ option. Configure the shared store globally with `setSessionStore` for multi-pro
 `RedisSessionStore` only needs `get`/`set(key, value, 'PX', ms)`/`del`, satisfied by an `ioredis` `Redis` or
 `Cluster` instance without depending on `ioredis` itself.
 
-When using a shared store, import the `/register` entrypoint before creating the client so every process registers
-the interaction handlers at startup, instead of only the process that first calls `run`:
+When using a shared store, the [`/register`](#setup) import matters for every process, not just the one that
+replies: a click can land on a process that never called `run`, and only a process whose handlers are registered can
+answer it.
+
+### What a shared store rejects
+
+A shared store only holds JSON-serialisable, eager pagination state. Before replying, `PaginatedMessage#run` /
+`#start` (via `assertSharedSessionState`) throws a `TypeError` naming the offending field for anything a shared
+store cannot carry between processes:
+
+- Lazy page functions (unresolved pages) — use eager pages (`addPage`/`addPageEmbed`/… with a value, not a
+  function) with a shared store.
+- Custom action `run` callbacks — only reserved built-in action ids (`first`, `previous`, `next`, `last`, `stop`,
+  `select`) are supported with a shared store.
+- Values that do not survive a JSON round trip: functions, symbols, `bigint`s, `NaN`/`Infinity`, class instances
+  other than plain objects/arrays, and circular references.
+
+`MessagePrompter` rejects a shared store outright (see above): it requires a process-scoped store regardless of
+what its message/strategy look like, because its answer is never written to the store at all.
+
+A multi-replica bot should prefer store-backed, eager-page `PaginatedMessage`s (no `run` callback, no lazy pages)
+over `MessagePrompter` for anything that must survive a click landing on a different process.
+
+## Timeout cleanup
+
+`PaginatedMessage#run` and `MessagePrompter#run` schedule a best-effort cleanup of the message's controls when the
+session times out (`idle` for `PaginatedMessage`, `timeout` for `MessagePrompter`). `start(ownerId)` flows send
+their own payload and have no timeout cleanup — only `run` schedules one; a later click on a `start`-created session
+still goes through the expired-session handling below.
+
+- `timeoutBehavior: 'disable' | 'remove'` (default `'disable'`) controls what the cleanup does to the message's
+  components: `'disable'` greys every button/select out, `'remove'` deletes the action rows. `stop` always disables,
+  regardless of `timeoutBehavior`.
+- `MaximumTokenLifetime` (14 minutes) bounds sessions whose only edit credential is the interaction token —
+  ephemeral replies, or a reply with no channel id. `idle`/`timeout` above that bound throws a `RangeError` for
+  those cases. Discord's interaction token itself lives for `InteractionTokenLifetime` (15 minutes); the one-minute
+  gap is the margin used for the timeout edit itself.
+- For a **non-ephemeral** `PaginatedMessage#run` reply, an `idle` above `MaximumTokenLifetime` is allowed: `run`
+  fetches the real message id after replying, and cleanup after the interaction token expires falls back to the
+  bot's own `container.rest` credentials on `Routes.channelMessage(channelId, messageId)` instead of the (by then
+  expired) webhook token.
+- `MessagePrompter#run`'s `timeout` always caps at `MaximumTokenLifetime`: a prompt always edits its `'@original'`
+  reply, so it never gets the non-ephemeral bot-REST fallback above.
+- Cleanup is **best effort**: process shutdown, serverless suspension, missing permissions, or API failures can
+  leave expired controls visible. It never persists or logs interaction tokens — they live only in an in-process
+  cleanup registry, independent of any `SessionStore`.
+
+## Expired or unknown sessions
+
+When a click's session is missing, expired, or otherwise unresolvable, the built-in handlers `update` the clicked
+message with every one of its components disabled, then send an ephemeral `followup` with the expiry notice —
+matching the rule that an HTTP interaction gets exactly one direct response (`update`), with the notice going out
+as a `followup` instead. The notice defaults to `DefaultExpiredReply` (`'This interaction has expired.'`) and is
+configurable per instance:
 
 ```ts
-import '@wolfstar/http-framework-utilities/register';
+new PaginatedMessage({ expiredReply: 'This menu is no longer available.' });
+new MessagePrompter('Delete?', 'confirm', { expiredReply: 'This prompt has expired.' });
 ```
 
-Lazy pages and custom action `run` callbacks stay process-local even with a shared store: their state includes
-functions, which are not JSON-serialisable. A multi-replica bot should prefer store-backed actions (no `run`
-callback, no lazy pages) for anything that must survive a click landing on a different process.
-
-`MessagePrompter` sessions are **not** kept in a `SessionStore` at all: waiters live in an in-process `Map`,
-independent of `setSessionStore`/`RedisSessionStore`. A `MessagePrompter`'s answer must reach the exact process that
-called `run` — there is no way to share it across processes. A multi-replica bot should use `PaginatedMessage`-style
-store-backed actions instead of `MessagePrompter` for anything that must survive a click landing on a different
-process.
+Call `setExpiredReply` on a `PaginatedMessage` instance to change it after construction.
 
 ## Migrating from `@sapphire/discord.js-utilities`
 
