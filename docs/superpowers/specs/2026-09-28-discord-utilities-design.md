@@ -279,7 +279,9 @@ Decisions taken while aligning the implementation with this spec and adding gate
   listen to the framework client's `messageCreate` / `messageReactionAdd` events and always remove their listeners.
   `time` is a positive integer of at most 2^31 − 1 ms. `awaitReactions` collects `{ reaction, user, userId }`, with
   `user` `null` for users plugin-gateway has not cached; `userId` comes from the event details and is always set.
-  Events are filtered sequentially in arrival order, so an async filter cannot reorder the results.
+  Filters run concurrently as events arrive; an event is committed once it and every earlier event have a decided
+  result, so results keep arrival order. On `time` expiry every event whose filter already passed is kept, in arrival
+  order, and events whose filter is still pending are dropped.
 - **`GatewayPaginatedMessage`** extends `PaginatedMessage`; `run(target, author?)` accepts an HTTP interaction
   (unchanged behaviour), a gateway `Message` (replies to it), or a text-based channel (sends to it). Gateway messages
   are bot-owned and non-ephemeral, so timeout cleanup uses the bot REST path without the token bound.

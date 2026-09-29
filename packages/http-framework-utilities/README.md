@@ -323,8 +323,10 @@ Available helpers: `canReadMessages`, `canSendMessages`, `canSendEmbeds`, `canSe
 
 `awaitMessages(channel, { time, max, filter })` and `awaitReactions(message, { time, max, filter })` resolve with what
 they collected once `max` (default `1`) values pass `filter` or `time` (milliseconds, required) elapses. `time` and `max`
-must be positive integers, and they reject without a `GatewayClient`. Events are filtered one at a time in arrival
-order, so with an async `filter` the first qualifying event by arrival wins and the results keep arrival order.
+must be positive integers, and they reject without a `GatewayClient`. Filters run concurrently as events arrive, but
+results are committed in arrival order: with `max: 1`, the first qualifying event by arrival wins once it and every
+earlier event have a decided filter result. When `time` elapses, every event whose filter already passed is returned,
+in arrival order (events still being filtered are dropped).
 
 `awaitReactions` collects `{ reaction, user, userId }`. `user` is `null` when `@wolfstar/plugin-gateway` knows the user
 neither from the payload nor from its cache (e.g. DMs without a user cache), so filter on `userId`, which is always set.

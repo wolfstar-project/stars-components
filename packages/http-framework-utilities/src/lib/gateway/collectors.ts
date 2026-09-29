@@ -42,7 +42,9 @@ function assertPositiveInteger(name: string, value: number): void {
 
 /**
  * Listens to a client event until `max` values pass the filter or `time` elapses, and always removes its listener.
- * Values are filtered sequentially, in the order their events arrived. A throwing filter rejects the collector.
+ * Filters run concurrently, but values are committed in arrival order: a value counts once it and every earlier value
+ * have a decided filter result. When `time` elapses, every value whose filter already passed is kept, in arrival order.
+ * A throwing filter rejects the collector.
  *
  * @param name The public function's name, for the error thrown without a gateway client.
  * @param pick Maps an event to the value to collect, `null` when the event is not about the target.
@@ -73,7 +75,10 @@ function collect<Event extends EventName, T>(
 	};
 
 	return new Promise<T[]>((resolve, reject) => {
+		// Every event about the target, in arrival order, with its filter result once decided.
+		const events: { value: T; passed: boolean | null }[] = [];
 		const collected: T[] = [];
+		let committed = 0;
 		let settled = false;
 
 		const finish = (error?: unknown) => {
@@ -81,30 +86,47 @@ function collect<Event extends EventName, T>(
 			settled = true;
 			clearTimeout(timer);
 			client.off(event, listener);
-			if (error === undefined) resolve(collected);
-			else reject(error);
+			if (error !== undefined) return reject(error);
+
+			// On timeout, the events decided after a still-pending one are kept too, in arrival order.
+			for (const entry of events.slice(committed)) {
+				if (collected.length >= max) break;
+				if (entry.passed === true) collected.push(entry.value);
+			}
+
+			resolve(collected);
 		};
 
-		const accept = async (value: T) => {
-			if (settled) return;
+		// Commits the decided events up to the first pending one, so results keep arrival order.
+		const commit = () => {
+			while (!settled && committed < events.length && events[committed]!.passed !== null) {
+				const entry = events[committed++]!;
+				if (!entry.passed) continue;
+				collected.push(entry.value);
+				if (collected.length >= max) finish();
+			}
+		};
+
+		const decide = async (entry: { value: T; passed: boolean | null }) => {
 			try {
-				if (filter && !(await filter(value))) return;
+				entry.passed = filter ? Boolean(await filter(entry.value)) : true;
 			} catch (error) {
 				finish(error ?? new Error('The collector filter threw'));
 				return;
 			}
-			if (settled) return;
-			collected.push(value);
-			if (collected.length >= max) finish();
+
+			commit();
 		};
 
-		// Events are filtered one at a time in arrival order, so a slow (async) filter cannot let a later event overtake
-		// an earlier one: with `max: 1` the first qualifying event by arrival wins, and results keep arrival order.
-		let queue = Promise.resolve();
+		// Filters run concurrently as events arrive, so a slow filter cannot hide a later event that qualified in time.
 		const listener: Listener<Event> = (...args) => {
 			if (settled) return;
 			const value = pick(...args);
-			if (value !== null) queue = queue.then(() => accept(value));
+			if (value === null) return;
+
+			const entry = { value, passed: null };
+			events.push(entry);
+			void decide(entry);
 		};
 
 		const timer = setTimeout(() => finish(), time);

@@ -72,6 +72,33 @@ describe('gateway collectors', () => {
 			await expect(promise).resolves.toEqual([first]);
 		});
 
+		test('GIVEN a filter still pending when time elapses THEN resolves with the later messages that already passed', async () => {
+			const first = message('1');
+			const second = message('2');
+			const filter = (value: Message) =>
+				value === first ? new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 5000)) : Promise.resolve(true);
+			const promise = awaitMessages({ id: ChannelId }, { max: 1, time: 1000, filter });
+			emitter.emit('messageCreate', first);
+			emitter.emit('messageCreate', second);
+
+			await vi.advanceTimersByTimeAsync(1000);
+			await expect(promise).resolves.toEqual([second]);
+			expect(emitter.listenerCount('messageCreate')).toBe(0);
+		});
+
+		test('GIVEN a failing slow filter on the first message THEN max 1 resolves with the second once the first is decided', async () => {
+			const first = message('1');
+			const second = message('2');
+			const filter = (value: Message) =>
+				value === first ? new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 100)) : Promise.resolve(true);
+			const promise = awaitMessages({ id: ChannelId }, { max: 1, time: 60_000, filter });
+			emitter.emit('messageCreate', first);
+			emitter.emit('messageCreate', second);
+
+			await vi.advanceTimersByTimeAsync(100);
+			await expect(promise).resolves.toEqual([second]);
+		});
+
 		test('GIVEN a slow filter on the first message THEN the collected messages keep their arrival order', async () => {
 			const first = message('1');
 			const second = message('2');
