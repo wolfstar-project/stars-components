@@ -47,6 +47,7 @@ export interface PaginatedMessageSession {
 	 */
 	idle: number;
 	wrongUserReply: string;
+	expiredReply: string;
 }
 
 export interface PaginatedMessageActionContext {

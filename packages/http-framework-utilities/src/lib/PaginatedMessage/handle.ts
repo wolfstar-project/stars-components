@@ -1,17 +1,14 @@
 import { container, type InteractionHandler } from '@wolfstar/http-framework';
 import { MessageFlags } from 'discord-api-types/v10';
 import { decodeCustomIdContent } from '../custom-id.js';
-import { getSelectedValues, isComponentInteraction, type ComponentInteraction } from '../interactions.js';
+import { expireInteraction } from '../expire.js';
+import { DefaultExpiredReply, getSelectedValues, isComponentInteraction } from '../interactions.js';
 import { getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
 import { renderComponents } from './render.js';
 import { getPaginatedMessageRuntime } from './runtime.js';
 import { applyBuiltinAction } from './state.js';
 import type { PaginatedMessagePage, PaginatedMessageSession } from './types.js';
-
-async function expire(interaction: ComponentInteraction): Promise<void> {
-	await interaction.update({ components: [] });
-}
 
 async function load(store: SessionStore, sessionId: string): Promise<PaginatedMessageSession | null> {
 	try {
@@ -29,7 +26,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	if (!isComponentInteraction(interaction)) return;
 
 	const decoded = decodeCustomIdContent(customIdValue);
-	if (decoded === null) return expire(interaction);
+	if (decoded === null) return expireInteraction(interaction, DefaultExpiredReply);
 
 	const { sessionId, action } = decoded;
 	const runtimes = getPaginatedMessageRuntime();
@@ -40,7 +37,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	const runtime = store.scope === 'shared' ? null : loadedRuntime;
 
 	const session = await load(store, sessionId);
-	if (session === null) return expire(interaction);
+	if (session === null) return expireInteraction(interaction, DefaultExpiredReply);
 
 	if (session.ownerId !== null && interaction.user.id !== session.ownerId) {
 		await interaction.reply({ content: session.wrongUserReply, flags: MessageFlags.Ephemeral });
@@ -55,7 +52,9 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 		({ index, stopped } = builtin);
 	} else {
 		const custom = runtime?.actions.get(action);
-		if (custom === undefined || custom.type !== 'button' || custom.run === undefined) return expire(interaction);
+		if (custom === undefined || custom.type !== 'button' || custom.run === undefined) {
+			return expireInteraction(interaction, session.expiredReply);
+		}
 
 		await custom.run({
 			interaction,
@@ -83,7 +82,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 
 	let page: PaginatedMessagePage | null = session.pages[index] ?? null;
 	if (page === null) {
-		if (runtime === null) return expire(interaction);
+		if (runtime === null) return expireInteraction(interaction, session.expiredReply);
 		page = await runtime.resolvePage(index);
 	}
 

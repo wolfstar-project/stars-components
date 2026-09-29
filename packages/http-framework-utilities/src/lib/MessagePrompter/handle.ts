@@ -1,7 +1,8 @@
 import type { InteractionHandler } from '@wolfstar/http-framework';
 import { MessageFlags } from 'discord-api-types/v10';
 import { decodeCustomIdContent } from '../custom-id.js';
-import { isComponentInteraction } from '../interactions.js';
+import { expireInteraction } from '../expire.js';
+import { DefaultExpiredReply, isComponentInteraction } from '../interactions.js';
 import { getPromptWaiters } from './waiters.js';
 
 /**
@@ -11,16 +12,10 @@ export async function handleMessagePrompterInteraction(interaction: InteractionH
 	if (!isComponentInteraction(interaction)) return;
 
 	const decoded = decodeCustomIdContent(customIdValue);
-	if (decoded === null) {
-		await interaction.update({ components: [] });
-		return;
-	}
+	if (decoded === null) return expireInteraction(interaction, DefaultExpiredReply);
 
 	const waiter = getPromptWaiters().get(decoded.sessionId);
-	if (waiter === undefined) {
-		await interaction.update({ components: [] });
-		return;
-	}
+	if (waiter === undefined) return expireInteraction(interaction, DefaultExpiredReply);
 
 	if (interaction.user.id !== waiter.ownerId) {
 		await interaction.reply({ content: waiter.wrongUserReply, flags: MessageFlags.Ephemeral });

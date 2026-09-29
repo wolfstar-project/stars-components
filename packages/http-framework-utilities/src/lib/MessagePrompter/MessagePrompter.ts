@@ -6,7 +6,7 @@ import {
 	type APIComponentInMessageActionRow
 } from 'discord-api-types/v10';
 import { createSessionId, encodeCustomId, MessagePrompterHandlerName } from '../custom-id.js';
-import { DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
+import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder } from '../MessageBuilder.js';
 import type { PaginatedMessagePage } from '../PaginatedMessage/types.js';
 import { registerUtilityHandlers } from '../registration.js';
@@ -28,6 +28,11 @@ export interface MessagePrompterOptions {
 	 */
 	timeout?: number;
 	wrongUserReply?: string;
+	/**
+	 * The ephemeral notice sent when a click arrives for an expired or unknown prompt.
+	 * @default DefaultExpiredReply
+	 */
+	expiredReply?: string;
 	/** @default 'Yes' */
 	confirmLabel?: string;
 	/** @default 'No' */
@@ -88,6 +93,7 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 			waiters.set(sessionId, {
 				ownerId: interaction.user.id,
 				wrongUserReply: this.options.wrongUserReply ?? DefaultWrongUserReply,
+				expiredReply: this.options.expiredReply ?? DefaultExpiredReply,
 				resolve: (action) => {
 					clearTimeout(timer);
 					waiters.delete(sessionId);

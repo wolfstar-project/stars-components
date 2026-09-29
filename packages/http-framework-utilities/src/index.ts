@@ -1,5 +1,6 @@
 export * from '@wolfstar/discord-utilities';
 export * from './lib/custom-id.js';
+export * from './lib/expire.js';
 export * from './lib/handlers/MessagePrompterHandler.js';
 export * from './lib/handlers/PaginatedMessageHandler.js';
 export * from './lib/interactions.js';

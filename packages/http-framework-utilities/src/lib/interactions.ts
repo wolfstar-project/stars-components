@@ -3,6 +3,8 @@ import { ComponentType, type APIInteractionResponseCallbackData } from 'discord-
 
 export const DefaultWrongUserReply = 'These buttons are not for you.';
 
+export const DefaultExpiredReply = 'This interaction has expired.';
+
 /**
  * Anything an interactive message can be sent from: command and component interactions of `@wolfstar/http-framework`.
  */

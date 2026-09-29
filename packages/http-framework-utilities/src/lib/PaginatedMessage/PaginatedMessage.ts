@@ -1,6 +1,6 @@
 import { ButtonStyle, type APIEmbed, type APIInteractionResponseCallbackData } from 'discord-api-types/v10';
 import { createSessionId } from '../custom-id.js';
-import { DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
+import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder, validateMessage } from '../MessageBuilder.js';
 import { registerUtilityHandlers } from '../registration.js';
 import { getSessionStore } from '../sessions/config.js';
@@ -34,6 +34,11 @@ export interface PaginatedMessageOptions {
 	 */
 	ownerOnly?: boolean;
 	wrongUserReply?: string;
+	/**
+	 * The ephemeral notice sent when a click arrives for an expired or unknown session.
+	 * @default DefaultExpiredReply
+	 */
+	expiredReply?: string;
 	/**
 	 * @default getSessionStore()
 	 */
@@ -84,6 +89,7 @@ export class PaginatedMessage {
 	public idle: number;
 	public ownerOnly: boolean;
 	public wrongUserReply: string;
+	public expiredReply: string;
 	public store: SessionStore | undefined;
 
 	/**
@@ -97,6 +103,7 @@ export class PaginatedMessage {
 		this.idle = validateIdle(options.idle ?? PaginatedMessage.defaultIdle);
 		this.ownerOnly = options.ownerOnly ?? true;
 		this.wrongUserReply = options.wrongUserReply ?? DefaultWrongUserReply;
+		this.expiredReply = options.expiredReply ?? DefaultExpiredReply;
 		this.store = options.store;
 		if (options.pages) this.addPages(options.pages);
 		this.addActions(options.actions ?? PaginatedMessage.defaultActions);
@@ -164,6 +171,11 @@ export class PaginatedMessage {
 
 	public setWrongUserInteractionReply(reply: string): this {
 		this.wrongUserReply = reply;
+		return this;
+	}
+
+	public setExpiredReply(reply: string): this {
+		this.expiredReply = reply;
 		return this;
 	}
 
@@ -239,7 +251,8 @@ export class PaginatedMessage {
 				return data;
 			}),
 			idle: this.idle,
-			wrongUserReply: this.wrongUserReply
+			wrongUserReply: this.wrongUserReply,
+			expiredReply: this.expiredReply
 		};
 
 		if (shared) assertSharedSessionState(session);
