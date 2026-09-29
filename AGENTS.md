@@ -47,8 +47,11 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   the `wolfstar-pm` (paginated message) and `wolfstar-mp` (message prompter) custom-id prefixes; they self-register on
   the first `PaginatedMessage#run`/`MessagePrompter#run`, and `@wolfstar/http-framework-utilities/register` registers
   them eagerly for processes that may receive a click without ever calling `run` (e.g. behind a shared
-  `RedisSessionStore`). The gateway counterpart, `@wolfstar/plugin-gateway-utilities` (built on
-  `@wolfstar/discord-utilities`), belongs in `wolfstar-project/plugins`, not in this repository.
+  `RedisSessionStore`). Gateway support is the
+  `@wolfstar/http-framework-utilities/gateway` subpath (optional peer `@wolfstar/plugin-gateway@^0.8.0`, Node `>=24.17`):
+  structure type guards, async `can*` permission helpers, `awaitMessages`/`awaitReactions`, `GatewayPaginatedMessage`,
+  and `GatewayMessagePrompter` (adds the `message`/`reaction` strategies). Clicks still arrive as HTTP interactions, so
+  gateway bots keep serving their interactions endpoint. It is not a separate package in `wolfstar-project/plugins`.
 - Logging: `@wolfstar/http-framework` has a built-in logger (`container.logger`); `@wolfstar/logger` has been removed from this monorepo in favour of `@wolfstar/plugin-logger` (published from `wolfstar-project/plugins`).
 - Tolgee sync is configured at root (`.tolgeerc.cjs`) and only targets `packages/shared-http-pieces/src/locales/**`.
   Scripts: `pnpm tolgee:push` (base `en`), `pnpm tolgee:pull` (pull + remap), `pnpm tolgee:ensure-languages`.
@@ -103,8 +106,8 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 ## Design specifications
 
 - [Discord utilities design](docs/superpowers/specs/2026-09-28-discord-utilities-design.md) defines the proposed
-  utility packages, registration, session constraints, and cleanup contract. Implementation is pending; this is
-  repository design documentation, not the external docs site.
+  utility packages, registration, session constraints, and cleanup contract. It is implemented in `packages/discord-utilities` and
+  `packages/http-framework-utilities`; this is repository design documentation, not the external docs site.
 
 ## Notes for agents
 

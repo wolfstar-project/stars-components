@@ -240,10 +240,105 @@ new MessagePrompter('Delete?', 'confirm', { expiredReply: 'This prompt has expir
 
 Call `setExpiredReply` on a `PaginatedMessage` instance to change it after construction.
 
+## Gateway (`@wolfstar/plugin-gateway`)
+
+The `@wolfstar/http-framework-utilities/gateway` subpath adds the gateway-only parts of
+`@sapphire/discord.js-utilities`, built on [`@wolfstar/plugin-gateway`](https://npmx.dev/package/@wolfstar/plugin-gateway)
+structures. It is optional: the main entrypoint never imports it.
+
+```sh
+pnpm add @wolfstar/plugin-gateway
+```
+
+`@wolfstar/plugin-gateway` (`^0.8.0`) is an optional peer dependency and requires Node `>=24.17`. Gateway bots must still
+serve their HTTP interactions endpoint (`GatewayClient.start({ listen })`), because button and select clicks arrive as
+interactions, and must import [`@wolfstar/http-framework-utilities/register`](#setup) like an HTTP bot.
+
+### Type guards
+
+`isTextBasedChannel`, `isGuildBasedChannel`, `isThreadChannel`, `isVoiceBasedChannel`, `isNsfwChannel`,
+`isMessageInstance`, `isGuildMember`, and the per-type guards (`isTextChannel`, `isDMChannel`, `isNewsChannel`, ...)
+take `@wolfstar/plugin-gateway` structures instead of raw payloads.
+
+### Permissions
+
+The async `can*` helpers compute the bot's permissions in a channel structure, and resolve `false` when they cannot
+(no channel, no bot user yet, no gateway client, a failed fetch). DMs resolve `true`, except `canRemoveAllReactions` and
+`canJoinVoiceChannel`, which resolve `false`.
+
+```ts
+import { canReact, canSendEmbeds } from '@wolfstar/http-framework-utilities/gateway';
+
+if (await canSendEmbeds(message.channel)) await message.reply({ embeds: [{ title: 'Hello' }] });
+```
+
+Available helpers: `canReadMessages`, `canSendMessages`, `canSendEmbeds`, `canSendAttachments`, `canReact`,
+`canRemoveAllReactions`, `canJoinVoiceChannel`.
+
+### Collectors
+
+`awaitMessages(channel, { time, max, filter })` and `awaitReactions(message, { time, max, filter })` resolve with what
+they collected once `max` (default `1`) values pass `filter` or `time` (milliseconds, required) elapses. `time` and `max`
+must be positive integers, and they reject without a `GatewayClient`.
+
+```ts
+import { awaitMessages } from '@wolfstar/http-framework-utilities/gateway';
+
+const [answer] = await awaitMessages(message.channel, {
+	time: 30_000,
+	filter: (candidate) => candidate.author.id === message.author.id
+});
+```
+
+### `GatewayPaginatedMessage`
+
+A `PaginatedMessage` whose `run(target, author?)` also accepts a gateway `Message` (replied to) or a text-based channel
+(sent to), besides an HTTP interaction. `author` is the user allowed to use the controls: it defaults to the message's
+author for a `Message`, and to anyone for a channel; it is ignored for an interaction.
+
+```ts
+import { GatewayPaginatedMessage } from '@wolfstar/http-framework-utilities/gateway';
+
+await new GatewayPaginatedMessage().addPageEmbed({ title: 'Page 1' }).addPageEmbed({ title: 'Page 2' }).run(message);
+```
+
+Gateway targets are bot-owned, non-ephemeral messages, so their timeout cleanup edits them through the bot's REST
+credentials and `idle` may exceed `MaximumTokenLifetime`.
+
+### `GatewayMessagePrompter`
+
+A `MessagePrompter` with two more strategies, and `run(target, author?)` accepting the same targets. `author` defaults to
+the interaction's user or the message's author, and is **required** for a channel target. `run` resolves with the answer,
+or `null` when `timeout` (default 60 seconds) elapses.
+
+| Strategy   | Resolves with                                  | Required intents (guild / DM)                                            |
+| ---------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| `confirm`  | `boolean`, from yes/no buttons                 | none                                                                     |
+| `number`   | `number`, from numbered buttons                | none                                                                     |
+| `message`  | the author's next `Message` in the channel     | `GuildMessages` + `MessageContent` / `DirectMessages` + `MessageContent` |
+| `reaction` | the chosen entry of `reactions`, as configured | `GuildMessageReactions` / `DirectMessageReactions`                       |
+
+The `message` and `reaction` strategies throw before sending when the gateway client lacks their intents. `reaction`
+reacts with `reactions` (default `['✅', '❌']`; Unicode emojis or custom ones as `name:id`) in order and matches a
+reaction by the custom emoji's id, else by the Unicode emoji.
+
+```ts
+import { GatewayMessagePrompter } from '@wolfstar/http-framework-utilities/gateway';
+
+const confirmed = await new GatewayMessagePrompter('Delete this?', 'confirm').run(message);
+
+const reply = await new GatewayMessagePrompter('What is your name?', 'message', { timeout: 30_000 }).run(channel, message.author);
+
+const choice = await new GatewayMessagePrompter('Proceed?', 'reaction', { reactions: ['✅', '❌'] }).run(message);
+```
+
+On gateway targets the button strategies' timeout is not bound by `MaximumTokenLifetime`; on an HTTP interaction it is,
+for every strategy. Like `MessagePrompter`, every strategy needs a process-scoped session store.
+
 ## Migrating from `@sapphire/discord.js-utilities`
 
-- The `message` and `reaction` `MessagePrompter` strategies are not available: an HTTP interactions bot receives
-  neither messages nor reactions, only interactions.
+- The `message` and `reaction` `MessagePrompter` strategies are not available on the main entrypoint: an HTTP
+  interactions bot receives neither messages nor reactions. They are in [`GatewayMessagePrompter`](#gatewaymessageprompter).
 - Type guards take raw payloads (`APIChannel` / `APIInteractionDataResolvedChannel` / interaction structures)
   instead of discord.js class instances.
 - `can*` permission helpers take the interaction (using its `app_permissions` bitfield) instead of a cached channel.

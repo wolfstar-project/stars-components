@@ -1,7 +1,7 @@
 # Discord utilities for `@wolfstar/http-framework` — design
 
 Date: 2026-09-28
-Status: approved design (revision 2, 2026-09-29), in implementation
+Status: implemented
 
 ## Goal
 
@@ -106,7 +106,7 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 
 - Strategies `confirm` (yes/no buttons) and `number` (buttons from `start` to `end`, max 25, across at most five
   action rows). The number range is configurable, rather than promising parity with Sapphire's default 0–10 range.
-- `run(interaction)` returns a promise resolved when the target user clicks, or rejected/resolved with `undefined`
+- `run(interaction)` returns a promise resolved when the target user clicks, or resolved with `null`
   on timeout (matching Sapphire's `confirm` → `boolean`, `number` → `number`). HTTP has no collector: the package's
   interaction handler resolves an in-process waiter keyed by session id. A prompter is therefore process-local — the
   click must reach the process that called `run`. `run` rejects a shared store before replying rather than
