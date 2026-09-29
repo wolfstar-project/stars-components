@@ -77,7 +77,15 @@ interface Responder {
 	 * Always `false` for a deferred click: the handler owns the edit of the deferred response.
 	 */
 	readonly answered: boolean;
-	update(body: UpdateBody): Promise<void>;
+	/**
+	 * Whether the click was acknowledged with `deferUpdate`: its edits are separate requests that can fail, so a new
+	 * page is shown before it is saved.
+	 */
+	readonly deferred: boolean;
+	/**
+	 * @returns Whether the message was edited. A direct response throws instead of returning `false`.
+	 */
+	update(body: UpdateBody): Promise<boolean>;
 	notify(content: string, failure: string): Promise<void>;
 }
 
@@ -95,8 +103,10 @@ function directResponder(interaction: ComponentInteraction): Responder {
 		get answered() {
 			return interaction.replied;
 		},
+		deferred: false,
 		async update(body) {
 			await interaction.update(body);
+			return true;
 		},
 		async notify(content, failure) {
 			if (interaction.replied) return followupNotice(interaction, content, failure);
@@ -110,15 +120,17 @@ type Deferred = Awaited<ReturnType<ComponentInteraction['deferUpdate']>>;
 function deferredResponder(interaction: ComponentInteraction, message: Deferred): Responder {
 	return {
 		answered: false,
+		deferred: true,
 		async update(body) {
 			try {
 				const result = await message.update(body);
-				if (result.isErr()) {
-					container.logger.error('[http-framework-utilities] Failed to update a paginated message', describeRestError(result.unwrapErr()));
-				}
+				if (result.isOk()) return true;
+				container.logger.error('[http-framework-utilities] Failed to update a paginated message', describeRestError(result.unwrapErr()));
 			} catch (error) {
 				container.logger.error('[http-framework-utilities] Failed to update a paginated message', describeRestError(error));
 			}
+
+			return false;
 		},
 		notify: (content, failure) => followupNotice(interaction, content, failure)
 	};
@@ -243,11 +255,19 @@ async function handle(interaction: ComponentInteraction, responder: Responder, s
 	const next: PaginatedMessageSession = { ...session, index, pages: session.pages.map((entry, i) => (i === index ? page : entry)), expiresAt };
 	const components = renderComponents(sessionId, next);
 	next.components = components;
+
+	// A deferred click edits the message in a separate request: show the page first, and only save it once shown, so a
+	// failed edit cannot leave the store a page ahead of the message.
+	if (responder.deferred && !(await responder.update({ ...page, components }))) {
+		return responder.notify(getDefaultSaveFailedReply(), 'Failed to send a save failure notice');
+	}
+
 	try {
 		await store.set(sessionId, next, ttl);
 	} catch (error) {
 		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
-		// Keep the stored page: showing the new one would desync the message from the store.
+		// Keep (or, for a deferred click, restore) the stored page: showing the new one would desync the message from the
+		// store.
 		if (!responder.answered) {
 			await responder.update({ ...session.pages[session.index], components: session.components ?? renderComponents(sessionId, session) });
 		}
@@ -258,7 +278,7 @@ async function handle(interaction: ComponentInteraction, responder: Responder, s
 	// Only the process that ran the message holds a cleanup record; other replicas are picked up by its recheck.
 	refreshCleanup(sessionId, expiresAt, components);
 	if (loadedRuntime !== null) runtimes.set(sessionId, loadedRuntime, ttl);
-	if (responder.answered) return;
+	if (responder.answered || responder.deferred) return;
 
 	await responder.update({ ...page, components });
 }

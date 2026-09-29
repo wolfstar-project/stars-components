@@ -2,6 +2,7 @@ import { UserData } from '@wolfstar/http-framework-test-utils';
 import { container } from '@wolfstar/http-framework';
 import { InteractionResponseType, MessageFlags, Routes } from 'discord-api-types/v10';
 import {
+	DefaultSaveFailedReply,
 	encodeCustomId,
 	getSessionStore,
 	MessageBuilder,
@@ -279,6 +280,26 @@ describe('handlePaginatedMessageInteraction with a queued click', () => {
 		expect(options.body.content).toBe('two');
 		expect(options.body.components.length).toBeGreaterThan(0);
 		expect(await getSessionStore().get(sessionId)).toMatchObject({ index: 1 });
+	});
+
+	test('GIVEN a queued click whose message edit fails THEN the session is not saved and the next click starts from the old page', async () => {
+		const { sessionId, release, first } = await slowSession();
+		patch.mockRejectedValueOnce(new Error('Unknown Webhook'));
+		const queued = clickButton(id(sessionId, 'next'));
+		const followup = vi.spyOn(queued.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		const error = vi.spyOn(container.logger, 'error').mockImplementation(() => undefined);
+		const second = handlePaginatedMessageInteraction(queued.interaction, queued.value);
+		await tick();
+
+		release();
+		await Promise.all([first, second]);
+		expect(await getSessionStore().get(sessionId)).toMatchObject({ index: 0 });
+		expect(followup).toHaveBeenCalledWith({ content: DefaultSaveFailedReply, flags: MessageFlags.Ephemeral });
+		expect(error).toHaveBeenCalledWith('[http-framework-utilities] Failed to update a paginated message', { name: 'Error' });
+
+		const after = clickButton(id(sessionId, 'next'));
+		await handlePaginatedMessageInteraction(after.interaction, after.value);
+		expect(after.body().data.content).toBe('two');
 	});
 
 	test('GIVEN another user clicks behind a slow click THEN it is deferred and gets an ephemeral followup', async () => {

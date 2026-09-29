@@ -246,10 +246,12 @@ Decisions taken while aligning the implementation with this spec and adding gate
 - **Concurrent clicks.** A process handles clicks on the same session one at a time (a per-session promise chain),
   so overlapping clicks all apply. A click that must wait is acknowledged immediately with `deferUpdate`; after the
   wait, its message edits go through the deferred response (`PATCH @original`) and its notices (wrong user, expired,
-  save failed) are ephemeral `followup`s. Custom actions on such a click receive an already-acknowledged interaction. `stop` replaces the session with a JSON tombstone `{ stopped: true }` for the
-  session's remaining lifetime instead of deleting it; the handler treats a tombstone like an expired session, and a
-  navigation re-reads the session right before saving and expires instead of saving when it is now a tombstone or
-  missing. Across replicas the store stays last-write-wins for simultaneous clicks on the same message: the re-read
+  save failed) are ephemeral `followup`s. A deferred click edits the message first and saves the new session only when
+  that edit succeeded; a failed edit is logged, nothing is saved, and the save-failed notice is sent. Custom actions
+  on such a click receive an already-acknowledged interaction. `stop` replaces the session with a JSON tombstone
+  `{ stopped: true }` for the session's remaining lifetime instead of deleting it; the handler treats a tombstone like
+  an expired session, and a navigation re-reads the session right before saving and expires instead of saving when it
+  is now a tombstone or missing. Across replicas the store stays last-write-wins for simultaneous clicks on the same message: the re-read
   narrows the window in which a click undoes a `stop`, but only atomic store operations could close it.
 - **Store lookup.** The handler reads the session from the creating process's runtime store (when this process ran
   the message), then the default store, then every store registered with `registerSessionStore` (deduplicated),
