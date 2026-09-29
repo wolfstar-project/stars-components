@@ -44,10 +44,11 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   `MessagePrompter`. `PaginatedMessage`/`MessagePrompter` sessions live behind a pluggable `SessionStore` — an
   in-memory default, or a `RedisSessionStore` (over a minimal `get`/`set(key, value, 'PX', ms)`/`del` shape an
   `ioredis` client satisfies without a dependency) for bots running several processes. Their interaction handlers use
-  the `wolfstar-pm` (paginated message) and `wolfstar-mp` (message prompter) custom-id prefixes; they self-register on
-  the first `PaginatedMessage#run`/`MessagePrompter#run`, and `@wolfstar/http-framework-utilities/register` registers
-  them eagerly for processes that may receive a click without ever calling `run` (e.g. behind a shared
-  `RedisSessionStore`). Gateway support is the
+  the `wolfstar-pm` (paginated message) and `wolfstar-mp` (message prompter) custom-id prefixes. Importing
+  `@wolfstar/http-framework-utilities/register` (before constructing the client) is required: it registers them on
+  every process, including those that receive a click without ever calling `run` (e.g. behind a shared
+  `RedisSessionStore`); the `stars` CLI does not auto-register it. Self-registration on the first
+  `PaginatedMessage#run`/`MessagePrompter#run` is only a safety net. Gateway support is the
   `@wolfstar/http-framework-utilities/gateway` subpath (optional peer `@wolfstar/plugin-gateway@^0.8.0`, Node `>=24.17`):
   structure type guards, async `can*` permission helpers, `awaitMessages`/`awaitReactions`, `GatewayPaginatedMessage`,
   and `GatewayMessagePrompter` (adds the `message`/`reaction` strategies). Clicks still arrive as HTTP interactions, so
