@@ -96,6 +96,46 @@ describe('expireInteraction', () => {
 		await expect(expireInteraction(click.interaction, DefaultExpiredReply)).resolves.toBeUndefined();
 		expect(logError).toHaveBeenCalled();
 	});
+
+	test('GIVEN followup rejects with a REST error carrying the interaction token in its url THEN the token is never logged', async () => {
+		const click = clickButton(pmId('000000000000', 'next'));
+		const restError = Object.assign(new Error('Unknown Message'), {
+			name: 'DiscordAPIError[10008]',
+			code: 10008,
+			status: 404,
+			method: 'POST',
+			url: 'https://discord.com/api/v10/webhooks/737141877803057244/SECRET-TOKEN',
+			requestBody: { content: DefaultExpiredReply },
+			rawError: { message: 'Unknown Message', code: 10008 }
+		});
+		vi.spyOn(click.interaction, 'followup').mockRejectedValue(restError);
+		const logError = vi.spyOn(container.logger, 'error').mockImplementation(() => undefined);
+
+		await expireInteraction(click.interaction, DefaultExpiredReply);
+
+		expect(logError).toHaveBeenCalled();
+		expect(JSON.stringify(logError.mock.calls)).not.toContain('SECRET-TOKEN');
+	});
+
+	test('GIVEN followup resolves with an Err result carrying the interaction token in its url THEN the token is never logged', async () => {
+		const click = clickButton(pmId('000000000000', 'next'));
+		const restError = Object.assign(new Error('Unknown Message'), {
+			name: 'DiscordAPIError[10008]',
+			code: 10008,
+			status: 404,
+			method: 'POST',
+			url: 'https://discord.com/api/v10/webhooks/737141877803057244/SECRET-TOKEN',
+			requestBody: { content: DefaultExpiredReply },
+			rawError: { message: 'Unknown Message', code: 10008 }
+		});
+		vi.spyOn(click.interaction, 'followup').mockResolvedValue({ isErr: () => true, unwrapErr: () => restError } as never);
+		const logError = vi.spyOn(container.logger, 'error').mockImplementation(() => undefined);
+
+		await expireInteraction(click.interaction, DefaultExpiredReply);
+
+		expect(logError).toHaveBeenCalled();
+		expect(JSON.stringify(logError.mock.calls)).not.toContain('SECRET-TOKEN');
+	});
 });
 
 describe('PaginatedMessage expiry', () => {

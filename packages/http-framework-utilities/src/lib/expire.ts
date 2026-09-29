@@ -6,6 +6,7 @@ import {
 	type APIComponentInMessageActionRow,
 	type APIMessageTopLevelComponent
 } from 'discord-api-types/v10';
+import { describeRestError } from './errors.js';
 import type { ComponentInteraction } from './interactions.js';
 
 /**
@@ -40,9 +41,9 @@ export async function expireInteraction(interaction: ComponentInteraction, conte
 	try {
 		const result = await interaction.followup({ content, flags: MessageFlags.Ephemeral });
 		if (result.isErr()) {
-			container.logger.error('[http-framework-utilities] Failed to send an expiry notice', result.unwrapErr());
+			container.logger.error('[http-framework-utilities] Failed to send an expiry notice', describeRestError(result.unwrapErr()));
 		}
 	} catch (error) {
-		container.logger.error('[http-framework-utilities] Failed to send an expiry notice', error);
+		container.logger.error('[http-framework-utilities] Failed to send an expiry notice', describeRestError(error));
 	}
 }
