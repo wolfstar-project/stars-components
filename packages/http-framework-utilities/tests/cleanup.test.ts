@@ -452,6 +452,25 @@ describe('MessagePrompter timeout cleanup', () => {
 		expect(patch).not.toHaveBeenCalled();
 	});
 
+	test('GIVEN the answer arrives before reply resolves THEN no cleanup is scheduled', async () => {
+		const interaction = fakeInteraction();
+		let customId = '';
+		interaction.reply.mockImplementation(async (data: unknown) => {
+			// The user answers while the reply is still being acknowledged.
+			customId = (data as { components: { components: { custom_id: string }[] }[] }).components[0]!.components[0]!.custom_id;
+			const click = clickButton(customId);
+			await handleMessagePrompterInteraction(click.interaction, click.value);
+			return { id: '@original', get: interaction.get };
+		});
+
+		await expect(new MessagePrompter('Sure?', 'confirm', { timeout: 1000 }).run(interaction)).resolves.toBe(true);
+
+		// With a record, this would edit the message now: the prompt would lose its buttons again after the answer.
+		await runCleanup(customId.split('.')[1]!);
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(patch).not.toHaveBeenCalled();
+	});
+
 	test("GIVEN timeoutBehavior 'remove' THEN the timed-out prompt loses its components", async () => {
 		const interaction = fakeInteraction();
 		const answer = new MessagePrompter('Sure?', 'confirm', { timeout: 1000, timeoutBehavior: 'remove' }).run(interaction);

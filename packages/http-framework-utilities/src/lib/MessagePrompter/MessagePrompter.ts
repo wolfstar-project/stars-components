@@ -175,6 +175,10 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 			throw error;
 		}
 
+		// Answered while the prompt was being sent: the answer already removed the buttons, so a cleanup would only edit
+		// an answered prompt later on.
+		if (!waiters.has(sessionId)) return answer;
+
 		// The cleanup timer is the prompt's timeout: it settles the waiter with `null` on release, even when the edit fails.
 		scheduleCleanup(sessionId, {
 			...sent,
