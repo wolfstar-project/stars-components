@@ -959,37 +959,6 @@ importers:
         specifier: ^5.0.1
         version: 5.0.2(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@5.0.2)(vite@8.3.1)
 
-  packages/http-framework-i18n:
-    dependencies:
-      '@discordjs/collection':
-        specifier: ^2.1.1
-        version: 2.1.1
-      '@sapphire/utilities':
-        specifier: ^3.18.2
-        version: 3.18.2
-      '@wolfstar/i18next-backend':
-        specifier: workspace:^
-        version: link:../i18next-backend
-      discord-api-types:
-        specifier: ^0.38.8
-        version: 0.38.55
-      i18next:
-        specifier: ^25.10.10
-        version: 25.10.10(typescript@7.0.2)
-      tslib:
-        specifier: ^2.8.1
-        version: 2.8.1
-    devDependencies:
-      golar:
-        specifier: ^0.1.10
-        version: 0.1.10
-      tsdown:
-        specifier: ^0.23.0
-        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
-      typescript:
-        specifier: ~7.0.2
-        version: 7.0.2
-
   packages/http-framework-test-utils:
     devDependencies:
       '@discordjs/builders':
@@ -1101,28 +1070,6 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
-
-  packages/logger:
-    dependencies:
-      colorette:
-        specifier: ^2.0.20
-        version: 2.0.20
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: ^5.0.1
-        version: 5.0.2(vitest@5.0.2)
-      golar:
-        specifier: ^0.1.10
-        version: 0.1.10
-      tsdown:
-        specifier: ^0.23.0
-        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.24)(typescript@7.0.2)(unrun@0.3.1)
-      typescript:
-        specifier: ~7.0.2
-        version: 7.0.2
-      vitest:
-        specifier: ^5.0.1
-        version: 5.0.2(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@5.0.2)(vite@8.3.1)
 
   packages/nitro-server:
     dependencies:

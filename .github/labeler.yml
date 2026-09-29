@@ -16,12 +16,6 @@ packages:http-framework:
                 - packages/http-framework/*
                 - packages/http-framework/**/*
 
-packages:http-framework-i18n:
-    - changed-files:
-          - any-glob-to-any-file:
-                - packages/http-framework-i18n/*
-                - packages/http-framework-i18n/**/*
-
 packages:i18next-backend:
     - changed-files:
           - any-glob-to-any-file:
@@ -33,12 +27,6 @@ packages:influx-utilities:
           - any-glob-to-any-file:
                 - packages/influx-utilities/*
                 - packages/influx-utilities/**/*
-
-packages:logger:
-    - changed-files:
-          - any-glob-to-any-file:
-                - packages/logger/*
-                - packages/logger/**/*
 
 packages:reddit-helpers:
     - changed-files:
