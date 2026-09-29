@@ -144,7 +144,8 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 5. On click: load session → if missing or expired, reply ephemerally with an "expired" message (overridable) and
    disable the components → if `interaction.user.id !== ownerId` and owner checking is on, reply with the
    wrong-user reply → otherwise run the action and `update` the message with the new page.
-6. `stop` edits the current message, then deletes the session and cancels its timer. Timeout deletes the
+6. `stop` edits the current message, then deletes the session (Revision 2: replaces it with a tombstone) and cancels
+   its timer. Timeout deletes the
    session and attempts to remove components (or disable them, configurable) through the cleanup target below.
 
 ### Timeout cleanup
@@ -174,7 +175,8 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 
 - Invalid builder input: `RangeError` / `TypeError` at build time, with the offending field named.
 - Store failures in the handler: logged through the framework logger (`container.logger`), user gets the generic
-  expired reply; no unhandled rejections.
+  expired reply when the session cannot be read (Revision 2: a failed save keeps the current page and sends a
+  save-failed notice instead); no unhandled rejections.
 - Discord API errors from normal action `update`/`reply` calls: propagate through the framework's existing result handling; the session
   is not deleted, so a retry is possible.
 
@@ -238,6 +240,25 @@ Decisions taken while aligning the implementation with this spec and adding gate
   `run` does not write the session again after fetching it (a click handled meanwhile would be overwritten), except
   to lower the stored lifetime cap back to the token bound when the fetch fails, merging into the stored session.
 - **Timeout behaviour.** `timeoutBehavior: 'disable' | 'remove'`, default `'disable'`. `stop` always disables.
+- **Reserved action ids.** `PaginatedMessageBuiltinActionIds` (`first`, `previous`, `next`, `last`, `stop`,
+  `select`) always run the built-in behaviour, so `addAction` rejects a button action with a `run` callback and one of
+  those ids (`TypeError`). An action with a built-in id and no `run` restyles the default button.
+- **Concurrent clicks.** A process handles clicks on the same session one at a time (a per-session promise chain),
+  so overlapping clicks all apply. `stop` replaces the session with a JSON tombstone `{ stopped: true }` for the
+  session's remaining lifetime instead of deleting it; the handler treats a tombstone like an expired session, and a
+  navigation re-reads the session right before saving and expires instead of saving when it is now a tombstone or
+  missing. Across replicas the store stays last-write-wins for simultaneous clicks on the same message: the re-read
+  narrows the window in which a click undoes a `stop`, but only atomic store operations could close it.
+- **Store lookup.** The handler reads the session from the creating process's runtime store (when this process ran
+  the message), then the default store, then every store registered with `registerSessionStore` (deduplicated),
+  skipping stores that fail to read (logged), and writes back to the store it found the session in. A per-instance
+  shared `store` must therefore be registered on every replica (or configured with `setSessionStore`); otherwise
+  clicks on the other replicas expire.
+- **Failed saves.** When saving a click fails, the handler `update`s the message with the stored page and components
+  (the index does not move) and sends `getDefaultSaveFailedReply()` (set with `setDefaultSaveFailedReply`, default
+  `'Something went wrong, please try again.'`) as an ephemeral `followup`.
+- **Answered prompts.** A prompt answered before its `reply`/`send` resolved schedules no timeout cleanup, so the
+  answered message is never edited again.
 
 ### Gateway support: `@wolfstar/http-framework-utilities/gateway`
 
@@ -256,6 +277,7 @@ Decisions taken while aligning the implementation with this spec and adding gate
   listen to the framework client's `messageCreate` / `messageReactionAdd` events and always remove their listeners.
   `time` is a positive integer of at most 2^31 − 1 ms. `awaitReactions` collects `{ reaction, user, userId }`, with
   `user` `null` for users plugin-gateway has not cached; `userId` comes from the event details and is always set.
+  Events are filtered sequentially in arrival order, so an async filter cannot reorder the results.
 - **`GatewayPaginatedMessage`** extends `PaginatedMessage`; `run(target, author?)` accepts an HTTP interaction
   (unchanged behaviour), a gateway `Message` (replies to it), or a text-based channel (sends to it). Gateway messages
   are bot-owned and non-ephemeral, so timeout cleanup uses the bot REST path without the token bound.

@@ -91,7 +91,17 @@ export function run(interaction: Interactions.ApplicationCommand) {
 
 `run` sends the first page and stores a session that the built-in `first`/`previous`/`next`/`last`/`stop`/`select`
 buttons use to browse pages, later interaction clicks resolved by the package's own interaction handlers. Custom
-`actions` must use ids other than those reserved built-in ones.
+`actions` with a `run` callback must use ids other than those reserved built-in ones (listed in
+`PaginatedMessageBuiltinActionIds`): `addAction` throws a `TypeError` otherwise, since a click on a built-in id always
+runs the built-in behaviour. An action with a built-in id and no `run` is allowed, to restyle a default button (e.g.
+`{ id: 'next', type: 'button', emoji: { name: '👉' } }`).
+
+Clicks on the same message are handled one at a time within a process, so two quick `next` clicks both apply. `stop`
+leaves a small `{ stopped: true }` tombstone in the store until the session would have expired, instead of deleting it:
+a click that was already being handled (on this process or another replica) re-reads the session right before saving
+and expires instead of bringing the stopped session back. If saving a click fails, the message keeps showing the page
+it was on and the user gets an ephemeral notice asking them to try again, set process-wide with
+`setDefaultSaveFailedReply` (default `DefaultSaveFailedReply`, `'Something went wrong, please try again.'`).
 
 `run` always sends a fresh reply. For a deferred reply or a follow-up, call `start(ownerId)` instead: it creates the
 session without sending anything and returns `{ sessionId, payload }`, so you send `payload` yourself:
@@ -169,11 +179,25 @@ setSessionStore(new RedisSessionStore({ redis: new Redis(process.env.REDIS_URL) 
 ```
 
 `setSessionStore` configures the store used process-wide by anything that does not pass its own `store` option.
-Passing `store` to a `PaginatedMessage` instance only overrides the store on the process that called `run`/`start`;
-a click reaching a different process still resolves through whatever store that other process has configured (its
-own `setSessionStore` call, or the default `MemorySessionStore` if it never called it), not the instance's `store`
-option — so a per-instance `store` only works for single-process bots or when every process is given the same
-option. Configure the shared store globally with `setSessionStore` for multi-process bots instead.
+Passing `store` to a `PaginatedMessage` instance only tells the process that called `run`/`start` where the session
+lives. A click reaching a different process looks the session up in its default store (its own `setSessionStore` call,
+or the default `MemorySessionStore`), then in every store registered with `registerSessionStore` — so a per-instance
+shared `store` must be registered on **every** replica, or the click expires there:
+
+```ts
+import { registerSessionStore, RedisSessionStore } from '@wolfstar/http-framework-utilities';
+
+export const menuStore = new RedisSessionStore({ redis, prefix: 'menus' });
+registerSessionStore(menuStore); // at startup, on every replica
+
+new PaginatedMessage({ store: menuStore }); // later, on any replica
+```
+
+Configuring the shared store globally with `setSessionStore` needs no registration.
+
+Across replicas, a shared store is last-write-wins for simultaneous clicks on the same message: two replicas handling
+a click at the same moment both read the same page and the later save wins. The re-read before saving narrows the
+window in which a click can undo a `stop`, but cannot close it without atomic store operations.
 
 `RedisSessionStore` only needs `get`/`set(key, value, 'PX', ms)`/`del`, satisfied by an `ioredis` `Redis` or
 `Cluster` instance without depending on `ioredis` itself.
@@ -295,7 +319,8 @@ Available helpers: `canReadMessages`, `canSendMessages`, `canSendEmbeds`, `canSe
 
 `awaitMessages(channel, { time, max, filter })` and `awaitReactions(message, { time, max, filter })` resolve with what
 they collected once `max` (default `1`) values pass `filter` or `time` (milliseconds, required) elapses. `time` and `max`
-must be positive integers, and they reject without a `GatewayClient`.
+must be positive integers, and they reject without a `GatewayClient`. Events are filtered one at a time in arrival
+order, so with an async `filter` the first qualifying event by arrival wins and the results keep arrival order.
 
 `awaitReactions` collects `{ reaction, user, userId }`. `user` is `null` when `@wolfstar/plugin-gateway` knows the user
 neither from the payload nor from its cache (e.g. DMs without a user cache), so filter on `userId`, which is always set.
