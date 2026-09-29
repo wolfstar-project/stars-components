@@ -1,5 +1,4 @@
-import { container } from '@wolfstar/http-framework';
-import type { GatewayEventMap, Message, MessageReaction, User } from '@wolfstar/plugin-gateway';
+import { getGatewayClient, type GatewayClient, type GatewayEventMap, type Message, type MessageReaction, type User } from '@wolfstar/plugin-gateway';
 import type { Awaitable } from '../sessions/SessionStore.js';
 
 export interface AwaitOptions<T> {
@@ -36,9 +35,11 @@ function assertPositiveInteger(name: string, value: number): void {
  * Listens to a client event until `max` values pass the filter or `time` elapses, and always removes its listener.
  * A throwing filter rejects the collector.
  *
+ * @param name The public function's name, for the error thrown without a gateway client.
  * @param pick Maps an event to the value to collect, `null` when the event is not about the target.
  */
 function collect<Event extends EventName, T>(
+	name: string,
 	event: Event,
 	options: AwaitOptions<T>,
 	pick: (...args: GatewayEventMap[Event]) => T | null
@@ -47,9 +48,16 @@ function collect<Event extends EventName, T>(
 	assertPositiveInteger('time', time);
 	assertPositiveInteger('max', max);
 
+	let gatewayClient: GatewayClient;
+	try {
+		gatewayClient = getGatewayClient();
+	} catch {
+		return Promise.reject(new Error(`${name} needs a GatewayClient from @wolfstar/plugin-gateway`));
+	}
+
 	// plugin-gateway augments the framework's `ClientEvents` with `GatewayEventMap`, but the emitter's overloads cannot
 	// resolve a listener for a generic event name, so the client is narrowed to the two events used here.
-	const client = container.client as unknown as {
+	const client = gatewayClient as unknown as {
 		on<E extends EventName>(event: E, listener: Listener<E>): unknown;
 		off<E extends EventName>(event: E, listener: Listener<E>): unknown;
 	};
@@ -96,9 +104,10 @@ function collect<Event extends EventName, T>(
  *
  * @returns The collected messages, once `max` of them are collected or `time` elapses.
  * @throws {RangeError} When `time` or `max` is not a positive integer.
+ * @remarks Rejects when `container.client` is not a `GatewayClient`.
  */
 export function awaitMessages(channel: { id: string }, options: AwaitOptions<Message>): Promise<Message[]> {
-	return collect('messageCreate', options, (message) => (message.channelId === channel.id ? message : null));
+	return collect('awaitMessages', 'messageCreate', options, (message) => (message.channelId === channel.id ? message : null));
 }
 
 /**
@@ -107,9 +116,10 @@ export function awaitMessages(channel: { id: string }, options: AwaitOptions<Mes
  *
  * @returns The collected reactions, once `max` of them are collected or `time` elapses.
  * @throws {RangeError} When `time` or `max` is not a positive integer.
+ * @remarks Rejects when `container.client` is not a `GatewayClient`.
  */
 export function awaitReactions(message: { id: string; channelId: string }, options: AwaitOptions<CollectedReaction>): Promise<CollectedReaction[]> {
-	return collect('messageReactionAdd', options, (reaction, user) =>
+	return collect('awaitReactions', 'messageReactionAdd', options, (reaction, user) =>
 		user !== null && reaction.messageId === message.id && reaction.channelId === message.channelId ? { reaction, user } : null
 	);
 }

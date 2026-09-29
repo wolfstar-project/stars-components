@@ -25,6 +25,8 @@ describe('gateway collectors', () => {
 		vi.useFakeTimers();
 		previousClient = container.client;
 		emitter = new EventEmitter();
+		// `getGatewayClient()` accepts any `container.client` carrying a `gateway`.
+		Object.assign(emitter, { gateway: {} });
 		container.client = emitter as never;
 	});
 
@@ -157,5 +159,23 @@ describe('gateway collectors', () => {
 			expect(() => awaitReactions(target, { time: 0 })).toThrow(RangeError);
 			expect(emitter.listenerCount('messageReactionAdd')).toBe(0);
 		});
+	});
+
+	describe('without a gateway client', () => {
+		test.each([undefined, { emit: () => true }])(
+			'GIVEN container.client %o THEN both collectors reject clearly and leave no timer',
+			async (client) => {
+				container.client = client as never;
+				await expect(awaitMessages({ id: ChannelId }, { time: 1000 })).rejects.toThrow(
+					'awaitMessages needs a GatewayClient from @wolfstar/plugin-gateway'
+				);
+				await expect(awaitReactions({ id: MessageId, channelId: ChannelId }, { time: 1000 })).rejects.toThrow(
+					'awaitReactions needs a GatewayClient from @wolfstar/plugin-gateway'
+				);
+				expect(vi.getTimerCount()).toBe(0);
+				expect(emitter.listenerCount('messageCreate')).toBe(0);
+				expect(emitter.listenerCount('messageReactionAdd')).toBe(0);
+			}
+		);
 	});
 });
