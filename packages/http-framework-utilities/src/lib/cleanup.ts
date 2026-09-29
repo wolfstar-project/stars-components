@@ -10,6 +10,12 @@ import { disableMessageComponents } from './expire.js';
 export const MaximumTokenLifetime = 14 * 60_000;
 
 /**
+ * Discord's interaction token lifetime, in milliseconds. Cleanups edit through the webhook until then, so the minute
+ * between {@linkcode MaximumTokenLifetime} (the session cap) and this bound is spent on the timeout edit.
+ */
+export const InteractionTokenLifetime = 15 * 60_000;
+
+/**
  * What happens to the controls of a timed-out message: `'disable'` keeps them greyed out, `'remove'` deletes them.
  */
 export type TimeoutBehavior = 'disable' | 'remove';

@@ -1,6 +1,13 @@
 import { container } from '@wolfstar/http-framework';
 import { ButtonStyle, MessageFlags, type APIEmbed, type APIInteractionResponseCallbackData } from 'discord-api-types/v10';
-import { MaximumTokenLifetime, scheduleCleanup, updateCleanupComponents, type CleanupTarget, type TimeoutBehavior } from '../cleanup.js';
+import {
+	InteractionTokenLifetime,
+	MaximumTokenLifetime,
+	scheduleCleanup,
+	updateCleanupComponents,
+	type CleanupTarget,
+	type TimeoutBehavior
+} from '../cleanup.js';
 import { createSessionId } from '../custom-id.js';
 import { describeRestError } from '../errors.js';
 import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
@@ -287,7 +294,7 @@ export class PaginatedMessage {
 
 		const credentials =
 			interaction.applicationId && interaction.token
-				? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + MaximumTokenLifetime }
+				? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + InteractionTokenLifetime }
 				: null;
 
 		scheduleCleanup(sessionId, {

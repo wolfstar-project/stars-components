@@ -4,7 +4,9 @@ import { ButtonStyle, ComponentType, Routes, type APIActionRowComponent, type AP
 import {
 	cancelCleanup,
 	encodeCustomId,
+	getPromptWaiters,
 	getSessionStore,
+	InteractionTokenLifetime,
 	MaximumTokenLifetime,
 	MessagePrompter,
 	PaginatedMessage,
@@ -218,6 +220,79 @@ describe('PaginatedMessage timeout cleanup', () => {
 		expect(session.expiresAt).toBe(createdAt + MaximumTokenLifetime);
 		expect(logError).toHaveBeenCalled();
 		expect(JSON.stringify(logError.mock.calls)).not.toContain(Token);
+	});
+});
+
+describe('cleanup at the token cap', () => {
+	function expectWebhookPatch() {
+		expect(patch).toHaveBeenCalledOnce();
+		const [route, options] = patch.mock.calls[0]! as [string, { body: never; auth?: boolean }];
+		expect(route).toBe(Routes.webhookMessage(AppId, Token, '@original'));
+		expect(options.auth).toBe(false);
+		expect(allDisabled(options.body)).toBe(true);
+	}
+
+	test('GIVEN the token lifetime constants THEN the session cap leaves a margin before the token expires', () => {
+		expect(InteractionTokenLifetime).toBe(15 * 60_000);
+		expect(MaximumTokenLifetime).toBeLessThan(InteractionTokenLifetime);
+	});
+
+	test('GIVEN a paginated message with idle equal to the cap THEN edits through the webhook at the deadline', async () => {
+		track(await new PaginatedMessage({ idle: MaximumTokenLifetime }).addPageContent('a').addPageContent('b').run(fakeInteraction()));
+
+		await vi.advanceTimersByTimeAsync(MaximumTokenLifetime - 1);
+		expect(patch).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(1);
+		expectWebhookPatch();
+	});
+
+	test('GIVEN clicks pushing expiresAt to the cap THEN edits through the webhook at the cap', async () => {
+		const sessionId = track(await new PaginatedMessage({ idle: 10 * 60_000 }).addPageContent('a').addPageContent('b').run(fakeInteraction()));
+
+		await vi.advanceTimersByTimeAsync(9 * 60_000);
+		const click = clickButton(pmId(sessionId, 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+
+		await vi.advanceTimersByTimeAsync(MaximumTokenLifetime - 9 * 60_000 - 1);
+		expect(patch).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(1);
+		expectWebhookPatch();
+	});
+
+	test('GIVEN fetching the real message id failed THEN edits @original through the webhook at the cap', async () => {
+		vi.spyOn(container.logger, 'error').mockImplementation(() => undefined);
+		const interaction = fakeInteraction();
+		interaction.get.mockResolvedValue({
+			isOk: () => false,
+			isErr: () => true,
+			unwrap: () => ({ id: '' }),
+			unwrapErr: () => new Error('x')
+		} as never);
+		track(await new PaginatedMessage({ idle: 20 * 60_000 }).addPageContent('a').addPageContent('b').run(interaction));
+
+		await vi.advanceTimersByTimeAsync(MaximumTokenLifetime - 1);
+		expect(patch).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(1);
+		expectWebhookPatch();
+	});
+
+	test('GIVEN a prompter timeout equal to the cap THEN edits through the webhook and resolves null', async () => {
+		const answer = new MessagePrompter('Sure?', 'confirm', { timeout: MaximumTokenLifetime }).run(fakeInteraction());
+
+		await vi.advanceTimersByTimeAsync(MaximumTokenLifetime);
+		await expect(answer).resolves.toBeNull();
+		expectWebhookPatch();
+	});
+
+	test('GIVEN a prompter timeout above the cap THEN rejects with a RangeError before registering or replying', async () => {
+		const interaction = fakeInteraction();
+		const waiters = getPromptWaiters().size;
+		const timers = vi.getTimerCount();
+
+		await expect(new MessagePrompter('Sure?', 'confirm', { timeout: MaximumTokenLifetime + 1 }).run(interaction)).rejects.toThrow(RangeError);
+		expect(interaction.reply).not.toHaveBeenCalled();
+		expect(getPromptWaiters().size).toBe(waiters);
+		expect(vi.getTimerCount()).toBe(timers);
 	});
 });
 

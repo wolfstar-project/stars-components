@@ -5,7 +5,7 @@ import {
 	type APIButtonComponentWithCustomId,
 	type APIComponentInMessageActionRow
 } from 'discord-api-types/v10';
-import { MaximumTokenLifetime, scheduleCleanup, type TimeoutBehavior } from '../cleanup.js';
+import { InteractionTokenLifetime, MaximumTokenLifetime, scheduleCleanup, type TimeoutBehavior } from '../cleanup.js';
 import { createSessionId, encodeCustomId, MessagePrompterHandlerName } from '../custom-id.js';
 import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder } from '../MessageBuilder.js';
@@ -24,7 +24,8 @@ export interface MessagePrompterStrategyReturns {
 
 export interface MessagePrompterOptions {
 	/**
-	 * How long to wait for an answer, in milliseconds.
+	 * How long to wait for an answer, in milliseconds. At most {@linkcode MaximumTokenLifetime}: the prompt is only
+	 * editable with the interaction token.
 	 * @default 60_000
 	 */
 	timeout?: number;
@@ -83,6 +84,14 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 			throw new TypeError('MessagePrompter needs a process-scoped session store: its answer is delivered to the process that called run');
 		}
 
+		const timeout = this.options.timeout ?? 60_000;
+		// A prompt always edits its '@original' response, so the interaction token is its only edit credential.
+		if (!Number.isFinite(timeout) || timeout <= 0 || timeout > MaximumTokenLifetime) {
+			throw new RangeError(
+				`timeout must be a positive number of at most ${MaximumTokenLifetime} ms (MaximumTokenLifetime), received ${timeout}`
+			);
+		}
+
 		const sessionId = createSessionId();
 		const components = this.#components(sessionId);
 		await registerUtilityHandlers();
@@ -116,11 +125,11 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 			target: { messageId: '@original', channelId: interaction.channel?.id ?? null, ephemeral: false },
 			credentials:
 				interaction.applicationId && interaction.token
-					? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + MaximumTokenLifetime }
+					? { applicationId: interaction.applicationId, token: interaction.token, tokenExpiresAt: createdAt + InteractionTokenLifetime }
 					: null,
 			components,
 			behavior: this.options.timeoutBehavior ?? 'disable',
-			deadline: createdAt + (this.options.timeout ?? 60_000),
+			deadline: createdAt + timeout,
 			onRelease: () => {
 				if (!waiters.has(sessionId)) return;
 				waiters.delete(sessionId);
