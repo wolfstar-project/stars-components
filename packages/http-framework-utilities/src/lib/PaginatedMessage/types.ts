@@ -54,6 +54,10 @@ export interface PaginatedMessageSession {
 	 */
 	idle: number;
 	wrongUserReply: string;
+	/**
+	 * The notice for clicks that cannot be handled while the session is readable (e.g. a custom action unavailable on
+	 * this process). Expired sessions use the process-wide `getDefaultExpiredReply()`.
+	 */
 	expiredReply: string;
 	/**
 	 * When the session expires unless clicked again, in milliseconds since the epoch.

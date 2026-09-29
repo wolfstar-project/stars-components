@@ -1,7 +1,6 @@
 export interface PromptWaiter {
 	ownerId: string;
 	wrongUserReply: string;
-	expiredReply: string;
 	resolve(action: string): void;
 }
 

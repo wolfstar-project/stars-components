@@ -15,7 +15,7 @@ import {
 	type TimeoutBehavior
 } from '../cleanup.js';
 import { createSessionId, encodeCustomId, MessagePrompterHandlerName } from '../custom-id.js';
-import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
+import { DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder } from '../MessageBuilder.js';
 import type { PaginatedMessagePage } from '../PaginatedMessage/types.js';
 import { registerUtilityHandlers } from '../registration.js';
@@ -38,11 +38,6 @@ export interface MessagePrompterOptions {
 	 */
 	timeout?: number;
 	wrongUserReply?: string;
-	/**
-	 * The ephemeral notice sent when a click arrives for an expired or unknown prompt.
-	 * @default DefaultExpiredReply
-	 */
-	expiredReply?: string;
 	/**
 	 * What happens to the buttons when the prompt times out.
 	 * @default 'disable'
@@ -165,7 +160,6 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 		waiters.set(sessionId, {
 			ownerId,
 			wrongUserReply: this.options.wrongUserReply ?? DefaultWrongUserReply,
-			expiredReply: this.options.expiredReply ?? DefaultExpiredReply,
 			resolve: (action) => {
 				waiters.delete(sessionId);
 				settle(this.#parse(action));

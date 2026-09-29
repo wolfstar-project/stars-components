@@ -5,6 +5,26 @@ export const DefaultWrongUserReply = 'These buttons are not for you.';
 
 export const DefaultExpiredReply = 'This interaction has expired.';
 
+let defaultExpiredReply = DefaultExpiredReply;
+
+/**
+ * Sets the process-wide expiry notice, sent as an ephemeral followup when a click arrives for a session that cannot be
+ * read anymore (expired, unknown, or undecodable): the paginated message and prompter handlers have no per-instance
+ * setting to read in that case. It is also the default `expiredReply` of paginated messages created afterwards.
+ * @param reply The notice; {@linkcode DefaultExpiredReply} restores the built-in one.
+ */
+export function setDefaultExpiredReply(reply: string): void {
+	defaultExpiredReply = reply;
+}
+
+/**
+ * The process-wide expiry notice, {@linkcode DefaultExpiredReply} unless changed with
+ * {@linkcode setDefaultExpiredReply}.
+ */
+export function getDefaultExpiredReply(): string {
+	return defaultExpiredReply;
+}
+
 /**
  * Anything an interactive message can be sent from: command and component interactions of `@wolfstar/http-framework`.
  */

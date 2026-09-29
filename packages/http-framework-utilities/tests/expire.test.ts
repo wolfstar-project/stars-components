@@ -6,9 +6,11 @@ import {
 	disableMessageComponents,
 	encodeCustomId,
 	expireInteraction,
+	getDefaultExpiredReply,
 	MessagePrompterHandlerName,
 	PaginatedMessage,
-	PaginatedMessageHandlerName
+	PaginatedMessageHandlerName,
+	setDefaultExpiredReply
 } from '../src/index.js';
 import { handleMessagePrompterInteraction } from '../src/lib/MessagePrompter/handle.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
@@ -198,5 +200,51 @@ describe('MessagePrompter expiry', () => {
 		await handleMessagePrompterInteraction(click.interaction, 'not-decodable');
 
 		expect(followup).toHaveBeenCalledWith({ content: DefaultExpiredReply, flags: MessageFlags.Ephemeral });
+	});
+});
+
+describe('setDefaultExpiredReply', () => {
+	const Custom = 'Nothing to see here anymore.';
+	afterEach(() => setDefaultExpiredReply(DefaultExpiredReply));
+
+	test('GIVEN no override THEN getDefaultExpiredReply returns DefaultExpiredReply', () => {
+		expect(getDefaultExpiredReply()).toBe(DefaultExpiredReply);
+	});
+
+	test('GIVEN an override THEN an unknown paginated message session uses it', async () => {
+		setDefaultExpiredReply(Custom);
+		expect(getDefaultExpiredReply()).toBe(Custom);
+
+		const click = clickButton(pmId('000000000000', 'next'));
+		const followup = vi.spyOn(click.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		expect(followup).toHaveBeenCalledWith({ content: Custom, flags: MessageFlags.Ephemeral });
+	});
+
+	test('GIVEN an override THEN an undecodable paginated message custom id uses it', async () => {
+		setDefaultExpiredReply(Custom);
+		const click = clickButton(pmId('000000000000', 'next'));
+		const followup = vi.spyOn(click.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		await handlePaginatedMessageInteraction(click.interaction, 'not-decodable');
+		expect(followup).toHaveBeenCalledWith({ content: Custom, flags: MessageFlags.Ephemeral });
+	});
+
+	test('GIVEN an override THEN an unknown or undecodable prompt uses it', async () => {
+		setDefaultExpiredReply(Custom);
+		const unknown = clickButton(mpId('000000000000', 'yes'));
+		const unknownFollowup = vi.spyOn(unknown.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		await handleMessagePrompterInteraction(unknown.interaction, unknown.value);
+		expect(unknownFollowup).toHaveBeenCalledWith({ content: Custom, flags: MessageFlags.Ephemeral });
+
+		const undecodable = clickButton(mpId('000000000000', 'yes'));
+		const undecodableFollowup = vi.spyOn(undecodable.interaction, 'followup').mockResolvedValue({ isErr: () => false } as never);
+		await handleMessagePrompterInteraction(undecodable.interaction, 'not-decodable');
+		expect(undecodableFollowup).toHaveBeenCalledWith({ content: Custom, flags: MessageFlags.Ephemeral });
+	});
+
+	test('GIVEN an override THEN it is the default expiredReply of new paginated messages', () => {
+		setDefaultExpiredReply(Custom);
+		expect(new PaginatedMessage().expiredReply).toBe(Custom);
+		expect(new PaginatedMessage({ expiredReply: 'mine' }).expiredReply).toBe('mine');
 	});
 });

@@ -3,7 +3,7 @@ import { MessageFlags } from 'discord-api-types/v10';
 import { cancelCleanup, refreshCleanup } from '../cleanup.js';
 import { decodeCustomIdContent } from '../custom-id.js';
 import { expireInteraction } from '../expire.js';
-import { DefaultExpiredReply, getSelectedValues, isComponentInteraction } from '../interactions.js';
+import { getDefaultExpiredReply, getSelectedValues, isComponentInteraction } from '../interactions.js';
 import { getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
 import { renderComponents } from './render.js';
@@ -27,7 +27,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	if (!isComponentInteraction(interaction)) return;
 
 	const decoded = decodeCustomIdContent(customIdValue);
-	if (decoded === null) return expireInteraction(interaction, DefaultExpiredReply);
+	if (decoded === null) return expireInteraction(interaction, getDefaultExpiredReply());
 
 	const { sessionId, action } = decoded;
 	const runtimes = getPaginatedMessageRuntime();
@@ -39,7 +39,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	const runtime = store.scope === 'shared' ? null : loadedRuntime;
 
 	const session = await load(store, sessionId);
-	if (session === null) return expireInteraction(interaction, DefaultExpiredReply);
+	if (session === null) return expireInteraction(interaction, getDefaultExpiredReply());
 
 	if (session.ownerId !== null && interaction.user.id !== session.ownerId) {
 		await interaction.reply({ content: session.wrongUserReply, flags: MessageFlags.Ephemeral });

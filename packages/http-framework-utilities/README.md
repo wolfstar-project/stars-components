@@ -230,15 +230,22 @@ still goes through the expired-session handling below.
 When a click's session is missing, expired, or otherwise unresolvable, the built-in handlers `update` the clicked
 message with every one of its components disabled, then send an ephemeral `followup` with the expiry notice —
 matching the rule that an HTTP interaction gets exactly one direct response (`update`), with the notice going out
-as a `followup` instead. The notice defaults to `DefaultExpiredReply` (`'This interaction has expired.'`) and is
-configurable per instance:
+as a `followup` instead. The notice defaults to `DefaultExpiredReply` (`'This interaction has expired.'`).
+
+An expired or unknown session cannot be read anymore, so nothing per instance is known when its click arrives: its
+notice is process-wide. Set it once at startup with `setDefaultExpiredReply` (and read it with
+`getDefaultExpiredReply`); it applies to both paginated messages and prompters:
 
 ```ts
-new PaginatedMessage({ expiredReply: 'This menu is no longer available.' });
-new MessagePrompter('Delete?', 'confirm', { expiredReply: 'This prompt has expired.' });
+import { setDefaultExpiredReply } from '@wolfstar/http-framework-utilities';
+
+setDefaultExpiredReply('This menu is no longer available.');
 ```
 
-Call `setExpiredReply` on a `PaginatedMessage` instance to change it after construction.
+`PaginatedMessage` also takes an `expiredReply` option (or `setExpiredReply`), defaulting to the process-wide notice.
+It only applies while the session is still readable, when a click cannot be handled by this process — e.g. a custom
+action or a lazy page that only exists on the process that started the message. For real expiry, use
+`setDefaultExpiredReply`. `MessagePrompter` has no `expiredReply` option: a prompt that expired is always unknown.
 
 ## Gateway (`@wolfstar/plugin-gateway`)
 

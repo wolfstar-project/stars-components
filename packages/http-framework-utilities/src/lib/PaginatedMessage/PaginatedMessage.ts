@@ -11,7 +11,7 @@ import {
 } from '../cleanup.js';
 import { createSessionId } from '../custom-id.js';
 import { describeRestError } from '../errors.js';
-import { DefaultExpiredReply, DefaultWrongUserReply, type RunnableInteraction } from '../interactions.js';
+import { DefaultWrongUserReply, getDefaultExpiredReply, type RunnableInteraction } from '../interactions.js';
 import { MessageBuilder, validateMessage } from '../MessageBuilder.js';
 import { registerUtilityHandlers } from '../registration.js';
 import { getSessionStore } from '../sessions/config.js';
@@ -46,8 +46,10 @@ export interface PaginatedMessageOptions {
 	ownerOnly?: boolean;
 	wrongUserReply?: string;
 	/**
-	 * The ephemeral notice sent when a click arrives for an expired or unknown session.
-	 * @default DefaultExpiredReply
+	 * The ephemeral notice sent when a click cannot be handled while its session is still readable, e.g. a custom
+	 * action or a lazy page that is only available on the process that started the message. A session that expired or
+	 * is unknown cannot be read, so its clicks get the process-wide notice set with `setDefaultExpiredReply` instead.
+	 * @default getDefaultExpiredReply()
 	 */
 	expiredReply?: string;
 	/**
@@ -127,7 +129,7 @@ export class PaginatedMessage {
 		this.idle = validateIdle(options.idle ?? PaginatedMessage.defaultIdle);
 		this.ownerOnly = options.ownerOnly ?? true;
 		this.wrongUserReply = options.wrongUserReply ?? DefaultWrongUserReply;
-		this.expiredReply = options.expiredReply ?? DefaultExpiredReply;
+		this.expiredReply = options.expiredReply ?? getDefaultExpiredReply();
 		this.timeoutBehavior = options.timeoutBehavior ?? 'disable';
 		this.store = options.store;
 		if (options.pages) this.addPages(options.pages);
@@ -199,6 +201,10 @@ export class PaginatedMessage {
 		return this;
 	}
 
+	/**
+	 * Sets the notice sent when a click cannot be handled while the session is still readable, see
+	 * {@linkcode PaginatedMessageOptions.expiredReply}. For expired sessions, use `setDefaultExpiredReply`.
+	 */
 	public setExpiredReply(reply: string): this {
 		this.expiredReply = reply;
 		return this;
