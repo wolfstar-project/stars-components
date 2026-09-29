@@ -195,7 +195,7 @@ describe('PaginatedMessage timeout cleanup', () => {
 
 		expect(interaction.get).toHaveBeenCalledOnce();
 		const session = (await getSessionStore().get(sessionId)) as PaginatedMessageSession;
-		expect(session.cleanupTarget).toEqual({ messageId: RealMessageId, channelId: ChannelId, ephemeral: false });
+		expect(session.maximumExpiresAt).toBeNull();
 
 		// After the token expired, cleanup falls back to the bot's REST credentials on the channel message.
 		await vi.advanceTimersByTimeAsync(20 * 60_000);
@@ -216,10 +216,55 @@ describe('PaginatedMessage timeout cleanup', () => {
 		const sessionId = track(await new PaginatedMessage({ idle: 20 * 60_000 }).addPageContent('a').run(interaction));
 
 		const session = (await getSessionStore().get(sessionId)) as PaginatedMessageSession;
-		expect(session.cleanupTarget?.messageId).toBe('@original');
+		expect(session.maximumExpiresAt).toBe(createdAt + MaximumTokenLifetime);
 		expect(session.expiresAt).toBe(createdAt + MaximumTokenLifetime);
+		expect(session).not.toHaveProperty('cleanupTarget');
 		expect(logError).toHaveBeenCalled();
 		expect(JSON.stringify(logError.mock.calls)).not.toContain(Token);
+	});
+});
+
+describe('PaginatedMessage#run after fetching the real message id', () => {
+	/** Clicks `next` on the reply `interaction` sent, while `run` is still waiting for the real message id. */
+	function clickNextDuringFetch(interaction: ReturnType<typeof fakeInteraction>) {
+		return async () => {
+			const payload = interaction.reply.mock.calls[0]![0] as { components: { components: { custom_id: string }[] }[] };
+			const next = payload.components[0]!.components.find((component) => component.custom_id.endsWith('.next'))!;
+			const click = clickButton(next.custom_id);
+			await handlePaginatedMessageInteraction(click.interaction, click.value);
+		};
+	}
+
+	test('GIVEN a click stored while the id is fetched THEN run does not overwrite it', async () => {
+		const interaction = fakeInteraction();
+		const click = clickNextDuringFetch(interaction);
+		interaction.get.mockImplementation(async () => {
+			await click();
+			return { isOk: () => true, isErr: () => false, unwrap: () => ({ id: RealMessageId }) };
+		});
+
+		const sessionId = track(await new PaginatedMessage({ idle: 20 * 60_000 }).addPageContent('a').addPageContent('b').run(interaction));
+
+		const session = (await getSessionStore().get(sessionId)) as PaginatedMessageSession;
+		expect(session.index).toBe(1);
+	});
+
+	test('GIVEN a click stored while a failing fetch runs THEN run only lowers the cap of the stored session', async () => {
+		vi.spyOn(container.logger, 'error').mockImplementation(() => undefined);
+		const interaction = fakeInteraction();
+		const click = clickNextDuringFetch(interaction);
+		interaction.get.mockImplementation(async () => {
+			await click();
+			return { isOk: () => false, isErr: () => true, unwrap: () => ({ id: '' }), unwrapErr: () => new Error('Unknown Message') } as never;
+		});
+		const createdAt = Date.now();
+
+		const sessionId = track(await new PaginatedMessage({ idle: 20 * 60_000 }).addPageContent('a').addPageContent('b').run(interaction));
+
+		const session = (await getSessionStore().get(sessionId)) as PaginatedMessageSession;
+		expect(session.index).toBe(1);
+		expect(session.maximumExpiresAt).toBe(createdAt + MaximumTokenLifetime);
+		expect(session.expiresAt).toBeLessThanOrEqual(createdAt + MaximumTokenLifetime);
 	});
 });
 

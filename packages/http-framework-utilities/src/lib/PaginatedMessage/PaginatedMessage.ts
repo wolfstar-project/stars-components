@@ -278,7 +278,6 @@ export class PaginatedMessage {
 		// The message is only editable with the token until it expires, unless the real id is fetched below.
 		session.maximumExpiresAt = longLived ? null : createdAt + MaximumTokenLifetime;
 		session.expiresAt = Math.min(createdAt + this.idle, session.maximumExpiresAt ?? Number.POSITIVE_INFINITY);
-		session.cleanupTarget = target;
 		session.components = payload.components as PaginatedMessageSession['components'];
 		await this.#save(prepared, session.expiresAt - createdAt);
 
@@ -289,13 +288,10 @@ export class PaginatedMessage {
 				// Without the real id the token is the only edit credential again: cap the lifetime like a short session.
 				session.maximumExpiresAt = createdAt + MaximumTokenLifetime;
 				session.expiresAt = Math.min(session.expiresAt, session.maximumExpiresAt);
+				await lowerStoredCap(store, sessionId, session.maximumExpiresAt);
 			}
-
-			try {
-				await store.set(sessionId, { ...session, cleanupTarget: target }, Math.max(session.expiresAt - Date.now(), 1));
-			} catch (error) {
-				container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
-			}
+			// With the real id, the stored session is already right: writing it again could overwrite a click handled
+			// while the id was fetched.
 		}
 
 		const credentials =
@@ -404,6 +400,22 @@ export class PaginatedMessage {
 		// Registered for shared stores too: it is how this process finds a per-instance store. The handler only trusts it
 		// for custom actions and lazy pages when the store is process-scoped.
 		getPaginatedMessageRuntime().set(sessionId, this, ttl);
+	}
+}
+
+/**
+ * Lowers the lifetime cap of the stored session, keeping whatever a click stored meanwhile. A session already gone
+ * (stopped, or expired) is not recreated.
+ */
+async function lowerStoredCap(store: SessionStore, sessionId: string, maximumExpiresAt: number): Promise<void> {
+	try {
+		const current = (await store.get(sessionId)) as PaginatedMessageSession | null;
+		if (current === null) return;
+
+		const expiresAt = Math.min(current.expiresAt ?? maximumExpiresAt, maximumExpiresAt);
+		await store.set(sessionId, { ...current, maximumExpiresAt, expiresAt }, Math.max(expiresAt - Date.now(), 1));
+	} catch (error) {
+		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
 	}
 }
 

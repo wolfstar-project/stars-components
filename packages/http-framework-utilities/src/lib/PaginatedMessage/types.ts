@@ -5,7 +5,6 @@ import type {
 	APIMessageComponentEmoji,
 	ButtonStyle
 } from 'discord-api-types/v10';
-import type { CleanupTarget } from '../cleanup.js';
 import type { ComponentInteraction } from '../interactions.js';
 import type { MessageBuilder } from '../MessageBuilder.js';
 import type { Awaitable } from '../sessions/SessionStore.js';
@@ -68,10 +67,6 @@ export interface PaginatedMessageSession {
 	 * unbounded. Set by `run`.
 	 */
 	maximumExpiresAt?: number | null;
-	/**
-	 * The message timeout cleanup edits. Set by `run`; `start` flows have no timeout cleanup.
-	 */
-	cleanupTarget?: CleanupTarget;
 	/**
 	 * The last rendered components.
 	 */
