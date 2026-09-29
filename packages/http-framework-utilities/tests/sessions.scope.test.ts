@@ -82,6 +82,18 @@ describe('assertSharedSessionState', () => {
 	test('GIVEN a null entry outside pages THEN does not throw', () => {
 		expect(() => assertSharedSessionState({ other: [null] })).not.toThrow();
 	});
+
+	test('GIVEN a circular reference THEN throws naming its path instead of overflowing the stack', () => {
+		const cyclic: { self?: unknown } = {};
+		cyclic.self = cyclic;
+		expect(() => assertSharedSessionState({ node: cyclic })).toThrow('node.self');
+		expect(() => assertSharedSessionState({ node: cyclic })).toThrow('circular reference');
+	});
+
+	test('GIVEN a value shared by two sibling paths (not an ancestor) THEN does not throw', () => {
+		const shared = { content: 'a' };
+		expect(() => assertSharedSessionState({ pages: [shared, shared] })).not.toThrow();
+	});
 });
 
 describe('RedisSessionStore#set with unshareable state', () => {
@@ -132,9 +144,22 @@ describe('PaginatedMessage with a shared store', () => {
 		const interaction = fakeCommandInteraction(UserData.id);
 		const sessionId = await new PaginatedMessage().addPageContent('a').addPageContent('b').run(interaction);
 
+		// A shared-store session never registers a runtime entry itself (asserted above), but another codepath in
+		// this same process could still have one lying around for the same session id (e.g. a stale/left-over entry,
+		// or a bug reintroducing runtime registration for shared stores). Plant one by hand, with a `jump` action
+		// whose `run` would prove the runtime was actually consulted, to prove `handlePaginatedMessageInteraction`
+		// never trusts it once the store says the session is shared.
+		const run = vi.fn();
+		const runtimeInstance = new PaginatedMessage()
+			.addPageContent('a')
+			.addPageContent('b')
+			.addAction({ id: 'jump', type: 'button', label: 'Jump', run });
+		getPaginatedMessageRuntime().set(sessionId, runtimeInstance, 1000);
+
 		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'jump'));
 		await handlePaginatedMessageInteraction(click.interaction, click.value);
 		expect(click.body()).toMatchObject({ data: { components: [] } });
+		expect(run).not.toHaveBeenCalled();
 	});
 });
 
