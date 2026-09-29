@@ -1,4 +1,5 @@
 import type { SessionStore } from './SessionStore.js';
+import { assertSharedSessionState } from './validate.js';
 
 /**
  * The Redis commands {@linkcode RedisSessionStore} needs. An `ioredis` `Redis` or `Cluster` satisfies it as is.
@@ -22,6 +23,8 @@ export interface RedisSessionStoreOptions {
  * A {@linkcode SessionStore} shared between processes through Redis. Values are stored as JSON.
  */
 export class RedisSessionStore<T = unknown> implements SessionStore<T> {
+	public readonly scope = 'shared' as const;
+
 	readonly #redis: RedisSessionClientLike;
 	readonly #prefix: string;
 
@@ -36,6 +39,7 @@ export class RedisSessionStore<T = unknown> implements SessionStore<T> {
 	}
 
 	public async set(id: string, value: T, ttl: number): Promise<void> {
+		assertSharedSessionState(value);
 		await this.#redis.set(this.#key(id), JSON.stringify(value), 'PX', ttl);
 	}
 

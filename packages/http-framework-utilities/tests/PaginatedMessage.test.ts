@@ -174,7 +174,7 @@ describe('handlePaginatedMessageInteraction', () => {
 
 	test('GIVEN a store failure THEN removes the components', async () => {
 		const { sessionId } = await started();
-		setSessionStore({ get: () => Promise.reject(new Error('down')), set: () => undefined, delete: () => undefined });
+		setSessionStore({ scope: 'process', get: () => Promise.reject(new Error('down')), set: () => undefined, delete: () => undefined });
 		const click = clickButton(id(sessionId, 'next'));
 		await handlePaginatedMessageInteraction(click.interaction, click.value);
 		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });

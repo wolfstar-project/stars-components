@@ -18,4 +18,5 @@ export * from './lib/sessions/config.js';
 export * from './lib/sessions/MemorySessionStore.js';
 export * from './lib/sessions/RedisSessionStore.js';
 export type * from './lib/sessions/SessionStore.js';
+export * from './lib/sessions/validate.js';
 export * from './lib/type-guards.js';

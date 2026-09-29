@@ -12,6 +12,8 @@ export interface MemorySessionStoreOptions {
  * A process-local {@linkcode SessionStore}. Sessions do not survive a restart and are not shared between processes.
  */
 export class MemorySessionStore<T = unknown> implements SessionStore<T> {
+	public readonly scope = 'process' as const;
+
 	readonly #entries = new Map<string, { value: T; expiresAt: number }>();
 	#sweeper: ReturnType<typeof setInterval> | null = null;
 

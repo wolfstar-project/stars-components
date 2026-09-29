@@ -5,6 +5,7 @@ import { MessageBuilder, validateMessage } from '../MessageBuilder.js';
 import { registerUtilityHandlers } from '../registration.js';
 import { getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
+import { assertSharedSessionState } from '../sessions/validate.js';
 import { renderComponents } from './render.js';
 import { getPaginatedMessageRuntime } from './runtime.js';
 import type {
@@ -207,6 +208,21 @@ export class PaginatedMessage {
 
 		await registerUtilityHandlers();
 
+		const store = this.store ?? getSessionStore();
+		const shared = store.scope === 'shared';
+
+		if (shared) {
+			for (const [index, page] of this.pages.entries()) {
+				if (typeof page === 'function') throw new TypeError(`pages[${index}] is a lazy page function; shared stores need eager pages`);
+			}
+
+			for (const [id, action] of this.actions) {
+				if (action.type === 'button' && action.run !== undefined) {
+					throw new TypeError(`actions.${id}.run is a callback; shared stores support built-in actions only`);
+				}
+			}
+		}
+
 		const pages: (PaginatedMessagePage | null)[] = await Promise.all(
 			this.pages.map((page, index) =>
 				index === this.index || this.eager || typeof page !== 'function' ? this.resolvePage(index) : Promise.resolve(null)
@@ -226,9 +242,11 @@ export class PaginatedMessage {
 			wrongUserReply: this.wrongUserReply
 		};
 
+		if (shared) assertSharedSessionState(session);
+
 		const sessionId = createSessionId();
-		await (this.store ?? getSessionStore()).set(sessionId, session, this.idle);
-		getPaginatedMessageRuntime().set(sessionId, this, this.idle);
+		await store.set(sessionId, session, this.idle);
+		if (!shared) getPaginatedMessageRuntime().set(sessionId, this, this.idle);
 
 		return { sessionId, payload: { ...pages[this.index]!, components: renderComponents(sessionId, session) } };
 	}

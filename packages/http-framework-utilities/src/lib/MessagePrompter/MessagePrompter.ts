@@ -10,6 +10,8 @@ import { DefaultWrongUserReply, type RunnableInteraction } from '../interactions
 import { MessageBuilder } from '../MessageBuilder.js';
 import type { PaginatedMessagePage } from '../PaginatedMessage/types.js';
 import { registerUtilityHandlers } from '../registration.js';
+import { getSessionStore } from '../sessions/config.js';
+import type { SessionStore } from '../sessions/SessionStore.js';
 import { getPromptWaiters } from './waiters.js';
 
 export type MessagePrompterStrategy = 'confirm' | 'number';
@@ -34,6 +36,12 @@ export interface MessagePrompterOptions {
 	start?: number;
 	/** Last number (inclusive) of the `number` strategy. @default 10 */
 	end?: number;
+	/**
+	 * The answer is only ever delivered to the process that called {@linkcode MessagePrompter.run}, so this store is
+	 * never actually written to; it is only checked for its {@linkcode SessionStore.scope | scope}.
+	 * @default getSessionStore()
+	 */
+	store?: SessionStore;
 }
 
 const ButtonsPerRow = 5;
@@ -60,6 +68,10 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 	 * @returns The answer, or `null` when the timeout elapsed.
 	 */
 	public async run(interaction: RunnableInteraction): Promise<MessagePrompterStrategyReturns[S] | null> {
+		if ((this.options.store ?? getSessionStore()).scope === 'shared') {
+			throw new TypeError('MessagePrompter needs a process-scoped session store: its answer is delivered to the process that called run');
+		}
+
 		const sessionId = createSessionId();
 		const components = this.#components(sessionId);
 		await registerUtilityHandlers();

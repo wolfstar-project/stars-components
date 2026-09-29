@@ -33,8 +33,11 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 
 	const { sessionId, action } = decoded;
 	const runtimes = getPaginatedMessageRuntime();
-	const runtime = runtimes.get(sessionId);
-	const store = runtime?.store ?? getSessionStore();
+	const loadedRuntime = runtimes.get(sessionId);
+	const store = loadedRuntime?.store ?? getSessionStore();
+	// A shared store is visible to every replica; a runtime entry only ever describes this process, so it must not
+	// be trusted for custom actions or lazy page resolution once the store says the session can be handled anywhere.
+	const runtime = store.scope === 'shared' ? null : loadedRuntime;
 
 	const session = await load(store, sessionId);
 	if (session === null) return expire(interaction);
