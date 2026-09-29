@@ -45,8 +45,10 @@ jobs:
                       decorators
                       env-utilities
                       http-framework
+                      http-framework-i18n
                       i18next-backend
                       influx-utilities
+                      logger
                       reddit-helpers
                       safe-fetch
                       schema
