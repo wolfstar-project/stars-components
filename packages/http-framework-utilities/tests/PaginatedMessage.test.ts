@@ -162,9 +162,66 @@ describe('handlePaginatedMessageInteraction', () => {
 		expect(again.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
 	});
 
-	test('GIVEN stop and a store whose delete rejects THEN still disables the components', async () => {
+	test('GIVEN stop THEN replaces the session with a tombstone instead of deleting it', async () => {
 		const { sessionId } = await started();
-		vi.spyOn(getSessionStore(), 'delete').mockRejectedValue(new Error('down'));
+		const stop = clickButton(id(sessionId, 'stop'));
+		await handlePaginatedMessageInteraction(stop.interaction, stop.value);
+		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
+	});
+
+	test('GIVEN two concurrent next clicks THEN both apply', async () => {
+		const { sessionId } = await started();
+		const first = clickButton(id(sessionId, 'next'));
+		const second = clickButton(id(sessionId, 'next'));
+		await Promise.all([
+			handlePaginatedMessageInteraction(first.interaction, first.value),
+			handlePaginatedMessageInteraction(second.interaction, second.value)
+		]);
+
+		expect(first.body().data.content).toBe('two');
+		expect(second.body().data.content).toBe('three');
+		expect(await getSessionStore().get(sessionId)).toMatchObject({ index: 2 });
+	});
+
+	test('GIVEN a next click racing a stop THEN the stop wins and later clicks expire', async () => {
+		const { sessionId } = await started();
+		const next = clickButton(id(sessionId, 'next'));
+		const stop = clickButton(id(sessionId, 'stop'));
+		await Promise.all([
+			handlePaginatedMessageInteraction(next.interaction, next.value),
+			handlePaginatedMessageInteraction(stop.interaction, stop.value)
+		]);
+
+		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
+		const again = clickButton(id(sessionId, 'next'));
+		await handlePaginatedMessageInteraction(again.interaction, again.value);
+		expect(again.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+		expect(await getSessionStore().get(sessionId)).toEqual({ stopped: true });
+	});
+
+	test('GIVEN another replica stops the session while a click is handled THEN the click does not resurrect it', async () => {
+		const { sessionId } = await started();
+		const store = getSessionStore();
+		const read = store.get.bind(store);
+		let reads = 0;
+		// The first read is the click's own load; the stop lands right after it, before the click saves.
+		const spy = vi.spyOn(store, 'get').mockImplementation(async (key: string) => {
+			const value = await read(key);
+			if (++reads === 1) await store.set(key, { stopped: true }, 1000);
+			return value;
+		});
+
+		const click = clickButton(id(sessionId, 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		spy.mockRestore();
+
+		expect(click.body()).toEqual({ type: InteractionResponseType.UpdateMessage, data: { components: [] } });
+		expect(await store.get(sessionId)).toEqual({ stopped: true });
+	});
+
+	test('GIVEN stop and a store whose set rejects THEN still disables the components', async () => {
+		const { sessionId } = await started();
+		vi.spyOn(getSessionStore(), 'set').mockRejectedValue(new Error('down'));
 		const stop = clickButton(id(sessionId, 'stop'));
 		await handlePaginatedMessageInteraction(stop.interaction, stop.value);
 		expect(stop.body().type).toBe(InteractionResponseType.UpdateMessage);

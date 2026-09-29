@@ -2,22 +2,44 @@ import { container, type InteractionHandler } from '@wolfstar/http-framework';
 import { MessageFlags } from 'discord-api-types/v10';
 import { cancelCleanup, refreshCleanup } from '../cleanup.js';
 import { decodeCustomIdContent } from '../custom-id.js';
+import { describeRestError } from '../errors.js';
 import { expireInteraction } from '../expire.js';
-import { getDefaultExpiredReply, getSelectedValues, isComponentInteraction } from '../interactions.js';
+import { getDefaultExpiredReply, getSelectedValues, isComponentInteraction, type ComponentInteraction } from '../interactions.js';
 import { getSessionStore } from '../sessions/config.js';
 import type { SessionStore } from '../sessions/SessionStore.js';
 import { renderComponents } from './render.js';
 import { getPaginatedMessageRuntime } from './runtime.js';
-import { applyBuiltinAction } from './state.js';
+import { applyBuiltinAction, isStoppedSession, type StoppedPaginatedMessageSession } from './state.js';
 import type { PaginatedMessagePage, PaginatedMessageSession } from './types.js';
 
-async function load(store: SessionStore, sessionId: string): Promise<PaginatedMessageSession | null> {
+async function read(store: SessionStore, sessionId: string): Promise<{ ok: true; value: unknown } | { ok: false }> {
 	try {
-		return ((await store.get(sessionId)) as PaginatedMessageSession | null) ?? null;
+		return { ok: true, value: (await store.get(sessionId)) ?? null };
 	} catch (error) {
-		container.logger.error('[http-framework-utilities] Failed to read a paginated message session', error);
-		return null;
+		container.logger.error('[http-framework-utilities] Failed to read a paginated message session', describeRestError(error));
+		return { ok: false };
 	}
+}
+
+async function load(store: SessionStore, sessionId: string): Promise<PaginatedMessageSession | null> {
+	const result = await read(store, sessionId);
+	if (!result.ok || result.value === null || isStoppedSession(result.value)) return null;
+	return result.value as PaginatedMessageSession;
+}
+
+// The clicks being handled in this process, by session id: each one waits for the previous click on the same session,
+// so two clicks never both start from the same stored index.
+const queues = new Map<string, Promise<void>>();
+
+function serialize(sessionId: string, task: () => Promise<void>): Promise<void> {
+	const previous = queues.get(sessionId) ?? Promise.resolve();
+	const current = previous.then(task);
+	const tail = current.catch(() => undefined);
+	queues.set(sessionId, tail);
+	void tail.then(() => {
+		if (queues.get(sessionId) === tail) queues.delete(sessionId);
+	});
+	return current;
 }
 
 /**
@@ -29,7 +51,10 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	const decoded = decodeCustomIdContent(customIdValue);
 	if (decoded === null) return expireInteraction(interaction, getDefaultExpiredReply());
 
-	const { sessionId, action } = decoded;
+	return serialize(decoded.sessionId, () => handle(interaction, decoded.sessionId, decoded.action));
+}
+
+async function handle(interaction: ComponentInteraction, sessionId: string, action: string): Promise<void> {
 	const runtimes = getPaginatedMessageRuntime();
 	const loadedRuntime = runtimes.get(sessionId);
 	// The runtime entry is the only way this process knows about a per-instance store, so it is always read for it.
@@ -74,10 +99,13 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 		if (!interaction.replied) await interaction.update({ components: renderComponents(sessionId, session, { disabled: true }) });
 		cancelCleanup(sessionId);
 		runtimes.delete(sessionId);
+		// A tombstone, not a delete: a click that loaded the session before the stop must not save it back afterwards.
+		const now = Date.now();
+		const ttl = Math.max((session.expiresAt ?? now + session.idle) - now, 1);
 		try {
-			await store.delete(sessionId);
+			await store.set(sessionId, { stopped: true } satisfies StoppedPaginatedMessageSession, ttl);
 		} catch (error) {
-			container.logger.error('[http-framework-utilities] Failed to delete a paginated message session', error);
+			container.logger.error('[http-framework-utilities] Failed to stop a paginated message session', describeRestError(error));
 		}
 
 		return;
@@ -89,6 +117,13 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 		page = await runtime.resolvePage(index);
 	}
 
+	// Stopped (or expired) while this click was handled, e.g. by another replica: saving would bring it back.
+	const latest = await read(store, sessionId);
+	if (latest.ok && (latest.value === null || isStoppedSession(latest.value))) {
+		if (interaction.replied) return;
+		return expireInteraction(interaction, getDefaultExpiredReply());
+	}
+
 	const now = Date.now();
 	const expiresAt = Math.min(now + session.idle, session.maximumExpiresAt ?? Number.POSITIVE_INFINITY);
 	const ttl = Math.max(expiresAt - now, 1);
@@ -98,7 +133,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	try {
 		await store.set(sessionId, next, ttl);
 	} catch (error) {
-		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', error);
+		container.logger.error('[http-framework-utilities] Failed to save a paginated message session', describeRestError(error));
 	}
 
 	// Only the process that ran the message holds a cleanup record; other replicas are picked up by its recheck.

@@ -19,6 +19,7 @@ import type { SessionStore } from '../sessions/SessionStore.js';
 import { assertSharedSessionState } from '../sessions/validate.js';
 import { renderComponents } from './render.js';
 import { getPaginatedMessageRuntime } from './runtime.js';
+import { isStoppedSession } from './state.js';
 import type {
 	PaginatedMessageAction,
 	PaginatedMessageBuiltinActionId,
@@ -357,7 +358,7 @@ export class PaginatedMessage {
 			deadline: session.expiresAt!,
 			recheck: async () => {
 				const current = (await store.get(sessionId)) as PaginatedMessageSession | null;
-				if (current === null) return null;
+				if (current === null || isStoppedSession(current)) return null;
 				if (current.components) updateCleanupComponents(sessionId, current.components);
 				return current.expiresAt !== undefined && current.expiresAt > Date.now() ? current.expiresAt : null;
 			}
@@ -428,7 +429,7 @@ export class PaginatedMessage {
 async function lowerStoredCap(store: SessionStore, sessionId: string, maximumExpiresAt: number): Promise<void> {
 	try {
 		const current = (await store.get(sessionId)) as PaginatedMessageSession | null;
-		if (current === null) return;
+		if (current === null || isStoppedSession(current)) return;
 
 		const expiresAt = Math.min(current.expiresAt ?? maximumExpiresAt, maximumExpiresAt);
 		await store.set(sessionId, { ...current, maximumExpiresAt, expiresAt }, Math.max(expiresAt - Date.now(), 1));

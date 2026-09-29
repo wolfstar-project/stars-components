@@ -1,6 +1,20 @@
 import { SelectMenuLimits } from '@wolfstar/discord-utilities';
 import type { PaginatedMessageSession } from './types.js';
 
+/**
+ * What `stop` leaves in the store instead of deleting the session, until the session would have expired: a click
+ * handled concurrently (here, or on another replica) that re-reads it before saving then knows not to recreate the
+ * session.
+ * @internal
+ */
+export interface StoppedPaginatedMessageSession {
+	stopped: true;
+}
+
+export function isStoppedSession(value: unknown): value is StoppedPaginatedMessageSession {
+	return typeof value === 'object' && value !== null && (value as Partial<StoppedPaginatedMessageSession>).stopped === true;
+}
+
 export interface BuiltinActionResult {
 	index: number;
 	stopped: boolean;
