@@ -10,9 +10,6 @@
 - name: packages:http-framework
   color: '1d76db'
   description: Changes in http-framework
-- name: packages:http-framework-i18n
-  color: '1d76db'
-  description: Changes in http-framework-i18n
 - name: packages:http-framework-test-utils
   color: '1d76db'
   description: Changes in http-framework-test-utils
@@ -22,9 +19,6 @@
 - name: packages:influx-utilities
   color: '1d76db'
   description: Changes in influx-utilities
-- name: packages:logger
-  color: '1d76db'
-  description: Changes in logger
 - name: packages:reddit-helpers
   color: '1d76db'
   description: Changes in reddit-helpers

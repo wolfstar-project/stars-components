@@ -8,10 +8,8 @@ const paths = [
 	// Dist folders
 	new URL('env-utilities/dist/', packagesDir),
 	new URL('http-framework/dist/', packagesDir),
-	new URL('http-framework-i18n/dist/', packagesDir),
 	new URL('i18next-backend/dist/', packagesDir),
 	new URL('i18next-type-generator/dist/', packagesDir),
-	new URL('logger/dist/', packagesDir),
 	new URL('safe-fetch/dist/', packagesDir),
 	new URL('shared-http-pieces/dist/', packagesDir),
 	new URL('start-banner/dist/', packagesDir),
@@ -24,10 +22,8 @@ const paths = [
 	// Turbo folders
 	new URL('env-utilities/.turbo/', packagesDir),
 	new URL('http-framework/.turbo/', packagesDir),
-	new URL('http-framework-i18n/.turbo/', packagesDir),
 	new URL('i18next-backend/.turbo/', packagesDir),
 	new URL('i18next-type-generator/.turbo/', packagesDir),
-	new URL('logger/.turbo/', packagesDir),
 	new URL('safe-fetch/.turbo/', packagesDir),
 	new URL('shared-http-pieces/.turbo/', packagesDir),
 	new URL('start-banner/.turbo/', packagesDir),
