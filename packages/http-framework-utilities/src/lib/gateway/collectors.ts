@@ -1,0 +1,115 @@
+import { container } from '@wolfstar/http-framework';
+import type { GatewayEventMap, Message, MessageReaction, User } from '@wolfstar/plugin-gateway';
+import type { Awaitable } from '../sessions/SessionStore.js';
+
+export interface AwaitOptions<T> {
+	/**
+	 * Which values to collect; every value of the target is collected without one.
+	 */
+	filter?: (value: T) => Awaitable<boolean>;
+	/**
+	 * How many values to collect before resolving, a positive integer.
+	 *
+	 * @default 1
+	 */
+	max?: number;
+	/**
+	 * How long to collect for, in milliseconds, a positive integer. The collector resolves with whatever it collected
+	 * when it elapses.
+	 */
+	time: number;
+}
+
+export interface CollectedReaction {
+	reaction: MessageReaction;
+	user: User;
+}
+
+type EventName = 'messageCreate' | 'messageReactionAdd';
+type Listener<Event extends EventName> = (...args: GatewayEventMap[Event]) => void;
+
+function assertPositiveInteger(name: string, value: number): void {
+	if (!Number.isInteger(value) || value <= 0) throw new RangeError(`The collector's ${name} must be a positive integer, received ${value}`);
+}
+
+/**
+ * Listens to a client event until `max` values pass the filter or `time` elapses, and always removes its listener.
+ * A throwing filter rejects the collector.
+ *
+ * @param pick Maps an event to the value to collect, `null` when the event is not about the target.
+ */
+function collect<Event extends EventName, T>(
+	event: Event,
+	options: AwaitOptions<T>,
+	pick: (...args: GatewayEventMap[Event]) => T | null
+): Promise<T[]> {
+	const { filter, max = 1, time } = options;
+	assertPositiveInteger('time', time);
+	assertPositiveInteger('max', max);
+
+	// plugin-gateway augments the framework's `ClientEvents` with `GatewayEventMap`, but the emitter's overloads cannot
+	// resolve a listener for a generic event name, so the client is narrowed to the two events used here.
+	const client = container.client as unknown as {
+		on<E extends EventName>(event: E, listener: Listener<E>): unknown;
+		off<E extends EventName>(event: E, listener: Listener<E>): unknown;
+	};
+
+	return new Promise<T[]>((resolve, reject) => {
+		const collected: T[] = [];
+		let settled = false;
+
+		const finish = (error?: unknown) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			client.off(event, listener);
+			if (error === undefined) resolve(collected);
+			else reject(error);
+		};
+
+		const accept = async (value: T) => {
+			try {
+				if (filter && !(await filter(value))) return;
+			} catch (error) {
+				finish(error ?? new Error('The collector filter threw'));
+				return;
+			}
+			if (settled) return;
+			collected.push(value);
+			if (collected.length >= max) finish();
+		};
+
+		const listener: Listener<Event> = (...args) => {
+			if (settled) return;
+			const value = pick(...args);
+			if (value !== null) void accept(value);
+		};
+
+		const timer = setTimeout(() => finish(), time);
+		timer.unref?.();
+		client.on(event, listener);
+	});
+}
+
+/**
+ * Collects the messages sent in a channel, from the client's `messageCreate` events.
+ *
+ * @returns The collected messages, once `max` of them are collected or `time` elapses.
+ * @throws {RangeError} When `time` or `max` is not a positive integer.
+ */
+export function awaitMessages(channel: { id: string }, options: AwaitOptions<Message>): Promise<Message[]> {
+	return collect('messageCreate', options, (message) => (message.channelId === channel.id ? message : null));
+}
+
+/**
+ * Collects the reactions added to a message, from the client's `messageReactionAdd` events. Reactions whose user is
+ * unknown (an uncached user outside of guilds) are skipped.
+ *
+ * @returns The collected reactions, once `max` of them are collected or `time` elapses.
+ * @throws {RangeError} When `time` or `max` is not a positive integer.
+ */
+export function awaitReactions(message: { id: string; channelId: string }, options: AwaitOptions<CollectedReaction>): Promise<CollectedReaction[]> {
+	return collect('messageReactionAdd', options, (reaction, user) =>
+		user !== null && reaction.messageId === message.id && reaction.channelId === message.channelId ? { reaction, user } : null
+	);
+}

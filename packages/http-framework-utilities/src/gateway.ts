@@ -1,3 +1,4 @@
+export * from './lib/gateway/collectors.js';
 export {
 	canJoinVoiceChannel,
 	canReact,
