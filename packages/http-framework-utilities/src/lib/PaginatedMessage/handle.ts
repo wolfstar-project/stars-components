@@ -32,6 +32,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 	const { sessionId, action } = decoded;
 	const runtimes = getPaginatedMessageRuntime();
 	const loadedRuntime = runtimes.get(sessionId);
+	// The runtime entry is the only way this process knows about a per-instance store, so it is always read for it.
 	const store = loadedRuntime?.store ?? getSessionStore();
 	// A shared store is visible to every replica; a runtime entry only ever describes this process, so it must not
 	// be trusted for custom actions or lazy page resolution once the store says the session can be handled anywhere.
@@ -102,7 +103,7 @@ export async function handlePaginatedMessageInteraction(interaction: Interaction
 
 	// Only the process that ran the message holds a cleanup record; other replicas are picked up by its recheck.
 	refreshCleanup(sessionId, expiresAt, components);
-	if (runtime !== null) runtimes.set(sessionId, runtime, ttl);
+	if (loadedRuntime !== null) runtimes.set(sessionId, loadedRuntime, ttl);
 	if (interaction.replied) return;
 
 	await interaction.update({ ...page, components });

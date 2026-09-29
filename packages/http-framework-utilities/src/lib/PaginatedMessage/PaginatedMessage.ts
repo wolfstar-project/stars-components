@@ -66,7 +66,6 @@ interface PreparedSession {
 	session: PaginatedMessageSession;
 	payload: APIInteractionResponseCallbackData;
 	store: SessionStore;
-	shared: boolean;
 }
 
 export interface PaginatedMessageStart {
@@ -391,12 +390,14 @@ export class PaginatedMessage {
 		if (shared) assertSharedSessionState(session);
 
 		const sessionId = createSessionId();
-		return { sessionId, session, payload: { ...pages[this.index]!, components: renderComponents(sessionId, session) }, store, shared };
+		return { sessionId, session, payload: { ...pages[this.index]!, components: renderComponents(sessionId, session) }, store };
 	}
 
-	async #save({ sessionId, session, store, shared }: PreparedSession, ttl: number): Promise<void> {
+	async #save({ sessionId, session, store }: PreparedSession, ttl: number): Promise<void> {
 		await store.set(sessionId, session, ttl);
-		if (!shared) getPaginatedMessageRuntime().set(sessionId, this, ttl);
+		// Registered for shared stores too: it is how this process finds a per-instance store. The handler only trusts it
+		// for custom actions and lazy pages when the store is process-scoped.
+		getPaginatedMessageRuntime().set(sessionId, this, ttl);
 	}
 }
 

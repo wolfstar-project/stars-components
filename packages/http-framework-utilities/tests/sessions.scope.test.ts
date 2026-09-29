@@ -130,15 +130,16 @@ describe('PaginatedMessage with a shared store', () => {
 		expect(interaction.reply).not.toHaveBeenCalled();
 	});
 
-	test('GIVEN eager pages THEN succeeds, writes the session and does not register a runtime entry', async () => {
+	test('GIVEN eager pages THEN succeeds, writes the session and registers a runtime entry pointing at its store', async () => {
 		const { client, data } = fakeRedis();
 		setSessionStore(new RedisSessionStore({ redis: client }));
 		const interaction = fakeCommandInteraction(UserData.id);
-		const sessionId = await new PaginatedMessage().addPageContent('a').addPageContent('b').run(interaction);
+		const message = new PaginatedMessage().addPageContent('a').addPageContent('b');
+		const sessionId = await message.run(interaction);
 
 		expect(interaction.reply).toHaveBeenCalledOnce();
 		expect(data.size).toBe(1);
-		expect(getPaginatedMessageRuntime().get(sessionId)).toBeNull();
+		expect(getPaginatedMessageRuntime().get(sessionId)).toBe(message);
 	});
 
 	test('GIVEN a click on a custom action id THEN expires instead of falling back to the runtime', async () => {
@@ -158,6 +159,43 @@ describe('PaginatedMessage with a shared store', () => {
 			.addPageContent('b')
 			.addAction({ id: 'jump', type: 'button', label: 'Jump', run });
 		getPaginatedMessageRuntime().set(sessionId, runtimeInstance, 1000);
+
+		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'jump'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+		expect(click.body()).toMatchObject({ data: { components: [] } });
+		expect(run).not.toHaveBeenCalled();
+	});
+});
+
+describe('PaginatedMessage with a per-instance shared store and the default memory store', () => {
+	test('GIVEN a next click on the creating process THEN reads the instance store and updates to page 2', async () => {
+		const { client, data } = fakeRedis();
+		const store = new RedisSessionStore({ redis: client });
+		const interaction = fakeCommandInteraction(UserData.id);
+		const message = new PaginatedMessage({ store }).addPageContent('a').addPageContent('b');
+		const sessionId = await message.run(interaction);
+		expect(data.size).toBe(1);
+
+		const refresh = vi.spyOn(getPaginatedMessageRuntime(), 'set');
+		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'next'));
+		await handlePaginatedMessageInteraction(click.interaction, click.value);
+
+		expect(click.body()).toMatchObject({ data: { content: 'b' } });
+		await expect(store.get(sessionId)).resolves.toMatchObject({ index: 1 });
+		// The runtime entry's TTL follows the session's, so later clicks still find the instance store.
+		expect(refresh).toHaveBeenCalledWith(sessionId, message, expect.any(Number));
+		refresh.mockRestore();
+	});
+
+	test('GIVEN a custom action added to that instance after run THEN still expires (no runtime fallback)', async () => {
+		const { client } = fakeRedis();
+		const store = new RedisSessionStore({ redis: client });
+		const interaction = fakeCommandInteraction(UserData.id);
+		const message = new PaginatedMessage({ store }).addPageContent('a').addPageContent('b');
+		const sessionId = await message.run(interaction);
+
+		const run = vi.fn();
+		message.addAction({ id: 'jump', type: 'button', label: 'Jump', run });
 
 		const click = clickButton(encodeCustomId(PaginatedMessageHandlerName, sessionId, 'jump'));
 		await handlePaginatedMessageInteraction(click.interaction, click.value);
