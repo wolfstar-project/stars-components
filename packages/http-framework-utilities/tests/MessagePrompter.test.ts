@@ -107,6 +107,12 @@ describe('MessagePrompter', () => {
 		expect(vi.getTimerCount()).toBe(0);
 	});
 
+	test.each([1.5, 0.5, 60_000.25])('GIVEN a fractional timeout %d THEN run rejects with a RangeError before replying', async (timeout) => {
+		const interaction = fakeCommandInteraction(UserData.id);
+		await expect(new MessagePrompter('Sure?', 'confirm', { timeout }).run(interaction)).rejects.toThrow(RangeError);
+		expect(interaction.reply).not.toHaveBeenCalled();
+	});
+
 	test('GIVEN the handler name THEN custom ids target wolfstar-mp', () => {
 		expect(encodeCustomId(MessagePrompterHandlerName, 'abcDEF123456', 'yes')).toBe('wolfstar-mp.abcDEF123456.yes');
 	});

@@ -1,5 +1,6 @@
 import { getGatewayClient, type GatewayClient, type GatewayEventMap, type Message, type MessageReaction, type User } from '@wolfstar/plugin-gateway';
 import type { Awaitable } from '../sessions/SessionStore.js';
+import { MaximumTimerDelay } from '../timers.js';
 
 export interface AwaitOptions<T> {
 	/**
@@ -13,8 +14,8 @@ export interface AwaitOptions<T> {
 	 */
 	max?: number;
 	/**
-	 * How long to collect for, in milliseconds, a positive integer. The collector resolves with whatever it collected
-	 * when it elapses.
+	 * How long to collect for, in milliseconds, a positive integer of at most 2^31 - 1 (~24.8 days, the longest
+	 * `setTimeout` delay). The collector resolves with whatever it collected when it elapses.
 	 */
 	time: number;
 }
@@ -54,6 +55,7 @@ function collect<Event extends EventName, T>(
 ): Promise<T[]> {
 	const { filter, max = 1, time } = options;
 	assertPositiveInteger('time', time);
+	if (time > MaximumTimerDelay) throw new RangeError(`The collector's time must be at most ${MaximumTimerDelay} ms, received ${time}`);
 	assertPositiveInteger('max', max);
 
 	let gatewayClient: GatewayClient;
@@ -111,7 +113,7 @@ function collect<Event extends EventName, T>(
  * Collects the messages sent in a channel, from the client's `messageCreate` events.
  *
  * @returns The collected messages, once `max` of them are collected or `time` elapses.
- * @throws {RangeError} When `time` or `max` is not a positive integer.
+ * @throws {RangeError} When `time` or `max` is not a positive integer, or `time` exceeds 2^31 - 1.
  * @remarks Rejects when `container.client` is not a `GatewayClient`.
  */
 export function awaitMessages(channel: { id: string }, options: AwaitOptions<Message>): Promise<Message[]> {
@@ -124,7 +126,7 @@ export function awaitMessages(channel: { id: string }, options: AwaitOptions<Mes
  * {@linkcode CollectedReaction.userId}.
  *
  * @returns The collected reactions, once `max` of them are collected or `time` elapses.
- * @throws {RangeError} When `time` or `max` is not a positive integer.
+ * @throws {RangeError} When `time` or `max` is not a positive integer, or `time` exceeds 2^31 - 1.
  * @remarks Rejects when `container.client` is not a `GatewayClient`.
  */
 export function awaitReactions(message: { id: string; channelId: string }, options: AwaitOptions<CollectedReaction>): Promise<CollectedReaction[]> {

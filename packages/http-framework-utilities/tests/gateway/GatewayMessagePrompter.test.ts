@@ -386,6 +386,11 @@ describe('GatewayMessagePrompter', () => {
 			expect(send).not.toHaveBeenCalled();
 		});
 
+		test.each([1.5, 2 ** 31])('GIVEN a timeout of %d THEN rejects before sending', async (timeout) => {
+			await expect(new GatewayMessagePrompter('Sure?', 'reaction', { timeout }).run(textChannel(), { id: UserId })).rejects.toThrow(RangeError);
+			expect(post).not.toHaveBeenCalled();
+		});
+
 		test('GIVEN no reactions THEN rejects before sending', async () => {
 			await expect(new GatewayMessagePrompter('Sure?', 'reaction', { reactions: [] }).run(textChannel(), { id: UserId })).rejects.toThrow(
 				RangeError

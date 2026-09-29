@@ -13,6 +13,7 @@ import type { MessageBuilder } from '../MessageBuilder.js';
 import type { PaginatedMessagePage } from '../PaginatedMessage/types.js';
 import { awaitMessages, awaitReactions } from './collectors.js';
 import { isInteraction, toReplyOptions, type GatewayTarget } from './targets.js';
+import { MaximumTimerDelay } from '../timers.js';
 import { isGuildBasedChannel, isMessageInstance } from './type-guards.js';
 
 export type GatewayMessagePrompterStrategy = MessagePrompterStrategy | 'message' | 'reaction';
@@ -163,6 +164,12 @@ export class GatewayMessagePrompter<S extends GatewayMessagePrompterStrategy = '
 		const message = isMessageInstance(target) ? target : null;
 		const interaction = message === null && isInteraction(target) ? target : null;
 		const timeout = this.prepareRun(interaction !== null);
+		// The collectors run on a single timer: reject a longer timeout here rather than once the question is sent.
+		if (timeout > MaximumTimerDelay) {
+			throw new RangeError(
+				`GatewayMessagePrompter "${strategy}" strategy needs a timeout of at most ${MaximumTimerDelay} ms, received ${timeout}`
+			);
+		}
 
 		const reactions = this.options.reactions ?? DefaultReactions;
 		const keys = reactions.map((emoji) => emojiKey(ReactionEmoji.resolvePartial(emoji)));

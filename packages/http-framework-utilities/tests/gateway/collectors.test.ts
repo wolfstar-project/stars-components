@@ -162,6 +162,14 @@ describe('gateway collectors', () => {
 			await expect(promise).resolves.toEqual([accepted]);
 		});
 
+		test('GIVEN a time above the maximum timer delay THEN throws a RangeError without listening', () => {
+			expect(() => awaitReactions(target, { time: 2 ** 31 })).toThrow(RangeError);
+			expect(() => awaitMessages({ id: ChannelId }, { time: 2 ** 31 })).toThrow(RangeError);
+			expect(emitter.listenerCount('messageReactionAdd')).toBe(0);
+			expect(emitter.listenerCount('messageCreate')).toBe(0);
+			expect(vi.getTimerCount()).toBe(0);
+		});
+
 		test('GIVEN an invalid time THEN throws a RangeError', () => {
 			expect(() => awaitReactions(target, { time: 0 })).toThrow(RangeError);
 			expect(emitter.listenerCount('messageReactionAdd')).toBe(0);

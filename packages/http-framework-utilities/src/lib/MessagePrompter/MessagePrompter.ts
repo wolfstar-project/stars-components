@@ -32,8 +32,8 @@ export interface MessagePrompterStrategyReturns {
 
 export interface MessagePrompterOptions {
 	/**
-	 * How long to wait for an answer, in milliseconds. At most {@linkcode MaximumTokenLifetime}: the prompt is only
-	 * editable with the interaction token.
+	 * How long to wait for an answer, in milliseconds, a positive integer. At most {@linkcode MaximumTokenLifetime}: the
+	 * prompt is only editable with the interaction token.
 	 * @default 60_000
 	 */
 	timeout?: number;
@@ -109,11 +109,11 @@ export class MessagePrompter<S extends MessagePrompterStrategy = 'confirm'> {
 
 		const timeout = this.options.timeout ?? 60_000;
 		// An interaction prompt always edits its '@original' response, so the interaction token is its only edit credential.
-		if (!Number.isFinite(timeout) || timeout <= 0 || (tokenBound && timeout > MaximumTokenLifetime)) {
+		if (!Number.isInteger(timeout) || timeout <= 0 || (tokenBound && timeout > MaximumTokenLifetime)) {
 			throw new RangeError(
 				tokenBound
-					? `timeout must be a positive number of at most ${MaximumTokenLifetime} ms (MaximumTokenLifetime), received ${timeout}`
-					: `timeout must be a positive finite number, received ${timeout}`
+					? `timeout must be a positive integer of at most ${MaximumTokenLifetime} ms (MaximumTokenLifetime), received ${timeout}`
+					: `timeout must be a positive integer, received ${timeout}`
 			);
 		}
 

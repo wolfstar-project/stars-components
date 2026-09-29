@@ -2,6 +2,7 @@ import { container } from '@wolfstar/http-framework';
 import { Routes, type APIActionRowComponent, type APIComponentInMessageActionRow } from 'discord-api-types/v10';
 import { describeRestError } from './errors.js';
 import { disableMessageComponents } from './expire.js';
+import { MaximumTimerDelay } from './timers.js';
 
 /**
  * How long an interaction token is used to edit a response, in milliseconds: one minute below Discord's 15-minute
@@ -71,8 +72,7 @@ interface CleanupEntry {
 	timer: ReturnType<typeof setTimeout> | null;
 }
 
-// `setTimeout` overflows past 2^31 - 1 ms (~24.8 days); longer deadlines are re-armed when the timer fires early.
-const MaximumTimerDelay = 2 ** 31 - 1;
+// `setTimeout` overflows past `MaximumTimerDelay`; longer deadlines are re-armed when the timer fires early.
 
 const entries = new Map<string, CleanupEntry>();
 
