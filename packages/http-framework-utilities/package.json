@@ -1,0 +1,94 @@
+{
+	"name": "@wolfstar/http-framework-utilities",
+	"version": "0.0.0",
+	"description": "Utilities for @wolfstar/http-framework: type guards, permission helpers, message builder, paginated messages, and prompters",
+	"keywords": [
+		"discord",
+		"http",
+		"http-framework",
+		"paginated-message",
+		"utilities",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework-utilities",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/http-framework-utilities"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": [
+		"./dist/esm/register.js"
+	],
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./register": {
+			"import": {
+				"types": "./dist/esm/register.d.ts",
+				"default": "./dist/esm/register.js"
+			}
+		},
+		"./gateway": {
+			"import": {
+				"types": "./dist/esm/gateway.d.ts",
+				"default": "./dist/esm/gateway.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"@wolfstar/discord-utilities": "workspace:^"
+	},
+	"devDependencies": {
+		"@vitest/coverage-v8": "^5.0.1",
+		"@wolfstar/http-framework": "workspace:*",
+		"@wolfstar/http-framework-test-utils": "workspace:*",
+		"@wolfstar/plugin-gateway": "^0.8.0",
+		"discord-api-types": "^0.38.30",
+		"golar": "^0.1.10",
+		"tsdown": "^0.23.0",
+		"typescript": "~7.0.2",
+		"vitest": "^5.0.1"
+	},
+	"peerDependencies": {
+		"@wolfstar/http-framework": "workspace:^",
+		"@wolfstar/plugin-gateway": "^0.8.0",
+		"discord-api-types": "^0.38.30"
+	},
+	"peerDependenciesMeta": {
+		"@wolfstar/plugin-gateway": {
+			"optional": true
+		}
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

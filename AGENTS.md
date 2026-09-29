@@ -37,6 +37,22 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - Decorators: `@wolfstar/decorators` (`packages/decorators`) is the `@sapphire/decorators` counterpart — `ApplyOptions`, `RequiresGuildContext`/`RequiresDMContext`, `RequiresUserPermissions`/`RequiresClientPermissions`, `Enumerable`/`EnumerableMethod`, and the `createClassDecorator`/`createMethodDecorator`/`createProxy`/`createFunctionPrecondition` primitives. It peer-depends on `@wolfstar/http-framework` (for `PreconditionError`, `Identifiers`, and the permission helpers), so the framework must never depend on it back: the framework only keeps the registration decorators (`Register*`, `RestrictGuildIds`) and its own private `createClassDecorator`/`createMethodDecorator` copies in `packages/http-framework/src/lib/utils/decorators.ts`. `@wolfstar/decorators` is one of the default `imports.presets` (`DEFAULT_IMPORTS_PRESETS` in `packages/schema/src/config/resolve.ts`). The root `tsconfig.json` lists `packages/http-framework/` before `packages/` in `include` on purpose: `packages/decorators` sorts before the framework and imports its built `dist/*.d.ts`, so without that ordering the framework's duplicate `@sapphire/pieces` module augmentations get reported against its sources instead of against the declaration files (which `skipLibCheck` silences).
 - Shareable tooling configs, extracted from this repo's own root config and published for external `@wolfstar/*` consumers: `@wolfstar/oxlint-config`, `@wolfstar/oxfmt-config`, `@wolfstar/eslint-config`, `@wolfstar/prettier-config`, and `@wolfstar/eslint-plugin-http-framework` (custom oxlint/ESLint rules for `@wolfstar/http-framework` and `@wolfstar/plugin-*` consumers, namespaced `wolfstar/*`). This repo's own root `.oxlintrc.json`/`.oxfmtrc.json` are the source these were extracted from, not consumers of them — the root config is not migrated to `extends`/depend on the published packages. `@wolfstar/oxlint-config` and `@wolfstar/oxfmt-config` are built TypeScript modules (`tsdown`, same layout as `@wolfstar/prettier-config`) whose default export is built with oxlint's/oxfmt's own `defineConfig` helper, not raw JSON — consumers write `import baseConfig from '@wolfstar/oxfmt-config'` / `extends: [baseConfig]` in an `oxlint.config.ts`, not `with { type: 'json' }` imports or file-path `extends`.
 - i18n: `@wolfstar/plugin-i18next` (external, published from `wolfstar-project/plugins`) is the standard `@wolfstar/http-framework` i18n plugin — `@wolfstar/shared-http-pieces` consumes it directly. `@wolfstar/http-framework-i18n` has been removed from this monorepo in favour of it (deprecate the published versions on npm separately); `@wolfstar/i18next-backend` remains published as the plugin's backend dependency. `@wolfstar/i18next-type-generator` is a CLI (`i18next-type-generator <locales-dir> <output.d.ts>`) that generates the i18next `CustomTypeOptions` augmentation from locale JSON, replacing hand-maintained `LanguageKeys`/`T`/`FT` helpers; consuming packages wire it up via a `generate:i18n` script (see `packages/shared-http-pieces/package.json`). The CLI auto-registers installed `@wolfstar/plugin-*` packages (`packages/cli/src/utils/plugin-registrations.ts`, which re-exports the discovery logic from `@wolfstar/vite-server/internal`): it discovers them from the app's dependencies/optionalDependencies and injects each plugin's `/register` side-effect entrypoint before the app entry in tsdown and Vite builds, so consumers no longer need a manual `import '@wolfstar/plugin-i18next/register'`.
+- `@wolfstar/discord-utilities` (`packages/discord-utilities`) and `@wolfstar/http-framework-utilities`
+  (`packages/http-framework-utilities`) are the `@wolfstar` counterparts of `@sapphire/discord-utilities` and
+  `@sapphire/discord.js-utilities`: library-agnostic limits/regexes/raw-payload option resolvers, and (built on top,
+  depending on `@wolfstar/http-framework`) type guards, permission helpers, `MessageBuilder`, `PaginatedMessage`, and
+  `MessagePrompter`. `PaginatedMessage`/`MessagePrompter` sessions live behind a pluggable `SessionStore` — an
+  in-memory default, or a `RedisSessionStore` (over a minimal `get`/`set(key, value, 'PX', ms)`/`del` shape an
+  `ioredis` client satisfies without a dependency) for bots running several processes. Their interaction handlers use
+  the `wolfstar-pm` (paginated message) and `wolfstar-mp` (message prompter) custom-id prefixes. Importing
+  `@wolfstar/http-framework-utilities/register` (before constructing the client) is required: it registers them on
+  every process, including those that receive a click without ever calling `run` (e.g. behind a shared
+  `RedisSessionStore`); the `stars` CLI does not auto-register it. Self-registration on the first
+  `PaginatedMessage#run`/`MessagePrompter#run` is only a safety net. Gateway support is the
+  `@wolfstar/http-framework-utilities/gateway` subpath (optional peer `@wolfstar/plugin-gateway@^0.8.0`, Node `>=24.17`):
+  structure type guards, async `can*` permission helpers, `awaitMessages`/`awaitReactions`, `GatewayPaginatedMessage`,
+  and `GatewayMessagePrompter` (adds the `message`/`reaction` strategies). Clicks still arrive as HTTP interactions, so
+  gateway bots keep serving their interactions endpoint. It is not a separate package in `wolfstar-project/plugins`.
 - Logging: `@wolfstar/http-framework` has a built-in logger (`container.logger`); `@wolfstar/logger` has been removed from this monorepo in favour of `@wolfstar/plugin-logger` (published from `wolfstar-project/plugins`).
 - Tolgee sync is configured at root (`.tolgeerc.cjs`) and only targets `packages/shared-http-pieces/src/locales/**`.
   Scripts: `pnpm tolgee:push` (base `en`), `pnpm tolgee:pull` (pull + remap), `pnpm tolgee:ensure-languages`.
@@ -91,8 +107,8 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 ## Design specifications
 
 - [Discord utilities design](docs/superpowers/specs/2026-09-28-discord-utilities-design.md) defines the proposed
-  utility packages, registration, session constraints, and cleanup contract. Implementation is pending; this is
-  repository design documentation, not the external docs site.
+  utility packages, registration, session constraints, and cleanup contract. It is implemented in `packages/discord-utilities` and
+  `packages/http-framework-utilities`; this is repository design documentation, not the external docs site.
 
 ## Notes for agents
 

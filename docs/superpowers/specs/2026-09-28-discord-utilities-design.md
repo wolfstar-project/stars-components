@@ -1,14 +1,14 @@
 # Discord utilities for `@wolfstar/http-framework` — design
 
 Date: 2026-09-28
-Status: approved design, pending spec review
+Status: implemented
 
 ## Goal
 
 Provide the `@wolfstar` counterparts of
 [`@sapphire/discord-utilities`](https://npmx.dev/package/@sapphire/discord-utilities) and
 [`@sapphire/discord.js-utilities`](https://npmx.dev/package/@sapphire/discord.js-utilities), so that bots built on
-`@wolfstar/http-framework` (and later on `@wolfstar/plugin-gateway`) get limits, regexes, option resolvers, type
+`@wolfstar/http-framework` (and, through the `/gateway` subpath, on `@wolfstar/plugin-gateway`) get limits, regexes, option resolvers, type
 guards, permission helpers, a message builder, paginated messages, and prompters without depending on discord.js.
 
 ## Packages
@@ -49,7 +49,8 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
       moves to `ChatInputInteractionOptionResolver`, `getTargetUser` / `getTargetMember` / `getTargetMessage` to
       `ContextMenuInteractionOptionResolver`, and `getFocusedOption` to `AutocompleteInteractionOptionResolver`.
       `ModalInteractionOptionResolver` covers modal inputs; there is no legacy resolver compatibility alias.
-- The future `@wolfstar/plugin-gateway-utilities` depends on this package unchanged.
+- The `@wolfstar/http-framework-utilities/gateway` subpath (see Revision 2) builds on this package unchanged; there is
+  no separate gateway utilities package.
 
 ### `@wolfstar/http-framework-utilities` (`packages/http-framework-utilities`)
 
@@ -80,8 +81,9 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 ### `MessageBuilder`
 
 - Fluent builder producing the body accepted by the framework's reply / update / follow-up methods
-  (`UpdateResponseOptions`-compatible): `setContent`, `setEmbeds`, `setComponents`, `setFiles`,
-  `setAllowedMentions`, `setFlags`, `setTTS`, `toJSON()`.
+  (`UpdateResponseOptions`-compatible): `setContent`, `setEmbeds`, `addEmbeds`, `setComponents`,
+  `setAllowedMentions`, `setFlags`, `setTTS`, `toJSON()`. No `setFiles`: the framework's `reply` / `update` do not
+  upload files, only `followup` does.
 - Validates lengths against `MessageLimits` / `EmbedLimits` only on `toJSON()`, throwing a `RangeError` naming the
   field.
 
@@ -105,7 +107,7 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 
 - Strategies `confirm` (yes/no buttons) and `number` (buttons from `start` to `end`, max 25, across at most five
   action rows). The number range is configurable, rather than promising parity with Sapphire's default 0–10 range.
-- `run(interaction)` returns a promise resolved when the target user clicks, or rejected/resolved with `undefined`
+- `run(interaction)` returns a promise resolved when the target user clicks, or resolved with `null`
   on timeout (matching Sapphire's `confirm` → `boolean`, `number` → `number`). HTTP has no collector: the package's
   interaction handler resolves an in-process waiter keyed by session id. A prompter is therefore process-local — the
   click must reach the process that called `run`. `run` rejects a shared store before replying rather than
@@ -116,13 +118,15 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 ## State and interaction flow
 
 1. `PaginatedMessage.run` / `MessagePrompter.run` create a session
-   `{ id, ownerId, kind, state, expiresAt, cleanupTarget }` and save it in a `SessionStore`. `cleanupTarget` contains
-   the message id, channel id when available, and whether the response is ephemeral; credentials stay outside the
-   serialised session (see timeout cleanup below).
+   `{ id, ownerId, kind, state, expiresAt }` and save it in a `SessionStore`. The cleanup target (message id,
+   channel id when available, and whether the response is ephemeral) and the credentials stay outside the
+   serialised session, in the process-local cleanup record (see timeout cleanup below).
 2. `SessionStore` interface: `get(id)`, `set(id, value, ttlMs)`, `delete(id)`, all returning promises.
     - Default: `MemorySessionStore`, a `Map` with expiry checked on read and a periodic sweep (unref'd timer).
-    - Optional adapter for `@wolfstar/plugin-cache` (subpath export `@wolfstar/http-framework-utilities/plugin-cache`,
-      `@wolfstar/plugin-cache` as optional peer), for multi-process bots.
+    - `RedisSessionStore` (`scope: 'shared'`) for multi-process bots, over a minimal `RedisSessionClientLike`
+      (`get` / `set(key, value, 'PX', ms)` / `del`) that an `ioredis` `Redis` or `Cluster` satisfies without a
+      dependency. `@wolfstar/plugin-cache` is a per-entity Discord cache, not a key/value store, so there is no
+      adapter for it.
     - Configured once through `setSessionStore(store)`; per-instance override via options. Each store declares
       `scope: 'process' | 'shared'`, so `run` can validate supported session shapes before sending a response.
     - Shared stores support only eager JSON pages plus reserved built-in action ids, with no function registry
@@ -140,7 +144,8 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 5. On click: load session → if missing or expired, reply ephemerally with an "expired" message (overridable) and
    disable the components → if `interaction.user.id !== ownerId` and owner checking is on, reply with the
    wrong-user reply → otherwise run the action and `update` the message with the new page.
-6. `stop` edits the current message, then deletes the session and cancels its timer. Timeout deletes the
+6. `stop` edits the current message, then deletes the session (Revision 2: replaces it with a tombstone) and cancels
+   its timer. Timeout deletes the
    session and attempts to remove components (or disable them, configurable) through the cleanup target below.
 
 ### Timeout cleanup
@@ -170,7 +175,8 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 
 - Invalid builder input: `RangeError` / `TypeError` at build time, with the offending field named.
 - Store failures in the handler: logged through the framework logger (`container.logger`), user gets the generic
-  expired reply; no unhandled rejections.
+  expired reply when the session cannot be read (Revision 2: a failed save keeps the current page and sends a
+  save-failed notice instead); no unhandled rejections.
 - Discord API errors from normal action `update`/`reply` calls: propagate through the framework's existing result handling; the session
   is not deleted, so a retry is possible.
 
@@ -187,9 +193,10 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 
 ## Out of scope
 
-- `@wolfstar/plugin-gateway-utilities` (lives in `wolfstar-project/plugins`, a follow-up that builds on
-  `@wolfstar/discord-utilities`).
-- `MessagePrompter` `message` / `reaction` strategies, collectors, channel/guild caching.
+- A separate `@wolfstar/plugin-gateway-utilities` package: gateway support ships as the
+  `@wolfstar/http-framework-utilities/gateway` subpath instead (see Revision 2).
+- `MessagePrompter` `message` / `reaction` strategies and collectors on the main entrypoint (HTTP-only bots receive
+  neither); they exist only on the `/gateway` subpath. Channel/guild caching of our own.
 - Changes to `@wolfstar/http-framework` itself, beyond what the implementation plan finds strictly necessary.
 
 ## Repository chores
@@ -200,3 +207,90 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 - When implementing the packages, update `AGENTS.md` package count (25 → 27) and describe both packages briefly;
   `CLAUDE.md` is a symlink to that file.
 - npmjs.com trusted-publishing setup for both new names (manual, see `.changeset/README.md`).
+
+## Revision 2 (2026-09-29)
+
+Decisions taken while aligning the implementation with this spec and adding gateway support.
+
+### Alignment clarifications
+
+- **Store scope.** `SessionStore.scope` is required: `MemorySessionStore` is `'process'`, `RedisSessionStore` is
+  `'shared'`. A shared-state check (`assertSharedSessionState`) rejects, with a `TypeError` naming the field,
+  unresolved lazy pages, custom action callbacks, and values that do not survive a JSON round trip. With a shared
+  store the click handler never falls back to the process-local runtime registry for custom actions or lazy pages.
+  The creating process still registers a runtime entry for every session (its TTL follows the session's on each
+  click), because it is how the handler finds a per-instance store (`new PaginatedMessage({ store })`) that differs
+  from the default one; with a shared store it is only read for that store.
+- **Handler registration.** Importing `@wolfstar/http-framework-utilities/register` is required and documented.
+  `run` still self-registers the handlers as a safety net for the creating process; that does not replace the import
+  for processes that only receive clicks.
+- **Expired or unknown sessions.** One HTTP interaction gets one response, so the handler `update`s the message with
+  every component of `interaction.message` disabled, then sends the expiry notice as an ephemeral `followup`.
+  A session that expired or is unknown cannot be read, so its notice is process-wide: `setDefaultExpiredReply(text)`
+  / `getDefaultExpiredReply()`, defaulting to `DefaultExpiredReply`. `PaginatedMessage`'s per-instance
+  `expiredReply` (default: the process-wide notice) only applies while the session is still readable, e.g. a custom
+  action or lazy page unavailable on this process. `MessagePrompter` has no per-instance `expiredReply`.
+- **Timeout cleanup scope.** Cleanup is scheduled by `run(...)`. `start(ownerId)` flows send the payload themselves
+  and have no timeout cleanup; later clicks still expire the controls.
+- **Token bound.** `MaximumTokenLifetime` is 14 minutes (one-minute margin below Discord's 15). A session whose only
+  edit credential is the interaction token (ephemeral replies, or no channel/message id) caps its absolute
+  lifetime at that bound; `idle` above it is a `RangeError`. For a non-ephemeral reply, `run` fetches the real
+  message id after replying when `idle` exceeds the bound, and cleanup after the token expires uses the bot's
+  `container.rest` on `Routes.channelMessage(channelId, messageId)`. The real id lives only in the cleanup record:
+  `run` does not write the session again after fetching it (a click handled meanwhile would be overwritten), except
+  to lower the stored lifetime cap back to the token bound when the fetch fails, merging into the stored session.
+- **Timeout behaviour.** `timeoutBehavior: 'disable' | 'remove'`, default `'disable'`. `stop` always disables.
+- **Reserved action ids.** `PaginatedMessageBuiltinActionIds` (`first`, `previous`, `next`, `last`, `stop`,
+  `select`) always run the built-in behaviour, so `addAction` rejects a button action with a `run` callback and one of
+  those ids (`TypeError`). An action with a built-in id and no `run` restyles the default button.
+- **Concurrent clicks.** A process handles clicks on the same session one at a time (a per-session promise chain),
+  so overlapping clicks all apply. A click that must wait is acknowledged immediately with `deferUpdate`; after the
+  wait, its message edits go through the deferred response (`PATCH @original`) and its notices (wrong user, expired,
+  save failed) are ephemeral `followup`s. A deferred click edits the message first and saves the new session only when
+  that edit succeeded; a failed edit is logged, nothing is saved, and the save-failed notice is sent. Custom actions
+  on such a click receive an already-acknowledged interaction. `stop` replaces the session with a JSON tombstone
+  `{ stopped: true }` for the session's remaining lifetime instead of deleting it; the handler treats a tombstone like
+  an expired session, and a navigation re-reads the session right before saving and expires instead of saving when it
+  is now a tombstone or missing. Across replicas the store stays last-write-wins for simultaneous clicks on the same message: the re-read
+  narrows the window in which a click undoes a `stop`, but only atomic store operations could close it.
+- **Store lookup.** The handler reads the session from the creating process's runtime store (when this process ran
+  the message), then the default store, then every store registered with `registerSessionStore` (deduplicated),
+  skipping stores that fail to read (logged), and writes back to the store it found the session in. A per-instance
+  shared `store` must therefore be registered on every replica (or configured with `setSessionStore`); otherwise
+  clicks on the other replicas expire.
+- **Failed saves.** When saving a click fails, the handler `update`s the message with the stored page and components
+  (the index does not move) and sends `getDefaultSaveFailedReply()` (set with `setDefaultSaveFailedReply`, default
+  `'Something went wrong, please try again.'`) as an ephemeral `followup`.
+- **Answered prompts.** A prompt answered before its `reply`/`send` resolved schedules no timeout cleanup, so the
+  answered message is never edited again.
+
+### Gateway support: `@wolfstar/http-framework-utilities/gateway`
+
+- A subpath export with `@wolfstar/plugin-gateway` (`^0.8.0`) as an **optional** peer dependency; the main
+  entrypoint never imports it. Clicks still arrive as HTTP interactions and use the same `wolfstar-pm` /
+  `wolfstar-mp` handlers, so a gateway bot also serves its interactions endpoint (`GatewayClient.start({ listen })`).
+- **Type guards** with the main entrypoint's names, narrowing to `@wolfstar/plugin-gateway` structures
+  (`isTextChannel(channel): channel is TextChannel`, …), plus the discord.js-only guards dropped from the HTTP entry:
+  `isMessageInstance`, `isGuildMember` (structure), `isGuildBasedChannelByGuildKey`.
+- **Permission helpers** (`canReadMessages`, `canSendMessages`, `canSendEmbeds`, `canSendAttachments`, `canReact`,
+  `canRemoveAllReactions`, `canJoinVoiceChannel`) take a channel structure and return `Promise<boolean>`: they compute
+  the bot's permissions with `computePermissionsIn(channel, clientUserId)` (DM channels allow sending and reacting),
+  honour `Administrator`, use `SendMessagesInThreads` in threads, and resolve `false` instead of throwing when the
+  permissions cannot be computed.
+- **Collectors**: `awaitMessages(channel, { filter?, max?, time })` and `awaitReactions(message, { filter?, max?, time })`
+  listen to the framework client's `messageCreate` / `messageReactionAdd` events and always remove their listeners.
+  `time` is a positive integer of at most 2^31 − 1 ms. `awaitReactions` collects `{ reaction, user, userId }`, with
+  `user` `null` for users plugin-gateway has not cached; `userId` comes from the event details and is always set.
+  Filters run concurrently as events arrive; an event is committed once it and every earlier event have a decided
+  result, so results keep arrival order. On `time` expiry every event whose filter already passed is kept, in arrival
+  order, and events whose filter is still pending are dropped.
+- **`GatewayPaginatedMessage`** extends `PaginatedMessage`; `run(target, author?)` accepts an HTTP interaction
+  (unchanged behaviour), a gateway `Message` (replies to it), or a text-based channel (sends to it). Gateway messages
+  are bot-owned and non-ephemeral, so timeout cleanup uses the bot REST path without the token bound.
+- **`GatewayMessagePrompter`** extends `MessagePrompter` with the same targets and adds Sapphire's `message` strategy
+  (resolves with the author's next `Message` in the channel) and `reaction` strategy (reacts with the configured emojis
+  and resolves with the chosen one). Both check the client's intents (`GuildMessages` / `DirectMessages`, plus
+  `MessageContent` for `message`; `GuildMessageReactions` / `DirectMessageReactions` for `reaction`) and throw
+  before sending when they are missing.
+- Tests use `@wolfstar/plugin-gateway` as a devDependency with a fake client (event emitter and mocked REST); no
+  gateway connection.
