@@ -1,21 +1,13 @@
 import { UserData } from '@wolfstar/http-framework-test-utils';
 import { InteractionResponseType, MessageFlags } from 'discord-api-types/v10';
-import {
-	encodeCustomId,
-	getSessionStore,
-	MemorySessionStore,
-	MessageBuilder,
-	PaginatedMessage,
-	PaginatedMessageHandlerName,
-	setSessionStore
-} from '../src/index.js';
+import { encodeCustomId, getSessionStore, MessageBuilder, PaginatedMessage, PaginatedMessageHandlerName, setSessionStore } from '../src/index.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
-import { clickButton, fakeCommandInteraction, selectOption } from './helpers.js';
+import { clickButton, fakeCommandInteraction, selectOption, useMemorySessionStore } from './helpers.js';
 
 const owner = UserData.id;
 const id = (sessionId: string, action: string) => encodeCustomId(PaginatedMessageHandlerName, sessionId, action);
 
-beforeEach(() => setSessionStore(new MemorySessionStore({ sweepInterval: 0 })));
+useMemorySessionStore();
 
 describe('PaginatedMessage validation', () => {
 	test.each([0, -1, 1.5, Number.NaN])('GIVEN idle %p in the constructor THEN throws a RangeError', (idle) => {

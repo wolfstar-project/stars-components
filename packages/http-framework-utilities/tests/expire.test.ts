@@ -6,21 +6,19 @@ import {
 	disableMessageComponents,
 	encodeCustomId,
 	expireInteraction,
-	MemorySessionStore,
 	MessagePrompterHandlerName,
 	PaginatedMessage,
-	PaginatedMessageHandlerName,
-	setSessionStore
+	PaginatedMessageHandlerName
 } from '../src/index.js';
 import { handleMessagePrompterInteraction } from '../src/lib/MessagePrompter/handle.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
-import { clickButton } from './helpers.js';
+import { clickButton, useMemorySessionStore } from './helpers.js';
 
 const owner = UserData.id;
 const pmId = (sessionId: string, action: string) => encodeCustomId(PaginatedMessageHandlerName, sessionId, action);
 const mpId = (sessionId: string, action: string) => encodeCustomId(MessagePrompterHandlerName, sessionId, action);
 
-beforeEach(() => setSessionStore(new MemorySessionStore({ sweepInterval: 0 })));
+useMemorySessionStore();
 afterEach(() => vi.restoreAllMocks());
 
 describe('disableMessageComponents', () => {

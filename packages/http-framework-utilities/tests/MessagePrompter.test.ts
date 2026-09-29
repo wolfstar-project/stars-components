@@ -2,7 +2,7 @@ import { UserData } from '@wolfstar/http-framework-test-utils';
 import { InteractionResponseType, MessageFlags } from 'discord-api-types/v10';
 import { encodeCustomId, MessagePrompter, MessagePrompterHandlerName } from '../src/index.js';
 import { handleMessagePrompterInteraction } from '../src/lib/MessagePrompter/handle.js';
-import { clickButton, fakeCommandInteraction } from './helpers.js';
+import { clickButton, fakeCommandInteraction, useMemorySessionStore } from './helpers.js';
 
 function customIdsOf(interaction: ReturnType<typeof fakeCommandInteraction>): string[] {
 	const payload = interaction.reply.mock.calls[0]![0] as { components: { components: { custom_id: string }[] }[] };
@@ -14,6 +14,7 @@ async function flush() {
 }
 
 describe('MessagePrompter', () => {
+	useMemorySessionStore();
 	afterEach(() => vi.useRealTimers());
 
 	test('GIVEN confirm and a yes click THEN resolves true and clears the buttons', async () => {

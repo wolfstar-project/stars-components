@@ -10,9 +10,10 @@ import {
 	setSessionStore,
 	type RedisSessionClientLike
 } from '../src/index.js';
+import { handleMessagePrompterInteraction } from '../src/lib/MessagePrompter/handle.js';
 import { getPaginatedMessageRuntime } from '../src/lib/PaginatedMessage/runtime.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
-import { clickButton, fakeCommandInteraction } from './helpers.js';
+import { clickButton, fakeCommandInteraction, useMemorySessionStore } from './helpers.js';
 
 function fakeRedis() {
 	const data = new Map<string, string>();
@@ -23,6 +24,8 @@ function fakeRedis() {
 	};
 	return { client, data };
 }
+
+useMemorySessionStore();
 
 describe('SessionStore scope', () => {
 	test('GIVEN MemorySessionStore THEN scope is process', () => {
@@ -177,10 +180,14 @@ describe('MessagePrompter with a shared store', () => {
 		setSessionStore(new RedisSessionStore({ redis: client }));
 		const interaction = fakeCommandInteraction(UserData.id);
 		const store = new MemorySessionStore({ sweepInterval: 0 });
-		// Intentionally not awaited: `run` only resolves once the prompt is answered or times out; this test only
-		// needs to prove it does not reject synchronously and does reply.
-		void new MessagePrompter('Sure?', 'confirm', { store }).run(interaction);
+		// `run` only settles once the prompt is answered: answer it so the promise is awaited, never left dangling.
+		const answer = new MessagePrompter('Sure?', 'confirm', { store }).run(interaction);
 		await new Promise((resolve) => setImmediate(resolve));
 		expect(interaction.reply).toHaveBeenCalledOnce();
+
+		const payload = interaction.reply.mock.calls[0]![0] as { components: { components: { custom_id: string }[] }[] };
+		const click = clickButton(payload.components[0]!.components[0]!.custom_id);
+		await handleMessagePrompterInteraction(click.interaction, click.value);
+		await expect(answer).resolves.toBe(true);
 	});
 });

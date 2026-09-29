@@ -71,8 +71,13 @@ describe('RedisSessionStore', () => {
 
 describe('session store configuration', () => {
 	test('GIVEN setSessionStore THEN getSessionStore returns it', () => {
+		const previous = getSessionStore();
 		const store = new MemorySessionStore({ sweepInterval: 0 });
-		setSessionStore(store);
-		expect(getSessionStore()).toBe(store);
+		try {
+			setSessionStore(store);
+			expect(getSessionStore()).toBe(store);
+		} finally {
+			setSessionStore(previous);
+		}
 	});
 });

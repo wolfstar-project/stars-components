@@ -2,16 +2,14 @@ import { UserData } from '@wolfstar/http-framework-test-utils';
 import {
 	encodeCustomId,
 	LazyPaginatedMessage,
-	MemorySessionStore,
 	PaginatedFieldMessageEmbed,
 	PaginatedMessageEmbedFields,
-	PaginatedMessageHandlerName,
-	setSessionStore
+	PaginatedMessageHandlerName
 } from '../src/index.js';
 import { handlePaginatedMessageInteraction } from '../src/lib/PaginatedMessage/handle.js';
-import { clickButton } from './helpers.js';
+import { clickButton, useMemorySessionStore } from './helpers.js';
 
-beforeEach(() => setSessionStore(new MemorySessionStore({ sweepInterval: 0 })));
+useMemorySessionStore();
 
 describe('LazyPaginatedMessage', () => {
 	test('GIVEN function pages THEN only resolves them when displayed', async () => {

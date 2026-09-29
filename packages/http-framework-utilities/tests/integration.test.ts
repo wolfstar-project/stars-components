@@ -3,11 +3,13 @@ import { MessageComponentButtonInteractionData, makeResponse, UserData, type Moc
 import { ComponentType, InteractionResponseType } from 'discord-api-types/v10';
 import {
 	encodeCustomId,
+	getSessionStore,
 	MemorySessionStore,
 	PaginatedMessage,
 	PaginatedMessageHandlerName,
 	registerUtilityHandlers,
-	setSessionStore
+	setSessionStore,
+	type SessionStore
 } from '../src/index.js';
 
 /**
@@ -18,6 +20,7 @@ import {
 describe('integration: InteractionHandlerStore.runHandler', () => {
 	let previousIdParser: IIdParser | undefined;
 	let previousClient: unknown;
+	let previousStore: SessionStore;
 
 	beforeEach(() => {
 		previousIdParser = container.idParser;
@@ -25,12 +28,14 @@ describe('integration: InteractionHandlerStore.runHandler', () => {
 		container.idParser = new StringIdParser();
 		// `runHandler` emits lifecycle events on `container.client`; a minimal stub is enough here.
 		container.client = { emit: () => true } as never;
+		previousStore = getSessionStore();
 		setSessionStore(new MemorySessionStore({ sweepInterval: 0 }));
 	});
 
 	afterEach(() => {
 		container.idParser = previousIdParser as IIdParser;
 		container.client = previousClient as never;
+		setSessionStore(previousStore);
 	});
 
 	test('GIVEN a real next click THEN the store dispatches to the paginated message handler', async () => {

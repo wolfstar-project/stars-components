@@ -6,6 +6,7 @@ import {
 	type MockServerResponse
 } from '@wolfstar/http-framework-test-utils';
 import { ComponentType } from 'discord-api-types/v10';
+import { getSessionStore, MemorySessionStore, setSessionStore } from '../src/index.js';
 
 export interface Click {
 	interaction: InteractionHandler.Interaction;
@@ -47,4 +48,18 @@ export function selectOption(customId: string, value: string, userId?: string): 
 
 export function fakeCommandInteraction(userId: string) {
 	return { user: { id: userId }, reply: vi.fn(async (_data: unknown) => undefined) };
+}
+
+/**
+ * Installs a fresh process-scoped default store before each test of the calling file and restores the previous default
+ * afterwards. Vitest runs every file in one worker without isolation, so a default left behind by one file (e.g. a
+ * shared `RedisSessionStore`) would otherwise leak into the next one.
+ */
+export function useMemorySessionStore(): void {
+	let previous: ReturnType<typeof getSessionStore>;
+	beforeEach(() => {
+		previous = getSessionStore();
+		setSessionStore(new MemorySessionStore({ sweepInterval: 0 }));
+	});
+	afterEach(() => setSessionStore(previous));
 }
