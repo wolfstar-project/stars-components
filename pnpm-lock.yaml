@@ -1025,6 +1025,9 @@ importers:
       '@wolfstar/http-framework-test-utils':
         specifier: workspace:*
         version: link:../http-framework-test-utils
+      '@wolfstar/plugin-gateway':
+        specifier: ^0.8.0
+        version: 0.8.0(@wolfstar/http-framework@packages+http-framework)
       discord-api-types:
         specifier: ^0.38.30
         version: 0.38.55
@@ -1704,12 +1707,20 @@ packages:
     resolution: {integrity: sha512-eIp0jh8vVq0buhuW32/OJAHL6fxJtlCazaJUs4ul+thPcxSb1p0THxdL6dA1PZ9L6n6C3jiD5I+ZfITdcx7nag==}
     engines: {node: '>=24.17.0'}
 
+  '@discordjs/formatters@1.0.0-pr-11602.1789066132-275cd4b42':
+    resolution: {integrity: sha512-Tk11INBbM/SaI0O6CGL6bccX14WKLsW5tZD+zFbSjdis9rJGbnCrnbd6bOoT07OWVi+tQSggPfJYM+0q7TeF9g==}
+    engines: {node: '>=24.17.0'}
+
   '@discordjs/rest@2.6.3':
     resolution: {integrity: sha512-wvOylxNYJkwKjctS/Mn5GP1w9r3/rzyH+ThD1JlAca6zEdlHs8QWBBUQJpU5Q+W6DoIj/Ljh1IPlZs7hTU+UAg==}
     engines: {node: '>=18'}
 
   '@discordjs/structures@1.0.0-dev.1790035407-dbb749062':
     resolution: {integrity: sha512-KXFjxtLPneEE3BroTrcrx7nvHXwFkv/UYe0iwWe1/sNHuKjRJ6HGQMZRlMGj+4WB7LbGG/PORG+6dj+4m6hQPg==}
+    engines: {node: '>=24.17.0'}
+
+  '@discordjs/structures@1.0.0-pr-11602.1789066132-275cd4b42':
+    resolution: {integrity: sha512-szc7bTb9RX5nAf0bbWVSZhpH9E9psgoozkdXraomoPVwoLNzvziWL55fzxEVgxkepMnxLG3vSALmuAoZ/3h9Sw==}
     engines: {node: '>=24.17.0'}
 
   '@discordjs/util@1.2.0':
@@ -3126,8 +3137,23 @@ packages:
     resolution: {integrity: sha512-nlcPuvEbmCuBPG2oASiMyga7NVIjgo5/s4R9LnMBfdF9LTFSsJjKSIAnb63bWYSqrWdjGcc3Xd8LX3YXAuS4DQ==}
     engines: {node: '>=20.0.0'}
 
+  '@wolfstar/plugin-cache@0.5.0':
+    resolution: {integrity: sha512-A4EhFYbJYeeolAeHX2hBcKSLb6YRD+NtEhpzJ9iJdMfLVxTpwNP5G5f1x85m+8odwSJs31zp3saw0WEc1FQc1A==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      msgpackr: ^2.0.0
+    peerDependenciesMeta:
+      msgpackr:
+        optional: true
+
   '@wolfstar/plugin-gateway@0.0.0':
     resolution: {integrity: sha512-WTlCK1M85HW3x9opYRBqaGIwFeSXTAoGklIjc0gGrTLm/gPz6eeJDXVVGdshcx0tbI1ROXEQk7UfFk0lWkw0XQ==}
+    engines: {node: '>=24.17.0'}
+    peerDependencies:
+      '@wolfstar/http-framework': ^3.4.0 || ^5.0.0
+
+  '@wolfstar/plugin-gateway@0.8.0':
+    resolution: {integrity: sha512-XWJpcOpYHHxXQTF2UZe+PQ3lpOp7Ok7Kwxsu4O2GIwcLwCLNpmVtt1XsG6D1U35ZfyUIB/kQQU31V5UIqgocAg==}
     engines: {node: '>=24.17.0'}
     peerDependencies:
       '@wolfstar/http-framework': ^3.4.0 || ^5.0.0
@@ -6022,6 +6048,10 @@ snapshots:
     dependencies:
       discord-api-types: 0.38.55
 
+  '@discordjs/formatters@1.0.0-pr-11602.1789066132-275cd4b42':
+    dependencies:
+      discord-api-types: 0.38.55
+
   '@discordjs/rest@2.6.3':
     dependencies:
       '@discordjs/collection': 2.1.1
@@ -6037,6 +6067,12 @@ snapshots:
   '@discordjs/structures@1.0.0-dev.1790035407-dbb749062':
     dependencies:
       '@discordjs/formatters': 1.0.0-dev.1790035407-dbb749062
+      '@sapphire/snowflake': 3.5.5
+      discord-api-types: 0.38.55
+
+  '@discordjs/structures@1.0.0-pr-11602.1789066132-275cd4b42':
+    dependencies:
+      '@discordjs/formatters': 1.0.0-pr-11602.1789066132-275cd4b42
       '@sapphire/snowflake': 3.5.5
       discord-api-types: 0.38.55
 
@@ -7155,6 +7191,10 @@ snapshots:
     dependencies:
       discord-api-types: 0.38.55
 
+  '@wolfstar/plugin-cache@0.5.0':
+    dependencies:
+      discord-api-types: 0.38.55
+
   '@wolfstar/plugin-gateway@0.0.0(@wolfstar/http-framework@packages+http-framework)':
     dependencies:
       '@discordjs/core': 2.6.0
@@ -7166,6 +7206,21 @@ snapshots:
       discord-api-types: 0.38.55
     transitivePeerDependencies:
       - bufferutil
+      - utf-8-validate
+
+  '@wolfstar/plugin-gateway@0.8.0(@wolfstar/http-framework@packages+http-framework)':
+    dependencies:
+      '@discordjs/core': 2.6.0
+      '@discordjs/rest': 2.6.3
+      '@discordjs/structures': 1.0.0-pr-11602.1789066132-275cd4b42
+      '@discordjs/ws': 2.0.4
+      '@sapphire/pieces': 4.4.1
+      '@wolfstar/http-framework': link:packages/http-framework
+      '@wolfstar/plugin-cache': 0.5.0
+      discord-api-types: 0.38.55
+    transitivePeerDependencies:
+      - bufferutil
+      - msgpackr
       - utf-8-validate
 
   '@wolfstar/plugin-i18next@2.0.3(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(typescript@5.8.3)':

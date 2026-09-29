@@ -44,6 +44,12 @@
 				"default": "./dist/esm/register.js"
 			}
 		},
+		"./gateway": {
+			"import": {
+				"types": "./dist/esm/gateway.d.ts",
+				"default": "./dist/esm/gateway.js"
+			}
+		},
 		"./package.json": "./package.json"
 	},
 	"publishConfig": {
@@ -65,6 +71,7 @@
 		"@vitest/coverage-v8": "^5.0.1",
 		"@wolfstar/http-framework": "workspace:*",
 		"@wolfstar/http-framework-test-utils": "workspace:*",
+		"@wolfstar/plugin-gateway": "^0.8.0",
 		"discord-api-types": "^0.38.30",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
@@ -73,7 +80,13 @@
 	},
 	"peerDependencies": {
 		"@wolfstar/http-framework": "workspace:^",
+		"@wolfstar/plugin-gateway": "^0.8.0",
 		"discord-api-types": "^0.38.30"
+	},
+	"peerDependenciesMeta": {
+		"@wolfstar/plugin-gateway": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=20"

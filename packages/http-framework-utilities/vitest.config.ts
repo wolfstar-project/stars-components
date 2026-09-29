@@ -28,6 +28,12 @@ export default mergeConfig(
 					replacement: fileURLToPath(new URL('../discord-utilities/src/index.ts', import.meta.url))
 				}
 			]
+		},
+		test: {
+			// Inlined so the alias above also applies to the plugin's own `@wolfstar/http-framework` import: externalized,
+			// it would load the built framework, whose module init registers a second `interaction-handlers` store
+			// over the one this package's sources use.
+			server: { deps: { inline: ['@wolfstar/plugin-gateway'] } }
 		}
 	})
 );
