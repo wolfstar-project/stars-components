@@ -1,5 +1,5 @@
 import { Collection } from '@discordjs/collection';
-import { createClassDecorator } from '../../decorators/utils.js';
+import { createClassDecorator } from '../../utils/decorators.js';
 import type { Command } from '../../structures/Command.js';
 
 export const restrictedGuildIdRegistry = new Collection<typeof Command<Command.Options>, readonly string[]>();

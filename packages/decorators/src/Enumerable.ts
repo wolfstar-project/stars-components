@@ -8,7 +8,8 @@
  * @returns A property decorator.
  * @example
  * ```typescript
- * import { Command, Enumerable } from '@wolfstar/http-framework';
+ * import { Enumerable } from '@wolfstar/decorators';
+ * import { Command } from '@wolfstar/http-framework';
  *
  * export class UserCommand extends Command {
  * 	(at)Enumerable(false)
@@ -44,7 +45,8 @@ export function Enumerable(value: boolean) {
  * @returns A method decorator.
  * @example
  * ```typescript
- * import { Command, EnumerableMethod } from '@wolfstar/http-framework';
+ * import { EnumerableMethod } from '@wolfstar/decorators';
+ * import { Command } from '@wolfstar/http-framework';
  *
  * export class UserCommand extends Command {
  * 	(at)EnumerableMethod(true)

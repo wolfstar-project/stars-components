@@ -1,4 +1,4 @@
-import { createClassDecorator } from '../../decorators/utils.js';
+import { createClassDecorator } from '../../utils/decorators.js';
 import type { Command } from '../../structures/Command';
 import type { ChatInputCommandResolver } from '../resolvers/ChatInputCommandResolver';
 import { ensureChatInputCommandResolver } from './_shared';

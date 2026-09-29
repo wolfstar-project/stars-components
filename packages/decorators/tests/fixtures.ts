@@ -1,4 +1,4 @@
-import type { BaseInteraction } from '../../src/index.js';
+import type { BaseInteraction } from '@wolfstar/http-framework';
 
 export interface MakeInteractionOptions {
 	guildId?: string | undefined;

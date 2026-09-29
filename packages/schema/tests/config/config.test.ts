@@ -59,7 +59,7 @@ describe('stars.config', () => {
 		// The build tool is 'none' here, and auto imports need `tsdown`'s transform.
 		expect(config.imports.enabled).toBe(false);
 		expect(config.imports.dirs).toEqual([join(fixture.root, 'src', 'lib', '**'), join(fixture.root, 'src', 'utils', '**')]);
-		expect(config.imports.presets).toEqual(['@wolfstar/http-framework', '@wolfstar/env-utilities']);
+		expect(config.imports.presets).toEqual(['@wolfstar/http-framework', '@wolfstar/decorators', '@wolfstar/env-utilities']);
 		expect(config.imports.dts).toBe(join(fixture.root, '.stars', 'imports.d.ts'));
 	});
 

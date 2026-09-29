@@ -1,0 +1,69 @@
+{
+	"name": "@wolfstar/decorators",
+	"version": "0.0.0",
+	"description": "Useful TypeScript decorators for @wolfstar/http-framework",
+	"keywords": [
+		"decorators",
+		"discord",
+		"http",
+		"pnpm",
+		"ts",
+		"typescript",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/decorators",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/decorators"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"devDependencies": {
+		"@vitest/coverage-v8": "^5.0.1",
+		"@wolfstar/http-framework": "workspace:^",
+		"discord-api-types": "^0.38.8",
+		"golar": "^0.1.10",
+		"tsdown": "^0.23.0",
+		"typescript": "~7.0.2",
+		"vitest": "^5.0.1"
+	},
+	"peerDependencies": {
+		"@wolfstar/http-framework": "workspace:^"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

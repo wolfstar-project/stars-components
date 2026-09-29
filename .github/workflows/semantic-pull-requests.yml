@@ -42,6 +42,7 @@ jobs:
                   scopes: |
                       cli
                       create-http-framework
+                      decorators
                       env-utilities
                       http-framework
                       http-framework-i18n

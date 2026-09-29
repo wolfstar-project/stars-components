@@ -1,5 +1,5 @@
-import type { BaseInteraction } from '../../src/index.js';
-import { RequiresDMContext, RequiresGuildContext } from '../../src/index.js';
+import type { BaseInteraction } from '@wolfstar/http-framework';
+import { RequiresDMContext, RequiresGuildContext } from '../src/index.js';
 import { makeFakeInteraction } from './fixtures.js';
 
 const guildInteraction = makeFakeInteraction({ guildId: '737141877803057244' });

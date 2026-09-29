@@ -268,7 +268,7 @@ export interface StarsImportsConfig {
 	dirs?: string[];
 	/**
 	 * Packages whose exports are auto-importable. Packages that are not installed are skipped.
-	 * @default ['@wolfstar/http-framework', '@wolfstar/env-utilities']
+	 * @default ['@wolfstar/http-framework', '@wolfstar/decorators', '@wolfstar/env-utilities']
 	 */
 	presets?: string[];
 	/**
