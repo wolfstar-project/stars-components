@@ -1,7 +1,7 @@
 # Discord utilities for `@wolfstar/http-framework` — design
 
 Date: 2026-09-28
-Status: approved design, pending spec review
+Status: approved design (revision 2, 2026-09-29), in implementation
 
 ## Goal
 
@@ -80,8 +80,9 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 ### `MessageBuilder`
 
 - Fluent builder producing the body accepted by the framework's reply / update / follow-up methods
-  (`UpdateResponseOptions`-compatible): `setContent`, `setEmbeds`, `setComponents`, `setFiles`,
-  `setAllowedMentions`, `setFlags`, `setTTS`, `toJSON()`.
+  (`UpdateResponseOptions`-compatible): `setContent`, `setEmbeds`, `addEmbeds`, `setComponents`,
+  `setAllowedMentions`, `setFlags`, `setTTS`, `toJSON()`. No `setFiles`: the framework's `reply` / `update` do not
+  upload files, only `followup` does.
 - Validates lengths against `MessageLimits` / `EmbedLimits` only on `toJSON()`, throwing a `RangeError` naming the
   field.
 
@@ -121,8 +122,10 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
    serialised session (see timeout cleanup below).
 2. `SessionStore` interface: `get(id)`, `set(id, value, ttlMs)`, `delete(id)`, all returning promises.
     - Default: `MemorySessionStore`, a `Map` with expiry checked on read and a periodic sweep (unref'd timer).
-    - Optional adapter for `@wolfstar/plugin-cache` (subpath export `@wolfstar/http-framework-utilities/plugin-cache`,
-      `@wolfstar/plugin-cache` as optional peer), for multi-process bots.
+    - `RedisSessionStore` (`scope: 'shared'`) for multi-process bots, over a minimal `RedisSessionClientLike`
+      (`get` / `set(key, value, 'PX', ms)` / `del`) that an `ioredis` `Redis` or `Cluster` satisfies without a
+      dependency. `@wolfstar/plugin-cache` is a per-entity Discord cache, not a key/value store, so there is no
+      adapter for it.
     - Configured once through `setSessionStore(store)`; per-instance override via options. Each store declares
       `scope: 'process' | 'shared'`, so `run` can validate supported session shapes before sending a response.
     - Shared stores support only eager JSON pages plus reserved built-in action ids, with no function registry
@@ -187,9 +190,10 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 
 ## Out of scope
 
-- `@wolfstar/plugin-gateway-utilities` (lives in `wolfstar-project/plugins`, a follow-up that builds on
-  `@wolfstar/discord-utilities`).
-- `MessagePrompter` `message` / `reaction` strategies, collectors, channel/guild caching.
+- A separate `@wolfstar/plugin-gateway-utilities` package: gateway support ships as the
+  `@wolfstar/http-framework-utilities/gateway` subpath instead (see Revision 2).
+- `MessagePrompter` `message` / `reaction` strategies and collectors on the main entrypoint (HTTP-only bots receive
+  neither); they exist only on the `/gateway` subpath. Channel/guild caching of our own.
 - Changes to `@wolfstar/http-framework` itself, beyond what the implementation plan finds strictly necessary.
 
 ## Repository chores
@@ -200,3 +204,54 @@ Changesets and scaffolded like `packages/start-banner` (`tsdown`, `golar`, `vite
 - When implementing the packages, update `AGENTS.md` package count (25 → 27) and describe both packages briefly;
   `CLAUDE.md` is a symlink to that file.
 - npmjs.com trusted-publishing setup for both new names (manual, see `.changeset/README.md`).
+
+## Revision 2 (2026-09-29)
+
+Decisions taken while aligning the implementation with this spec and adding gateway support.
+
+### Alignment clarifications
+
+- **Store scope.** `SessionStore.scope` is required: `MemorySessionStore` is `'process'`, `RedisSessionStore` is
+  `'shared'`. A shared-state check (`assertSharedSessionState`) rejects, with a `TypeError` naming the field,
+  unresolved lazy pages, custom action callbacks, and values that do not survive a JSON round trip. With a shared
+  store the click handler never falls back to the process-local runtime registry.
+- **Handler registration.** Importing `@wolfstar/http-framework-utilities/register` is required and documented.
+  `run` still self-registers the handlers as a safety net for the creating process; that does not replace the import
+  for processes that only receive clicks.
+- **Expired or unknown sessions.** One HTTP interaction gets one response, so the handler `update`s the message with
+  every component of `interaction.message` disabled, then sends the expiry notice as an ephemeral `followup`.
+  `expiredReply` is configurable per instance and defaults to `DefaultExpiredReply`.
+- **Timeout cleanup scope.** Cleanup is scheduled by `run(...)`. `start(ownerId)` flows send the payload themselves
+  and have no timeout cleanup; later clicks still expire the controls.
+- **Token bound.** `MaximumTokenLifetime` is 14 minutes (one-minute margin below Discord's 15). A session whose only
+  edit credential is the interaction token (ephemeral replies, or no channel/message id) caps its absolute
+  lifetime at that bound; `idle` above it is a `RangeError`. For a non-ephemeral reply, `run` fetches the real
+  message id after replying when `idle` exceeds the bound, and cleanup after the token expires uses the bot's
+  `container.rest` on `Routes.channelMessage(channelId, messageId)`.
+- **Timeout behaviour.** `timeoutBehavior: 'disable' | 'remove'`, default `'disable'`. `stop` always disables.
+
+### Gateway support: `@wolfstar/http-framework-utilities/gateway`
+
+- A subpath export with `@wolfstar/plugin-gateway` (`^0.8.0`) as an **optional** peer dependency; the main
+  entrypoint never imports it. Clicks still arrive as HTTP interactions and use the same `wolfstar-pm` /
+  `wolfstar-mp` handlers, so a gateway bot also serves its interactions endpoint (`GatewayClient.start({ listen })`).
+- **Type guards** with the main entrypoint's names, narrowing to `@wolfstar/plugin-gateway` structures
+  (`isTextChannel(channel): channel is TextChannel`, …), plus the discord.js-only guards dropped from the HTTP entry:
+  `isMessageInstance`, `isGuildMember` (structure), `isGuildBasedChannelByGuildKey`.
+- **Permission helpers** (`canReadMessages`, `canSendMessages`, `canSendEmbeds`, `canSendAttachments`, `canReact`,
+  `canRemoveAllReactions`, `canJoinVoiceChannel`) take a channel structure and return `Promise<boolean>`: they compute
+  the bot's permissions with `computePermissionsIn(channel, clientUserId)` (DM channels allow sending and reacting),
+  honour `Administrator`, use `SendMessagesInThreads` in threads, and resolve `false` instead of throwing when the
+  permissions cannot be computed.
+- **Collectors**: `awaitMessages(channel, { filter?, max?, time })` and `awaitReactions(message, { filter?, max?, time })`
+  listen to the framework client's `messageCreate` / `messageReactionAdd` events and always remove their listeners.
+- **`GatewayPaginatedMessage`** extends `PaginatedMessage`; `run(target, author?)` accepts an HTTP interaction
+  (unchanged behaviour), a gateway `Message` (replies to it), or a text-based channel (sends to it). Gateway messages
+  are bot-owned and non-ephemeral, so timeout cleanup uses the bot REST path without the token bound.
+- **`GatewayMessagePrompter`** extends `MessagePrompter` with the same targets and adds Sapphire's `message` strategy
+  (resolves with the author's next `Message` in the channel) and `reaction` strategy (reacts with the configured emojis
+  and resolves with the chosen one). Both check the client's intents (`GuildMessages` / `DirectMessages`, plus
+  `MessageContent` for `message`; `GuildMessageReactions` / `DirectMessageReactions` for `reaction`) and throw
+  before sending when they are missing.
+- Tests use `@wolfstar/plugin-gateway` as a devDependency with a fake client (event emitter and mocked REST); no
+  gateway connection.
