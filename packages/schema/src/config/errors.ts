@@ -98,6 +98,10 @@ export const configDiagnostics = defineDiagnostics({
 			why: (_p: {}) => '`imports` requires the `tsdown` build tool',
 			fix: (_p: {}) => "Set `build.tool` to 'tsdown', or remove `imports`/set it to `false`."
 		},
+		ENV_REQUIRES_ENV_UTILITIES: {
+			why: (_p: {}) => '`env` is enabled, but the project does not depend on `@wolfstar/env-utilities`',
+			fix: (_p: {}) => 'Install it with `pnpm add @wolfstar/env-utilities`, or set `env` to `false`.'
+		},
 		LOCALES_NOT_FOUND: {
 			why: (p: { locales: string }) => `The locales directory does not exist: ${p.locales}`,
 			fix: (_p: { locales: string }) => 'Point `codegen.i18n.locales` to the base locale directory, relative to the project root.'

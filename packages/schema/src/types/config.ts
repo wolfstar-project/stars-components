@@ -359,6 +359,46 @@ export type StarsExperimentalConfig =
 			nitro?: StarsNitroConfig;
 	  };
 
+/**
+ * The serializable subset of `@wolfstar/env-utilities`' `EnvSetupOptions`. These options are written into the built
+ * entry as JSON, which is why `path` is a string only and `processEnv` is not available. A type test in
+ * `@wolfstar/env-utilities` keeps the two in sync.
+ */
+export interface StarsEnvSetupOptions {
+	/**
+	 * A custom `.env` path. Kept relative: `@wolfstar/env-utilities` resolves it against the bot's working directory
+	 * at runtime, so the build output does not depend on the machine it was built on.
+	 * @default `src/.env*`, then `.env*`
+	 */
+	path?: string;
+	/** A custom environment name, when `NODE_ENV` is not sufficient. */
+	env?: string;
+	/** Only keep the variables starting with this prefix (e.g. `BOT_`). */
+	prefix?: string;
+	/**
+	 * **Experimental.** `'varlock'` resolves the environment through [varlock](https://varlock.dev) instead of dotenv.
+	 * @default 'dotenv'
+	 */
+	loader?: 'dotenv' | 'varlock';
+	/** Logs every file loaded and every prefix match. */
+	debug?: boolean;
+	/**
+	 * The encoding of the `.env` files.
+	 * @default 'utf8'
+	 */
+	encoding?: string;
+}
+
+/**
+ * The environment `stars` registers in the built entry before any other module runs, the way a hand-written
+ * `setup()` from `@wolfstar/env-utilities` would. On by default from `future.compatibilityVersion: 5` when the project
+ * depends on `@wolfstar/env-utilities`, except with `experimental.enableNitro`.
+ */
+export interface StarsEnvConfig extends StarsEnvSetupOptions {
+	/** `false` turns the automatic registration off while keeping the options (e.g. for `stars dev`'s port lookup). */
+	enabled?: boolean;
+}
+
 export interface StarsConfig {
 	/**
 	 * The project root. Relative paths are resolved from the configuration file.
@@ -379,6 +419,11 @@ export interface StarsConfig {
 	 * `future.compatibilityVersion` 4 and later.
 	 */
 	imports?: StarsImportsConfig | boolean;
+	/**
+	 * `@wolfstar/env-utilities` options, registered automatically before the bot's own modules run.
+	 * `false` disables the automatic registration, `true` forces it on with defaults.
+	 */
+	env?: StarsEnvConfig | boolean;
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
 	/** Build-default compatibility. Omit for version 5; version 3 is end-of-life and only meant for migrating a standalone tsdown config. */

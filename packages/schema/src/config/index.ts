@@ -37,6 +37,8 @@ export {
 	LEGACY_COMPATIBILITY_VERSION,
 	STARS_CONFIG_TSDOWN_VERSION
 } from './compatibility.js';
+export { resolveEnv } from './env.js';
+export type { ResolvedEnvConfig } from './env.js';
 export { configDiagnostics } from './errors.js';
 export type { ConfigDiagnosticCode } from './errors.js';
 export { displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';

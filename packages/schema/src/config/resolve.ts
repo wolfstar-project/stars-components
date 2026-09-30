@@ -3,6 +3,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import type { Diagnostic } from 'nostics';
 import type { StarsBuildTool, StarsConfig, StarsDevConfig, StarsExperimentalConfig, StarsTypechecker } from '../types/config.js';
 import { LEGACY_COMPATIBILITY_VERSION, STARS_CONFIG_TSDOWN_VERSION, resolveFuture, type ResolvedFutureConfig } from './compatibility.js';
+import { resolveEnv, type ResolvedEnvConfig } from './env.js';
 import { configDiagnostics } from './errors.js';
 import { Validator } from './validator.js';
 
@@ -113,6 +114,7 @@ export interface ResolvedStarsConfig {
 	readonly dev: ResolvedDevConfig;
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
+	readonly env: ResolvedEnvConfig;
 	readonly experimental: ResolvedExperimentalConfig;
 	readonly future: ResolvedFutureConfig;
 	/** Raw options merged into `vite.config.*`. */
@@ -171,7 +173,20 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const validator = new Validator(file);
 	const warnings: Diagnostic[] = [];
 
-	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental', 'future', 'vite', 'tsdown']);
+	validator.knownKeys(config, '', [
+		'root',
+		'entry',
+		'build',
+		'dev',
+		'codegen',
+		'imports',
+		'env',
+		'hooks',
+		'experimental',
+		'future',
+		'vite',
+		'tsdown'
+	]);
 	const baseDirectory = file ? dirname(file) : cwd;
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
@@ -188,7 +203,8 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const vite = validator.plainObject(config.vite, 'vite') ?? {};
 	const tsdown = validator.plainObject(config.tsdown, 'tsdown') ?? {};
 	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, future, Object.keys(tsdown).length > 0, validator);
-	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
+	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator);
+	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, envConfig.options, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
@@ -200,7 +216,23 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 		throw validator.error(configDiagnostics.VITE_OPTIONS_REQUIRE_VITE, { tool: build.tool });
 	}
 
-	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental, future, vite, tsdown, warnings };
+	return {
+		configFile: file,
+		cwd,
+		root,
+		packageJson,
+		entry,
+		build,
+		dev,
+		codegen,
+		imports,
+		env: envConfig,
+		experimental,
+		future,
+		vite,
+		tsdown,
+		warnings
+	};
 }
 
 /**
@@ -408,10 +440,12 @@ const ENV_PORT_KEYS = ['HTTP_PORT', 'PORT'] as const;
  * implementation — quoting is stripped, but expansion (`dotenv-expand`) is not. Earlier files win, matching
  * dotenv's own precedence.
  */
-export function readProjectEnvFiles(root: string, environment = 'development'): Record<string, string> {
+export function readProjectEnvFiles(root: string, environment = 'development', options: { path?: string } = {}): Record<string, string> {
 	const result: Record<string, string> = {};
 	const suffixes = [`.${environment}.local`, ...(environment === 'test' ? [] : ['.local']), `.${environment}`, ''];
-	const files = suffixes.flatMap((suffix) => [join('src', `.env${suffix}`), `.env${suffix}`]);
+	// A custom `env.path` replaces both default locations, the way it does in `@wolfstar/env-utilities`.
+	const bases = options.path ? [options.path] : [join('src', '.env'), '.env'];
+	const files = suffixes.flatMap((suffix) => bases.map((base) => `${base}${suffix}`));
 
 	for (const file of files) {
 		const path = join(root, file);
@@ -437,8 +471,8 @@ export function readProjectEnvFiles(root: string, environment = 'development'): 
 	return result;
 }
 
-function readDevPortFromEnvFile(root: string, environment: string): string | null {
-	const values = readProjectEnvFiles(root, environment);
+function readDevPortFromEnvFile(root: string, environment: string, path: string | undefined): string | null {
+	const values = readProjectEnvFiles(root, environment, { path });
 	for (const key of ENV_PORT_KEYS) {
 		if (values[key]) return values[key];
 	}
@@ -452,6 +486,7 @@ function resolveDev(
 	packageJson: PackageJsonLike | null,
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
+	envOptions: Readonly<StarsEnvSetupOptions>,
 	validator: Validator
 ): ResolvedDevConfig {
 	validator.knownKeys(config, 'dev', [
@@ -489,7 +524,11 @@ function resolveDev(
 	} else {
 		// Mirrors Vite's and Nuxt's own dev servers: a URL is shown without any configuration. The exact host
 		// (`localhost` vs `127.0.0.1`) is resolved at runtime by `stars dev`, once it knows which one is actually reachable.
-		const port = devEnv.HTTP_PORT ?? env.HTTP_PORT ?? readDevPortFromEnvFile(root, env.NODE_ENV ?? 'development') ?? String(DEFAULT_DEV_PORT);
+		const port =
+			devEnv.HTTP_PORT ??
+			env.HTTP_PORT ??
+			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions.path) ??
+			String(DEFAULT_DEV_PORT);
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}
 
