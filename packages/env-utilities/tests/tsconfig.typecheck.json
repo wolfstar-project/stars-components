@@ -1,5 +1,10 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		// CI runs the unit tests before any build, so `@wolfstar/schema` has no `dist/` to resolve to: point it at its
+		// sources, the way the CLI's vitest config aliases its workspace dependencies.
+		"paths": { "@wolfstar/schema": ["../../schema/src/index.ts"] }
+	},
 	"include": ["./*.test-d.ts"]
 }

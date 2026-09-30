@@ -9,7 +9,8 @@ export interface ResolvedFutureConfig {
 
 export const LEGACY_COMPATIBILITY_VERSION = 3;
 export const LATEST_COMPATIBILITY_VERSION = 5;
-export const DEFAULT_COMPATIBILITY_VERSION = LATEST_COMPATIBILITY_VERSION;
+/** The version a project without `future.compatibilityVersion` runs on: today, the latest one. */
+export const DEFAULT_COMPATIBILITY_VERSION = 5;
 /** Versions still accepted but scheduled for removal in the next major. */
 export const EOL_COMPATIBILITY_VERSIONS: ReadonlySet<number> = new Set([LEGACY_COMPATIBILITY_VERSION]);
 /** From this version on, `tsdown` is configured from `stars.config` alone and auto imports are on by default. */
