@@ -38,7 +38,7 @@ export type StarsViteConfig = Record<string, unknown>;
 /**
  * Options for `tsdown`, the bundler `stars build` uses by default.
  *
- * With {@link StarsFutureConfig.compatibilityVersion} `4` these replace `tsdown.config.*` outright: the build is
+ * From {@link StarsFutureConfig.compatibilityVersion} `4` on these replace `tsdown.config.*` outright: the build is
  * derived from `stars.config` (the entry's directory, `build.outDir`, `build.tsconfig`) and these options are layered
  * on top, so a project keeps one configuration file instead of two. With `3` the project's own `tsdown.config.*` is
  * still loaded and these are merged over it, the way `vite: {}` in a Nuxt config is merged into the project's own
@@ -85,30 +85,34 @@ export interface StarsTsdownConfig {
 }
 
 /**
- * The build-default generation the project runs on. Version 4 is current; version 3 remains available for projects
- * that still load a standalone `tsdown.config.*`.
+ * The build-default generation the project runs on. Version 5 is current and version 4 remains supported.
+ * Version 3 is end-of-life: it still resolves, with a warning, and is removed in the next major.
  */
-export type StarsCompatibilityVersion = 3 | 4;
+export type StarsCompatibilityVersion = 3 | 4 | 5;
 
 /**
- * Nuxt-style compatibility block. New projects need not set it; version 3 is retained as an explicit migration
- * escape hatch for projects that still use a standalone `tsdown.config.*`.
+ * Nuxt-style compatibility block. New projects need not set it; version 4 stays available, and version 3 is kept only
+ * as an end-of-life migration escape hatch for projects that still use a standalone `tsdown.config.*`.
  */
 export interface StarsFutureConfig {
 	/**
 	 * The major whose defaults apply.
 	 *
-	 * `4` is the default build pipeline:
+	 * `5` is the default: everything in `4`, plus `env` registered automatically in the built entry
+	 * (see {@link StarsConfig.env}) when the project depends on `@wolfstar/env-utilities`.
+	 *
+	 * `4`:
 	 * - auto imports are on by default with the `tsdown` build tool ({@link StarsImportsConfig}), and the
 	 *   `autoImports()` plugin is wired into the build by `stars` itself.
 	 * - `tsdown` is configured from {@link StarsConfig.tsdown} only. A `tsdown.config.*` in the project root is
 	 *   rejected rather than silently ignored, so a build never loses the plugins it declares.
 	 * - `build.tool: 'auto'` resolves to `tsdown` for any TypeScript entry, without looking for a `tsdown.config.*`
 	 *   or a `tsdown` dependency first.
+	 * - `env` is opt-in.
 	 *
-	 * `3` keeps the legacy behaviour: auto imports off unless asked for, and a `tsdown.config.*` loaded and merged with
-	 * {@link StarsConfig.tsdown}.
-	 * @default 4
+	 * `3` (**end-of-life**) keeps the legacy behaviour: auto imports off unless asked for, and a `tsdown.config.*`
+	 * loaded and merged with {@link StarsConfig.tsdown}. It prints a warning and is removed in the next major.
+	 * @default 5
 	 */
 	compatibilityVersion?: StarsCompatibilityVersion;
 }
@@ -372,12 +376,12 @@ export interface StarsConfig {
 	/**
 	 * Nuxt-style auto imports of the framework's exports and the project's own modules.
 	 * `false` disables them, `true` forces them on (requires the `tsdown` build tool). On by default with
-	 * `future.compatibilityVersion: 4`.
+	 * `future.compatibilityVersion` 4 and later.
 	 */
 	imports?: StarsImportsConfig | boolean;
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
-	/** Build-default compatibility. Omit for version 4; set version 3 only while migrating a standalone tsdown config. */
+	/** Build-default compatibility. Omit for version 5; version 3 is end-of-life and only meant for migrating a standalone tsdown config. */
 	future?: StarsFutureConfig;
 	/**
 	 * Raw options merged into `vite.config.*`, the way `vite: {}` in a Nuxt config is merged into Nuxt's own Vite
@@ -385,7 +389,7 @@ export interface StarsConfig {
 	 */
 	vite?: StarsViteConfig;
 	/**
-	 * The project's `tsdown` build. Replaces `tsdown.config.*` with `future.compatibilityVersion: 4`, and is merged
+	 * The project's `tsdown` build. Replaces `tsdown.config.*` from `future.compatibilityVersion: 4` on, and is merged
 	 * over it with `3`. Only used with `build.tool: 'tsdown'`.
 	 */
 	tsdown?: StarsTsdownConfig;
