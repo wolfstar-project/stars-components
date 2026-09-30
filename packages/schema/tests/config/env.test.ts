@@ -91,6 +91,18 @@ describe('stars.config env', () => {
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.url).toBe('http://localhost:4000');
 	});
 
+	test('does not read the dev port from dotenv files with the varlock loader', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'package.json': WITH_ENV_UTILITIES,
+			'.env': 'HTTP_PORT=4000',
+			'stars.config.mjs': "export default { env: { loader: 'varlock' } };"
+		});
+		// Varlock resolves `.env.schema` on its own terms: a dotenv file may be stale or not what the bot loads.
+		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.url).toBe('http://localhost:3000');
+		expect((await loadStarsConfig({ cwd: fixture.root, env: { HTTP_PORT: '4300' } })).dev.url).toBe('http://localhost:4300');
+	});
+
 	test('readProjectEnvFiles honours a custom path', async () => {
 		fixture = await createFixture({ 'config/.env': 'HTTP_PORT=4000', '.env': 'HTTP_PORT=5000' });
 		expect(readProjectEnvFiles(fixture.root, 'development', { path: 'config/.env' })).toEqual({ HTTP_PORT: '4000' });

@@ -1,4 +1,5 @@
-import { readProjectEnvFiles, type ResolvedStarsConfig, type ResolvedTunnelConfig } from '@wolfstar/schema';
+import type { ResolvedStarsConfig, ResolvedTunnelConfig } from '@wolfstar/schema';
+import { readProjectEnv } from '../utils/project-env.js';
 import { EventEmitter } from 'node:events';
 import { startTunnel, type Tunnel as UntunTunnel } from 'untun';
 import type { LogLevel } from '../utils/log-buffer.js';
@@ -197,10 +198,9 @@ export function readDiscordCredentials(config: ResolvedStarsConfig, env: NodeJS.
 
 let envFileCache: { key: string; values: Record<string, string> } | null = null;
 
-/** The project's env files, read from `env.path` and for `env.env` when `stars.config` sets them. */
+/** The variables the bot loads (see {@link readProjectEnv}), once per project and `env` options. */
 function readProjectEnvFilesCached(config: ResolvedStarsConfig): Record<string, string> {
-	const { path, env = 'development' } = config.env.options;
-	const key = JSON.stringify([config.root, path, env]);
-	if (envFileCache?.key !== key) envFileCache = { key, values: readProjectEnvFiles(config.root, env, { path }) };
+	const key = JSON.stringify([config.root, config.env.options]);
+	if (envFileCache?.key !== key) envFileCache = { key, values: readProjectEnv(config) };
 	return envFileCache.values;
 }

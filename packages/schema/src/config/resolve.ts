@@ -484,8 +484,12 @@ export function readProjectEnvFiles(root: string, environment = 'development', o
 	return result;
 }
 
-function readDevPortFromEnvFile(root: string, environment: string, path: string | undefined): string | null {
-	const values = readProjectEnvFiles(root, environment, { path });
+function readDevPortFromEnvFile(root: string, environment: string, envOptions: Readonly<StarsEnvSetupOptions>): string | null {
+	// Varlock resolves its `.env.schema` on its own terms (and may pull values from elsewhere), so a dotenv file is
+	// not what the bot loads: set `dev.url` or `HTTP_PORT` in the environment instead.
+	if (envOptions.loader === 'varlock') return null;
+
+	const values = readProjectEnvFiles(root, environment, { path: envOptions.path });
 	for (const key of ENV_PORT_KEYS) {
 		if (values[key]) return values[key];
 	}
@@ -540,7 +544,7 @@ function resolveDev(
 		const port =
 			devEnv.HTTP_PORT ??
 			env.HTTP_PORT ??
-			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions.path) ??
+			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions) ??
 			String(DEFAULT_DEV_PORT);
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}
