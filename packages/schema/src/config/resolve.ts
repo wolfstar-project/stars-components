@@ -1,10 +1,18 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { Diagnostic } from 'nostics';
-import type { StarsBuildTool, StarsConfig, StarsDevConfig, StarsExperimentalConfig, StarsTypechecker } from '../types/config.js';
+import type {
+	StarsBuildTool,
+	StarsConfig,
+	StarsDevConfig,
+	StarsEnvSetupOptions,
+	StarsExperimentalConfig,
+	StarsTypechecker
+} from '../types/config.js';
 import { LEGACY_COMPATIBILITY_VERSION, STARS_CONFIG_TSDOWN_VERSION, resolveFuture, type ResolvedFutureConfig } from './compatibility.js';
 import { resolveEnv, type ResolvedEnvConfig } from './env.js';
 import { configDiagnostics } from './errors.js';
+import { resolveHooks, type ResolvedHooksConfig } from './hooks.js';
 import { Validator } from './validator.js';
 
 export type { ResolvedFutureConfig } from './compatibility.js';
@@ -115,6 +123,8 @@ export interface ResolvedStarsConfig {
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
 	readonly env: ResolvedEnvConfig;
+	/** The `hooks` block, flattened to full hook names (`build:done`). */
+	readonly hooks: ResolvedHooksConfig;
 	readonly experimental: ResolvedExperimentalConfig;
 	readonly future: ResolvedFutureConfig;
 	/** Raw options merged into `vite.config.*`. */
@@ -203,6 +213,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const vite = validator.plainObject(config.vite, 'vite') ?? {};
 	const tsdown = validator.plainObject(config.tsdown, 'tsdown') ?? {};
 	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, future, Object.keys(tsdown).length > 0, validator);
+	const hooks = resolveHooks(config.hooks, validator);
 	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator);
 	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, envConfig.options, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
@@ -227,6 +238,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 		codegen,
 		imports,
 		env: envConfig,
+		hooks,
 		experimental,
 		future,
 		vite,

@@ -40,6 +40,8 @@ export {
 export { resolveEnv } from './env.js';
 export type { ResolvedEnvConfig } from './env.js';
 export { configDiagnostics } from './errors.js';
+export { resolveHooks, STARS_HOOK_NAMES } from './hooks.js';
+export type { ResolvedHooksConfig } from './hooks.js';
 export type { ConfigDiagnosticCode } from './errors.js';
 export { displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';
 export type {

@@ -90,6 +90,10 @@ export const configDiagnostics = defineDiagnostics({
 			why: (p: { path: string; parent: string; known: string }) => `Unknown option \`${p.path}\``,
 			fix: (p: { path: string; parent: string; known: string }) => `Known options${p.parent ? ` of \`${p.parent}\`` : ''}: ${p.known}.`
 		},
+		UNKNOWN_HOOK: {
+			why: (p: { name: string; known: string }) => `Unknown hook \`${p.name}\``,
+			fix: (p: { name: string; known: string }) => `Known hooks: ${p.known}.`
+		},
 		EXPERIMENT_REQUIRED: {
 			why: (p: { path: string; requires: string; drop: string }) => `\`${p.path}\` needs \`${p.requires}\``,
 			fix: (p: { path: string; requires: string; drop: string }) => `Set \`${p.requires}\` to true as well, or drop \`${p.drop}\`.`

@@ -1,3 +1,5 @@
+import type { StarsHooks, StarsHooksConfig } from './hooks.js';
+
 /**
  * The build tool used to turn the project sources into runnable JavaScript.
  *
@@ -424,6 +426,11 @@ export interface StarsConfig {
 	 * `false` disables the automatic registration, `true` forces it on with defaults.
 	 */
 	env?: StarsEnvConfig | boolean;
+	/**
+	 * Lifecycle hooks of the `stars` CLI (see {@link StarsHooks}), keyed by full name (`'build:done'`) or nested under
+	 * their namespace (`{ build: { done() {} } }`). Each value is a function or an array of functions.
+	 */
+	hooks?: StarsHooksConfig;
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
 	/** Build-default compatibility. Omit for version 5; version 3 is end-of-life and only meant for migrating a standalone tsdown config. */
