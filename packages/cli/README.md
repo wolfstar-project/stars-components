@@ -230,8 +230,8 @@ export default defineConfig({
 
 `hooks` are CLI lifecycle hooks run with [`hookable`](https://github.com/unjs/hookable): `config:resolved`,
 `env:options`, `prepare:before`/`prepare:done`, `builder:created`, `tsdown:options`, `build:before`/`build:done`,
-`dev:start`/`dev:restart`/`dev:close`. They run in the CLI process, never in the bot, in the same order and awaited one
-after another in `stars build` and `stars dev`. `stars info` lists the env
+`dev:start`/`dev:restart`/`dev:close`. They run in the CLI process, never in the bot, in the same order in `stars build` and
+`stars dev` (see the framework README for how `stars dev` awaits them). `stars info` lists the env
 options and the registered hooks. See the [framework README](../http-framework#environment-env) for the full
 reference.
 

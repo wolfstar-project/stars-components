@@ -555,7 +555,9 @@ export default defineConfig({
   through it: `stars dev` preloads it with `node --import`, but in production such a bot loads its environment itself
   (or runs with `node --import @wolfstar/env-utilities/setup`). The projects `@wolfstar/create-http-framework`
   generates for them set `env: false` and keep calling `setup()` in `src/lib/setup`.
-- `stars dev` reads `HTTP_PORT` for the default `dev.url` from the same `path`/`env` files.
+- `stars dev` reads `HTTP_PORT` for the default `dev.url` from the same `path`/`env` files, after `env:options`. With
+  `loader: 'varlock'` it reads no dotenv file for that: set `dev.url` or `HTTP_PORT` instead. The tunnel's Discord
+  credentials then come from `varlock load` in the project.
 
 ### Hooks
 
@@ -598,9 +600,11 @@ is logged and the watcher keeps going; in `stars build` it fails the build.
 
 `stars build` and `stars dev` run them in the same order: `config:resolved` → `env:options` → `builder:created` →
 `prepare:before` → `prepare:done`, then `build:before` → `build:done` for each build. `stars dev` adds `dev:start` once
-it is watching, `dev:restart` before each (re)start of the bot, and `dev:close` on shutdown. Every hook is awaited: in
-`stars dev` the hooks of consecutive rebuilds run one after another, and `dev:restart` waits for the `build:done` that
-triggered it.
+it is watching, `dev:restart` before each (re)start of the bot, and `dev:close` on shutdown. `stars build` awaits every
+hook. In `stars dev` the builder drives rebuilds on its own: `build:before` starts when it reports a build, without
+delaying it, while `build:done`, `dev:restart` and `dev:close` run one after another — a slow `build:done` settles before
+the restart it triggered, and before shutdown. `build:done` gets the final outcome, including a failure to copy
+`src/locales`.
 
 ### Experimental flags
 
