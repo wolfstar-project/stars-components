@@ -854,6 +854,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^5.0.1
         version: 5.0.2(vitest@5.0.2)
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
       golar:
         specifier: ^0.1.10
         version: 0.1.10
