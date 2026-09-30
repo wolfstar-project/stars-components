@@ -1,4 +1,4 @@
-import type { StarsHooks, StarsHooksConfig } from './hooks.js';
+import type { StarsHooksConfig } from './hooks.js';
 
 /**
  * The build tool used to turn the project sources into runnable JavaScript.
@@ -427,7 +427,7 @@ export interface StarsConfig {
 	 */
 	env?: StarsEnvConfig | boolean;
 	/**
-	 * Lifecycle hooks of the `stars` CLI (see {@link StarsHooks}), keyed by full name (`'build:done'`) or nested under
+	 * Lifecycle hooks of the `stars` CLI (see `StarsHooks`), keyed by full name (`'build:done'`) or nested under
 	 * their namespace (`{ build: { done() {} } }`). Each value is a function or an array of functions.
 	 */
 	hooks?: StarsHooksConfig;

@@ -64,20 +64,41 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 - A project's build lives in `stars.config.*`, not in a separate `tsdown.config.ts`: `tsdown: {}` (and `vite: {}` for
   `build.tool: 'vite'`) is merged into what the CLI derives from `entry`/`build`. The packages of this repository are
   libraries and keep their own `tsdown.config.ts` — this is about the bot projects the CLI builds.
-- `future: { compatibilityVersion: 3 | 4 }` mirrors Nuxt's own: `4` is the default as of the convention-first rework
-  (#182, `@wolfstar/http-framework` major) — `tsdown` configured from `stars.config` alone, auto imports on and wired
-  in, `'auto'` picking `tsdown` for TypeScript entries. `3` is legacy behaviour (a `tsdown.config.*` drives the build,
-  auto imports off unless asked for) and was kept as an opt-in rather than dropped: `LEGACY_COMPATIBILITY_VERSION` (3)
-  stays in `COMPATIBILITY_VERSIONS` alongside `LATEST_COMPATIBILITY_VERSION`/`DEFAULT_COMPATIBILITY_VERSION` (4) in
-  `packages/schema/src/config/resolve.ts`, and the `build.configFile` branch (compatibility version 3's
-  file mode) stays in `TsdownBuilder` and its test.
+- `future: { compatibilityVersion: 3 | 4 | 5 }` mirrors Nuxt's own: `5` is the default — everything in `4` plus the
+  automatic `env` registration below. `4` (the convention-first rework, #182) stays supported: `tsdown` configured
+  from `stars.config` alone, auto imports on and wired in, `'auto'` picking `tsdown` for TypeScript entries, `env`
+  opt-in. `3` is **end-of-life** (a `tsdown.config.*` drives the build, auto imports off unless asked for): it still
+  resolves, but pushes a `COMPATIBILITY_VERSION_EOL` diagnostic to `ResolvedStarsConfig.warnings` (printed by
+  `stars build`/`prepare`/`info`/`dev`), and is to be removed in the next major together with the `build.configFile`
+  branch of `TsdownBuilder`. The constants live in `packages/schema/src/config/compatibility.ts`; new behaviour is
+  gated by a named version constant (`STARS_CONFIG_TSDOWN_VERSION` = 4, `AUTO_ENV_VERSION` = 5), never by
+  `LATEST_COMPATIBILITY_VERSION`, so bumping the latest version never moves an older one onto other defaults.
+- `env` in `stars.config` (`packages/schema/src/config/env.ts`) mirrors the serializable part of
+  `@wolfstar/env-utilities`' `EnvSetupOptions` (`path`, `env`, `prefix`, `loader`, `debug`, `encoding`, plus
+  `enabled`); `packages/env-utilities/tests/schema-mirror.test-d.ts` (a vitest typecheck test with its own
+  `tests/tsconfig.typecheck.json`, since the root tsconfig excludes `tests/`) fails when the two drift. It defaults on
+  from version 5 only when the project depends on `@wolfstar/env-utilities`, and off with `experimental.enableNitro`.
+  `pluginRegistrations` (`packages/vite-server/src/plugins.ts`, shared by the tsdown, Vite and Nitro builders) makes
+  the `\0stars:env` virtual module (calling `setup()` with the options as JSON) the entry's first import, ahead of the
+  `@wolfstar/plugin-*/register` ones. `tsc`/`none` builds never pass through that transform: `stars dev` preloads the
+  same module with `node --import data:…` (`packages/cli/src/utils/env-import.ts`); production is up to the bot.
+  `env.path` stays relative on purpose (resolved at runtime), so the build output is portable.
+- `hooks` in `stars.config` are CLI lifecycle hooks run with `hookable` (unjs): the catalogue is `StarsHooks` in
+  `packages/schema/src/types/hooks.ts` (`config:resolved`, `env:options`, `prepare:*`, `builder:created`,
+  `tsdown:options`, `build:*`, `dev:*`), resolved and validated (`UNKNOWN_HOOK`) by `packages/schema/src/config/hooks.ts`
+  — not with `hookable`'s `flatHooks`, which splits arrays into `name:0` keys and drops non-functions silently — and
+  run by `packages/cli/src/utils/hooks.ts` (`loadProject`, `applyEnvOptions`). They run in the CLI process only;
+  `env:options` is how a hook changes what the bot receives. `@wolfstar/schema` only needs types for them, so it does
+  not depend on `hookable`; `@wolfstar/cli` does.
 - Convention-first defaults (#182) beyond the compatibility version: `stars dev` forces `NODE_ENV=development` for
   config evaluation, build plugins, and the supervised process; `src/locales` is copied to the build output and kept
   in sync by a `chokidar` watcher (`packages/cli/src/utils/locales.ts`) instead of a hand-written `tsdown` plugin; and
   `@wolfstar/env-utilities`' `setup()` (aliased `envRun` in scaffolded `src/lib/setup/all.ts`) takes no argument,
   discovering `.env*` files under both `src/` and the project root itself. `@wolfstar/create-http-framework` now
-  scaffolds a bare `defineConfig({})` (or `{ build: { tool: 'tsc' } }` for a `tsc` project) instead of specifying
-  `entry`/`build`/`future`.
+  scaffolds a bare `defineConfig({})` (or `{ build: { tool: 'tsc' }, env: false }` for a `tsc` project, and
+  `{ env: false }` for JavaScript) instead of specifying `entry`/`build`/`future`. Only the scaffolds whose entry goes
+  through the `env` transform (TypeScript `tsdown`/`vite`) drop the hand-written `setup()` call; the manifest records
+  `autoEnv: true` so a rerun against an older manifest still recognises the old `src/lib/setup` as pristine.
 - `@wolfstar/create-http-framework`'s `--build` also accepts the experimental, TypeScript-only `vite` and
   `vite-nitro` tools (`experimental.enableVite`/`enableNitro` in the generated `stars.config.ts`), and scaffolds the
   external gateway plugins via `--gateway`/`--cache`/`--redis`/`--sharder` (`@wolfstar/plugin-gateway`/`-cache`/

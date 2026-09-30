@@ -44,6 +44,21 @@ You can also pass a `string` or if you want to define other options, you may use
 - `DOTENV_PATH`: configures `EnvSetupOptions.path`. If set, it will specify a custom path to the file containing environment variables, useful for when they are located elsewhere.
 - `DOTENV_PREFIX`: configures `EnvSetupOptions.prefix`. If set, it will specify a required prefix for dotenv variables (e.g. `APP_`).
 
+### With the `stars` CLI
+
+A bot built with the `stars` CLI (`@wolfstar/cli`, compatibility version 5) does not call `setup()` itself: the
+`env` option of `stars.config` mirrors `EnvSetupOptions`, and `stars` calls `setup()` with it before any module of the
+bot runs. Do not call it by hand as well. Options set in `stars.config` win over the `DOTENV_*` variables above, the
+same way options passed to `setup()` do. See `env` in the
+[`@wolfstar/http-framework` README](../http-framework#environment-env).
+
+```typescript
+// stars.config.ts
+export default defineConfig({
+	env: { prefix: 'BOT_' }
+});
+```
+
 ### What `.env` files can be used?
 
 Every file below is searched first under `src/`, then at the project root. An explicit `path` or `DOTENV_PATH`
