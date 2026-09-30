@@ -91,6 +91,37 @@ describe('DevService', () => {
 		).toBe(true);
 	});
 
+	test('runs async build hooks one after another, and dev:restart only once they settle', async () => {
+		fixture = await createFixture({
+			'src/main.js': KEEPALIVE_SCRIPT,
+			'stars.config.mjs': 'export default { dev: { debounce: 10, killTimeout: 1000 } };'
+		});
+		config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		builder = new FakeBuilder();
+		const hooks = createStarsHooks(config);
+		const events: string[] = [];
+		hooks.hook('build:done', async (outcome) => {
+			events.push(`build:done:${outcome.durationMs}:start`);
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			events.push(`build:done:${outcome.durationMs}:end`);
+		});
+		hooks.hook('dev:restart', (reason) => void events.push(`dev:restart:${reason}`));
+		service = new DevService(config, { builder, hooks });
+
+		await service.start();
+		builder.succeed(1);
+		builder.succeed(2);
+		await waitFor(() => service.status.process === 'running' && events.includes('build:done:2:end'));
+
+		expect(events.slice(0, 5)).toEqual([
+			'build:done:1:start',
+			'build:done:1:end',
+			'build:done:2:start',
+			'build:done:2:end',
+			'dev:restart:initial'
+		]);
+	});
+
 	test('starts the bot after the first successful build and restarts after the next one', async () => {
 		await setup(KEEPALIVE_SCRIPT);
 		await service.start();

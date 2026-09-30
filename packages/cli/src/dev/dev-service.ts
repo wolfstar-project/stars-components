@@ -59,6 +59,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public readonly tunnel: Tunnel;
 	public readonly locales: Locales;
 	readonly #hooks: StarsHookable | null;
+	/** Runs hooks one at a time, so an async `build:done` settles before the next build's hooks or a restart. */
+	#hookChain: Promise<void> = Promise.resolve();
 
 	#build: BuildState = 'idle';
 	#health: HealthState = 'unknown';
@@ -89,18 +91,18 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
 			this.#setBuild('building');
-			void this.#callHook('build:before', this.config);
+			void this.#queueHook('build:before', this.config);
 		});
 		this.builder.on('progress', (fraction, message) => {
 			this.#progress = { ...this.#progress, fraction: Math.max(this.#progress.fraction, Math.min(0.75, fraction)), message };
 			this.#emitStatus();
 		});
 		this.builder.on('success', (outcome) => {
-			void this.#callHook('build:done', outcome, this.config);
+			void this.#queueHook('build:done', outcome, this.config);
 			this.#onBuildSuccess(outcome);
 		});
 		this.builder.on('failure', (outcome) => {
-			void this.#callHook('build:done', outcome, this.config);
+			void this.#queueHook('build:done', outcome, this.config);
 			this.#onBuildFailure(outcome);
 		});
 		this.builder.on('log', (level, text) => this.log('build', level, text));
@@ -178,7 +180,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#clearRestartTimer();
 		return this.#enqueue(async () => {
 			if (this.#stopped) return;
-			await this.#callHook('dev:restart', reason, this.config);
+			await this.#queueHook('dev:restart', reason, this.config);
 			if (this.#stopped) return;
 			if (reason === 'manual' || reason === 'crash') {
 				this.#progress = { fraction: 0, message: 'restarting the bot', startedAt: Date.now(), readyMs: null };
@@ -333,6 +335,12 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			message: 'watching for changes',
 			readyMs: this.#progress.readyMs ?? Date.now() - this.#progress.startedAt
 		};
+	}
+
+	/** Queues a hook behind the ones already running; see {@link DevService.#hookChain}. */
+	#queueHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		this.#hookChain = this.#hookChain.then(() => this.#callHook(name, ...args));
+		return this.#hookChain;
 	}
 
 	/**

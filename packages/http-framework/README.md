@@ -596,6 +596,12 @@ Hooks run in the CLI process, never in the bot — `env:options` is how a hook c
 hook name fails with `UNKNOWN_HOOK` rather than registering a hook that never runs. In `stars dev` a hook that throws
 is logged and the watcher keeps going; in `stars build` it fails the build.
 
+`stars build` and `stars dev` run them in the same order: `config:resolved` → `env:options` → `builder:created` →
+`prepare:before` → `prepare:done`, then `build:before` → `build:done` for each build. `stars dev` adds `dev:start` once
+it is watching, `dev:restart` before each (re)start of the bot, and `dev:close` on shutdown. Every hook is awaited: in
+`stars dev` the hooks of consecutive rebuilds run one after another, and `dev:restart` waits for the `build:done` that
+triggered it.
+
 ### Experimental flags
 
 `experimental` is the same kind of block Nuxt's own `experimental` is: opt-in booleans, all `false` by default, each

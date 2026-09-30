@@ -18,16 +18,18 @@ export async function runBuild(options: BuildTaskOptions): Promise<void> {
 	const colors = createColors({ useColor: shouldUseColor() });
 	const { config: resolved, hooks } = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
 	await reportWarnings(resolved, (text) => process.stderr.write(`${text}\n`));
-	await prepareProject(resolved, hooks);
 
 	if (resolved.build.tool === 'none') {
+		await prepareProject(resolved, hooks);
 		stdout.write(`${colors.dim('stars')} nothing to build, ${displayPath(resolved.root, resolved.entry)} runs as-is (build.tool is 'none')\n`);
 		return;
 	}
 
+	// Same hook order as `stars dev`: `env:options` and `builder:created` before `prepare:*`.
 	const config = await applyEnvOptions(resolved, hooks);
 	const builder = await createBuilder(config, hooks);
 	await hooks.callHook('builder:created', builder, config);
+	await prepareProject(config, hooks);
 	builder.on('log', (level, text) => {
 		const paint = level === 'error' ? colors.red : level === 'warn' ? colors.yellow : (value: string) => value;
 		stdout.write(`${paint(text)}\n`);
