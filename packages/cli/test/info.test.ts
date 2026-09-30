@@ -35,6 +35,24 @@ describe('stars info', () => {
 		expect(info.build.tool).toBe('none');
 	});
 
+	test('reports env, hooks and warnings', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsdown.config.ts': 'export default {};',
+			'package.json': JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } }),
+			'stars.config.mjs': "export default { future: { compatibilityVersion: 3 }, env: { prefix: 'BOT_' }, hooks: { build: { done() {} } } };"
+		});
+		const info = JSON.parse(await capture((stdout) => runInfo({ cwd: fixture.root, json: true, stdout }))) as ProjectInfo;
+		expect(info.env).toEqual({ enabled: true, options: { prefix: 'BOT_' } });
+		expect(info.hooks).toEqual(['build:done']);
+		expect(info.warnings).toEqual([expect.stringMatching(/^COMPATIBILITY_VERSION_EOL: /)]);
+
+		const output = await capture((stdout) => runInfo({ cwd: fixture.root, stdout }));
+		expect(output).toContain('enabled (prefix BOT_)');
+		expect(output).toContain('build:done');
+		expect(output).toContain('COMPATIBILITY_VERSION_EOL');
+	});
+
 	test('prints a readable report with relative paths', async () => {
 		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': "export default { dev: { url: 'http://localhost:3000' } };" });
 		const output = await capture((stdout) => runInfo({ cwd: fixture.root, stdout }));

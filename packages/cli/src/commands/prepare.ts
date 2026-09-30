@@ -1,10 +1,11 @@
-import { displayPath, loadStarsConfig } from '@wolfstar/schema';
+import { displayPath } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { shouldUseColor } from '../utils/output-mode.js';
-import { prepareProject } from './_shared.js';
+import { loadProject } from '../utils/hooks.js';
+import { prepareProject, reportWarnings } from './_shared.js';
 
 export { prepareProject } from './_shared.js';
 
@@ -22,8 +23,9 @@ export interface PrepareTaskOptions extends ProjectArgs {
 export async function runPrepare(options: PrepareTaskOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: shouldUseColor() && !options.json });
-	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
-	const result = await prepareProject(config, Boolean(options.check));
+	const { config, hooks } = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
+	await reportWarnings(config, (text) => process.stderr.write(`${text}\n`));
+	const result = await prepareProject(config, hooks, Boolean(options.check));
 
 	if (options.json) {
 		stdout.write(`${JSON.stringify(result, null, 2)}\n`);

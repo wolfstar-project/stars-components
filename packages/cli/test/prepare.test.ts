@@ -23,10 +23,10 @@ describe('generated TypeScript configuration', () => {
 
 	test('resolves inherited aliases even when auto imports are disabled', async () => {
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
-		expect((await prepareProject(config, true)).tsconfig.status).toBe('outdated');
+		expect((await prepareProject(config, undefined, true)).tsconfig.status).toBe('outdated');
 		await expect(readFile(join(fixture.root, '.stars/tsconfig.json'))).rejects.toMatchObject({ code: 'ENOENT' });
 		await prepareProject(config);
-		expect((await prepareProject(config, true)).tsconfig.status).toBe('up-to-date');
+		expect((await prepareProject(config, undefined, true)).tsconfig.status).toBe('up-to-date');
 		await fixture.write(
 			'src/main.ts',
 			[

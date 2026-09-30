@@ -692,6 +692,9 @@ importers:
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
+      hookable:
+        specifier: ^6.1.2
+        version: 6.1.2
       ink:
         specifier: ^7.1.1
         version: 7.1.1(@types/react@19.3.0)(react@19.3.0)

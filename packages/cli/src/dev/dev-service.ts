@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from '../builders/types.js';
-import { displayPath, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { displayPath, type ResolvedStarsConfig, type StarsHooks, type StarsRestartReason } from '@wolfstar/schema';
+import type { StarsHookable } from '../utils/hooks.js';
 import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from '../utils/log-buffer.js';
 import { Locales } from '../utils/locales.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from '../utils/process-supervisor.js';
@@ -9,7 +10,7 @@ import { Typechecker, type TypecheckState } from './typechecker.js';
 
 export type BuildState = 'idle' | 'building' | 'ok' | 'failed';
 export type HealthState = 'unknown' | 'ok' | 'down';
-export type RestartReason = 'initial' | 'build' | 'manual' | 'crash';
+export type RestartReason = StarsRestartReason;
 
 export interface DevStatus {
 	readonly progress: { readonly fraction: number; readonly message: string; readonly startedAt: number; readonly readyMs: number | null };
@@ -35,6 +36,8 @@ export interface DevServiceEvents {
 
 export interface DevServiceOptions {
 	builder: Builder;
+	/** The `stars.config` hooks; `build:*` and `dev:restart` run from here. */
+	hooks?: StarsHookable;
 	logs?: LogBuffer;
 	/** Overrides for tests. */
 	supervisor?: ProcessSupervisor;
@@ -54,6 +57,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public readonly typechecker: Typechecker;
 	public readonly tunnel: Tunnel;
 	public readonly locales: Locales;
+	readonly #hooks: StarsHookable | null;
 
 	#build: BuildState = 'idle';
 	#health: HealthState = 'unknown';
@@ -79,17 +83,25 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.typechecker = options.typechecker ?? new Typechecker(config);
 		this.tunnel = options.tunnel ?? new Tunnel(config);
 		this.locales = new Locales(config);
+		this.#hooks = options.hooks ?? null;
 
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
 			this.#setBuild('building');
+			void this.#callHook('build:before', this.config);
 		});
 		this.builder.on('progress', (fraction, message) => {
 			this.#progress = { ...this.#progress, fraction: Math.max(this.#progress.fraction, Math.min(0.75, fraction)), message };
 			this.#emitStatus();
 		});
-		this.builder.on('success', (outcome) => this.#onBuildSuccess(outcome));
-		this.builder.on('failure', (outcome) => this.#onBuildFailure(outcome));
+		this.builder.on('success', (outcome) => {
+			void this.#callHook('build:done', outcome, this.config);
+			this.#onBuildSuccess(outcome);
+		});
+		this.builder.on('failure', (outcome) => {
+			void this.#callHook('build:done', outcome, this.config);
+			this.#onBuildFailure(outcome);
+		});
 		this.builder.on('log', (level, text) => this.log('build', level, text));
 
 		this.supervisor.on('state', () => {
@@ -164,6 +176,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public restart(reason: RestartReason = 'manual'): Promise<void> {
 		this.#clearRestartTimer();
 		return this.#enqueue(async () => {
+			if (this.#stopped) return;
+			await this.#callHook('dev:restart', reason, this.config);
 			if (this.#stopped) return;
 			if (reason === 'manual' || reason === 'crash') {
 				this.#progress = { fraction: 0, message: 'restarting the bot', startedAt: Date.now(), readyMs: null };
@@ -318,6 +332,19 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			message: 'watching for changes',
 			readyMs: this.#progress.readyMs ?? Date.now() - this.#progress.startedAt
 		};
+	}
+
+	/**
+	 * Runs a `stars.config` hook. A failing hook is logged rather than thrown: a broken hook must never stop the
+	 * watcher or keep the bot from restarting.
+	 */
+	async #callHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		if (this.#hooks === null) return;
+		try {
+			await this.#hooks.callHook(name, ...args);
+		} catch (error) {
+			this.log('stars', 'error', `Hook ${name} failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	#emitStatus(): void {

@@ -1,7 +1,11 @@
 import type { ResolvedStarsConfig } from '@wolfstar/schema';
+import type { StarsHookable } from '../utils/hooks.js';
 import type { Builder } from './types.js';
 
-export async function createBuilder(config: ResolvedStarsConfig): Promise<Builder> {
+/**
+ * Creates the builder for `build.tool`. `hooks` reach the builders that expose hooks of their own (`tsdown:options`).
+ */
+export async function createBuilder(config: ResolvedStarsConfig, hooks?: StarsHookable): Promise<Builder> {
 	// The project runs its own build, so the CLI only watches what it writes (see `ExternalBuilder`) — including when
 	// it is driving `vite build` with its own `nitro()` plugin itself; `build.output` already points at Nitro's
 	// `server/index.mjs` in that case (see `resolveBuild`).
@@ -20,7 +24,7 @@ export async function createBuilder(config: ResolvedStarsConfig): Promise<Builde
 	switch (config.build.tool) {
 		case 'tsdown': {
 			const { TsdownBuilder } = await import('./tsdown.js');
-			return new TsdownBuilder(config);
+			return new TsdownBuilder(config, hooks);
 		}
 		case 'vite': {
 			const { ViteBuilder } = await import('./vite.js');

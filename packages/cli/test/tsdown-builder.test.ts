@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { TsdownBuilder } from '../src/builders/tsdown.js';
+import { createStarsHooks } from '../src/utils/hooks.js';
 
 const TSDOWN_PACKAGE = dirname(createRequire(import.meta.url).resolve('tsdown/package.json'));
 
@@ -142,6 +143,25 @@ describe('TsdownBuilder', () => {
 		expect(outcome).toMatchObject({ ok: true, message: null });
 		// `stars.config` wins on the option they both set, and the file keeps the ones it alone declares.
 		expect(await run(config.build.output)).toContain('stars file-only');
+	});
+
+	test('tsdown:options can change the options handed to tsdown, but not the CLI-owned ones', async () => {
+		fixture = await createFixture({
+			'package.json': PACKAGE_JSON,
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, future: { compatibilityVersion: 4 } };",
+			'src/main.ts': 'declare const __FROM__: string;\nconsole.log(__FROM__);\n'
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const hooks = createStarsHooks(config);
+		hooks.hook('tsdown:options', (options) => {
+			options.define = { __FROM__: '"hook"' };
+			options.cwd = '/nowhere';
+		});
+
+		const outcome = await new TsdownBuilder(config, hooks).build();
+		expect(outcome).toMatchObject({ ok: true, message: null });
+		expect(await run(config.build.output)).toContain('hook');
 	});
 
 	test('reports a failed build instead of throwing', async () => {

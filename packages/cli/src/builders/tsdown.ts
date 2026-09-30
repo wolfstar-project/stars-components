@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { dirname, extname, relative, resolve } from 'node:path';
 import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
+import type { StarsHookable } from '../utils/hooks.js';
 import { pluginRegistrations } from '../utils/plugin-registrations.js';
 import { importFromProject } from '../utils/project.js';
 import type { Builder, BuilderEvents, BuildOutcome } from './types.js';
@@ -33,7 +34,10 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 	#hadError = false;
 	#startedAt = 0;
 
-	public constructor(private readonly config: ResolvedStarsConfig) {
+	public constructor(
+		private readonly config: ResolvedStarsConfig,
+		private readonly hooks?: StarsHookable
+	) {
 		super();
 	}
 
@@ -82,14 +86,20 @@ export class TsdownBuilder extends EventEmitter<BuilderEvents> implements Builde
 		// otherwise silently drop the auto imports transform, or every `~`/`@` import in its sources.
 		const alias = { ...(defaults.alias as object), ...this.#alias(user.alias) };
 
-		return {
+		const options: TsdownOptions = {
 			...defaults,
 			...user,
 			...(plugins.length > 0 ? { plugins } : {}),
-			...(Object.keys(alias).length > 0 ? { alias } : {}),
-			// Last, and so not overridable: these are how the CLI talks to `tsdown` rather than project build options —
-			// the project root it resolves from, its own compact progress UI, and the logger that feeds diagnostics to
-			// the dev panel. `logLevel` also covers the few lifecycle messages tsdown writes through its global logger.
+			...(Object.keys(alias).length > 0 ? { alias } : {})
+		};
+		await this.hooks?.callHook('tsdown:options', options, this.config);
+
+		return {
+			...options,
+			// Last, and so not overridable (not even by `tsdown:options`): these are how the CLI talks to `tsdown` rather
+			// than project build options — the project root it resolves from, its own compact progress UI, and the logger
+			// that feeds diagnostics to the dev panel. `logLevel` also covers the few lifecycle messages tsdown writes
+			// through its global logger.
 			cwd: this.config.root,
 			logLevel: 'warn',
 			customLogger: this.#logger()
