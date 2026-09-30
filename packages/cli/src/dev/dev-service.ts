@@ -91,20 +91,14 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
 			this.#setBuild('building');
-			void this.#queueHook('build:before', this.config);
+			void this.#startHook('build:before', this.config);
 		});
 		this.builder.on('progress', (fraction, message) => {
 			this.#progress = { ...this.#progress, fraction: Math.max(this.#progress.fraction, Math.min(0.75, fraction)), message };
 			this.#emitStatus();
 		});
-		this.builder.on('success', (outcome) => {
-			void this.#queueHook('build:done', outcome, this.config);
-			this.#onBuildSuccess(outcome);
-		});
-		this.builder.on('failure', (outcome) => {
-			void this.#queueHook('build:done', outcome, this.config);
-			this.#onBuildFailure(outcome);
-		});
+		this.builder.on('success', (outcome) => this.#onBuildSuccess(outcome));
+		this.builder.on('failure', (outcome) => this.#onBuildFailure(outcome));
 		this.builder.on('log', (level, text) => this.log('build', level, text));
 
 		this.supervisor.on('state', () => {
@@ -255,6 +249,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#lastBuild = outcome;
 		this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 		this.#setBuild('ok');
+		// Only once locales are copied: until then the build is not done, and may still fail.
+		void this.#queueHook('build:done', outcome, this.config);
 		if (this.#stopped) return;
 		// A checker without a watch mode (`tsz`) only knows about the change once the build is through.
 		this.typechecker.check();
@@ -264,6 +260,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 	#onBuildFailure(outcome: BuildOutcome): void {
 		this.#lastBuild = outcome;
+		void this.#queueHook('build:done', outcome, this.config);
 		this.#setBuild('failed');
 		this.#clearRestartTimer();
 		this.log('stars', 'error', `Build failed${outcome.message ? `: ${outcome.message}` : ''}, waiting for changes`);
@@ -337,10 +334,29 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		};
 	}
 
+	/**
+	 * Runs a hook behind the ones already running (see {@link DevService.#hookChain}), e.g. `dev:close` so shutdown
+	 * waits for an unfinished `build:done`.
+	 */
+	public runHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		return this.#queueHook(name, ...args);
+	}
+
 	/** Queues a hook behind the ones already running; see {@link DevService.#hookChain}. */
 	#queueHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
 		this.#hookChain = this.#hookChain.then(() => this.#callHook(name, ...args));
 		return this.#hookChain;
+	}
+
+	/**
+	 * Starts a hook right away, at the moment it describes, instead of queueing it: `build:before` belongs to the
+	 * builder's `start` boundary, and a builder such as `none` finishes in the same call stack. Its synchronous part
+	 * runs here; later hooks still wait for the rest.
+	 */
+	#startHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		const running = this.#callHook(name, ...args);
+		this.#hookChain = Promise.all([this.#hookChain, running]).then(() => undefined);
+		return running;
 	}
 
 	/**

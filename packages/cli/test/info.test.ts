@@ -53,6 +53,17 @@ describe('stars info', () => {
 		expect(output).toContain('COMPATIBILITY_VERSION_EOL');
 	});
 
+	test('reports the env options after env:options', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'package.json': JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } }),
+			'stars.config.mjs':
+				"export default { env: { path: '.env.original' }, hooks: { 'env:options'(options) { options.path = '.env.hooked'; } } };"
+		});
+		const info = JSON.parse(await capture((stdout) => runInfo({ cwd: fixture.root, json: true, stdout }))) as ProjectInfo;
+		expect(info.env.options).toEqual({ path: '.env.hooked' });
+	});
+
 	test('prints a readable report with relative paths', async () => {
 		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': "export default { dev: { url: 'http://localhost:3000' } };" });
 		const output = await capture((stdout) => runInfo({ cwd: fixture.root, stdout }));

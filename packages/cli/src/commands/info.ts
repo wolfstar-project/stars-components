@@ -4,7 +4,7 @@ import { createColors } from 'colorette';
 import { arch, platform } from 'node:os';
 import { relative } from 'node:path';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
-import { loadProject } from '../utils/hooks.js';
+import { applyEnvOptions, loadProject } from '../utils/hooks.js';
 import { resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { findInstalledVersion } from '../utils/project.js';
 import { readOwnPackageJson } from '../utils/version.js';
@@ -180,7 +180,9 @@ function describeTunnel(tunnel: ResolvedStarsConfig['dev']['tunnel'], colors: Re
 
 export async function runInfo(options: InfoOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
-	const { config } = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
+	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
+	// What the build would use: `env:options` may change the env files.
+	const config = await applyEnvOptions(project.config, project.hooks);
 	const info = collectInfo(config);
 	stdout.write(`${options.json ? JSON.stringify(info, null, 2) : formatInfo(info, shouldUseColor())}\n`);
 }

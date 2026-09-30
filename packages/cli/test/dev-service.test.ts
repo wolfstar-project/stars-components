@@ -122,6 +122,60 @@ describe('DevService', () => {
 		]);
 	});
 
+	async function setupWithHooks() {
+		fixture = await createFixture({
+			'src/main.js': KEEPALIVE_SCRIPT,
+			'stars.config.mjs': 'export default { dev: { debounce: 10, killTimeout: 1000 } };'
+		});
+		config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		builder = new FakeBuilder();
+		const hooks = createStarsHooks(config);
+		service = new DevService(config, { builder, hooks });
+		return hooks;
+	}
+
+	test('runs build:before at the build start boundary, even behind a slow hook', async () => {
+		const hooks = await setupWithHooks();
+		const calls: string[] = [];
+		hooks.hook('build:done', () => new Promise((resolve) => setTimeout(resolve, 50)));
+		hooks.hook('build:before', () => void calls.push('build:before'));
+
+		builder.emit('start');
+		// A builder like `none` completes in the same call stack as `start`: the hook's synchronous part must not wait.
+		expect(calls).toEqual(['build:before']);
+		builder.emit('success', { ok: true, durationMs: 1, message: null });
+		builder.emit('start');
+		expect(calls).toEqual(['build:before', 'build:before']);
+	});
+
+	test('build:done reports the final outcome when copying locales fails', async () => {
+		const hooks = await setupWithHooks();
+		const outcomes: boolean[] = [];
+		hooks.hook('build:done', (outcome) => void outcomes.push(outcome.ok));
+		vi.spyOn(service.locales, 'copy').mockImplementation(() => {
+			throw new Error('EACCES');
+		});
+
+		builder.succeed();
+		await waitFor(() => outcomes.length === 1);
+		expect(outcomes).toEqual([false]);
+		expect(service.status.build).toBe('failed');
+	});
+
+	test('runHook waits for the hooks already running, so dev:close sees build:done settle', async () => {
+		const hooks = await setupWithHooks();
+		const events: string[] = [];
+		hooks.hook('build:done', async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			events.push('build:done');
+		});
+		hooks.hook('dev:close', () => void events.push('dev:close'));
+
+		builder.fail();
+		await service.runHook('dev:close', config);
+		expect(events).toEqual(['build:done', 'dev:close']);
+	});
+
 	test('starts the bot after the first successful build and restarts after the next one', async () => {
 		await setup(KEEPALIVE_SCRIPT);
 		await service.start();

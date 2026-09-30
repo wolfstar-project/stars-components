@@ -27,7 +27,8 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	process.env.NODE_ENV = 'development';
 	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } });
 	const hooks = project.hooks;
-	const config = await applyEnvOptions(await resolveDevConfig(project.config), hooks);
+	// `env:options` first: it may pick env files with another `HTTP_PORT`, which `dev.url` is derived from.
+	const config = await resolveDevConfig(await applyEnvOptions(project.config, hooks));
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();
 	const theme = resolveThemeSetting({ flag: options.theme, saved: readSavedTheme() });
@@ -55,11 +56,8 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 		exiting ??= (async () => {
 			renderer.stop();
 			// A failing hook must not keep the bot running.
-			try {
-				await hooks.callHook('dev:close', config);
-			} catch (error) {
-				service.log('stars', 'error', `Hook dev:close failed: ${error instanceof Error ? error.message : String(error)}`);
-			}
+			// Behind any hook still running (an async `build:done`), and logged rather than thrown if it fails.
+			await service.runHook('dev:close', config);
 			await service.stop();
 			logFile?.close();
 			process.exit(code);

@@ -47,6 +47,22 @@ describe('stars hooks', () => {
 		expect(config.env.options.prefix).toBe('A_');
 	});
 
+	test('env:options re-resolves what depends on the env files, such as the dev URL', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'package.json': WITH_ENV_UTILITIES,
+			'.env': 'HTTP_PORT=4000',
+			'config/.env': 'HTTP_PORT=4100',
+			'stars.config.mjs': "export default { hooks: { 'env:options'(options) { options.path = 'config/.env'; } } };"
+		});
+		const { config, hooks } = await loadProject({ cwd: fixture.root, env: {} });
+		expect(config.dev.url).toBe('http://localhost:4000');
+
+		const next = await applyEnvOptions(config, hooks);
+		expect(next.env).toEqual({ enabled: true, options: { path: 'config/.env' } });
+		expect(next.dev.url).toBe('http://localhost:4100');
+	});
+
 	test('env:options does not run when env is disabled', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
