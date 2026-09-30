@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from '../builders/types.js';
 import { displayPath, type ResolvedStarsConfig, type StarsHooks, type StarsRestartReason } from '@wolfstar/schema';
+import { envImportArgs } from '../utils/env-import.js';
 import type { StarsHookable } from '../utils/hooks.js';
 import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from '../utils/log-buffer.js';
 import { Locales } from '../utils/locales.js';
@@ -355,7 +356,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 export function createSupervisor(config: ResolvedStarsConfig): ProcessSupervisor {
 	return new ProcessSupervisor({
 		command: process.execPath,
-		args: [...config.dev.nodeArgs, config.build.output, ...config.dev.args],
+		args: [...envImportArgs(config), ...config.dev.nodeArgs, config.build.output, ...config.dev.args],
 		cwd: config.root,
 		env: {
 			...process.env,
