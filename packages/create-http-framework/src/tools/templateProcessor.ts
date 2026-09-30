@@ -62,6 +62,11 @@ export interface TemplateContext {
 	sharder: boolean;
 	/** Only meaningful when `language === 'ts'`. */
 	buildTool: BuildTool;
+	/**
+	 * Whether the generator relies on `stars` registering `env` in the entry (compatibility version 5). Optional so a
+	 * manifest written before it existed renders `src/lib/setup` the way it was generated: loading the env by hand.
+	 */
+	autoEnv?: boolean;
 }
 
 /** A command the bundled builds (Vite, Nitro) import and load explicitly, since there is no `commands` directory to scan. */
@@ -74,7 +79,9 @@ interface CommandImport {
  * What the Handlebars sources see: the persisted {@link TemplateContext} plus values derived from it. Deriving at render
  * time keeps the manifest small and lets manifests written before these fields existed still render.
  */
-function toRenderContext(context: TemplateContext): TemplateContext & { vite: boolean; nitro: boolean; commands: CommandImport[] } {
+function toRenderContext(
+	context: TemplateContext
+): TemplateContext & { vite: boolean; nitro: boolean; registersEnv: boolean; commands: CommandImport[] } {
 	const typescript = context.language === 'ts';
 	const commands: CommandImport[] = [{ className: 'PingCommand', file: 'ping' }];
 	if (context.subcommandsAdvanced) commands.push({ className: 'SettingsCommand', file: 'settings' });
@@ -84,6 +91,9 @@ function toRenderContext(context: TemplateContext): TemplateContext & { vite: bo
 		...context,
 		vite: typescript && isViteBuild(context.buildTool),
 		nitro: typescript && isNitroBuild(context.buildTool),
+		// `stars` registers `env` in the entry of tsdown and Vite builds; Nitro leaves it off by default, and `tsc` or
+		// a JavaScript entry never pass through the transform, so those keep loading the environment themselves.
+		registersEnv: Boolean(context.autoEnv) && typescript && (context.buildTool === 'tsdown' || context.buildTool === 'vite'),
 		commands
 	};
 }
@@ -206,7 +216,8 @@ function buildLegacyVariantMatchers(absoluteSource: string, context: TemplateCon
 		gateway: false,
 		cache: false,
 		redis: false,
-		sharder: false
+		sharder: false,
+		autoEnv: false
 	};
 	return [false, true].map((i18n) => {
 		const rendered = renderSource(absoluteSource, { ...legacy, buildTool: 'tsdown', i18n });

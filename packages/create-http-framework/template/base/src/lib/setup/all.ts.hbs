@@ -1,5 +1,11 @@
+{{#if registersEnv}}
+export function setup() {
+	// `stars` loads the environment (`env` in stars.config.ts) before any module of the bot runs.
+}
+{{else}}
 import { setup as envRun } from '@wolfstar/env-utilities';
 
 export function setup() {
 	envRun();
 }
+{{/if}}

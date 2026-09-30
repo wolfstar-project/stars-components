@@ -228,12 +228,15 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 
 /**
  * Writes the `stars.config.*` file read by the `stars` CLI (`dev`, `build`, `info`, `codegen` scripts). Conventional
- * JavaScript and tsdown projects need no options; an explicit tsc, Vite or Nitro selection is the only generated override.
+ * tsdown projects need no options; an explicit tsc, Vite or Nitro selection is the only generated build override.
+ * JavaScript and tsc projects also turn the automatic `env` registration off: their output never passes through the
+ * entry transform that registers it, so `src/lib/setup` loads the environment itself (see `registersEnv` in the
+ * template processor).
  */
 function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
 	const isJs = ctx.language === 'js';
 	const usesTsc = !isJs && (ctx.buildTool === 'tsc6' || ctx.buildTool === 'tsc7');
-	let options = usesTsc ? "{ build: { tool: 'tsc' } }" : '{}';
+	let options = usesTsc ? "{ build: { tool: 'tsc' }, env: false }" : isJs ? '{ env: false }' : '{}';
 	if (!isJs && isViteBuild(ctx.buildTool)) {
 		// Nitro v3 is itself a Vite plugin, so `enableNitro` also needs `enableVite`.
 		const nitro = isNitroBuild(ctx.buildTool) ? ", enableNitro: true, nitro: { preset: 'node-server' }" : '';
