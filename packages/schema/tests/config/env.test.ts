@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { Diagnostic } from 'nostics';
 import { loadStarsConfig, readProjectEnvFiles } from '../../src/index.js';
 import { createFixture, type Fixture } from './helpers.js';
@@ -94,5 +95,15 @@ describe('stars.config env', () => {
 		fixture = await createFixture({ 'config/.env': 'HTTP_PORT=4000', '.env': 'HTTP_PORT=5000' });
 		expect(readProjectEnvFiles(fixture.root, 'development', { path: 'config/.env' })).toEqual({ HTTP_PORT: '4000' });
 		expect(readProjectEnvFiles(fixture.root, 'development')).toEqual({ HTTP_PORT: '5000' });
+	});
+
+	test('readProjectEnvFiles reads an absolute env.path as-is, the way @wolfstar/env-utilities does', async () => {
+		const secrets = await createFixture({ '.env': 'HTTP_PORT=4100' });
+		try {
+			fixture = await createFixture({ '.env': 'HTTP_PORT=5000' });
+			expect(readProjectEnvFiles(fixture.root, 'development', { path: join(secrets.root, '.env') })).toEqual({ HTTP_PORT: '4100' });
+		} finally {
+			await secrets.cleanup();
+		}
 	});
 });

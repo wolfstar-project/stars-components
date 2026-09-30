@@ -460,7 +460,8 @@ export function readProjectEnvFiles(root: string, environment = 'development', o
 	const files = suffixes.flatMap((suffix) => bases.map((base) => `${base}${suffix}`));
 
 	for (const file of files) {
-		const path = join(root, file);
+		// `resolve`, not `join`: an absolute `env.path` is used as-is, as `@wolfstar/env-utilities` itself does.
+		const path = resolve(root, file);
 		if (!isFile(path)) continue;
 
 		let contents: string;
