@@ -7,7 +7,7 @@ import { LogFileWriter } from '../dev/log-file.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { ExitCode, renderCrashReport } from '../utils/errors.js';
-import { applyEnvOptions, loadProject } from '../utils/hooks.js';
+import { applyEnvOptions, loadProject, withProjectEnv } from '../utils/hooks.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { THEME_SETTINGS, isThemeSetting, readSavedTheme, resolveThemeSetting, saveTheme } from '../utils/theme.js';
 import { prepareProject, reportWarnings } from './_shared.js';
@@ -28,7 +28,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } });
 	const hooks = project.hooks;
 	// `env:options` first: it may pick env files with another `HTTP_PORT`, which `dev.url` is derived from.
-	const config = await resolveDevConfig(await applyEnvOptions(project.config, hooks));
+	const config = await resolveDevConfig(withProjectEnv(await applyEnvOptions(project.config, hooks)));
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();
 	const theme = resolveThemeSetting({ flag: options.theme, saved: readSavedTheme() });

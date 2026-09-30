@@ -16,10 +16,11 @@ export function readProjectEnv(config: ResolvedStarsConfig): Record<string, stri
 	if (binary === null) return {};
 
 	try {
-		// `env.env` maps to varlock's own `--env`; otherwise it reads the environment `stars dev` runs in.
-		const args = [binary, 'load', '--format', 'json', ...(config.env.options.env ? ['--env', config.env.options.env] : [])];
-		const output = execFileSync(process.execPath, args, {
+		// The way the bot loads it: `@wolfstar/env-utilities` runs `varlock/auto-load` with no `--env` (it ignores
+		// `env.env` with varlock), in the environment `stars dev` gives the bot.
+		const output = execFileSync(process.execPath, [binary, 'load', '--format', 'json'], {
 			cwd: config.root,
+			env: { ...process.env, ...config.dev.env },
 			encoding: 'utf8',
 			stdio: ['ignore', 'pipe', 'ignore'],
 			timeout: 30_000

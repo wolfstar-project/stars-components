@@ -140,6 +140,11 @@ export interface ResolveConfigOptions {
 	configFile: string | null;
 	config: StarsConfig;
 	env?: NodeJS.ProcessEnv;
+	/**
+	 * The variables the bot will load, when the host resolved them itself (e.g. through `varlock load`). Used instead
+	 * of the project's env files for the defaults read from them, such as the `dev.url` port.
+	 */
+	projectEnv?: Readonly<Record<string, string>>;
 }
 
 export const DEFAULT_ENTRIES = ['src/main.ts', 'src/main.js', 'src/index.ts', 'src/index.js'] as const;
@@ -215,7 +220,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, future, Object.keys(tsdown).length > 0, validator);
 	const hooks = resolveHooks(config.hooks, validator);
 	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator);
-	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, envConfig.options, validator);
+	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, envConfig.options, options.projectEnv, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
@@ -484,12 +489,17 @@ export function readProjectEnvFiles(root: string, environment = 'development', o
 	return result;
 }
 
-function readDevPortFromEnvFile(root: string, environment: string, envOptions: Readonly<StarsEnvSetupOptions>): string | null {
+function readDevPortFromEnvFile(
+	root: string,
+	environment: string,
+	envOptions: Readonly<StarsEnvSetupOptions>,
+	projectEnv: Readonly<Record<string, string>> | undefined
+): string | null {
 	// Varlock resolves its `.env.schema` on its own terms (and may pull values from elsewhere), so a dotenv file is
-	// not what the bot loads: set `dev.url` or `HTTP_PORT` in the environment instead.
-	if (envOptions.loader === 'varlock') return null;
+	// not what the bot loads: without the values the host resolved (`projectEnv`), there is nothing to read.
+	if (projectEnv === undefined && envOptions.loader === 'varlock') return null;
 
-	const values = readProjectEnvFiles(root, environment, { path: envOptions.path });
+	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envOptions.path });
 	for (const key of ENV_PORT_KEYS) {
 		if (values[key]) return values[key];
 	}
@@ -504,6 +514,7 @@ function resolveDev(
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
 	envOptions: Readonly<StarsEnvSetupOptions>,
+	projectEnv: Readonly<Record<string, string>> | undefined,
 	validator: Validator
 ): ResolvedDevConfig {
 	validator.knownKeys(config, 'dev', [
@@ -544,7 +555,7 @@ function resolveDev(
 		const port =
 			devEnv.HTTP_PORT ??
 			env.HTTP_PORT ??
-			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions) ??
+			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions, projectEnv) ??
 			String(DEFAULT_DEV_PORT);
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}

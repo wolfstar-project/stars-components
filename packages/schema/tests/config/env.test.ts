@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { Diagnostic } from 'nostics';
-import { loadStarsConfig, readProjectEnvFiles } from '../../src/index.js';
+import { loadConfigFile, loadStarsConfig, readProjectEnvFiles, resolveStarsConfig } from '../../src/index.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 const WITH_ENV_UTILITIES = JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } });
@@ -101,6 +101,18 @@ describe('stars.config env', () => {
 		// Varlock resolves `.env.schema` on its own terms: a dotenv file may be stale or not what the bot loads.
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).dev.url).toBe('http://localhost:3000');
 		expect((await loadStarsConfig({ cwd: fixture.root, env: { HTTP_PORT: '4300' } })).dev.url).toBe('http://localhost:4300');
+	});
+
+	test('reads the dev port from projectEnv when the host resolved the variables itself', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'package.json': WITH_ENV_UTILITIES,
+			'.env': 'HTTP_PORT=4000',
+			'stars.config.mjs': "export default { env: { loader: 'varlock' } };"
+		});
+		const loaded = await loadConfigFile({ cwd: fixture.root });
+		const config = resolveStarsConfig({ cwd: fixture.root, ...loaded, env: {}, projectEnv: { HTTP_PORT: '4500' } });
+		expect(config.dev.url).toBe('http://localhost:4500');
 	});
 
 	test('readProjectEnvFiles honours a custom path', async () => {

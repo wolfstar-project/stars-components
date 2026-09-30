@@ -556,8 +556,8 @@ export default defineConfig({
   (or runs with `node --import @wolfstar/env-utilities/setup`). The projects `@wolfstar/create-http-framework`
   generates for them set `env: false` and keep calling `setup()` in `src/lib/setup`.
 - `stars dev` reads `HTTP_PORT` for the default `dev.url` from the same `path`/`env` files, after `env:options`. With
-  `loader: 'varlock'` it reads no dotenv file for that: set `dev.url` or `HTTP_PORT` instead. The tunnel's Discord
-  credentials then come from `varlock load` in the project.
+  `loader: 'varlock'` it reads it, and the tunnel's Discord credentials, from `varlock load` in the project instead —
+  run the way the bot loads it, without `env.env`, which varlock ignores.
 
 ### Hooks
 

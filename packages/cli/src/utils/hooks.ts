@@ -8,6 +8,7 @@ import {
 	type StarsHooks
 } from '@wolfstar/schema';
 import { createHooks, type Hookable } from 'hookable';
+import { readProjectEnv } from './project-env.js';
 
 export type StarsHookable = Hookable<StarsHooks>;
 
@@ -55,5 +56,23 @@ export async function applyEnvOptions(config: ResolvedStarsConfig, hooks: StarsH
 		return { ...config, env: { ...config.env, options } };
 	}
 
-	return resolveStarsConfig({ ...source, config: { ...source.config, env: { ...options, enabled: true } } });
+	return reresolve(source, { config: { ...source.config, env: { ...options, enabled: true } } });
+}
+
+/**
+ * With `loader: 'varlock'`, resolves the configuration again with the variables `varlock load` returns, so the
+ * defaults `stars.config` derives from the environment — the `dev.url` port — match what the bot loads. Every other
+ * configuration is returned as-is: the schema reads its env files directly.
+ */
+export function withProjectEnv(config: ResolvedStarsConfig): ResolvedStarsConfig {
+	const source = sources.get(config);
+	if (source === undefined || !config.env.enabled || config.env.options.loader !== 'varlock') return config;
+	return reresolve(source, { projectEnv: readProjectEnv(config) });
+}
+
+function reresolve(source: ResolveConfigOptions, change: Partial<ResolveConfigOptions>): ResolvedStarsConfig {
+	const next = { ...source, ...change };
+	const config = resolveStarsConfig(next);
+	sources.set(config, next);
+	return config;
 }

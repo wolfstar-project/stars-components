@@ -1,4 +1,4 @@
-import { applyEnvOptions, createStarsHooks, loadProject } from '../src/utils/hooks.js';
+import { applyEnvOptions, createStarsHooks, loadProject, withProjectEnv } from '../src/utils/hooks.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 const WITH_ENV_UTILITIES = JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } });
@@ -61,6 +61,25 @@ describe('stars hooks', () => {
 		const next = await applyEnvOptions(config, hooks);
 		expect(next.env).toEqual({ enabled: true, options: { path: 'config/.env' } });
 		expect(next.dev.url).toBe('http://localhost:4100');
+	});
+
+	test('withProjectEnv takes the dev port from varlock', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'package.json': WITH_ENV_UTILITIES,
+			'stars.config.mjs': "export default { env: { loader: 'varlock' } };",
+			'node_modules/varlock/package.json': JSON.stringify({ name: 'varlock', bin: { varlock: './cli.js' } }),
+			'node_modules/varlock/cli.js': 'console.log(JSON.stringify({ HTTP_PORT: 4500 }));\n'
+		});
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+		expect(config.dev.url).toBe('http://localhost:3000');
+		expect(withProjectEnv(config).dev.url).toBe('http://localhost:4500');
+	});
+
+	test('withProjectEnv leaves a dotenv project alone', async () => {
+		fixture = await createFixture({ 'src/main.js': '', '.env': 'HTTP_PORT=4000' });
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+		expect(withProjectEnv(config)).toBe(config);
 	});
 
 	test('env:options does not run when env is disabled', async () => {

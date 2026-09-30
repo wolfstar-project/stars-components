@@ -63,6 +63,21 @@ describe('readDiscordCredentials with the varlock loader', () => {
 		expect(readDiscordCredentials(config, {})).toEqual({ token: 'from-varlock', applicationId: '42' });
 	});
 
+	test('runs varlock the way the bot does, ignoring env.env', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'package.json': JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } }),
+			// `@wolfstar/env-utilities` ignores `env` with varlock: `varlock/auto-load` gets no `--env`.
+			'stars.config.mjs': "export default { env: { loader: 'varlock', env: 'production' } };",
+			'node_modules/varlock/package.json': JSON.stringify({ name: 'varlock', bin: { varlock: './cli.js' } }),
+			'node_modules/varlock/cli.js':
+				"const token = process.argv.includes('--env') ? 'production-token' : 'bot-token';\nconsole.log(JSON.stringify({ DISCORD_TOKEN: token }));\n"
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(readDiscordCredentials(config, {})?.token).toBe('bot-token');
+	});
+
 	test('reads nothing from the env files when varlock cannot be run', async () => {
 		fixture = await createFixture({
 			'src/main.js': '',
