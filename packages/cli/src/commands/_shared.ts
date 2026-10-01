@@ -2,6 +2,8 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
+import { formatError } from '../utils/errors.js';
+import type { StarsHookable } from '../utils/hooks.js';
 import { prepareTsconfig } from '../utils/tsconfig.js';
 
 export type PrepareResult =
@@ -30,7 +32,15 @@ export async function prepareAutoImports(config: ResolvedStarsConfig, check = fa
 }
 
 /** Prepares TypeScript configuration and auto import declarations before building. */
-export async function prepareProject(config: ResolvedStarsConfig, check = false) {
+export async function prepareProject(config: ResolvedStarsConfig, hooks?: StarsHookable, check = false) {
+	await hooks?.callHook('prepare:before', config);
 	const tsconfig = await prepareTsconfig(config, check);
-	return { ...(await prepareAutoImports(config, check)), tsconfig };
+	const result = { ...(await prepareAutoImports(config, check)), tsconfig };
+	await hooks?.callHook('prepare:done', config, { dts: result.dts, status: result.status });
+	return result;
+}
+
+/** Prints the non-fatal configuration diagnostics (e.g. an end-of-life compatibility version). */
+export async function reportWarnings(config: ResolvedStarsConfig, write: (text: string) => void): Promise<void> {
+	for (const warning of config.warnings) write(await formatError(warning));
 }

@@ -49,7 +49,8 @@ describe('stars.config', () => {
 		expect(config.root).toBe(fixture.root);
 		expect(config.entry).toBe(join(fixture.root, 'src', 'main.js'));
 		expect(config.build).toEqual({ tool: 'none', outDir: join(fixture.root, 'dist'), tsconfig: null, output: config.entry, configFile: null });
-		expect(config.future.compatibilityVersion).toBe(4);
+		expect(config.future.compatibilityVersion).toBe(5);
+		expect(config.warnings).toEqual([]);
 		expect(config.dev.watch).toEqual([join(fixture.root, 'src')]);
 		expect(config.dev.debounce).toBe(150);
 		expect(config.dev.nodeArgs).toEqual(['--enable-source-maps']);
@@ -94,6 +95,28 @@ describe('stars.config', () => {
 		expect(config.build.tool).toBe('tsdown');
 		expect(config.build.configFile).toBeNull();
 		expect(config.tsdown).toEqual({ minify: true });
+	});
+
+	test('accepts compatibility version 5 explicitly', async () => {
+		fixture = await createFixture({ 'src/main.ts': '', 'stars.config.mjs': 'export default { future: { compatibilityVersion: 5 } };' });
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.future.compatibilityVersion).toBe(5);
+		expect(config.build.tool).toBe('tsdown');
+		expect(config.build.configFile).toBeNull();
+		expect(config.imports.enabled).toBe(true);
+		expect(config.warnings).toEqual([]);
+	});
+
+	test('warns that compatibility version 3 is end-of-life', async () => {
+		fixture = await createFixture({
+			'src/main.ts': '',
+			'tsdown.config.ts': 'export default {};',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 3 } };'
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.future.compatibilityVersion).toBe(3);
+		expect(config.warnings.map((warning) => warning.code)).toEqual(['COMPATIBILITY_VERSION_EOL']);
+		expect(config.warnings[0]!.fix).toContain('compatibilityVersion');
 	});
 
 	test('keeps a tsdown.config.* authoritative at compatibility version 3', async () => {
@@ -453,10 +476,10 @@ describe('stars.config', () => {
 		});
 
 		test('rejects an unknown compatibility version and unknown `future` options', async () => {
-			const error = await expectConfigError('export default { future: { compatibilityVersion: 5 } };');
+			const error = await expectConfigError('export default { future: { compatibilityVersion: 6 } };');
 			expect(error.code).toBe('INVALID_COMPATIBILITY_VERSION');
-			expect(error.message).toContain('5');
-			expect(error.fix).toContain('4');
+			expect(error.message).toContain('6');
+			expect(error.fix).toContain('5');
 
 			expect((await expectConfigError("export default { future: { compatibilityVersion: '4' } };")).code).toBe('INVALID_COMPATIBILITY_VERSION');
 			expect((await expectConfigError('export default { future: { compatVersion: 4 } };')).code).toBe('UNKNOWN_OPTION');

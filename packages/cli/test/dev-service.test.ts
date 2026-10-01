@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';
 import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { DevService } from '../src/dev/dev-service.js';
+import { createStarsHooks } from '../src/utils/hooks.js';
 import { CRASH_SCRIPT, KEEPALIVE_SCRIPT, createFixture, waitFor, type Fixture } from './helpers.js';
 
 class FakeBuilder extends EventEmitter<BuilderEvents> implements Builder {
@@ -57,6 +58,122 @@ describe('DevService', () => {
 	afterEach(async () => {
 		await service?.stop();
 		await fixture?.cleanup();
+	});
+
+	test('runs the build and restart hooks, and logs a failing hook instead of stopping', async () => {
+		fixture = await createFixture({
+			'src/main.js': KEEPALIVE_SCRIPT,
+			'stars.config.mjs': 'export default { dev: { debounce: 10, killTimeout: 1000 } };'
+		});
+		config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		builder = new FakeBuilder();
+		const hooks = createStarsHooks(config);
+		const calls: string[] = [];
+		hooks.hook('build:before', () => void calls.push('build:before'));
+		hooks.hook('build:done', (outcome) => void calls.push(`build:done:${outcome.ok}`));
+		hooks.hook('dev:restart', (reason) => void calls.push(`dev:restart:${reason}`));
+		hooks.hook('dev:restart', () => {
+			throw new Error('broken hook');
+		});
+		service = new DevService(config, { builder, hooks });
+
+		await service.start();
+		builder.succeed();
+		await waitFor(() => service.status.process === 'running');
+		builder.fail();
+		await waitFor(() => calls.includes('build:done:false'));
+
+		expect(calls).toEqual(['build:before', 'build:done:true', 'dev:restart:initial', 'build:before', 'build:done:false']);
+		expect(
+			service.logs
+				.entries()
+				.some((entry) => entry.level === 'error' && entry.text.includes('dev:restart') && entry.text.includes('broken hook'))
+		).toBe(true);
+	});
+
+	test('runs async build hooks one after another, and dev:restart only once they settle', async () => {
+		fixture = await createFixture({
+			'src/main.js': KEEPALIVE_SCRIPT,
+			'stars.config.mjs': 'export default { dev: { debounce: 10, killTimeout: 1000 } };'
+		});
+		config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		builder = new FakeBuilder();
+		const hooks = createStarsHooks(config);
+		const events: string[] = [];
+		hooks.hook('build:done', async (outcome) => {
+			events.push(`build:done:${outcome.durationMs}:start`);
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			events.push(`build:done:${outcome.durationMs}:end`);
+		});
+		hooks.hook('dev:restart', (reason) => void events.push(`dev:restart:${reason}`));
+		service = new DevService(config, { builder, hooks });
+
+		await service.start();
+		builder.succeed(1);
+		builder.succeed(2);
+		await waitFor(() => service.status.process === 'running' && events.includes('build:done:2:end'));
+
+		expect(events.slice(0, 5)).toEqual([
+			'build:done:1:start',
+			'build:done:1:end',
+			'build:done:2:start',
+			'build:done:2:end',
+			'dev:restart:initial'
+		]);
+	});
+
+	async function setupWithHooks() {
+		fixture = await createFixture({
+			'src/main.js': KEEPALIVE_SCRIPT,
+			'stars.config.mjs': 'export default { dev: { debounce: 10, killTimeout: 1000 } };'
+		});
+		config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		builder = new FakeBuilder();
+		const hooks = createStarsHooks(config);
+		service = new DevService(config, { builder, hooks });
+		return hooks;
+	}
+
+	test('runs build:before at the build start boundary, even behind a slow hook', async () => {
+		const hooks = await setupWithHooks();
+		const calls: string[] = [];
+		hooks.hook('build:done', () => new Promise((resolve) => setTimeout(resolve, 50)));
+		hooks.hook('build:before', () => void calls.push('build:before'));
+
+		builder.emit('start');
+		// A builder like `none` completes in the same call stack as `start`: the hook's synchronous part must not wait.
+		expect(calls).toEqual(['build:before']);
+		builder.emit('success', { ok: true, durationMs: 1, message: null });
+		builder.emit('start');
+		expect(calls).toEqual(['build:before', 'build:before']);
+	});
+
+	test('build:done reports the final outcome when copying locales fails', async () => {
+		const hooks = await setupWithHooks();
+		const outcomes: boolean[] = [];
+		hooks.hook('build:done', (outcome) => void outcomes.push(outcome.ok));
+		vi.spyOn(service.locales, 'copy').mockImplementation(() => {
+			throw new Error('EACCES');
+		});
+
+		builder.succeed();
+		await waitFor(() => outcomes.length === 1);
+		expect(outcomes).toEqual([false]);
+		expect(service.status.build).toBe('failed');
+	});
+
+	test('runHook waits for the hooks already running, so dev:close sees build:done settle', async () => {
+		const hooks = await setupWithHooks();
+		const events: string[] = [];
+		hooks.hook('build:done', async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			events.push('build:done');
+		});
+		hooks.hook('dev:close', () => void events.push('dev:close'));
+
+		builder.fail();
+		await service.runHook('dev:close', config);
+		expect(events).toEqual(['build:done', 'dev:close']);
 	});
 
 	test('starts the bot after the first successful build and restarts after the next one', async () => {

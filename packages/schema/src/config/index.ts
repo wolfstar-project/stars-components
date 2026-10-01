@@ -29,7 +29,19 @@ export async function loadStarsConfig(options: LoadStarsConfigOptions = {}): Pro
 
 export { CONFIG_EXTENSIONS, CONFIG_FILE_NAMES, discoverConfigFile, loadConfigFile } from './load.js';
 export type { LoadConfigFileOptions, LoadedConfigFile } from './load.js';
+export {
+	AUTO_ENV_VERSION,
+	DEFAULT_COMPATIBILITY_VERSION,
+	EOL_COMPATIBILITY_VERSIONS,
+	LATEST_COMPATIBILITY_VERSION,
+	LEGACY_COMPATIBILITY_VERSION,
+	STARS_CONFIG_TSDOWN_VERSION
+} from './compatibility.js';
+export { resolveEnv } from './env.js';
+export type { ResolvedEnvConfig } from './env.js';
 export { configDiagnostics } from './errors.js';
+export { resolveHooks, STARS_HOOK_NAMES } from './hooks.js';
+export type { ResolvedHooksConfig } from './hooks.js';
 export type { ConfigDiagnosticCode } from './errors.js';
 export { displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';
 export type {

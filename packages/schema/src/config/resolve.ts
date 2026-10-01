@@ -3,14 +3,19 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import type { Diagnostic } from 'nostics';
 import type {
 	StarsBuildTool,
-	StarsCompatibilityVersion,
 	StarsConfig,
 	StarsDevConfig,
+	StarsEnvSetupOptions,
 	StarsExperimentalConfig,
-	StarsFutureConfig,
 	StarsTypechecker
 } from '../types/config.js';
+import { LEGACY_COMPATIBILITY_VERSION, STARS_CONFIG_TSDOWN_VERSION, resolveFuture, type ResolvedFutureConfig } from './compatibility.js';
+import { resolveEnv, type ResolvedEnvConfig } from './env.js';
 import { configDiagnostics } from './errors.js';
+import { resolveHooks, type ResolvedHooksConfig } from './hooks.js';
+import { Validator } from './validator.js';
+
+export type { ResolvedFutureConfig } from './compatibility.js';
 
 export interface PackageJsonLike {
 	name?: string;
@@ -34,7 +39,7 @@ export interface ResolvedBuildConfig {
 	readonly output: string;
 	/**
 	 * Absolute path of the build tool's own configuration file (`tsdown.config.*`, `vite.config.*`), `null` when the
-	 * tool has none — which is always the case for `tsdown` with `future.compatibilityVersion` 4, where the build is
+	 * tool has none — which is always the case for `tsdown` from `future.compatibilityVersion` 4 on, where the build is
 	 * configured from `stars.config` alone.
 	 */
 	readonly configFile: string | null;
@@ -84,10 +89,6 @@ export interface ResolvedExperimentalConfig {
 	readonly nitro: ResolvedNitroConfig;
 }
 
-export interface ResolvedFutureConfig {
-	readonly compatibilityVersion: StarsCompatibilityVersion;
-}
-
 export interface ResolvedImportsConfig {
 	readonly enabled: boolean;
 	/** Directory glob patterns, relative to the project root (the way `unimport` scans them). */
@@ -121,12 +122,17 @@ export interface ResolvedStarsConfig {
 	readonly dev: ResolvedDevConfig;
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
+	readonly env: ResolvedEnvConfig;
+	/** The `hooks` block, flattened to full hook names (`build:done`). */
+	readonly hooks: ResolvedHooksConfig;
 	readonly experimental: ResolvedExperimentalConfig;
 	readonly future: ResolvedFutureConfig;
 	/** Raw options merged into `vite.config.*`. */
 	readonly vite: Readonly<Record<string, unknown>>;
-	/** The `tsdown` build's options: merged over `tsdown.config.*` at compatibility version 3, the whole build at 4. */
+	/** The `tsdown` build's options: merged over `tsdown.config.*` at compatibility version 3, the whole build from 4 on. */
 	readonly tsdown: Readonly<Record<string, unknown>>;
+	/** Non-fatal diagnostics (e.g. an end-of-life compatibility version), for the host to report. */
+	readonly warnings: readonly Diagnostic[];
 }
 
 export interface ResolveConfigOptions {
@@ -134,6 +140,11 @@ export interface ResolveConfigOptions {
 	configFile: string | null;
 	config: StarsConfig;
 	env?: NodeJS.ProcessEnv;
+	/**
+	 * The variables the bot will load, when the host resolved them itself (e.g. through `varlock load`). Used instead
+	 * of the project's env files for the defaults read from them, such as the `dev.url` port.
+	 */
+	projectEnv?: Readonly<Record<string, string>>;
 }
 
 export const DEFAULT_ENTRIES = ['src/main.ts', 'src/main.js', 'src/index.ts', 'src/index.js'] as const;
@@ -150,11 +161,6 @@ export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
 export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
 export const DEFAULT_TUNNEL_PATH = '/';
 
-export const DEFAULT_COMPATIBILITY_VERSION = 4;
-export const LEGACY_COMPATIBILITY_VERSION = 3;
-export const LATEST_COMPATIBILITY_VERSION = 4;
-
-const COMPATIBILITY_VERSIONS = new Set<number>([LEGACY_COMPATIBILITY_VERSION, LATEST_COMPATIBILITY_VERSION]);
 const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'vite', 'auto']);
 const TYPECHECKERS = new Set<string>(['tsc', 'golar', 'tsz', 'auto']);
 const VITE_CONFIG_FILES = ['vite.config.ts', 'vite.config.mts', 'vite.config.cts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs'];
@@ -180,8 +186,22 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const file = options.configFile;
 	const config = options.config;
 	const validator = new Validator(file);
+	const warnings: Diagnostic[] = [];
 
-	validator.knownKeys(config, '', ['root', 'entry', 'build', 'dev', 'codegen', 'imports', 'experimental', 'future', 'vite', 'tsdown']);
+	validator.knownKeys(config, '', [
+		'root',
+		'entry',
+		'build',
+		'dev',
+		'codegen',
+		'imports',
+		'env',
+		'hooks',
+		'experimental',
+		'future',
+		'vite',
+		'tsdown'
+	]);
 	const baseDirectory = file ? dirname(file) : cwd;
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
@@ -191,14 +211,16 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 
 	const packageJson = readPackageJson(root, validator);
 	const experimental = resolveExperimental(config.experimental ?? {}, validator);
-	const future = resolveFuture(config.future ?? {}, validator);
+	const future = resolveFuture(config.future ?? {}, validator, warnings);
 	const entry = resolveEntry(root, validator.string(config.entry, 'entry'), validator);
 	// The tool-specific blocks are read before the build so a project that only declares `tsdown: {}` still resolves
 	// `build.tool: 'auto'` to `tsdown`: configuring a tool is as clear a signal as depending on it.
 	const vite = validator.plainObject(config.vite, 'vite') ?? {};
 	const tsdown = validator.plainObject(config.tsdown, 'tsdown') ?? {};
 	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, future, Object.keys(tsdown).length > 0, validator);
-	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, validator);
+	const hooks = resolveHooks(config.hooks, validator);
+	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator);
+	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, envConfig.options, options.projectEnv, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
@@ -210,7 +232,24 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 		throw validator.error(configDiagnostics.VITE_OPTIONS_REQUIRE_VITE, { tool: build.tool });
 	}
 
-	return { configFile: file, cwd, root, packageJson, entry, build, dev, codegen, imports, experimental, future, vite, tsdown };
+	return {
+		configFile: file,
+		cwd,
+		root,
+		packageJson,
+		entry,
+		build,
+		dev,
+		codegen,
+		imports,
+		env: envConfig,
+		hooks,
+		experimental,
+		future,
+		vite,
+		tsdown,
+		warnings
+	};
 }
 
 /**
@@ -305,7 +344,7 @@ function resolveBuild(
 
 	// Compatibility version 4 builds `tsdown` from this file alone. A `tsdown.config.*` left behind would keep the
 	// plugins and entry points it declares out of the build, so it is reported rather than quietly ignored.
-	if (tool === 'tsdown' && configFile !== null && future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION) {
+	if (tool === 'tsdown' && configFile !== null && future.compatibilityVersion >= STARS_CONFIG_TSDOWN_VERSION) {
 		throw validator.error(configDiagnostics.TSDOWN_CONFIG_FILE_UNSUPPORTED, {
 			file: displayPath(root, configFile),
 			version: future.compatibilityVersion,
@@ -345,35 +384,12 @@ function detectBuildTool(
 	// From compatibility version 4 on, `tsdown` is the build of a TypeScript project rather than one of the options:
 	// there is no `tsdown.config.*` left to detect it from, and a missing dependency is reported by the builder with
 	// an install hint instead of silently falling back to `tsc`.
-	if (future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION) return isTypeScriptEntry ? 'tsdown' : 'none';
+	if (future.compatibilityVersion >= STARS_CONFIG_TSDOWN_VERSION) return isTypeScriptEntry ? 'tsdown' : 'none';
 
 	const hasTsdown = TSDOWN_CONFIG_FILES.some((name) => isFile(join(root, name))) || hasDependency(packageJson, 'tsdown');
 	if (hasTsdown) return 'tsdown';
 	if (isTypeScriptEntry) return 'tsc';
 	return 'none';
-}
-
-/**
- * Resolves the Nuxt-style compatibility block. Version 4 is the default; version 3 remains an explicit legacy mode.
- */
-function resolveFuture(config: StarsFutureConfig, validator: Validator): ResolvedFutureConfig {
-	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
-		throw validator.typeError('future', 'an object', config, 'Use `{ compatibilityVersion }`.');
-	}
-
-	validator.knownKeys(config, 'future', ['compatibilityVersion']);
-	const version = config.compatibilityVersion;
-	if (version === undefined) return { compatibilityVersion: DEFAULT_COMPATIBILITY_VERSION };
-
-	if (typeof version !== 'number' || !COMPATIBILITY_VERSIONS.has(version)) {
-		throw validator.error(configDiagnostics.INVALID_COMPATIBILITY_VERSION, {
-			value: version,
-			legacyVersion: LEGACY_COMPATIBILITY_VERSION,
-			latestVersion: LATEST_COMPATIBILITY_VERSION
-		});
-	}
-
-	return { compatibilityVersion: version as StarsCompatibilityVersion };
 }
 
 /**
@@ -441,13 +457,16 @@ const ENV_PORT_KEYS = ['HTTP_PORT', 'PORT'] as const;
  * implementation — quoting is stripped, but expansion (`dotenv-expand`) is not. Earlier files win, matching
  * dotenv's own precedence.
  */
-export function readProjectEnvFiles(root: string, environment = 'development'): Record<string, string> {
+export function readProjectEnvFiles(root: string, environment = 'development', options: { path?: string } = {}): Record<string, string> {
 	const result: Record<string, string> = {};
 	const suffixes = [`.${environment}.local`, ...(environment === 'test' ? [] : ['.local']), `.${environment}`, ''];
-	const files = suffixes.flatMap((suffix) => [join('src', `.env${suffix}`), `.env${suffix}`]);
+	// A custom `env.path` replaces both default locations, the way it does in `@wolfstar/env-utilities`.
+	const bases = options.path ? [options.path] : [join('src', '.env'), '.env'];
+	const files = suffixes.flatMap((suffix) => bases.map((base) => `${base}${suffix}`));
 
 	for (const file of files) {
-		const path = join(root, file);
+		// `resolve`, not `join`: an absolute `env.path` is used as-is, as `@wolfstar/env-utilities` itself does.
+		const path = resolve(root, file);
 		if (!isFile(path)) continue;
 
 		let contents: string;
@@ -470,8 +489,17 @@ export function readProjectEnvFiles(root: string, environment = 'development'): 
 	return result;
 }
 
-function readDevPortFromEnvFile(root: string, environment: string): string | null {
-	const values = readProjectEnvFiles(root, environment);
+function readDevPortFromEnvFile(
+	root: string,
+	environment: string,
+	envOptions: Readonly<StarsEnvSetupOptions>,
+	projectEnv: Readonly<Record<string, string>> | undefined
+): string | null {
+	// Varlock resolves its `.env.schema` on its own terms (and may pull values from elsewhere), so a dotenv file is
+	// not what the bot loads: without the values the host resolved (`projectEnv`), there is nothing to read.
+	if (projectEnv === undefined && envOptions.loader === 'varlock') return null;
+
+	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envOptions.path });
 	for (const key of ENV_PORT_KEYS) {
 		if (values[key]) return values[key];
 	}
@@ -485,6 +513,8 @@ function resolveDev(
 	packageJson: PackageJsonLike | null,
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
+	envOptions: Readonly<StarsEnvSetupOptions>,
+	projectEnv: Readonly<Record<string, string>> | undefined,
 	validator: Validator
 ): ResolvedDevConfig {
 	validator.knownKeys(config, 'dev', [
@@ -522,7 +552,11 @@ function resolveDev(
 	} else {
 		// Mirrors Vite's and Nuxt's own dev servers: a URL is shown without any configuration. The exact host
 		// (`localhost` vs `127.0.0.1`) is resolved at runtime by `stars dev`, once it knows which one is actually reachable.
-		const port = devEnv.HTTP_PORT ?? env.HTTP_PORT ?? readDevPortFromEnvFile(root, env.NODE_ENV ?? 'development') ?? String(DEFAULT_DEV_PORT);
+		const port =
+			devEnv.HTTP_PORT ??
+			env.HTTP_PORT ??
+			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions, projectEnv) ??
+			String(DEFAULT_DEV_PORT);
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}
 
@@ -720,80 +754,11 @@ function resolveImports(
 	const exclude = validator.stringArray(options.exclude, 'imports.exclude') ?? [];
 	const dts = resolve(root, validator.string(options.dts, 'imports.dts') ?? DEFAULT_IMPORTS_DTS);
 
-	const enabledByDefault = buildTool === 'tsdown' && future.compatibilityVersion >= LATEST_COMPATIBILITY_VERSION;
+	const enabledByDefault = buildTool === 'tsdown' && future.compatibilityVersion >= STARS_CONFIG_TSDOWN_VERSION;
 	return { enabled: requestedOn ?? enabledByDefault, dirs, presets, exclude, dts };
 }
 
-class Validator {
-	public constructor(private readonly file: string | null) {}
-
-	private get sources(): string[] | undefined {
-		return this.file ? [this.file] : undefined;
-	}
-
-	public error<Handle extends (params: any) => Diagnostic>(handle: Handle, params: Parameters<Handle>[0]): Diagnostic {
-		return handle({ ...params, sources: this.sources });
-	}
-
-	public knownKeys(value: object, path: string, keys: readonly string[]): void {
-		for (const key of Object.keys(value)) {
-			if (keys.includes(key)) continue;
-			const fullPath = path ? `${path}.${key}` : key;
-			throw this.error(configDiagnostics.UNKNOWN_OPTION, { path: fullPath, parent: path, known: keys.join(', ') });
-		}
-	}
-
-	public string(value: unknown, path: string): string | undefined {
-		if (value === undefined) return undefined;
-		if (typeof value !== 'string' || value.length === 0) throw this.typeError(path, 'a non-empty string', value);
-		return value;
-	}
-
-	public boolean(value: unknown, path: string): boolean | undefined {
-		if (value === undefined) return undefined;
-		if (typeof value !== 'boolean') throw this.typeError(path, 'a boolean', value);
-		return value;
-	}
-
-	/** A plain object passed through as-is (e.g. raw `vite`/`tsdown` config merged into the project's own). */
-	public plainObject(value: unknown, path: string): Record<string, unknown> | undefined {
-		if (value === undefined) return undefined;
-		if (value === null || typeof value !== 'object' || Array.isArray(value)) throw this.typeError(path, 'an object', value);
-		return value as Record<string, unknown>;
-	}
-
-	public stringArray(value: unknown, path: string): string[] | undefined {
-		if (value === undefined) return undefined;
-		if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) throw this.typeError(path, 'an array of strings', value);
-		return value;
-	}
-
-	public nonNegativeNumber(value: unknown, path: string): number | undefined {
-		if (value === undefined) return undefined;
-		if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) throw this.typeError(path, 'a non-negative number', value);
-		return value;
-	}
-
-	public stringRecord(value: unknown, path: string): Record<string, string> | undefined {
-		if (value === undefined) return undefined;
-		if (value === null || typeof value !== 'object' || Array.isArray(value) || !Object.values(value).every((item) => typeof item === 'string')) {
-			throw this.typeError(path, 'an object of string values', value);
-		}
-		return value as Record<string, string>;
-	}
-
-	/** A generic "wrong type" diagnostic. `fix` defaults to the standard "set it or remove it" wording. */
-	public typeError(path: string, expected: string, value: unknown, fix?: string): Diagnostic {
-		return this.error(configDiagnostics.INVALID_TYPE, {
-			path,
-			expected,
-			value,
-			fix: fix ?? `Set \`${path}\` to ${expected} or remove it to use the default.`
-		});
-	}
-}
-
-function hasDependency(packageJson: PackageJsonLike | null, name: string): boolean {
+export function hasDependency(packageJson: PackageJsonLike | null, name: string): boolean {
 	return Boolean(packageJson?.dependencies?.[name] ?? packageJson?.devDependencies?.[name]);
 }
 

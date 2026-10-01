@@ -68,7 +68,7 @@ export const configDiagnostics = defineDiagnostics({
 		TSDOWN_CONFIG_FILE_UNSUPPORTED: {
 			why: (p: { file: string; version: number; legacyVersion: number }) => `\`${p.file}\` is not used with compatibility version ${p.version}`,
 			fix: (p: { file: string; version: number; legacyVersion: number }) =>
-				`Move its options into \`tsdown\` here, drop the ${p.file} configuration, or set \`future.compatibilityVersion\` to ${p.legacyVersion}.`
+				`Move its options into \`tsdown\` here and drop ${p.file}. \`future.compatibilityVersion\` ${p.legacyVersion} still loads it, but is end-of-life.`
 		},
 		INVALID_TYPE: {
 			why: (p: { path: string; expected: string; value: unknown; fix: string }) =>
@@ -76,13 +76,23 @@ export const configDiagnostics = defineDiagnostics({
 			fix: (p: { path: string; expected: string; value: unknown; fix: string }) => p.fix
 		},
 		INVALID_COMPATIBILITY_VERSION: {
-			why: (p: { value: unknown; legacyVersion: number; latestVersion: number }) => `Unknown compatibility version ${describeValue(p.value)}`,
-			fix: (p: { value: unknown; legacyVersion: number; latestVersion: number }) =>
-				`Use ${p.legacyVersion} for the legacy build pipeline or ${p.latestVersion} for today's defaults.`
+			why: (p: { value: unknown; supported: string; latestVersion: number }) => `Unknown compatibility version ${describeValue(p.value)}`,
+			fix: (p: { value: unknown; supported: string; latestVersion: number }) =>
+				`Use one of ${p.supported}; ${p.latestVersion} carries today's defaults.`
+		},
+		COMPATIBILITY_VERSION_EOL: {
+			why: (p: { version: number; latestVersion: number }) =>
+				`Compatibility version ${p.version} is end-of-life and will be removed in the next major`,
+			fix: (p: { version: number; latestVersion: number }) =>
+				`Move the options of your tsdown.config.* into \`tsdown\` in stars.config, delete that file, then set \`future.compatibilityVersion\` to ${p.latestVersion} (or remove it).`
 		},
 		UNKNOWN_OPTION: {
 			why: (p: { path: string; parent: string; known: string }) => `Unknown option \`${p.path}\``,
 			fix: (p: { path: string; parent: string; known: string }) => `Known options${p.parent ? ` of \`${p.parent}\`` : ''}: ${p.known}.`
+		},
+		UNKNOWN_HOOK: {
+			why: (p: { name: string; known: string }) => `Unknown hook \`${p.name}\``,
+			fix: (p: { name: string; known: string }) => `Known hooks: ${p.known}.`
 		},
 		EXPERIMENT_REQUIRED: {
 			why: (p: { path: string; requires: string; drop: string }) => `\`${p.path}\` needs \`${p.requires}\``,
@@ -91,6 +101,10 @@ export const configDiagnostics = defineDiagnostics({
 		IMPORTS_REQUIRE_TSDOWN: {
 			why: (_p: {}) => '`imports` requires the `tsdown` build tool',
 			fix: (_p: {}) => "Set `build.tool` to 'tsdown', or remove `imports`/set it to `false`."
+		},
+		ENV_REQUIRES_ENV_UTILITIES: {
+			why: (_p: {}) => '`env` is enabled, but the project does not depend on `@wolfstar/env-utilities`',
+			fix: (_p: {}) => 'Install it with `pnpm add @wolfstar/env-utilities`, or set `env` to `false`.'
 		},
 		LOCALES_NOT_FOUND: {
 			why: (p: { locales: string }) => `The locales directory does not exist: ${p.locales}`,

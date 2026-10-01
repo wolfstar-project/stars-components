@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { TsdownBuilder } from '../src/builders/tsdown.js';
+import { createStarsHooks } from '../src/utils/hooks.js';
 
 const TSDOWN_PACKAGE = dirname(createRequire(import.meta.url).resolve('tsdown/package.json'));
 
@@ -144,6 +145,25 @@ describe('TsdownBuilder', () => {
 		expect(await run(config.build.output)).toContain('stars file-only');
 	});
 
+	test('tsdown:options can change the options handed to tsdown, but not the CLI-owned ones', async () => {
+		fixture = await createFixture({
+			'package.json': PACKAGE_JSON,
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, future: { compatibilityVersion: 4 } };",
+			'src/main.ts': 'declare const __FROM__: string;\nconsole.log(__FROM__);\n'
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const hooks = createStarsHooks(config);
+		hooks.hook('tsdown:options', (options) => {
+			options.define = { __FROM__: '"hook"' };
+			options.cwd = '/nowhere';
+		});
+
+		const outcome = await new TsdownBuilder(config, hooks).build();
+		expect(outcome).toMatchObject({ ok: true, message: null });
+		expect(await run(config.build.output)).toContain('hook');
+	});
+
 	test('reports a failed build instead of throwing', async () => {
 		fixture = await createFixture({
 			'package.json': PACKAGE_JSON,
@@ -252,6 +272,43 @@ describe('TsdownBuilder', () => {
 
 		expect(outcome).toMatchObject({ ok: true, message: null });
 		expect(await run(config.build.output)).toContain('example');
+	});
+
+	test('registers env before plugin registrations and the entry itself', async () => {
+		fixture = await createFixture({
+			'package.json': JSON.stringify({
+				name: 'tsdown-fixture',
+				type: 'module',
+				main: 'dist/main.js',
+				dependencies: { '@wolfstar/env-utilities': '1.0.0', '@wolfstar/plugin-example': '1.0.0' }
+			}),
+			'stars.config.mjs': "export default { entry: 'src/main.ts', imports: false, env: { prefix: 'BOT_' } };",
+			// Stands in for the real `setup()`: records the options it got, the way loading `.env*` fills `process.env`.
+			'node_modules/@wolfstar/env-utilities/package.json': JSON.stringify({
+				name: '@wolfstar/env-utilities',
+				type: 'module',
+				exports: { '.': './index.js' }
+			}),
+			'node_modules/@wolfstar/env-utilities/index.js': 'export function setup(options) { process.env.STARS_ENV = JSON.stringify(options); }\n',
+			'node_modules/@wolfstar/plugin-example/package.json': JSON.stringify({
+				name: '@wolfstar/plugin-example',
+				type: 'module',
+				exports: { './register': './register.js' }
+			}),
+			// A plugin registration reads the environment as soon as it is evaluated.
+			'node_modules/@wolfstar/plugin-example/register.js': 'globalThis.envSeenByPlugin = process.env.STARS_ENV;\n',
+			'src/lib/read.ts': 'export const envSeenByModule = process.env.STARS_ENV;\n',
+			'src/main.ts':
+				"import { envSeenByModule } from './lib/read.js';\nconsole.log((globalThis as { envSeenByPlugin?: string }).envSeenByPlugin, envSeenByModule);\n"
+		});
+
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(config.env).toEqual({ enabled: true, options: { prefix: 'BOT_' } });
+		const outcome = await new TsdownBuilder(config).build();
+
+		expect(outcome).toMatchObject({ ok: true, message: null });
+		// Both the plugin registration and the entry's own imports see the environment already loaded.
+		expect((await run(config.build.output)).trim()).toBe('{"prefix":"BOT_"} {"prefix":"BOT_"}');
 	});
 
 	test('does not activate @wolfstar/plugin-* libraries that export no /register entrypoint', async () => {

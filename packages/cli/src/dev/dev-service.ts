@@ -1,6 +1,8 @@
 import { EventEmitter } from 'node:events';
 import type { Builder, BuildOutcome } from '../builders/types.js';
-import { displayPath, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { displayPath, type ResolvedStarsConfig, type StarsHooks, type StarsRestartReason } from '@wolfstar/schema';
+import { envImportArgs } from '../utils/env-import.js';
+import type { StarsHookable } from '../utils/hooks.js';
 import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from '../utils/log-buffer.js';
 import { Locales } from '../utils/locales.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from '../utils/process-supervisor.js';
@@ -9,7 +11,7 @@ import { Typechecker, type TypecheckState } from './typechecker.js';
 
 export type BuildState = 'idle' | 'building' | 'ok' | 'failed';
 export type HealthState = 'unknown' | 'ok' | 'down';
-export type RestartReason = 'initial' | 'build' | 'manual' | 'crash';
+export type RestartReason = StarsRestartReason;
 
 export interface DevStatus {
 	readonly progress: { readonly fraction: number; readonly message: string; readonly startedAt: number; readonly readyMs: number | null };
@@ -35,6 +37,8 @@ export interface DevServiceEvents {
 
 export interface DevServiceOptions {
 	builder: Builder;
+	/** The `stars.config` hooks; `build:*` and `dev:restart` run from here. */
+	hooks?: StarsHookable;
 	logs?: LogBuffer;
 	/** Overrides for tests. */
 	supervisor?: ProcessSupervisor;
@@ -54,6 +58,9 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public readonly typechecker: Typechecker;
 	public readonly tunnel: Tunnel;
 	public readonly locales: Locales;
+	readonly #hooks: StarsHookable | null;
+	/** Runs hooks one at a time, so an async `build:done` settles before the next build's hooks or a restart. */
+	#hookChain: Promise<void> = Promise.resolve();
 
 	#build: BuildState = 'idle';
 	#health: HealthState = 'unknown';
@@ -79,10 +86,12 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.typechecker = options.typechecker ?? new Typechecker(config);
 		this.tunnel = options.tunnel ?? new Tunnel(config);
 		this.locales = new Locales(config);
+		this.#hooks = options.hooks ?? null;
 
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
 			this.#setBuild('building');
+			void this.#startHook('build:before', this.config);
 		});
 		this.builder.on('progress', (fraction, message) => {
 			this.#progress = { ...this.#progress, fraction: Math.max(this.#progress.fraction, Math.min(0.75, fraction)), message };
@@ -165,6 +174,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#clearRestartTimer();
 		return this.#enqueue(async () => {
 			if (this.#stopped) return;
+			await this.#queueHook('dev:restart', reason, this.config);
+			if (this.#stopped) return;
 			if (reason === 'manual' || reason === 'crash') {
 				this.#progress = { fraction: 0, message: 'restarting the bot', startedAt: Date.now(), readyMs: null };
 			}
@@ -238,6 +249,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#lastBuild = outcome;
 		this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 		this.#setBuild('ok');
+		// Only once locales are copied: until then the build is not done, and may still fail.
+		void this.#queueHook('build:done', outcome, this.config);
 		if (this.#stopped) return;
 		// A checker without a watch mode (`tsz`) only knows about the change once the build is through.
 		this.typechecker.check();
@@ -247,6 +260,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 	#onBuildFailure(outcome: BuildOutcome): void {
 		this.#lastBuild = outcome;
+		void this.#queueHook('build:done', outcome, this.config);
 		this.#setBuild('failed');
 		this.#clearRestartTimer();
 		this.log('stars', 'error', `Build failed${outcome.message ? `: ${outcome.message}` : ''}, waiting for changes`);
@@ -320,6 +334,44 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		};
 	}
 
+	/**
+	 * Runs a hook behind the ones already running (see {@link DevService.#hookChain}), e.g. `dev:close` so shutdown
+	 * waits for an unfinished `build:done`.
+	 */
+	public runHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		return this.#queueHook(name, ...args);
+	}
+
+	/** Queues a hook behind the ones already running; see {@link DevService.#hookChain}. */
+	#queueHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		this.#hookChain = this.#hookChain.then(() => this.#callHook(name, ...args));
+		return this.#hookChain;
+	}
+
+	/**
+	 * Starts a hook right away, at the moment it describes, instead of queueing it: `build:before` belongs to the
+	 * builder's `start` boundary, and a builder such as `none` finishes in the same call stack. Its synchronous part
+	 * runs here; later hooks still wait for the rest.
+	 */
+	#startHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		const running = this.#callHook(name, ...args);
+		this.#hookChain = Promise.all([this.#hookChain, running]).then(() => undefined);
+		return running;
+	}
+
+	/**
+	 * Runs a `stars.config` hook. A failing hook is logged rather than thrown: a broken hook must never stop the
+	 * watcher or keep the bot from restarting.
+	 */
+	async #callHook<Name extends keyof StarsHooks>(name: Name, ...args: Parameters<StarsHooks[Name]>): Promise<void> {
+		if (this.#hooks === null) return;
+		try {
+			await this.#hooks.callHook(name, ...args);
+		} catch (error) {
+			this.log('stars', 'error', `Hook ${name} failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
 	#emitStatus(): void {
 		this.emit('status', this.status);
 	}
@@ -328,7 +380,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 export function createSupervisor(config: ResolvedStarsConfig): ProcessSupervisor {
 	return new ProcessSupervisor({
 		command: process.execPath,
-		args: [...config.dev.nodeArgs, config.build.output, ...config.dev.args],
+		args: [...envImportArgs(config), ...config.dev.nodeArgs, config.build.output, ...config.dev.args],
 		cwd: config.root,
 		env: {
 			...process.env,

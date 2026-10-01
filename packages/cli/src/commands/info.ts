@@ -1,9 +1,10 @@
-import { displayPath, loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { displayPath, type ResolvedStarsConfig, type StarsEnvSetupOptions } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { arch, platform } from 'node:os';
 import { relative } from 'node:path';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
+import { applyEnvOptions, loadProject } from '../utils/hooks.js';
 import { resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { findInstalledVersion } from '../utils/project.js';
 import { readOwnPackageJson } from '../utils/version.js';
@@ -30,6 +31,11 @@ export interface ProjectInfo {
 	imports: ResolvedStarsConfig['imports'];
 	experimental: ResolvedStarsConfig['experimental'];
 	future: ResolvedStarsConfig['future'];
+	env: ResolvedStarsConfig['env'];
+	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
+	hooks: string[];
+	/** Non-fatal configuration diagnostics, as `CODE: message`. */
+	warnings: string[];
 	/**
 	 * The option names set in the `tsdown`/`vite` blocks. Only the names: the values hold plugins and callbacks,
 	 * which neither serialize to JSON nor read usefully on a terminal.
@@ -60,6 +66,9 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		imports: config.imports,
 		experimental: config.experimental,
 		future: config.future,
+		env: config.env,
+		hooks: Object.keys(config.hooks),
+		warnings: config.warnings.map((warning) => `${warning.code}: ${warning.message}`),
 		options: { tsdown: Object.keys(config.tsdown), vite: Object.keys(config.vite) }
 	};
 }
@@ -123,7 +132,12 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Codegen', [
 			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled'))
 		]),
-		section('Future', [row('compat', `v${info.future.compatibilityVersion} defaults`)]),
+		section('Future', [
+			row('compat', `v${info.future.compatibilityVersion} defaults`),
+			...info.warnings.map((warning) => row('warning', colors.yellow(warning)))
+		]),
+		section('Env', [row('register', info.env.enabled ? colors.green(describeEnvOptions(info.env.options)) : colors.dim('disabled'))]),
+		section('Hooks', [row('registered', info.hooks.join(', ') || colors.dim('none'))]),
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),
 			row('nitro', flag(info.experimental.enableNitro, colors)),
@@ -144,6 +158,11 @@ function describeOptions(info: ProjectInfo, colors: ReturnType<typeof createColo
 	return names.length > 0 ? names.join(', ') : colors.dim('none');
 }
 
+function describeEnvOptions(options: Readonly<StarsEnvSetupOptions>): string {
+	const entries = Object.entries(options).map(([key, value]) => `${key} ${String(value)}`);
+	return entries.length > 0 ? `enabled (${entries.join(', ')})` : 'enabled';
+}
+
 function flag(enabled: boolean, colors: ReturnType<typeof createColors>): string {
 	return enabled ? colors.green('enabled') : colors.dim('disabled');
 }
@@ -161,7 +180,9 @@ function describeTunnel(tunnel: ResolvedStarsConfig['dev']['tunnel'], colors: Re
 
 export async function runInfo(options: InfoOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
-	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
+	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
+	// What the build would use: `env:options` may change the env files.
+	const config = await applyEnvOptions(project.config, project.hooks);
 	const info = collectInfo(config);
 	stdout.write(`${options.json ? JSON.stringify(info, null, 2) : formatInfo(info, shouldUseColor())}\n`);
 }

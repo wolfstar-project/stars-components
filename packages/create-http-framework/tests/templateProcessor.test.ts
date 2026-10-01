@@ -133,6 +133,31 @@ describe('processTemplate', () => {
 		expect(main).not.toContain('logo: [');
 	});
 
+	test.each([
+		['tsdown', false],
+		['vite', false],
+		['vite-nitro', true],
+		['tsc7', true]
+	] as const)('GIVEN a TypeScript %s project THEN src/lib/setup loads the environment by hand: %s', async (buildTool, byHand) => {
+		await processTemplate(outputDir, makeContext({ buildTool, autoEnv: true }));
+
+		const setup = await readFile(join(outputDir, 'src/lib/setup/all.ts'), 'utf8');
+		expect(setup.includes('envRun()')).toBe(byHand);
+		expect(setup).toContain('export function setup()');
+	});
+
+	test('GIVEN a manifest written before autoEnv existed THEN src/lib/setup keeps loading the environment by hand', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'tsdown' }));
+
+		expect(await readFile(join(outputDir, 'src/lib/setup/all.ts'), 'utf8')).toContain('envRun()');
+	});
+
+	test('GIVEN a JavaScript project THEN src/lib/setup loads the environment by hand', async () => {
+		await processTemplate(outputDir, makeContext({ language: 'js', buildTool: 'tsdown', autoEnv: true }));
+
+		expect(await readFile(join(outputDir, 'src/lib/setup/all.js'), 'utf8')).toContain('envRun()');
+	});
+
 	test('GIVEN i18n enabled THEN writes the localized ping command and locale JSON', async () => {
 		await processTemplate(outputDir, makeContext({ i18n: true }));
 

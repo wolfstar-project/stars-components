@@ -2,10 +2,12 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { pluginRegistrations } from '../src/plugins.js';
+import { envModuleSource, pluginRegistrations, STARS_ENV_MODULE } from '../src/plugins.js';
 
 interface RegistrationPlugin {
 	transform(code: string, id: string): { code: string } | null;
+	resolveId(id: string): string | null;
+	load(id: string): string | null;
 }
 
 let workspace: string;
@@ -93,5 +95,51 @@ describe('pluginRegistrations', () => {
 	test('GIVEN a plugin hoisted to a parent node_modules THEN its exports are read from there', async () => {
 		const imports = await project(['@wolfstar/plugin-hoisted'], installed('@wolfstar/plugin-hoisted', { exports: { '.': './index.js' } }, '.'));
 		expect(imports).toEqual([]);
+	});
+});
+
+describe('pluginRegistrations env', () => {
+	function plugin(env: ResolvedStarsConfig['env']): RegistrationPlugin {
+		const root = join(workspace, 'app');
+		return pluginRegistrations({ root, entry: join(root, 'src/main.ts'), env } as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+	}
+
+	const entry = () => join(workspace, 'app', 'src/main.ts');
+
+	test('imports the env module before plugin registrations', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app', dependencies: { '@wolfstar/plugin-i18next': '1.0.0' } }) });
+		const lines = plugin({ enabled: true, options: {} }).transform('console.log(1);', entry())!.code.split('\n');
+		expect(lines.slice(0, 3)).toEqual([
+			`import ${JSON.stringify(STARS_ENV_MODULE)};`,
+			'import "@wolfstar/plugin-i18next/register";',
+			'console.log(1);'
+		]);
+	});
+
+	test('transforms the entry for env alone, without plugins', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		expect(plugin({ enabled: true, options: {} }).transform('x', entry())!.code).toBe(`import ${JSON.stringify(STARS_ENV_MODULE)};\nx`);
+	});
+
+	test('leaves the entry alone when env is disabled and there are no plugins', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const instance = plugin({ enabled: false, options: {} });
+		expect(instance.transform('x', entry())).toBeNull();
+		expect(instance.resolveId(STARS_ENV_MODULE)).toBeNull();
+		expect(instance.load(STARS_ENV_MODULE)).toBeNull();
+	});
+
+	test('resolves and loads the virtual module with the options as JSON', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const instance = plugin({ enabled: true, options: { prefix: 'BOT_', path: 'config/.env' } });
+		expect(instance.resolveId(STARS_ENV_MODULE)).toBe(STARS_ENV_MODULE);
+		expect(instance.resolveId('other')).toBeNull();
+		expect(instance.load(STARS_ENV_MODULE)).toBe(envModuleSource({ prefix: 'BOT_', path: 'config/.env' }));
+		expect(instance.load('other')).toBeNull();
+	});
+
+	test('the virtual module calls setup with the options', () => {
+		expect(envModuleSource({ prefix: 'BOT_' })).toBe('import { setup } from "@wolfstar/env-utilities";\nsetup({"prefix":"BOT_"});\n');
+		expect(envModuleSource({}, 'file:///x/env.js')).toBe('import { setup } from "file:///x/env.js";\nsetup({});\n');
 	});
 });

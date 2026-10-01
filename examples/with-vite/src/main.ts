@@ -1,9 +1,7 @@
-import { envParseInteger, envParseString, setup } from '@wolfstar/env-utilities';
+import { envParseInteger, envParseString } from '@wolfstar/env-utilities';
 import { Client, container } from '@wolfstar/http-framework';
 import { PingCommand } from './commands/ping.js';
 import { registerCommands } from './lib/register-commands.js';
-
-setup();
 
 const client = new Client();
 

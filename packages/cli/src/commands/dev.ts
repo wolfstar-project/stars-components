@@ -1,4 +1,4 @@
-import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
+import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev/dev-service.js';
@@ -7,9 +7,10 @@ import { LogFileWriter } from '../dev/log-file.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { ExitCode, renderCrashReport } from '../utils/errors.js';
+import { applyEnvOptions, loadProject, withProjectEnv } from '../utils/hooks.js';
 import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { THEME_SETTINGS, isThemeSetting, readSavedTheme, resolveThemeSetting, saveTheme } from '../utils/theme.js';
-import { prepareProject } from './_shared.js';
+import { prepareProject, reportWarnings } from './_shared.js';
 
 export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
@@ -24,14 +25,18 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 
 	// Dev mode applies to config evaluation, build plugins, and the supervised application — not only the child.
 	process.env.NODE_ENV = 'development';
-	const config = await resolveDevConfig(
-		await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } })
-	);
+	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } });
+	const hooks = project.hooks;
+	// `env:options` first: it may pick env files with another `HTTP_PORT`, which `dev.url` is derived from.
+	const config = await resolveDevConfig(withProjectEnv(await applyEnvOptions(project.config, hooks)));
 	const mode = resolveOutputMode({ tui: options.tui });
 	const color = shouldUseColor();
 	const theme = resolveThemeSetting({ flag: options.theme, saved: readSavedTheme() });
 
-	const service = new DevService(config, { builder: await createBuilder(config) });
+	const builder = await createBuilder(config, hooks);
+	await hooks.callHook('builder:created', builder, config);
+	const service = new DevService(config, { builder, hooks });
+	await reportWarnings(config, (text) => service.log('stars', 'warn', text));
 	const logFile = config.dev.logFile ? new LogFileWriter(config.dev.logFile, service.logs) : null;
 	logFile?.open();
 	const renderer =
@@ -50,6 +55,9 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const shutdown = (code: ExitCode): Promise<never> => {
 		exiting ??= (async () => {
 			renderer.stop();
+			// A failing hook must not keep the bot running.
+			// Behind any hook still running (an async `build:done`), and logged rather than thrown if it fails.
+			await service.runHook('dev:close', config);
 			await service.stop();
 			logFile?.close();
 			process.exit(code);
@@ -78,8 +86,9 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 
 	const finished = renderer.start().then(() => shutdown(ExitCode.Ok));
 	try {
-		await prepareProject(config);
+		await prepareProject(config, hooks);
 		await service.start();
+		await hooks.callHook('dev:start', config);
 	} catch (error) {
 		service.log('stars', 'error', error instanceof Error ? await renderCrashReport(error, config.root) : String(error));
 		await shutdown(ExitCode.Error);

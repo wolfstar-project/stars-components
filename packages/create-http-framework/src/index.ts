@@ -467,7 +467,8 @@ async function main(): Promise<void> {
 		cache: wantsCache,
 		redis: wantsRedis,
 		sharder: wantsSharder,
-		buildTool
+		buildTool,
+		autoEnv: true
 	});
 	writeProjectFiles(targetDir, {
 		name: projectName,

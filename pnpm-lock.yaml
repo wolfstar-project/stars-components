@@ -692,6 +692,9 @@ importers:
       colorette:
         specifier: ^2.0.20
         version: 2.0.20
+      hookable:
+        specifier: ^6.1.2
+        version: 6.1.2
       ink:
         specifier: ^7.1.1
         version: 7.1.1(@types/react@19.3.0)(react@19.3.0)
@@ -851,6 +854,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^5.0.1
         version: 5.0.2(vitest@5.0.2)
+      '@wolfstar/schema':
+        specifier: workspace:^
+        version: link:../schema
       golar:
         specifier: ^0.1.10
         version: 0.1.10

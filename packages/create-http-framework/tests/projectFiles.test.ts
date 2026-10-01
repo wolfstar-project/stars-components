@@ -254,11 +254,12 @@ describe('writeProjectFiles', () => {
 		expect(tsconfig.compilerOptions.paths).toBeUndefined();
 	});
 
-	test('GIVEN tsc THEN stars.config.ts only selects tsc', async () => {
+	test('GIVEN tsc THEN stars.config.ts selects tsc and leaves loading the environment to src/lib/setup', async () => {
 		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsc7' }));
 
 		const config = await readFile(join(target, 'stars.config.ts'), 'utf-8');
-		expect(config).toContain("defineConfig({ build: { tool: 'tsc' } })");
+		// `tsc` output never passes through the entry transform that registers `env`.
+		expect(config).toContain("defineConfig({ build: { tool: 'tsc' }, env: false })");
 		expect(config).not.toContain('compatibilityVersion');
 		expect(config).not.toContain('tsdown:');
 	});
@@ -344,13 +345,16 @@ describe('vite build tools', () => {
 			expect(config).toContain('enableVite: true');
 			expect(config).toContain('enableNitro: true');
 			expect(config).toContain("preset: 'node-server'");
+			// Automatic `env` registration is off with Nitro by default, so `env` needs no mention.
+			expect(config).not.toContain('env:');
 		});
 
 		test('GIVEN JavaScript THEN a vite selection never reaches stars.config.js', async () => {
 			writeProjectFiles(target, makeContext({ language: 'js', buildTool: 'vite-nitro' }));
 
 			const config = await readFile(join(target, 'stars.config.js'), 'utf-8');
-			expect(config).toContain('defineConfig({})');
+			// A JavaScript entry runs as-is, so `src/lib/setup` loads the environment instead of `stars`.
+			expect(config).toContain('defineConfig({ env: false })');
 		});
 	});
 });

@@ -1,4 +1,5 @@
-import { displayPath, loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { displayPath, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { loadProject } from '../utils/hooks.js';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { spawn } from 'node:child_process';
@@ -25,7 +26,7 @@ export interface CodegenResult {
 export async function runCodegen(options: CodegenTaskOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: shouldUseColor() && !options.json });
-	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
+	const { config } = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
 	const results: CodegenResult[] = [];
 
 	if (config.codegen.i18n) results.push(await runI18n(config, Boolean(options.check)));

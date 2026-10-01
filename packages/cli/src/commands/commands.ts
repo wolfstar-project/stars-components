@@ -1,4 +1,4 @@
-import { loadStarsConfig } from '@wolfstar/schema';
+import { loadProject } from '../utils/hooks.js';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import type { Diagnostic } from 'nostics';
@@ -128,7 +128,7 @@ async function selectTargets(
 }
 
 async function connect(options: CommandsTaskOptions): Promise<{ client: DiscordClient; guild: string | null }> {
-	const config = await loadStarsConfig({ cwd: resolveCwd(options), configFile: options.config });
+	const { config } = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
 	return { client: options.client ?? createDiscordClient(config), guild: options.guild ?? null };
 }
 
