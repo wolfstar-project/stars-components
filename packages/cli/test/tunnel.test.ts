@@ -78,6 +78,20 @@ describe('readDiscordCredentials with the varlock loader', () => {
 		expect(readDiscordCredentials(config, {})?.token).toBe('bot-token');
 	});
 
+	test('runs varlock in development mode, as the supervised bot does, whatever dev.env.NODE_ENV says', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'package.json': JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } }),
+			// `createSupervisor` sets NODE_ENV to development after spreading `dev.env`, so the bot never sees production.
+			'stars.config.mjs': "export default { env: { loader: 'varlock' }, dev: { env: { NODE_ENV: 'production' } } };",
+			'node_modules/varlock/package.json': JSON.stringify({ name: 'varlock', bin: { varlock: './cli.js' } }),
+			'node_modules/varlock/cli.js': 'console.log(JSON.stringify({ DISCORD_TOKEN: `${process.env.NODE_ENV}-token` }));\n'
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(readDiscordCredentials(config, {})?.token).toBe('development-token');
+	});
+
 	test('reads nothing from the env files when varlock cannot be run', async () => {
 		fixture = await createFixture({
 			'src/main.js': '',

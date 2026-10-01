@@ -20,7 +20,8 @@ export function readProjectEnv(config: ResolvedStarsConfig): Record<string, stri
 		// `env.env` with varlock), in the environment `stars dev` gives the bot.
 		const output = execFileSync(process.execPath, [binary, 'load', '--format', 'json'], {
 			cwd: config.root,
-			env: { ...process.env, ...config.dev.env },
+			// Same order as `createSupervisor`: `NODE_ENV` is forced to development after `dev.env`, so it can't differ.
+			env: { ...process.env, ...config.dev.env, NODE_ENV: 'development' },
 			encoding: 'utf8',
 			stdio: ['ignore', 'pipe', 'ignore'],
 			timeout: 30_000
