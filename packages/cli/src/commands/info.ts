@@ -5,6 +5,7 @@ import { arch, platform } from 'node:os';
 import { relative } from 'node:path';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { applyEnvOptions, loadProject } from '../utils/hooks.js';
+import { modulesPreloadWarning } from '../utils/modules.js';
 import { resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { findInstalledVersion } from '../utils/project.js';
 import { readOwnPackageJson } from '../utils/version.js';
@@ -68,7 +69,9 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		future: config.future,
 		env: config.env,
 		hooks: Object.keys(config.hooks),
-		warnings: config.warnings.map((warning) => `${warning.code}: ${warning.message}`),
+		warnings: [...config.warnings, modulesPreloadWarning(config)]
+			.filter((warning) => warning !== null)
+			.map((warning) => `${warning.code}: ${warning.message}`),
 		options: { tsdown: Object.keys(config.tsdown), vite: Object.keys(config.vite) }
 	};
 }

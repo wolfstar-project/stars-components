@@ -200,6 +200,37 @@ describe('stars modules', () => {
 			expect(JSON.parse(stdout)).toEqual([{ name: 'fake', options: { ttl: 5 } }]);
 		});
 
+		test('the production preload loads the environment before the plugins', async () => {
+			fixture = await createFixture({
+				...NO_BUILD,
+				'package.json': JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1' } }),
+				// Stands in for the real `setup()`: records the options it was called with.
+				'node_modules/@wolfstar/env-utilities/package.json': JSON.stringify({
+					name: '@wolfstar/env-utilities',
+					type: 'module',
+					exports: './index.js'
+				}),
+				'node_modules/@wolfstar/env-utilities/index.js':
+					'export const setup = (options) => { process.env.STARS_ENV_OPTIONS = JSON.stringify(options); };',
+				// A plugin that reads the environment while it is imported.
+				'node_modules/fake-module/plugin.js':
+					'export const seen = process.env.STARS_ENV_OPTIONS; export default { name: "reads-env", seen };',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, env: { prefix: 'BOT_' }, modules: ['fake-module'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			expect((await prepareProject(config, undefined, true)).modules?.status).toBe('outdated');
+			await prepareProject(config);
+			expect((await prepareProject(config, undefined, true)).modules?.status).toBe('up-to-date');
+
+			const stdout = await new Promise<string>((resolve, reject) => {
+				execFile(process.execPath, ['--import', './.stars/modules.mjs', 'src/main.js'], { cwd: fixture.root }, (error, out) =>
+					error ? reject(error) : resolve(out)
+				);
+			});
+			expect(JSON.parse(stdout)).toEqual([{ name: 'reads-env', seen: '{"prefix":"BOT_"}' }]);
+		});
+
 		test('prepare writes nothing without runtime plugins', async () => {
 			fixture = await createFixture({ ...NO_BUILD, 'stars.config.mjs': "export default { build: { tool: 'none' } };" });
 			const { config } = await loadProject({ cwd: fixture.root, env: {} });

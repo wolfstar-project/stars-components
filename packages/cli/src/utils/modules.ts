@@ -1,10 +1,10 @@
 import { ModuleError, setupModules } from '@wolfstar/kit';
 import type { ResolvedStarsConfig } from '@wolfstar/schema';
-import { modulesModuleSource } from '@wolfstar/vite-server/internal';
+import { envModuleSource, modulesModuleSource } from '@wolfstar/vite-server/internal';
 import { resolve as resolveModule } from 'mlly';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { Diagnostic } from 'nostics';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cliDiagnostics } from './diagnostics.js';
 import { UNTRANSFORMED_TOOLS } from './env-import.js';
@@ -79,19 +79,30 @@ export interface ModulesPreloadResult {
  * ./.stars/modules.mjs <entry>` registers the runtime plugins of the installed modules for the build tools whose entry
  * cannot be transformed (`tsc`, `none`). Its specifiers are bare, so they resolve from the project's `node_modules`
  * like the bot's own imports. `null` when there is nothing to register.
+ *
+ * With `env` enabled it is preceded by `.stars/env.mjs`, a separate module imported first: imports of one module are
+ * all evaluated before its body runs, so the environment could not be loaded ahead of the plugins from the same file,
+ * and a plugin reading `process.env` while it is imported would see nothing.
  */
 export async function prepareModulesPreload(config: ResolvedStarsConfig, check = false): Promise<ModulesPreloadResult | null> {
 	if (!needsPreload(config)) return null;
 
-	const path = join(config.root, '.stars', 'modules.mjs');
+	const directory = join(config.root, '.stars');
+	const path = join(directory, 'modules.mjs');
+	const withEnv = config.env?.enabled === true;
 	// An absolute path is a `file:` URL in the import, like in `moduleImportArgs`: Node rejects a Windows path there.
-	const content = modulesModuleSource(config.runtime.plugins, { resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from) });
+	const plugins = modulesModuleSource(config.runtime.plugins, { resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from) });
+	const files = [
+		{ path, content: withEnv ? `import "./env.mjs";\n${plugins}` : plugins },
+		...(withEnv ? [{ path: join(directory, 'env.mjs'), content: envModuleSource(config.env.options) }] : [])
+	];
+
 	if (check) {
-		const existing = await readFile(path, 'utf-8').catch(() => null);
-		return { path, status: existing === content ? 'up-to-date' : 'outdated' };
+		const current = await Promise.all(files.map(async (file) => (await readFile(file.path, 'utf-8').catch(() => null)) === file.content));
+		return { path, status: current.every(Boolean) ? 'up-to-date' : 'outdated' };
 	}
 
-	await mkdir(dirname(path), { recursive: true });
-	await writeFile(path, content);
+	await mkdir(directory, { recursive: true });
+	await Promise.all(files.map((file) => writeFile(file.path, file.content)));
 	return { path, status: 'written' };
 }
