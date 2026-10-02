@@ -11,8 +11,9 @@ import { HotModuleReloader, type HMROptions } from './hmr/HotModuleReloader.js';
 import type { IIdParser } from './components/IIdParser.js';
 import { StringIdParser } from './components/StringIdParser.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
-import { PluginManager } from './plugins/PluginManager.js';
+import { PluginManager, toPluginEntries, type HttpFrameworkPluginHookEntry } from './plugins/PluginManager.js';
 import type { Plugin } from './plugins/Plugin.js';
+import type { PluginOption } from './plugins/definePlugin.js';
 import { CommandStore } from './structures/CommandStore.js';
 import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js';
 import { ListenerStore } from './structures/ListenerStore.js';
@@ -55,6 +56,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public readonly httpReplyOnError: boolean;
 	#discordPublicKey: string;
 	#fetchKey: Promise<Key> | null = null;
+	#pluginEntries: readonly HttpFrameworkPluginHookEntry[];
 
 	public constructor(options: ClientOptions = {}) {
 		super();
@@ -65,9 +67,10 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		// same credential-free options, so neither this public field nor the plugin hooks retain or
 		// observe secrets for the lifetime of the client.
 		this.options = { ...options, discordToken: undefined, discordPublicKey: undefined };
+		this.#pluginEntries = toPluginEntries(options.plugins);
 
-		for (const plugin of Client.plugins.values(PluginHook.PreGenericsInitialization)) {
-			plugin.hook.call(this, this.options);
+		for (const plugin of Client.plugins.forClient(PluginHook.PreGenericsInitialization, this, this.options, this.#pluginEntries)) {
+			plugin.hook(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
@@ -76,8 +79,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		this.logger = this.options.logger?.instance ?? new Logger(this.options.logger?.level ?? LogLevel.Info);
 		container.logger = this.logger;
 
-		for (const plugin of Client.plugins.values(PluginHook.PreInitialization)) {
-			plugin.hook.call(this, this.options);
+		for (const plugin of Client.plugins.forClient(PluginHook.PreInitialization, this, this.options, this.#pluginEntries)) {
+			plugin.hook(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
@@ -103,8 +106,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			authPrefix: options.authPrefix
 		});
 
-		for (const plugin of Client.plugins.values(PluginHook.PostInitialization)) {
-			plugin.hook.call(this, this.options);
+		for (const plugin of Client.plugins.forClient(PluginHook.PostInitialization, this, this.options, this.#pluginEntries)) {
+			plugin.hook(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 	}
@@ -117,13 +120,14 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	public static readonly plugins = new PluginManager();
 
 	/**
-	 * Registers a plugin onto the {@link Client}, applying all of its hooks.
+	 * Registers plugins onto the {@link Client}, applying all of their hooks. Accepts {@link StarsPlugin} objects
+	 * (see {@link definePlugin}) and, deprecated, legacy {@link Plugin} classes.
 	 *
 	 * @since 2.4.0
-	 * @param plugin The plugin to register.
+	 * @param plugins The plugins to register.
 	 */
-	public static use(plugin: typeof Plugin) {
-		this.plugins.use(plugin);
+	public static use(...plugins: (typeof Plugin | PluginOption)[]) {
+		this.plugins.use(...plugins);
 		return this;
 	}
 
@@ -142,8 +146,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	 * @param options The load options.
 	 */
 	public async load(options: LoadOptions = {}) {
-		for (const plugin of Client.plugins.values(PluginHook.PreLoad)) {
-			await plugin.hook.call(this, this.options);
+		for (const plugin of Client.plugins.forClient(PluginHook.PreLoad, this, this.options, this.#pluginEntries)) {
+			await plugin.hook(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
@@ -174,8 +178,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		await new Promise<void>((resolve) => this.server.listen({ ...listenOptions, port, host: address }, resolve));
 
 		try {
-			for (const plugin of Client.plugins.values(PluginHook.PostListen)) {
-				await plugin.hook.call(this, this.options);
+			for (const plugin of Client.plugins.forClient(PluginHook.PostListen, this, this.options, this.#pluginEntries)) {
+				await plugin.hook(this, this.options);
 				this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 			}
 		} catch (error) {
@@ -272,6 +276,12 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 }
 
 export interface ClientOptions {
+	/**
+	 * Plugins that apply to this client only, next to the ones registered globally with {@link Client.use}.
+	 * Nested arrays are flattened and falsy entries are dropped.
+	 */
+	plugins?: PluginOption;
+
 	/**
 	 * The public key from Discord, available under "General Information" after opening an application from
 	 * [Discord's applications](https://discord.com/developers/applications).
