@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { ResolvedStarsConfig, StarsEnvSetupOptions } from '@wolfstar/schema';
+import type { ResolvedStarsConfig, RuntimePluginRegistration, StarsEnvSetupOptions } from '@wolfstar/schema';
 
 interface PackageJson {
 	dependencies?: Record<string, string>;
@@ -26,28 +26,76 @@ export function envModuleSource(options: Readonly<StarsEnvSetupOptions>, specifi
 }
 
 /**
+ * The module that registers the runtime plugins installed modules added with `ctx.addPlugin` (`modules` in
+ * `stars.config`). It comes right after {@link STARS_ENV_MODULE} and before the `/register` imports, so a plugin sees
+ * the environment and is in place before the legacy registrations.
+ */
+export const STARS_MODULES_MODULE = '\0stars:modules';
+
+export interface ModulesModuleSourceOptions {
+	/** Where `Client` is imported from. `resolve` and this let a host that cannot resolve bare specifiers point at files. */
+	framework?: string;
+	/** Maps a plugin's `from` to what the generated `import` uses. */
+	resolve?: (from: string) => string;
+}
+
+/**
+ * The source of the modules module: every runtime plugin is imported from its `from` and handed to `Client.use`. A
+ * function export is a factory called with the plugin's options (`definePlugin((options) => ({ … }))`), anything else
+ * is the plugin itself.
+ */
+export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[], options: ModulesModuleSourceOptions = {}): string {
+	const { framework = '@wolfstar/http-framework', resolve: resolveFrom = (from: string) => from } = options;
+	const lines = [`import { Client } from ${JSON.stringify(framework)};`];
+	for (const [index, plugin] of plugins.entries()) {
+		const from = JSON.stringify(resolveFrom(plugin.from));
+		const local = `__stars_plugin_${index}`;
+		lines.push(
+			plugin.export === 'default' ? `import ${local} from ${from};` : `import { ${JSON.stringify(plugin.export)} as ${local} } from ${from};`
+		);
+	}
+
+	lines.push('const __stars_register = (plugin, options) => Client.use(typeof plugin === "function" ? plugin(options) : plugin);');
+	for (const [index, plugin] of plugins.entries()) {
+		lines.push(`__stars_register(__stars_plugin_${index}, ${plugin.options === undefined ? 'undefined' : JSON.stringify(plugin.options)});`);
+	}
+
+	return `${lines.join('\n')}\n`;
+}
+
+/**
  * Activates installed WolfStar plugins without making applications maintain a list
  * of side-effect-only plugin registration imports in their entry point, and registers the project's environment
  * ahead of them.
  */
 export function pluginRegistrations(config: ResolvedStarsConfig): object {
-	const plugins = findPluginDependencies(config.root);
+	// A package listed in `modules` is installed because the project says so: it is not also activated by its name.
+	const listed = new Set((config.modules ?? []).map((module) => module.specifier));
+	const plugins = findPluginDependencies(config.root).filter((name) => !listed.has(name));
 	const entry = resolve(config.entry);
 	// Optional: hosts and tests may hand over a configuration resolved before `env` existed.
 	const env = config.env?.enabled ? config.env.options : null;
+	const runtimePlugins = config.runtime?.plugins ?? [];
+	const hasModules = runtimePlugins.length > 0;
 
 	return {
 		name: 'stars:plugin-registrations',
 		resolveId(id: string) {
-			return env !== null && id === STARS_ENV_MODULE ? STARS_ENV_MODULE : null;
+			if (env !== null && id === STARS_ENV_MODULE) return STARS_ENV_MODULE;
+			return hasModules && id === STARS_MODULES_MODULE ? STARS_MODULES_MODULE : null;
 		},
 		load(id: string) {
-			return env !== null && id === STARS_ENV_MODULE ? envModuleSource(env) : null;
+			if (env !== null && id === STARS_ENV_MODULE) return envModuleSource(env);
+			return hasModules && id === STARS_MODULES_MODULE ? modulesModuleSource(runtimePlugins) : null;
 		},
 		transform(code: string, id: string) {
-			if ((plugins.length === 0 && env === null) || cleanId(id) !== entry) return null;
+			if ((plugins.length === 0 && env === null && !hasModules) || cleanId(id) !== entry) return null;
 
-			const specifiers = [...(env === null ? [] : [STARS_ENV_MODULE]), ...plugins.map((name) => `${name}/register`)];
+			const specifiers = [
+				...(env === null ? [] : [STARS_ENV_MODULE]),
+				...(hasModules ? [STARS_MODULES_MODULE] : []),
+				...plugins.map((name) => `${name}/register`)
+			];
 			return { code: `${specifiers.map((specifier) => `import ${JSON.stringify(specifier)};`).join('\n')}\n${code}`, map: null };
 		}
 	};

@@ -1,0 +1,72 @@
+# @wolfstar/kit
+
+`defineModule` and the module runtime for installable Stars modules — the `@nuxt/kit` counterpart. A module is a
+package that says it is one; the project lists it in `modules` in `stars.config`:
+
+```ts
+// stars.config.ts
+import { defineConfig } from '@wolfstar/http-framework/config';
+
+export default defineConfig({
+	modules: ['@wolfstar/plugin-cache', ['@wolfstar/plugin-gateway', { shards: 2 }]]
+});
+```
+
+```ts
+// the module's package: its default export
+import { defineModule } from '@wolfstar/kit';
+
+export default defineModule<{ ttl: number }>({
+	meta: {
+		name: '@wolfstar/plugin-cache',
+		compatibility: { framework: '>=6.1.0' }
+	},
+	defaults: { ttl: 60_000 },
+	hooks: {
+		'build:done': (outcome) => {}
+	},
+	setup(options, ctx) {
+		ctx.addPlugin({ from: new URL('./plugin.js', import.meta.url), options });
+		ctx.addImports('@wolfstar/plugin-cache');
+	}
+});
+```
+
+```ts
+// plugin.js — runs in the bot
+import { definePlugin } from '@wolfstar/http-framework';
+
+export default definePlugin((options) => ({
+	name: '@wolfstar/plugin-cache',
+	preLoad(client) {}
+}));
+```
+
+`@wolfstar/kit` depends on `@wolfstar/schema` only, so a module depends on it (as a peer) without pulling in the
+framework or the CLI.
+
+## What `setup` can do
+
+`setup(options, ctx)` runs once, in the CLI process, while the project loads. `options` is the module's `defaults`
+merged under the ones written in `stars.config` (plain objects merge deeply, arrays are replaced).
+
+- `ctx.addPlugin(source)` registers a runtime plugin. The plugin lives in the bot's process and `setup` in the CLI's,
+  so a plugin is given by **source** — `{ from, export?, options? }` — rather than by value. `from` is a package
+  specifier, an absolute path or a `file:` URL; the `export` (default `'default'`) is the plugin or, when it is a
+  function, a factory called with `options`, which must be JSON-serialisable.
+- `ctx.addImports(preset)` adds a package to the auto imports presets.
+- `ctx.hook(name, callback)` / `ctx.callHook(name, …)` use the CLI's hooks (`StarsHooks`), the same registry as `hooks`
+  in `stars.config`. A module's `hooks` are registered before `setup` runs.
+- `ctx.installModule(module, options?)` installs another module, and `dependencies` installs modules first. A module
+  is installed once, by `meta.name`: the first installation wins.
+
+`meta.compatibility` (`framework`, `stars`) is a semver range checked against the project's installed
+`@wolfstar/http-framework` and the running `@wolfstar/cli`; a mismatch fails early instead of leaving a plugin that
+silently never runs. `meta.configKey` is reserved.
+
+## Programmatic usage
+
+`setupModules({ config, hooks, load, versions })` is what the CLI calls: `load` imports a specifier from the project,
+`hooks` is a `hookable`-shaped registry, and the result (`ModulesRuntime`) lists the installed modules, the runtime
+plugins and the import presets they contributed. Failures are `ModuleError`s with a `code` (`MODULE_LOAD_FAILED`,
+`MODULE_INVALID`, `MODULE_INCOMPATIBLE`, `MODULE_SETUP_FAILED`, `MODULE_PLUGIN_INVALID`) and the `moduleName`.

@@ -2,7 +2,7 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { envModuleSource, pluginRegistrations, STARS_ENV_MODULE } from '../src/plugins.js';
+import { envModuleSource, modulesModuleSource, pluginRegistrations, STARS_ENV_MODULE, STARS_MODULES_MODULE } from '../src/plugins.js';
 
 interface RegistrationPlugin {
 	transform(code: string, id: string): { code: string } | null;
@@ -141,5 +141,84 @@ describe('pluginRegistrations env', () => {
 	test('the virtual module calls setup with the options', () => {
 		expect(envModuleSource({ prefix: 'BOT_' })).toBe('import { setup } from "@wolfstar/env-utilities";\nsetup({"prefix":"BOT_"});\n');
 		expect(envModuleSource({}, 'file:///x/env.js')).toBe('import { setup } from "file:///x/env.js";\nsetup({});\n');
+	});
+});
+
+describe('pluginRegistrations modules', () => {
+	const entry = () => join(workspace, 'app', 'src/main.ts');
+
+	function plugin(config: Partial<ResolvedStarsConfig>): RegistrationPlugin {
+		const root = join(workspace, 'app');
+		return pluginRegistrations({ root, entry: entry(), ...config } as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+	}
+
+	const runtime = (plugins: object[]) => ({ modules: [], imports: [], plugins }) as unknown as ResolvedStarsConfig['runtime'];
+
+	test('the virtual module registers every runtime plugin, calling factories with their options', () => {
+		expect(
+			modulesModuleSource([
+				{ module: 'a', from: '@wolfstar/plugin-a/plugin', export: 'default' },
+				{ module: 'b', from: '/pkg/b.js', export: 'plugin', options: { ttl: 5 } }
+			])
+		).toBe(
+			[
+				'import { Client } from "@wolfstar/http-framework";',
+				'import __stars_plugin_0 from "@wolfstar/plugin-a/plugin";',
+				'import { "plugin" as __stars_plugin_1 } from "/pkg/b.js";',
+				'const __stars_register = (plugin, options) => Client.use(typeof plugin === "function" ? plugin(options) : plugin);',
+				'__stars_register(__stars_plugin_0, undefined);',
+				'__stars_register(__stars_plugin_1, {"ttl":5});',
+				''
+			].join('\n')
+		);
+	});
+
+	test('the virtual module can point at resolved files', () => {
+		const source = modulesModuleSource([{ module: 'a', from: 'a/plugin', export: 'default' }], {
+			framework: 'file:///fw/index.js',
+			resolve: (from) => `file:///resolved/${from}.js`
+		});
+		expect(source).toContain('import { Client } from "file:///fw/index.js";');
+		expect(source).toContain('import __stars_plugin_0 from "file:///resolved/a/plugin.js";');
+	});
+
+	test('imports the modules module after env and before the /register imports', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app', dependencies: { '@wolfstar/plugin-i18next': '1.0.0' } }) });
+		const instance = plugin({
+			env: { enabled: true, options: {} },
+			runtime: runtime([{ module: 'a', from: 'a/plugin', export: 'default' }])
+		});
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([
+			`import ${JSON.stringify(STARS_ENV_MODULE)};`,
+			`import ${JSON.stringify(STARS_MODULES_MODULE)};`,
+			'import "@wolfstar/plugin-i18next/register";',
+			'x'
+		]);
+	});
+
+	test('resolves and loads the virtual module only when there are runtime plugins', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const plugins = [{ module: 'a', from: 'a/plugin', export: 'default' }];
+		const active = plugin({ runtime: runtime(plugins) });
+		expect(active.resolveId(STARS_MODULES_MODULE)).toBe(STARS_MODULES_MODULE);
+		expect(active.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource(plugins as never));
+
+		const idle = plugin({ runtime: runtime([]) });
+		expect(idle.resolveId(STARS_MODULES_MODULE)).toBeNull();
+		expect(idle.load(STARS_MODULES_MODULE)).toBeNull();
+		expect(idle.transform('x', entry())).toBeNull();
+	});
+
+	test('a package listed in modules is no longer activated through its /register import', async () => {
+		const imports = await project(['@wolfstar/plugin-a', '@wolfstar/plugin-b'], {});
+		expect(imports).toEqual(['import "@wolfstar/plugin-a/register";', 'import "@wolfstar/plugin-b/register";']);
+
+		const root = join(workspace, 'app');
+		const instance = pluginRegistrations({
+			root,
+			entry: entry(),
+			modules: [{ specifier: '@wolfstar/plugin-a', options: {} }]
+		} as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+		expect(instance.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-b/register";']);
 	});
 });
