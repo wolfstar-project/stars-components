@@ -16,8 +16,9 @@ export type StarsPluginHook<Async extends boolean = false> = (
 /**
  * Where a plugin applies: `'development'` and `'production'` compare against `process.env.NODE_ENV` (which
  * `stars dev` forces to `development`), a function decides per client from its options. A function is called once
- * per client, before the client's first hook, and its answer holds for every hook of the plugin: it receives the
- * options rather than the client because the client is not initialised yet.
+ * per client and plugin, when the plugin's first hook would run, and its answer holds for every hook of the plugin: it
+ * receives the options rather than the client because the client is not initialised yet. A function that throws is
+ * not wrapped in a {@link PluginHookError}.
  *
  * @since 6.1.0
  */

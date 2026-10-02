@@ -13,7 +13,7 @@ import { StringIdParser } from './components/StringIdParser.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
 import { PluginManager, toPluginEntries, type HttpFrameworkPluginHookEntry } from './plugins/PluginManager.js';
 import type { Plugin } from './plugins/Plugin.js';
-import type { PluginOption, StarsPluginApply } from './plugins/definePlugin.js';
+import type { PluginOption } from './plugins/definePlugin.js';
 import { CommandStore } from './structures/CommandStore.js';
 import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js';
 import { ListenerStore } from './structures/ListenerStore.js';
@@ -57,7 +57,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	#discordPublicKey: string;
 	#fetchKey: Promise<Key> | null = null;
 	#pluginEntries: readonly HttpFrameworkPluginHookEntry[];
-	#applyDecisions = new Map<StarsPluginApply, boolean>();
+	#applyDecisions = new Map<object, boolean>();
 
 	public constructor(options: ClientOptions = {}) {
 		super();

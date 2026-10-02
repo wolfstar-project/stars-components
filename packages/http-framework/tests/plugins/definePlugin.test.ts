@@ -153,7 +153,7 @@ describe('Client with plugin objects', () => {
 				{ name: 'dev-only', apply: 'development', preInitialization: () => void calls.push('dev-only') },
 				{ name: 'prod-only', apply: 'production', preInitialization: () => void calls.push('prod-only') },
 				{ name: 'fn-false', apply: () => false, preInitialization: () => void calls.push('fn-false') },
-				{ name: 'fn-true', apply: (options) => options !== undefined, preInitialization: () => void calls.push('fn-true') }
+				{ name: 'fn-true', apply: () => true, preInitialization: () => void calls.push('fn-true') }
 			);
 
 			new TestableClient();
@@ -186,6 +186,29 @@ describe('Client with plugin objects', () => {
 		calls.length = 0;
 		new TestableClient();
 		expect(calls).toEqual([]);
+		expect(apply).toHaveBeenCalledTimes(2);
+	});
+
+	test('GIVEN plugins sharing an apply function THEN each decides for itself, once, when its first hook runs', () => {
+		const apply = vi.fn((options: { bodySizeLimit?: number }) => options.bodySizeLimit === undefined);
+		const calls: string[] = [];
+		Client.use(
+			{
+				name: 'test:first',
+				apply,
+				preGenericsInitialization(_client, options) {
+					calls.push('first');
+					// The next plugin sees what this one changed.
+					options.bodySizeLimit = 1;
+				},
+				preInitialization: () => void calls.push('first again')
+			},
+			{ name: 'test:second', apply, preInitialization: () => void calls.push('second') }
+		);
+
+		new TestableClient();
+
+		expect(calls).toEqual(['first', 'first again']);
 		expect(apply).toHaveBeenCalledTimes(2);
 	});
 
