@@ -1,8 +1,11 @@
 import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Diagnostic } from 'nostics';
+import { reportWarnings } from '../src/commands/_shared.js';
 import { prepareProject } from '../src/commands/prepare.js';
+import { modulesPreloadWarning } from '../src/utils/modules.js';
 import { applyEnvOptions, loadProject } from '../src/utils/hooks.js';
 import { createFixture, type Fixture } from './helpers.js';
 
@@ -138,14 +141,43 @@ describe('stars modules', () => {
 		test.each([
 			['none', true],
 			['tsdown', false]
-		])('%s: warns that the plugins are only preloaded by stars dev: %s', async (tool, warns) => {
+		])('%s: has a preload warning for the plugins: %s', async (tool, warns) => {
 			fixture = await createFixture({
 				...NO_BUILD,
 				[tool === 'none' ? 'src/main.js' : 'src/main.ts']: '',
 				'stars.config.mjs': `export default { build: { tool: '${tool}' }, modules: ['fake-module'] };`
 			});
 			const { config } = await loadProject({ cwd: fixture.root, env: {} });
-			expect(config.warnings.some((warning) => warning.code === 'MODULES_PRELOAD_REQUIRED')).toBe(warns);
+
+			expect(modulesPreloadWarning(config)?.code ?? null).toBe(warns ? 'MODULES_PRELOAD_REQUIRED' : null);
+			// `stars dev` preloads the plugins itself: the warning is about production, so it is not a config warning.
+			expect(config.warnings).toEqual([]);
+		});
+
+		test('reportWarnings prints the preload warning for build and prepare, not for dev', async () => {
+			fixture = await createFixture(NO_BUILD);
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const printed = async (options?: { production?: boolean }) => {
+				const lines: string[] = [];
+				await reportWarnings(config, (text) => lines.push(text), options);
+				return lines.join('\n');
+			};
+			expect(await printed()).toContain('MODULES_PRELOAD_REQUIRED');
+			expect(await printed({ production: true })).toContain('MODULES_PRELOAD_REQUIRED');
+			expect(await printed({ production: false })).toBe('');
+		});
+
+		test('an absolute plugin path is written as a file URL, which Node accepts on every platform', async () => {
+			fixture = await createFixture({ ...NO_BUILD, 'plugin.mjs': 'export default { name: "abs" };' });
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+			const plugin = join(fixture.root, 'plugin.mjs');
+			const absolute = { ...config, runtime: { ...config.runtime, plugins: [{ module: 'abs', from: plugin, export: 'default' }] } };
+
+			await prepareProject(absolute);
+
+			const content = await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8');
+			expect(content).toContain(`import __stars_plugin_0 from ${JSON.stringify(pathToFileURL(plugin).href)};`);
 		});
 
 		test('prepare writes .stars/modules.mjs, which registers the plugins when node preloads it for production', async () => {

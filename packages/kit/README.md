@@ -71,7 +71,7 @@ silently never runs. `meta.configKey` is reserved.
 `tsdown`, `vite` and Nitro builds register the runtime plugins through the entry. `tsc` and `none` builds cannot be
 transformed: `stars dev` preloads the plugins with `node --import`, and for production `stars prepare` (and
 `stars build`) writes `.stars/modules.mjs`, to be preloaded the same way: `node --import ./.stars/modules.mjs dist/main.js`.
-A warning (`MODULES_PRELOAD_REQUIRED`) says so whenever such a project has modules with runtime plugins.
+`stars build` and `stars prepare` print a warning (`MODULES_PRELOAD_REQUIRED`) when such a project has modules with runtime plugins; `stars dev` does not, since it preloads them itself.
 
 ## Programmatic usage
 

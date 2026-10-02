@@ -69,7 +69,7 @@ export const cliDiagnostics = defineDiagnostics({
 					case 'MODULE_INVALID':
 						return 'Export the module with `defineModule` from @wolfstar/kit as the default export.';
 					case 'MODULE_PLUGIN_INVALID':
-						return 'Pass `ctx.addPlugin` a specifier, path or URL, and JSON-serialisable options.';
+						return 'Pass `ctx.addPlugin` a package specifier, an absolute path or a `file:` URL, and JSON-serialisable options.';
 					default:
 						return 'Fix the error the module threw (see the cause), or remove it from `modules` in stars.config.';
 				}

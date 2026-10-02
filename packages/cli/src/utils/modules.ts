@@ -3,6 +3,7 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { modulesModuleSource } from '@wolfstar/vite-server/internal';
 import { resolve as resolveModule } from 'mlly';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import type { Diagnostic } from 'nostics';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cliDiagnostics } from './diagnostics.js';
@@ -38,17 +39,8 @@ export async function installModules(config: ResolvedStarsConfig, hooks: StarsHo
 			load: async (specifier) => import(await resolveSpecifier(config.root, specifier))
 		});
 
-		const warnings = needsPreload({ ...config, runtime })
-			? [
-					...config.warnings,
-					cliDiagnostics.MODULES_PRELOAD_REQUIRED({
-						tool: config.build.tool,
-						plugins: [...new Set(runtime.plugins.map((plugin) => plugin.module))].join(', ')
-					})
-				]
-			: config.warnings;
 		const presets = [...config.imports.presets, ...runtime.imports.filter((preset) => !config.imports.presets.includes(preset))];
-		return { ...config, runtime, warnings, imports: { ...config.imports, presets } };
+		return { ...config, runtime, imports: { ...config.imports, presets } };
 	} catch (error) {
 		if (error instanceof ModuleError) {
 			throw cliDiagnostics.MODULE_FAILED({ module: error.moduleName, reason: error.code, message: error.message, cause: error });
@@ -56,6 +48,19 @@ export async function installModules(config: ResolvedStarsConfig, hooks: StarsHo
 
 		throw error;
 	}
+}
+
+/**
+ * The warning for a project whose runtime plugins reach production only through a `node --import` preload, `null`
+ * otherwise. It is not one of `config.warnings`: `stars dev` preloads the plugins itself, so there it would be noise
+ * on every start. `stars build` and `stars prepare` report it.
+ */
+export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic | null {
+	if (!needsPreload(config)) return null;
+	return cliDiagnostics.MODULES_PRELOAD_REQUIRED({
+		tool: config.build.tool,
+		plugins: [...new Set(config.runtime.plugins.map((plugin) => plugin.module))].join(', ')
+	});
 }
 
 /** A build tool the entry transform cannot reach, with runtime plugins to register: they need a `node --import` preload. */
@@ -79,7 +84,8 @@ export async function prepareModulesPreload(config: ResolvedStarsConfig, check =
 	if (!needsPreload(config)) return null;
 
 	const path = join(config.root, '.stars', 'modules.mjs');
-	const content = modulesModuleSource(config.runtime.plugins);
+	// An absolute path is a `file:` URL in the import, like in `moduleImportArgs`: Node rejects a Windows path there.
+	const content = modulesModuleSource(config.runtime.plugins, { resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from) });
 	if (check) {
 		const existing = await readFile(path, 'utf-8').catch(() => null);
 		return { path, status: existing === content ? 'up-to-date' : 'outdated' };
