@@ -13,7 +13,7 @@ import { StringIdParser } from './components/StringIdParser.js';
 import type { ApplicationCommandRegistry, RequestAuthPrefix } from './interactions/shared/ApplicationCommandRegistry.js';
 import { PluginManager, toPluginEntries, type HttpFrameworkPluginHookEntry } from './plugins/PluginManager.js';
 import type { Plugin } from './plugins/Plugin.js';
-import type { PluginOption } from './plugins/definePlugin.js';
+import type { PluginOption, StarsPluginApply } from './plugins/definePlugin.js';
 import { CommandStore } from './structures/CommandStore.js';
 import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js';
 import { ListenerStore } from './structures/ListenerStore.js';
@@ -57,6 +57,7 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	#discordPublicKey: string;
 	#fetchKey: Promise<Key> | null = null;
 	#pluginEntries: readonly HttpFrameworkPluginHookEntry[];
+	#applyDecisions = new Map<StarsPluginApply, boolean>();
 
 	public constructor(options: ClientOptions = {}) {
 		super();
@@ -69,8 +70,13 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		this.options = { ...options, discordToken: undefined, discordPublicKey: undefined };
 		this.#pluginEntries = toPluginEntries(options.plugins);
 
-		for (const plugin of Client.plugins.forClient(PluginHook.PreGenericsInitialization, this, this.options, this.#pluginEntries)) {
-			plugin.hook(this, this.options);
+		for (const plugin of Client.plugins.applicable(
+			PluginHook.PreGenericsInitialization,
+			this.options,
+			this.#pluginEntries,
+			this.#applyDecisions
+		)) {
+			plugin.run(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
@@ -79,8 +85,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		this.logger = this.options.logger?.instance ?? new Logger(this.options.logger?.level ?? LogLevel.Info);
 		container.logger = this.logger;
 
-		for (const plugin of Client.plugins.forClient(PluginHook.PreInitialization, this, this.options, this.#pluginEntries)) {
-			plugin.hook(this, this.options);
+		for (const plugin of Client.plugins.applicable(PluginHook.PreInitialization, this.options, this.#pluginEntries, this.#applyDecisions)) {
+			plugin.run(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
@@ -106,8 +112,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 			authPrefix: options.authPrefix
 		});
 
-		for (const plugin of Client.plugins.forClient(PluginHook.PostInitialization, this, this.options, this.#pluginEntries)) {
-			plugin.hook(this, this.options);
+		for (const plugin of Client.plugins.applicable(PluginHook.PostInitialization, this.options, this.#pluginEntries, this.#applyDecisions)) {
+			plugin.run(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 	}
@@ -146,8 +152,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	 * @param options The load options.
 	 */
 	public async load(options: LoadOptions = {}) {
-		for (const plugin of Client.plugins.forClient(PluginHook.PreLoad, this, this.options, this.#pluginEntries)) {
-			await plugin.hook(this, this.options);
+		for (const plugin of Client.plugins.applicable(PluginHook.PreLoad, this.options, this.#pluginEntries, this.#applyDecisions)) {
+			await plugin.run(this, this.options);
 			this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 		}
 
@@ -178,8 +184,8 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 		await new Promise<void>((resolve) => this.server.listen({ ...listenOptions, port, host: address }, resolve));
 
 		try {
-			for (const plugin of Client.plugins.forClient(PluginHook.PostListen, this, this.options, this.#pluginEntries)) {
-				await plugin.hook(this, this.options);
+			for (const plugin of Client.plugins.applicable(PluginHook.PostListen, this.options, this.#pluginEntries, this.#applyDecisions)) {
+				await plugin.run(this, this.options);
 				this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 			}
 		} catch (error) {

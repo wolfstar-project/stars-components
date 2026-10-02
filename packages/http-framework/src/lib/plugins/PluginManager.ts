@@ -34,8 +34,11 @@ export interface HttpFrameworkPluginInvoker {
 	(client: Client, options: ClientOptions): Awaitable<unknown>;
 }
 
-export interface HttpFrameworkPluginHookEntry<T = HttpFrameworkPluginInvoker> {
+export interface HttpFrameworkPluginHookEntry<T = HttpFrameworkPluginHook | HttpFrameworkPluginAsyncHook> {
+	/** The hook, `this`-bound to the client like it always was: `entry.hook.call(client, options)`. */
 	hook: T;
+	/** The same hook as a plain `(client, options)` call. For a {@link StarsPlugin} it also attributes failures to the plugin. */
+	run: HttpFrameworkPluginInvoker;
 	type: PluginHook;
 	name?: string;
 	enforce?: 'pre' | 'post';
@@ -113,18 +116,38 @@ export function toPluginEntries(option: PluginOption): HttpFrameworkPluginHookEn
 					throw new PluginHookError(name, type, error);
 				}
 			};
-			entries.push({ hook: invoker, type, name, enforce: plugin.enforce, apply: plugin.apply });
+			entries.push({
+				hook: function (this: Client, options: ClientOptions) {
+					return invoker(this, options);
+				},
+				run: invoker,
+				type,
+				name,
+				enforce: plugin.enforce,
+				apply: plugin.apply
+			});
 		}
 	}
 	return entries;
 }
 
-function isApplicable(entry: HttpFrameworkPluginHookEntry, client: Client, options: ClientOptions) {
+/**
+ * Decides whether an entry applies. A function is called once per `decisions` map (one per client) and its answer
+ * kept, so every hook of a plugin sees the same decision: a predicate that is not stable cannot leave a plugin
+ * half-applied, with its early hooks run and its later ones skipped.
+ */
+function isApplicable(entry: HttpFrameworkPluginHookEntry, options: ClientOptions, decisions: Map<StarsPluginApply, boolean>) {
 	const { apply } = entry;
 	if (apply === undefined) return true;
 	if (apply === 'development') return process.env.NODE_ENV === 'development';
 	if (apply === 'production') return process.env.NODE_ENV === 'production';
-	return apply(client, options);
+
+	let decision = decisions.get(apply);
+	if (decision === undefined) {
+		decision = apply(options);
+		decisions.set(apply, decision);
+	}
+	return decision;
 }
 
 export class PluginManager {
@@ -140,7 +163,7 @@ export class PluginManager {
 	public registerHook(hook: HttpFrameworkPluginHook | HttpFrameworkPluginAsyncHook, type: PluginHook, name?: string): this {
 		if (typeof hook !== 'function') throw new TypeError(`The provided hook ${name ? `(${name}) ` : ''}is not a function`);
 		warnLegacy(name);
-		this.registry.add({ hook: (client, options) => hook.call(client, options), type, name });
+		this.registry.add({ hook, run: (client, options) => hook.call(client, options), type, name });
 		return this;
 	}
 
@@ -192,11 +215,20 @@ export class PluginManager {
 	/**
 	 * Yields the entries ordered as `enforce: 'pre'`, plain, then `enforce: 'post'`, keeping registration order
 	 * inside each group.
-	 *
-	 * @param hook The hook to filter by, if any.
-	 * @param extra Entries (from {@link toPluginEntries}) registered next to the global ones, such as a client's own plugins.
 	 */
 	public values(): Generator<HttpFrameworkPluginHookEntry, void, unknown>;
+	/**
+	 * @param hook The hook to filter by.
+	 * @param extra Entries (from {@link toPluginEntries}) registered next to the global ones, such as a client's own plugins.
+	 */
+	public values(
+		hook: SyncPluginHooks,
+		extra?: readonly HttpFrameworkPluginHookEntry[]
+	): Generator<HttpFrameworkPluginHookEntry<HttpFrameworkPluginHook>, void, unknown>;
+	public values(
+		hook: AsyncPluginHooks,
+		extra?: readonly HttpFrameworkPluginHookEntry[]
+	): Generator<HttpFrameworkPluginHookEntry<HttpFrameworkPluginAsyncHook>, void, unknown>;
 	public values(hook: PluginHook, extra?: readonly HttpFrameworkPluginHookEntry[]): Generator<HttpFrameworkPluginHookEntry, void, unknown>;
 	public *values(hook?: PluginHook, extra: readonly HttpFrameworkPluginHookEntry[] = []): Generator<HttpFrameworkPluginHookEntry, void, unknown> {
 		const entries = [...this.registry, ...extra].filter((entry) => !hook || entry.type === hook);
@@ -206,16 +238,19 @@ export class PluginManager {
 	}
 
 	/**
-	 * Like {@link PluginManager.values}, but only the entries whose `apply` accepts the client.
+	 * Like {@link PluginManager.values}, but only the entries whose `apply` accepts the client's options.
+	 *
+	 * @param decisions The answers of `apply` functions already given for this client. Pass the same map for every
+	 * phase of one client so a plugin is accepted or rejected as a whole.
 	 */
-	public *forClient(
+	public *applicable(
 		hook: PluginHook,
-		client: Client,
 		options: ClientOptions,
-		extra?: readonly HttpFrameworkPluginHookEntry[]
+		extra: readonly HttpFrameworkPluginHookEntry[] = [],
+		decisions: Map<StarsPluginApply, boolean> = new Map()
 	): Generator<HttpFrameworkPluginHookEntry, void, unknown> {
 		for (const entry of this.values(hook, extra)) {
-			if (isApplicable(entry, client, options)) yield entry;
+			if (isApplicable(entry, options, decisions)) yield entry;
 		}
 	}
 }

@@ -153,7 +153,7 @@ describe('Client with plugin objects', () => {
 				{ name: 'dev-only', apply: 'development', preInitialization: () => void calls.push('dev-only') },
 				{ name: 'prod-only', apply: 'production', preInitialization: () => void calls.push('prod-only') },
 				{ name: 'fn-false', apply: () => false, preInitialization: () => void calls.push('fn-false') },
-				{ name: 'fn-true', apply: (client) => client instanceof Client, preInitialization: () => void calls.push('fn-true') }
+				{ name: 'fn-true', apply: (options) => options !== undefined, preInitialization: () => void calls.push('fn-true') }
 			);
 
 			new TestableClient();
@@ -161,6 +161,51 @@ describe('Client with plugin objects', () => {
 		} finally {
 			process.env.NODE_ENV = env;
 		}
+	});
+
+	test('GIVEN an apply function THEN it is decided once per client, with the options, for every hook of the plugin', async () => {
+		const decisions = [true, false, false, false];
+		const apply = vi.fn(() => decisions.shift() ?? false);
+		const calls: string[] = [];
+		Client.use({
+			name: 'test:stable',
+			apply,
+			preGenericsInitialization: () => void calls.push('preGenerics'),
+			preInitialization: () => void calls.push('preInit'),
+			postInitialization: () => void calls.push('postInit'),
+			preLoad: () => void calls.push('preLoad')
+		});
+
+		const client = new TestableClient();
+		await client.load({ baseUserDirectory: null });
+
+		expect(calls).toEqual(['preGenerics', 'preInit', 'postInit', 'preLoad']);
+		expect(apply).toHaveBeenCalledExactlyOnceWith(client.options);
+
+		// Another client decides for itself.
+		calls.length = 0;
+		new TestableClient();
+		expect(calls).toEqual([]);
+		expect(apply).toHaveBeenCalledTimes(2);
+	});
+
+	test('GIVEN an entry THEN hook is still the this-bound function the registry always exposed', () => {
+		const manager = new PluginManager();
+		const received: unknown[] = [];
+		manager.use({ name: 'compat', preInitialization: (...args) => void received.push(...args) });
+		const legacyHook = vi.fn();
+		class Legacy extends Plugin {
+			public static override [preInitialization] = legacyHook;
+		}
+		manager.use(Legacy);
+
+		const client = {} as Client;
+		const options = {};
+		for (const entry of manager.values(PluginHook.PreInitialization)) entry.hook.call(client, options);
+
+		expect(received).toEqual([client, options]);
+		expect(legacyHook).toHaveBeenCalledExactlyOnceWith(options);
+		expect(legacyHook.mock.instances[0]).toBe(client);
 	});
 
 	test('GIVEN a legacy hook THEN errors are not wrapped and this is still the client', async () => {
