@@ -1,5 +1,13 @@
 # @wolfstar/nitro-server
 
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`2d9bf55`](https://github.com/wolfstar-project/stars-components/commit/2d9bf55a29ee43503d415edc800fea4c5a313630)]:
+    - @wolfstar/schema@0.5.0
+    - @wolfstar/vite-server@0.4.0
+
 ## 0.2.4
 
 ### Patch Changes

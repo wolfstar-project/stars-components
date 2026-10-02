@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.1.0
+
+### Minor Changes
+
+- [#246](https://github.com/wolfstar-project/stars-components/pull/246) [`49bc9a7`](https://github.com/wolfstar-project/stars-components/commit/49bc9a7987b0c04891625439375110ef675a3ae1) - Add Vite-style, object-based plugins: `definePlugin` and the `StarsPlugin` type (`name`, `enforce: 'pre' | 'post'`, `apply`, and the five lifecycle hooks as `(client, options) => …`), a `plugins` option in `ClientOptions` for per-client plugins, and `PluginHookError`, which attributes a failing hook to its plugin name. `PluginManager` now orders hooks as `pre`, plain, then `post` (registration order inside each group) and `Client.use` accepts plugin objects and nested arrays. The legacy `Plugin` class, symbol hooks and `registerXHook` keep working through an adapter and emit a one-time `DeprecationWarning` (`HTTP_FRAMEWORK_LEGACY_PLUGIN`) per plugin. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`2d9bf55`](https://github.com/wolfstar-project/stars-components/commit/2d9bf55a29ee43503d415edc800fea4c5a313630)]:
+    - @wolfstar/schema@0.5.0
+    - @wolfstar/cli@2.2.0
+
 ## 6.0.1
 
 ### Patch Changes

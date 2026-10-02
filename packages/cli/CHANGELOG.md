@@ -1,5 +1,19 @@
 # @wolfstar/cli
 
+## 2.2.0
+
+### Minor Changes
+
+- [#247](https://github.com/wolfstar-project/stars-components/pull/247) [`2d9bf55`](https://github.com/wolfstar-project/stars-components/commit/2d9bf55a29ee43503d415edc800fea4c5a313630) - Add `modules` to `stars.config`: a list of package names or `[name, options]` tuples, installed by the CLI with `@wolfstar/kit`'s `setupModules` before `config:resolved`. The resolved configuration gains `modules` and `runtime` (the runtime plugins and auto-import presets the modules contributed). Runtime plugins are registered in the bot through a `\0stars:modules` virtual module imported before the legacy `/register` imports, which skip packages listed in `modules`, and, for the `tsc` and `none` build tools, through a `node --import` preload in `stars dev` and a `.stars/modules.mjs` file written by `stars prepare` for production (`stars build`, `stars prepare` and `stars info` report a `MODULES_PRELOAD_REQUIRED` warning that points at it; it loads `env` first through `.stars/env.mjs`). A failing module is reported as a `MODULE_FAILED` diagnostic (exit code 2). Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`2d9bf55`](https://github.com/wolfstar-project/stars-components/commit/2d9bf55a29ee43503d415edc800fea4c5a313630), [`2d9bf55`](https://github.com/wolfstar-project/stars-components/commit/2d9bf55a29ee43503d415edc800fea4c5a313630)]:
+    - @wolfstar/kit@0.1.0
+    - @wolfstar/schema@0.5.0
+    - @wolfstar/vite-server@0.4.0
+    - @wolfstar/nitro-server@0.2.5
+
 ## 2.1.0
 
 ### Minor Changes
