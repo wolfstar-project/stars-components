@@ -101,6 +101,23 @@ describe('setupModules', () => {
 		await expect(result).rejects.toMatchObject({ code: 'MODULE_PLUGIN_INVALID', moduleName: 'bad' });
 	});
 
+	test.each(['./plugin.js', '../plugin.js', '.\\plugin.js', '.'])(
+		'GIVEN a relative plugin path %s THEN it throws MODULE_PLUGIN_INVALID',
+		async (from) => {
+			const { result } = run([defineModule({ meta: { name: 'rel' }, setup: (_options, ctx) => ctx.addPlugin(from) })], [['rel']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_PLUGIN_INVALID', moduleName: 'rel' });
+			await expect(result).rejects.toThrow(/relative/);
+		}
+	);
+
+	test.each([
+		['an unknown hook name', { 'build:finished': () => {} }],
+		['a hook that is not a function', { 'build:done': 'nope' }]
+	])('GIVEN %s in hooks THEN it throws MODULE_INVALID', async (_name, hooks) => {
+		const { result } = run([{ meta: { name: 'hooked' }, hooks } as unknown as StarsModule], [['hooked']]);
+		await expect(result).rejects.toMatchObject({ code: 'MODULE_INVALID', moduleName: 'hooked' });
+	});
+
 	test('GIVEN hooks and ctx.hook THEN they are registered on the host and callHook delegates', async () => {
 		const hook = vi.fn();
 		const { result, registered, called } = run(

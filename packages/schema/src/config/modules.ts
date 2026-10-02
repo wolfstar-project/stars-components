@@ -22,6 +22,10 @@ export function resolveModules(config: unknown, validator: Validator): readonly 
 
 		if (!Array.isArray(entry)) throw validator.typeError(path, 'a module specifier or a `[specifier, options]` tuple', entry, FIX);
 
+		if (entry.length > 2) {
+			throw validator.typeError(path, 'a `[specifier, options]` tuple with at most two members', entry, FIX);
+		}
+
 		const [specifier, options] = entry as [unknown, unknown?];
 		if (typeof specifier !== 'string' || specifier.length === 0) {
 			throw validator.typeError(`${path}[0]`, 'a non-empty module specifier', specifier, FIX);

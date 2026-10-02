@@ -75,6 +75,12 @@ export const cliDiagnostics = defineDiagnostics({
 				}
 			}
 		},
+		MODULES_PRELOAD_REQUIRED: {
+			why: (p: { tool: string; plugins: string }) =>
+				`The runtime plugins added by modules (${p.plugins}) are registered through \`node --import\` with build.tool "${p.tool}", which only \`stars dev\` does for you`,
+			fix: (_p: { tool: string; plugins: string }) =>
+				'Start the production bot with `node --import ./.stars/modules.mjs <entry>`; `stars prepare` (and `stars build`) writes that file.'
+		},
 		CODEGEN_FAILED: {
 			why: (p: { code: number | null; stderr: string }) => `i18next-type-generator exited with code ${p.code}${p.stderr ? `: ${p.stderr}` : ''}`
 		}

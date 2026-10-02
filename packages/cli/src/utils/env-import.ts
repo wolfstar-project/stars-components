@@ -7,7 +7,7 @@ import { cliDiagnostics } from './diagnostics.js';
 import { resolveFromProject } from './project.js';
 
 /** Build tools whose output never passes through the entry transform that registers `env`. */
-const UNTRANSFORMED_TOOLS = new Set<string>(['none', 'tsc']);
+export const UNTRANSFORMED_TOOLS = new Set<string>(['none', 'tsc']);
 
 /**
  * `node` arguments that register `env` before the entry runs, for the build tools the entry transform cannot reach.

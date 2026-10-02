@@ -32,6 +32,14 @@ export function envModuleSource(options: Readonly<StarsEnvSetupOptions>, specifi
  */
 export const STARS_MODULES_MODULE = '\0stars:modules';
 
+/**
+ * How the modules module hands a plugin to `Client.use`: a plugin object, or a legacy `Plugin` class, as it is, and a
+ * factory function called with the plugin's options. A `class` is told from a factory by its source, because both are
+ * functions and calling a class without `new` throws.
+ */
+export const REGISTER_PLUGIN_SOURCE =
+	'const __stars_register = (plugin, options) => Client.use(typeof plugin === "function" && !/^class[\\s{]/.test(Function.prototype.toString.call(plugin)) ? plugin(options) : plugin);';
+
 export interface ModulesModuleSourceOptions {
 	/** Where `Client` is imported from. `resolve` and this let a host that cannot resolve bare specifiers point at files. */
 	framework?: string;
@@ -42,7 +50,7 @@ export interface ModulesModuleSourceOptions {
 /**
  * The source of the modules module: every runtime plugin is imported from its `from` and handed to `Client.use`. A
  * function export is a factory called with the plugin's options (`definePlugin((options) => ({ … }))`), anything else
- * is the plugin itself.
+ * is the plugin itself (see {@link REGISTER_PLUGIN_SOURCE}).
  */
 export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[], options: ModulesModuleSourceOptions = {}): string {
 	const { framework = '@wolfstar/http-framework', resolve: resolveFrom = (from: string) => from } = options;
@@ -55,7 +63,7 @@ export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[
 		);
 	}
 
-	lines.push('const __stars_register = (plugin, options) => Client.use(typeof plugin === "function" ? plugin(options) : plugin);');
+	lines.push(REGISTER_PLUGIN_SOURCE);
 	for (const [index, plugin] of plugins.entries()) {
 		lines.push(`__stars_register(__stars_plugin_${index}, ${plugin.options === undefined ? 'undefined' : JSON.stringify(plugin.options)});`);
 	}
@@ -69,8 +77,12 @@ export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[
  * ahead of them.
  */
 export function pluginRegistrations(config: ResolvedStarsConfig): object {
-	// A package listed in `modules` is installed because the project says so: it is not also activated by its name.
-	const listed = new Set((config.modules ?? []).map((module) => module.specifier));
+	// A package that is a module — listed in `modules`, or installed by one that is — was installed because the project
+	// says so: it is not also activated by its name, which would register its plugins twice.
+	const listed = new Set([
+		...(config.modules ?? []).map((module) => module.specifier),
+		...(config.runtime?.modules ?? []).map((module) => module.name)
+	]);
 	const plugins = findPluginDependencies(config.root).filter((name) => !listed.has(name));
 	const entry = resolve(config.entry);
 	// Optional: hosts and tests may hand over a configuration resolved before `env` existed.

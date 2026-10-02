@@ -1,4 +1,8 @@
+import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Diagnostic } from 'nostics';
+import { prepareProject } from '../src/commands/prepare.js';
 import { applyEnvOptions, loadProject } from '../src/utils/hooks.js';
 import { createFixture, type Fixture } from './helpers.js';
 
@@ -63,7 +67,8 @@ describe('stars modules', () => {
 	test('loads a module from a path relative to the project', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
-			'modules/local.mjs': "export default { meta: { name: 'local' }, setup: (_options, ctx) => ctx.addPlugin('./plugin.mjs') };",
+			'modules/local.mjs':
+				"export default { meta: { name: 'local' }, setup: (_options, ctx) => ctx.addPlugin(new URL('./plugin.mjs', import.meta.url)) };",
 			'stars.config.mjs': "export default { modules: ['./modules/local.mjs'] };"
 		});
 		const { config } = await loadProject({ cwd: fixture.root, env: {} });
@@ -107,5 +112,66 @@ describe('stars modules', () => {
 
 		expect(error).toMatchObject({ code: 'MODULE_FAILED' });
 		expect((error as Diagnostic).message).toContain('>=5.0.0');
+	});
+
+	describe('with a build tool the entry transform cannot reach', () => {
+		const NO_BUILD = {
+			...MODULE_PACKAGE,
+			'node_modules/@wolfstar/http-framework/package.json': JSON.stringify({
+				name: '@wolfstar/http-framework',
+				version: '6.1.0',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/@wolfstar/http-framework/index.js':
+				'export const Client = { use(plugin) { (globalThis.__starsPlugins ??= []).push(plugin); } };',
+			'node_modules/fake-module/plugin.js': 'export default (options) => ({ name: "fake", options });',
+			'node_modules/fake-module/package.json': JSON.stringify({
+				name: 'fake-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' }, './plugin': { import: './plugin.js' } }
+			}),
+			'src/main.js': 'console.log(JSON.stringify(globalThis.__starsPlugins));',
+			'stars.config.mjs': "export default { build: { tool: 'none' }, modules: [['fake-module', { ttl: 5 }]] };"
+		};
+
+		test.each([
+			['none', true],
+			['tsdown', false]
+		])('%s: warns that the plugins are only preloaded by stars dev: %s', async (tool, warns) => {
+			fixture = await createFixture({
+				...NO_BUILD,
+				[tool === 'none' ? 'src/main.js' : 'src/main.ts']: '',
+				'stars.config.mjs': `export default { build: { tool: '${tool}' }, modules: ['fake-module'] };`
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+			expect(config.warnings.some((warning) => warning.code === 'MODULES_PRELOAD_REQUIRED')).toBe(warns);
+		});
+
+		test('prepare writes .stars/modules.mjs, which registers the plugins when node preloads it for production', async () => {
+			fixture = await createFixture(NO_BUILD);
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			expect((await prepareProject(config, undefined, true)).modules).toEqual({
+				path: join(fixture.root, '.stars/modules.mjs'),
+				status: 'outdated'
+			});
+			expect((await prepareProject(config)).modules?.status).toBe('written');
+			expect((await prepareProject(config, undefined, true)).modules?.status).toBe('up-to-date');
+			expect(await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8')).toContain('import __stars_plugin_0 from "fake-module/plugin";');
+
+			const stdout = await new Promise<string>((resolve, reject) => {
+				execFile(process.execPath, ['--import', './.stars/modules.mjs', 'src/main.js'], { cwd: fixture.root }, (error, out) =>
+					error ? reject(error) : resolve(out)
+				);
+			});
+			expect(JSON.parse(stdout)).toEqual([{ name: 'fake', options: { ttl: 5 } }]);
+		});
+
+		test('prepare writes nothing without runtime plugins', async () => {
+			fixture = await createFixture({ ...NO_BUILD, 'stars.config.mjs': "export default { build: { tool: 'none' } };" });
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+			expect((await prepareProject(config)).modules).toBeNull();
+		});
 	});
 });

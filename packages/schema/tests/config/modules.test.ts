@@ -45,7 +45,8 @@ describe('stars.config modules', () => {
 		['a string instead of an array', "'@wolfstar/a'"],
 		['a number entry', '[1]'],
 		['options that are not an object', "[['@wolfstar/a', 'nope']]"],
-		['a tuple without a specifier', '[[{}]]']
+		['a tuple without a specifier', '[[{}]]'],
+		['a tuple with more than a specifier and options', "[['@wolfstar/a', {}, 'extra']]"]
 	])('rejects %s', async (_name, modules) => {
 		const error = await loadError(modules);
 		expect(error.message).toContain('modules');

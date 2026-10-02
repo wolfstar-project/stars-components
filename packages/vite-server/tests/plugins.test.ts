@@ -2,7 +2,14 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { envModuleSource, modulesModuleSource, pluginRegistrations, STARS_ENV_MODULE, STARS_MODULES_MODULE } from '../src/plugins.js';
+import {
+	envModuleSource,
+	modulesModuleSource,
+	pluginRegistrations,
+	REGISTER_PLUGIN_SOURCE,
+	STARS_ENV_MODULE,
+	STARS_MODULES_MODULE
+} from '../src/plugins.js';
 
 interface RegistrationPlugin {
 	transform(code: string, id: string): { code: string } | null;
@@ -165,7 +172,7 @@ describe('pluginRegistrations modules', () => {
 				'import { Client } from "@wolfstar/http-framework";',
 				'import __stars_plugin_0 from "@wolfstar/plugin-a/plugin";',
 				'import { "plugin" as __stars_plugin_1 } from "/pkg/b.js";',
-				'const __stars_register = (plugin, options) => Client.use(typeof plugin === "function" ? plugin(options) : plugin);',
+				REGISTER_PLUGIN_SOURCE,
 				'__stars_register(__stars_plugin_0, undefined);',
 				'__stars_register(__stars_plugin_1, {"ttl":5});',
 				''
@@ -220,5 +227,47 @@ describe('pluginRegistrations modules', () => {
 			modules: [{ specifier: '@wolfstar/plugin-a', options: {} }]
 		} as unknown as ResolvedStarsConfig) as RegistrationPlugin;
 		expect(instance.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-b/register";']);
+	});
+
+	test('a package installed by another module is not activated through /register either', async () => {
+		await write({
+			'app/package.json': JSON.stringify({
+				name: 'app',
+				dependencies: { '@wolfstar/plugin-a': '1', '@wolfstar/plugin-b': '1', '@wolfstar/plugin-c': '1' }
+			})
+		});
+		const instance = plugin({
+			// `a` is listed; `b` was installed as a dependency of `a`; `c` is not a module at all.
+			modules: [{ specifier: '@wolfstar/plugin-a', options: {} }],
+			runtime: { modules: [{ name: '@wolfstar/plugin-b' }, { name: '@wolfstar/plugin-a' }], imports: [], plugins: [] }
+		} as unknown as Partial<ResolvedStarsConfig>);
+		expect(instance.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-c/register";']);
+	});
+});
+
+describe('REGISTER_PLUGIN_SOURCE', () => {
+	function register(plugin: unknown, options?: unknown) {
+		const used: unknown[] = [];
+		const run = new Function('Client', `${REGISTER_PLUGIN_SOURCE}\nreturn __stars_register;`) as (
+			client: object
+		) => (plugin: unknown, options: unknown) => void;
+		run({ use: (value: unknown) => void used.push(value) })(plugin, options);
+		return used;
+	}
+
+	test('passes a plugin object as it is', () => {
+		const plugin = { name: 'object' };
+		expect(register(plugin)).toEqual([plugin]);
+	});
+
+	test('calls a factory function with the options', () => {
+		expect(register((options: unknown) => ({ name: 'factory', options }), { ttl: 1 })).toEqual([{ name: 'factory', options: { ttl: 1 } }]);
+	});
+
+	test('passes a legacy Plugin class as it is, without calling it', () => {
+		class Legacy {
+			public static name2 = 'legacy';
+		}
+		expect(register(Legacy)).toEqual([Legacy]);
 	});
 });

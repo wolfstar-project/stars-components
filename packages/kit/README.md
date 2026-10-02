@@ -52,17 +52,26 @@ merged under the ones written in `stars.config` (plain objects merge deeply, arr
 
 - `ctx.addPlugin(source)` registers a runtime plugin. The plugin lives in the bot's process and `setup` in the CLI's,
   so a plugin is given by **source** — `{ from, export?, options? }` — rather than by value. `from` is a package
-  specifier, an absolute path or a `file:` URL; the `export` (default `'default'`) is the plugin or, when it is a
-  function, a factory called with `options`, which must be JSON-serialisable.
+  specifier, an absolute path or a `file:` URL (a relative path is rejected: it would resolve differently in each
+  build tool); the `export` (default `'default'`) is the plugin or, when it is a function, a factory called with
+  `options`, which must be JSON-serialisable. A legacy `Plugin` class is registered as it is, never called.
 - `ctx.addImports(preset)` adds a package to the auto imports presets.
 - `ctx.hook(name, callback)` / `ctx.callHook(name, …)` use the CLI's hooks (`StarsHooks`), the same registry as `hooks`
-  in `stars.config`. A module's `hooks` are registered before `setup` runs.
+  in `stars.config`. A module's `hooks` are registered before `setup` runs; an unknown hook name or a value that is not
+  a function fails the install.
 - `ctx.installModule(module, options?)` installs another module, and `dependencies` installs modules first. A module
   is installed once, by `meta.name`: the first installation wins.
 
 `meta.compatibility` (`framework`, `stars`) is a semver range checked against the project's installed
 `@wolfstar/http-framework` and the running `@wolfstar/cli`; a mismatch fails early instead of leaving a plugin that
 silently never runs. `meta.configKey` is reserved.
+
+## Production with `tsc` or `none`
+
+`tsdown`, `vite` and Nitro builds register the runtime plugins through the entry. `tsc` and `none` builds cannot be
+transformed: `stars dev` preloads the plugins with `node --import`, and for production `stars prepare` (and
+`stars build`) writes `.stars/modules.mjs`, to be preloaded the same way: `node --import ./.stars/modules.mjs dist/main.js`.
+A warning (`MODULES_PRELOAD_REQUIRED`) says so whenever such a project has modules with runtime plugins.
 
 ## Programmatic usage
 

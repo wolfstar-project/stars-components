@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { formatError } from '../utils/errors.js';
 import type { StarsHookable } from '../utils/hooks.js';
+import { prepareModulesPreload } from '../utils/modules.js';
 import { prepareTsconfig } from '../utils/tsconfig.js';
 
 export type PrepareResult =
@@ -35,7 +36,7 @@ export async function prepareAutoImports(config: ResolvedStarsConfig, check = fa
 export async function prepareProject(config: ResolvedStarsConfig, hooks?: StarsHookable, check = false) {
 	await hooks?.callHook('prepare:before', config);
 	const tsconfig = await prepareTsconfig(config, check);
-	const result = { ...(await prepareAutoImports(config, check)), tsconfig };
+	const result = { ...(await prepareAutoImports(config, check)), tsconfig, modules: await prepareModulesPreload(config, check) };
 	await hooks?.callHook('prepare:done', config, { dts: result.dts, status: result.status });
 	return result;
 }

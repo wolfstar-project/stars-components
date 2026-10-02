@@ -38,10 +38,14 @@ export interface ModuleHookHost {
 /**
  * A runtime plugin to register with `Client.use`. It is given by source: the plugin lives in the bot's process, the
  * module's `setup` in the CLI's. The `export` of `from` is the plugin (`definePlugin({ … })`) or, when it is a
- * function, a factory called with `options` (`definePlugin((options) => ({ … }))`).
+ * function, a factory called with `options` (`definePlugin((options) => ({ … }))`). A legacy `Plugin` class is
+ * passed to `Client.use` as it is, never called.
  */
 export interface ModulePluginSource {
-	/** A package specifier (resolved from the project), an absolute path or a `file:` URL, e.g. `new URL('./plugin.js', import.meta.url)`. */
+	/**
+	 * A package specifier (resolved from the project), an absolute path or a `file:` URL, e.g. `new URL('./plugin.js',
+	 * import.meta.url)`. A relative path is rejected: it would resolve differently in each build tool.
+	 */
 	from: string | URL;
 	/** @default 'default' */
 	export?: string;
@@ -76,7 +80,7 @@ export interface StarsModule<Options extends ModuleOptions = ModuleOptions> {
 	defaults?: Options;
 	/** Modules installed before this one. */
 	dependencies?: readonly ModuleInput[];
-	/** Hooks of the `stars` CLI, registered before `setup` runs. */
+	/** Hooks of the `stars` CLI, registered before `setup` runs. An unknown hook name or a value that is not a function is rejected. */
 	hooks?: { [Name in StarsHookName]?: StarsHooks[Name] };
 	/** Runs in the CLI process, once, while the project loads. */
 	setup?(options: Options, ctx: ModuleContext): Awaitable<void>;
