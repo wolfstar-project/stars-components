@@ -48,6 +48,7 @@ jobs:
                       http-framework-i18n
                       i18next-backend
                       influx-utilities
+                      kit
                       logger
                       reddit-helpers
                       safe-fetch

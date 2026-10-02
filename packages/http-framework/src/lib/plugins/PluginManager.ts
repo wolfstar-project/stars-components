@@ -43,6 +43,8 @@ export interface HttpFrameworkPluginHookEntry<T = HttpFrameworkPluginHook | Http
 	name?: string;
 	enforce?: 'pre' | 'post';
 	apply?: StarsPluginApply;
+	/** The plugin object the entry came from, shared by all of its entries. `undefined` for the legacy API. */
+	plugin?: StarsPlugin;
 }
 
 const HOOK_NAMES = [
@@ -124,7 +126,8 @@ export function toPluginEntries(option: PluginOption): HttpFrameworkPluginHookEn
 				type,
 				name,
 				enforce: plugin.enforce,
-				apply: plugin.apply
+				apply: plugin.apply,
+				plugin
 			});
 		}
 	}
@@ -132,20 +135,22 @@ export function toPluginEntries(option: PluginOption): HttpFrameworkPluginHookEn
 }
 
 /**
- * Decides whether an entry applies. A function is called once per `decisions` map (one per client) and its answer
- * kept, so every hook of a plugin sees the same decision: a predicate that is not stable cannot leave a plugin
- * half-applied, with its early hooks run and its later ones skipped.
+ * Decides whether an entry applies. A function is called once per plugin per `decisions` map (one per client) and its
+ * answer kept, so every hook of a plugin sees the same decision: a predicate that is not stable cannot leave a plugin
+ * half-applied, with its early hooks run and its later ones skipped. The decision is the plugin's own, never shared
+ * with another plugin that happens to use the same function, because each is asked with the options it will receive.
  */
-function isApplicable(entry: HttpFrameworkPluginHookEntry, options: ClientOptions, decisions: Map<StarsPluginApply, boolean>) {
+function isApplicable(entry: HttpFrameworkPluginHookEntry, options: ClientOptions, decisions: Map<object, boolean>) {
 	const { apply } = entry;
 	if (apply === undefined) return true;
 	if (apply === 'development') return process.env.NODE_ENV === 'development';
 	if (apply === 'production') return process.env.NODE_ENV === 'production';
 
-	let decision = decisions.get(apply);
+	const owner = entry.plugin ?? entry;
+	let decision = decisions.get(owner);
 	if (decision === undefined) {
 		decision = apply(options);
-		decisions.set(apply, decision);
+		decisions.set(owner, decision);
 	}
 	return decision;
 }
@@ -240,14 +245,14 @@ export class PluginManager {
 	/**
 	 * Like {@link PluginManager.values}, but only the entries whose `apply` accepts the client's options.
 	 *
-	 * @param decisions The answers of `apply` functions already given for this client. Pass the same map for every
-	 * phase of one client so a plugin is accepted or rejected as a whole.
+	 * @param decisions The answers of `apply` functions already given for this client, by plugin. Pass the same map for
+	 * every phase of one client so a plugin is accepted or rejected as a whole.
 	 */
 	public *applicable(
 		hook: PluginHook,
 		options: ClientOptions,
 		extra: readonly HttpFrameworkPluginHookEntry[] = [],
-		decisions: Map<StarsPluginApply, boolean> = new Map()
+		decisions: Map<object, boolean> = new Map()
 	): Generator<HttpFrameworkPluginHookEntry, void, unknown> {
 		for (const entry of this.values(hook, extra)) {
 			if (isApplicable(entry, options, decisions)) yield entry;
