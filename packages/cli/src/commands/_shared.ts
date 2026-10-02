@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { formatError } from '../utils/errors.js';
 import type { StarsHookable } from '../utils/hooks.js';
+import { modulesPreloadWarning, prepareModulesPreload } from '../utils/modules.js';
 import { prepareTsconfig } from '../utils/tsconfig.js';
 
 export type PrepareResult =
@@ -35,12 +36,22 @@ export async function prepareAutoImports(config: ResolvedStarsConfig, check = fa
 export async function prepareProject(config: ResolvedStarsConfig, hooks?: StarsHookable, check = false) {
 	await hooks?.callHook('prepare:before', config);
 	const tsconfig = await prepareTsconfig(config, check);
-	const result = { ...(await prepareAutoImports(config, check)), tsconfig };
+	const result = { ...(await prepareAutoImports(config, check)), tsconfig, modules: await prepareModulesPreload(config, check) };
 	await hooks?.callHook('prepare:done', config, { dts: result.dts, status: result.status });
 	return result;
 }
 
-/** Prints the non-fatal configuration diagnostics (e.g. an end-of-life compatibility version). */
-export async function reportWarnings(config: ResolvedStarsConfig, write: (text: string) => void): Promise<void> {
+/**
+ * Prints the non-fatal configuration diagnostics (e.g. an end-of-life compatibility version), and, unless `production`
+ * is `false` (`stars dev`, which does that itself), what a production start of the project still needs to do.
+ */
+export async function reportWarnings(
+	config: ResolvedStarsConfig,
+	write: (text: string) => void,
+	options: { production?: boolean } = {}
+): Promise<void> {
 	for (const warning of config.warnings) write(await formatError(warning));
+
+	const preload = options.production === false ? null : modulesPreloadWarning(config);
+	if (preload) write(await formatError(preload));
 }

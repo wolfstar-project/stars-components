@@ -86,4 +86,18 @@ describe('stars info', () => {
 
 		expect(output).toContain(expected);
 	});
+
+	test('reports the production preload that tsc and none builds need for module plugins', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'node_modules/fake-module/package.json': JSON.stringify({ name: 'fake-module', type: 'module', exports: './index.js' }),
+			'node_modules/fake-module/index.js':
+				"export default { meta: { name: 'fake-module' }, setup: (_options, ctx) => ctx.addPlugin('fake-module/plugin') };",
+			'stars.config.mjs': "export default { modules: ['fake-module'] };"
+		});
+		const output = await capture((stdout) => runInfo({ cwd: fixture.root, json: true, stdout }));
+		const info = JSON.parse(output) as ProjectInfo;
+
+		expect(info.warnings).toEqual([expect.stringMatching(/^MODULES_PRELOAD_REQUIRED: /)]);
+	});
 });

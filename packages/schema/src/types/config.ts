@@ -1,4 +1,5 @@
 import type { StarsHooksConfig } from './hooks.js';
+import type { StarsModuleEntry } from './modules.js';
 
 /**
  * The build tool used to turn the project sources into runnable JavaScript.
@@ -431,6 +432,13 @@ export interface StarsConfig {
 	 * their namespace (`{ build: { done() {} } }`). Each value is a function or an array of functions.
 	 */
 	hooks?: StarsHooksConfig;
+	/**
+	 * Installable modules (see `defineModule` in `@wolfstar/kit`), each a package name or a `[name, options]` tuple.
+	 * A package listed here is installed because the project says so, not because of its name: it is no longer
+	 * activated through the `@wolfstar/plugin-*` `/register` import the CLI otherwise injects. Falsy entries are
+	 * dropped.
+	 */
+	modules?: readonly (StarsModuleEntry | false | null | undefined)[];
 	/** Opt-in flags for behaviour that is still landing. */
 	experimental?: StarsExperimentalConfig;
 	/** Build-default compatibility. Omit for version 5; version 3 is end-of-life and only meant for migrating a standalone tsdown config. */

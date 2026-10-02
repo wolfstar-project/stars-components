@@ -36,7 +36,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const builder = await createBuilder(config, hooks);
 	await hooks.callHook('builder:created', builder, config);
 	const service = new DevService(config, { builder, hooks });
-	await reportWarnings(config, (text) => service.log('stars', 'warn', text));
+	await reportWarnings(config, (text) => service.log('stars', 'warn', text), { production: false });
 	const logFile = config.dev.logFile ? new LogFileWriter(config.dev.logFile, service.logs) : null;
 	logFile?.open();
 	const renderer =

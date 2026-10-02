@@ -8,6 +8,7 @@ import {
 	type StarsHooks
 } from '@wolfstar/schema';
 import { createHooks, type Hookable } from 'hookable';
+import { installModules } from './modules.js';
 import { readProjectEnv } from './project-env.js';
 
 export type StarsHookable = Hookable<StarsHooks>;
@@ -30,10 +31,12 @@ export async function loadProject(options: LoadStarsConfigOptions): Promise<{ co
 	const cwd = options.cwd ?? process.cwd();
 	const loaded = await loadConfigFile({ cwd, configFile: options.configFile });
 	const source: ResolveConfigOptions = { cwd, configFile: loaded.configFile, config: loaded.config, env: options.env };
-	const config = resolveStarsConfig(source);
+	const resolved = resolveStarsConfig(source);
+	const hooks = createStarsHooks(resolved);
+	// Modules install before `config:resolved`, so that hook already sees what they contributed.
+	const config = await installModules(resolved, hooks);
 	sources.set(config, source);
 
-	const hooks = createStarsHooks(config);
 	await hooks.callHook('config:resolved', config);
 	return { config, hooks };
 }
@@ -56,7 +59,7 @@ export async function applyEnvOptions(config: ResolvedStarsConfig, hooks: StarsH
 		return { ...config, env: { ...config.env, options } };
 	}
 
-	return reresolve(source, { config: { ...source.config, env: { ...options, enabled: true } } });
+	return reresolve(config, source, { config: { ...source.config, env: { ...options, enabled: true } } });
 }
 
 /**
@@ -67,12 +70,14 @@ export async function applyEnvOptions(config: ResolvedStarsConfig, hooks: StarsH
 export function withProjectEnv(config: ResolvedStarsConfig): ResolvedStarsConfig {
 	const source = sources.get(config);
 	if (source === undefined || !config.env.enabled || config.env.options.loader !== 'varlock') return config;
-	return reresolve(source, { projectEnv: readProjectEnv(config) });
+	return reresolve(config, source, { projectEnv: readProjectEnv(config) });
 }
 
-function reresolve(source: ResolveConfigOptions, change: Partial<ResolveConfigOptions>): ResolvedStarsConfig {
+function reresolve(previous: ResolvedStarsConfig, source: ResolveConfigOptions, change: Partial<ResolveConfigOptions>): ResolvedStarsConfig {
 	const next = { ...source, ...change };
-	const config = resolveStarsConfig(next);
+	const resolved = resolveStarsConfig(next);
+	// Modules ran once, against the first resolution: what they contributed carries over to the new one.
+	const config = { ...resolved, runtime: previous.runtime, imports: { ...resolved.imports, presets: previous.imports.presets } };
 	sources.set(config, next);
 	return config;
 }

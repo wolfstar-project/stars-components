@@ -64,6 +64,7 @@
 	"dependencies": {
 		"@clack/prompts": "^1.8.1",
 		"@sapphire/ts-config": "^5.0.3",
+		"@wolfstar/kit": "workspace:^",
 		"@wolfstar/nitro-server": "workspace:^",
 		"@wolfstar/schema": "workspace:^",
 		"@wolfstar/vite-server": "workspace:^",

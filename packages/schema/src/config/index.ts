@@ -43,6 +43,7 @@ export { configDiagnostics } from './errors.js';
 export { resolveHooks, STARS_HOOK_NAMES } from './hooks.js';
 export type { ResolvedHooksConfig } from './hooks.js';
 export type { ConfigDiagnosticCode } from './errors.js';
+export { resolveModules } from './modules.js';
 export { displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';
 export type {
 	PackageJsonLike,

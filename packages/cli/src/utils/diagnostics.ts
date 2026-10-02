@@ -58,6 +58,29 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (p: { name: string; root: string; hint: string }) => `"${p.name}" is not installed in ${p.root}`,
 			fix: (p: { name: string; root: string; hint: string }) => p.hint
 		},
+		MODULE_FAILED: {
+			why: (p: { module: string; reason: string; message: string }) => p.message,
+			fix: (p: { module: string; reason: string; message: string }) => {
+				switch (p.reason) {
+					case 'MODULE_LOAD_FAILED':
+						return `Install "${p.module}" in the project, or fix its specifier in \`modules\` in stars.config.`;
+					case 'MODULE_INCOMPATIBLE':
+						return 'Update the module or @wolfstar/http-framework so their versions match.';
+					case 'MODULE_INVALID':
+						return 'Export the module with `defineModule` from @wolfstar/kit as the default export.';
+					case 'MODULE_PLUGIN_INVALID':
+						return 'Pass `ctx.addPlugin` a package specifier, an absolute path or a `file:` URL, and JSON-serialisable options.';
+					default:
+						return 'Fix the error the module threw (see the cause), or remove it from `modules` in stars.config.';
+				}
+			}
+		},
+		MODULES_PRELOAD_REQUIRED: {
+			why: (p: { tool: string; plugins: string }) =>
+				`The runtime plugins added by modules (${p.plugins}) are registered through \`node --import\` with build.tool "${p.tool}", which only \`stars dev\` does for you`,
+			fix: (_p: { tool: string; plugins: string }) =>
+				'Start the production bot with `node --import ./.stars/modules.mjs <entry>`; `stars prepare` (and `stars build`) writes that file.'
+		},
 		CODEGEN_FAILED: {
 			why: (p: { code: number | null; stderr: string }) => `i18next-type-generator exited with code ${p.code}${p.stderr ? `: ${p.stderr}` : ''}`
 		}

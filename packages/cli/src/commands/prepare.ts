@@ -32,13 +32,17 @@ export async function runPrepare(options: PrepareTaskOptions): Promise<void> {
 	} else {
 		const paintConfig = result.tsconfig.status === 'outdated' ? colors.red : colors.green;
 		stdout.write(`${colors.dim('stars')} tsconfig: ${paintConfig(result.tsconfig.status)} ${displayPath(config.root, result.tsconfig.path)}\n`);
+		if (result.modules) {
+			const paint = result.modules.status === 'outdated' ? colors.red : colors.green;
+			stdout.write(`${colors.dim('stars')} modules: ${paint(result.modules.status)} ${displayPath(config.root, result.modules.path)}\n`);
+		}
 		if (result.enabled) {
 			const paint = result.status === 'outdated' ? colors.red : colors.green;
 			stdout.write(`${colors.dim('stars')} imports: ${paint(result.status)} ${displayPath(config.root, result.dts)}\n`);
 		}
 	}
 
-	if (result.status === 'outdated' || result.tsconfig.status === 'outdated') {
+	if (result.status === 'outdated' || result.tsconfig.status === 'outdated' || result.modules?.status === 'outdated') {
 		throw cliDiagnostics.PREPARE_OUTDATED({});
 	}
 }

@@ -1,0 +1,72 @@
+{
+	"name": "@wolfstar/kit",
+	"version": "0.0.0",
+	"description": "defineModule and the module setup runtime for installable Stars modules, the @nuxt/kit counterpart",
+	"keywords": [
+		"api",
+		"discord",
+		"http",
+		"kit",
+		"modules",
+		"pnpm",
+		"stars",
+		"ts",
+		"typescript",
+		"wolfstar"
+	],
+	"homepage": "https://github.com/wolfstar-project/stars-components/tree/main/packages/kit",
+	"bugs": {
+		"url": "https://github.com/wolfstar-project/stars-components/issues"
+	},
+	"license": "Apache-2.0",
+	"author": "@wolfstar",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/wolfstar-project/stars-components.git",
+		"directory": "packages/kit"
+	},
+	"files": [
+		"dist/"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "dist/esm/index.js",
+	"module": "dist/esm/index.js",
+	"types": "dist/esm/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/esm/index.d.ts",
+				"default": "./dist/esm/index.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsdown --config-loader unrun",
+		"watch": "tsdown --config-loader unrun --watch",
+		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"lint": "oxlint src --fix",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"@wolfstar/schema": "workspace:^",
+		"semver": "^7.8.5"
+	},
+	"devDependencies": {
+		"@types/semver": "^7.8.0",
+		"@vitest/coverage-v8": "^5.0.1",
+		"golar": "^0.1.10",
+		"tsdown": "^0.23.0",
+		"typescript": "~7.0.2",
+		"vitest": "^5.0.1"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

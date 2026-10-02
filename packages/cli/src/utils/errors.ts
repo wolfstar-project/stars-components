@@ -20,7 +20,8 @@ const CONFIG_DIAGNOSTIC_CODES = new Set<string>(Object.keys(configDiagnostics));
 
 /** CLI-local diagnostic codes whose exit code isn't the default {@link ExitCode.Error}. */
 const CLI_EXIT_CODES: Partial<Record<string, ExitCode>> = {
-	BUILD_FAILED: ExitCode.BuildFailed
+	BUILD_FAILED: ExitCode.BuildFailed,
+	MODULE_FAILED: ExitCode.InvalidConfig
 };
 
 /**
