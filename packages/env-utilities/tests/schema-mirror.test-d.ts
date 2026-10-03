@@ -12,8 +12,8 @@ describe('StarsEnvSetupOptions', () => {
 
 	test('mirrors every EnvSetupOptions key the loader honours', () => {
 		// Not mirrored: `processEnv` is not serializable, `DOTENV_KEY` is a secret, and the loader never forwards
-		// `quiet`/`override` to dotenv.
-		type Mirrored = Exclude<keyof EnvSetupOptions, 'processEnv' | 'DOTENV_KEY' | 'quiet' | 'override'>;
+		// `quiet`/`override`/`fast` to dotenv.
+		type Mirrored = Exclude<keyof EnvSetupOptions, 'processEnv' | 'DOTENV_KEY' | 'quiet' | 'override' | 'fast'>;
 		expectTypeOf<keyof StarsEnvSetupOptions>().toEqualTypeOf<Mirrored>();
 	});
 });
