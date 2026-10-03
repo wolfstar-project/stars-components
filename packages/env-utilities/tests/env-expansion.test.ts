@@ -172,7 +172,7 @@ describe('Env file loader cross-file expansion', () => {
 	describe('dotenv logging switches', () => {
 		test('logs an injected env line by default', () => {
 			write('.env', 'BASE=base\n');
-			const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+			const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
 			loadEnvFiles({ path: join(directory, '.env') });
 
@@ -182,7 +182,7 @@ describe('Env file loader cross-file expansion', () => {
 		test('honours DOTENV_CONFIG_QUIET from the real environment', () => {
 			process.env.DOTENV_CONFIG_QUIET = 'true';
 			write('.env', 'BASE=base\n');
-			const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+			const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
 			loadEnvFiles({ path: join(directory, '.env') });
 
