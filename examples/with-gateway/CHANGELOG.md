@@ -1,5 +1,12 @@
 # with-gateway
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`d3ab9fa`](https://github.com/wolfstar-project/stars-components/commit/d3ab9fadca28c2f525ee91097fc94fd425b49eb1)]:
+    - @wolfstar/env-utilities@2.2.2
+
 ## 0.0.5
 
 ### Patch Changes

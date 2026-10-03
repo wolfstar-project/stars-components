@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.2
+
+### Patch Changes
+
+- [#230](https://github.com/wolfstar-project/stars-components/pull/230) [`d3ab9fa`](https://github.com/wolfstar-project/stars-components/commit/d3ab9fadca28c2f525ee91097fc94fd425b49eb1) - fix(deps): update dependency dotenv to v18 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 2.2.1
 
 ### Patch Changes
