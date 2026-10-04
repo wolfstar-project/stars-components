@@ -52,6 +52,16 @@
 				"types": "./dist/cjs/setup.d.cts",
 				"default": "./dist/cjs/setup.cjs"
 			}
+		},
+		"./varlock": {
+			"import": {
+				"types": "./dist/esm/varlock.d.ts",
+				"default": "./dist/esm/varlock.js"
+			},
+			"require": {
+				"types": "./dist/cjs/varlock.d.cts",
+				"default": "./dist/cjs/varlock.cjs"
+			}
 		}
 	},
 	"publishConfig": {

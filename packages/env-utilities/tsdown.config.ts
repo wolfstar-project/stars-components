@@ -4,7 +4,7 @@ import { createTsdownOptions } from '../../scripts/tsdown.config';
 
 export default defineConfig(
 	createTsdownOptions({
-		entry: ['src/index.ts', 'src/setup.ts'],
+		entry: ['src/index.ts', 'src/setup.ts', 'src/varlock.ts'],
 		plugins: [VersionInjector()]
 	})
 );
