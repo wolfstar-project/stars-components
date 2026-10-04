@@ -194,7 +194,8 @@ function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => vo
 		({ stdout } = varlock.execSyncVarlock(args.join(' '), {
 			fullResult: true,
 			callerDir: dirname(fileURLToPath(import.meta.url)),
-			...(cwd && { cwd })
+			...(cwd && { cwd }),
+			env: varlockChildEnv()
 		}));
 	} catch (error) {
 		if (error instanceof varlock.VarlockExecError) {
@@ -227,6 +228,15 @@ function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => vo
 	return {
 		parsed
 	};
+}
+
+/**
+ * The environment of `varlock load`. Its summary becomes the message of an `Error`, so colour is turned off: varlock
+ * colours it even when it is not a TTY (`FORCE_COLOR`), and `FORCE_COLOR` wins over `NO_COLOR`.
+ */
+function varlockChildEnv(): NodeJS.ProcessEnv {
+	const { FORCE_COLOR: _forceColor, ...env } = process.env;
+	return { ...env, NO_COLOR: '1' };
 }
 
 /**

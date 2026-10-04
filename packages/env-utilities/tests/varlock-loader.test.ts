@@ -110,6 +110,20 @@ describe('Varlock loader (experimental)', () => {
 		expect(() => loadEnvFiles({ loader: 'varlock', path: fixture('valid'), env: 'my env' })).toThrow(/'env' option cannot contain whitespace/);
 	});
 
+	test('should not put ANSI colour codes in the message of an invalid schema', () => {
+		setEnv('FORCE_COLOR', '1');
+
+		let message = '';
+		try {
+			loadEnvFiles({ loader: 'varlock', path: fixture('invalid') });
+		} catch (error) {
+			message = (error as Error).message;
+		}
+
+		expect(message).toContain('VARLOCK_TEST_MISSING');
+		expect(message).not.toContain('\u001B');
+	});
+
 	test('should throw an `Error` carrying the summary of an invalid schema instead of exiting', () => {
 		const exit = vi.spyOn(process, 'exit');
 
