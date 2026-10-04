@@ -263,4 +263,226 @@ describe('DevService', () => {
 		builder.emit('start');
 		expect(service.status.progress).toMatchObject({ fraction: 0, readyMs: null });
 	});
+	describe('bridge', () => {
+		/** As `stars dev` prints it: relative to the project, with the separators of the platform. */
+		const PING = join('src', 'commands', 'ping.js');
+		const bridge = (message: Record<string, unknown>) => service.supervisor.emit('message', { source: 'stars:bridge', ...message });
+		const last = (channel: string) =>
+			service.logs
+				.entries()
+				.filter((entry) => entry.channel === channel)
+				.at(-1);
+		const commands = (description: string, extra: Record<string, unknown>[] = []) =>
+			bridge({ type: 'commands', global: [{ name: 'ping', description }, ...extra], guilds: {} });
+
+		async function setupWith(dev: string) {
+			fixture = await createFixture({
+				'src/main.js': KEEPALIVE_SCRIPT,
+				'src/commands/ping.js': '',
+				'stars.config.mjs': `export default { dev: { debounce: 10, killTimeout: 1000, ${dev} } };`
+			});
+			config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+			builder = new FakeBuilder();
+			service = new DevService(config, { builder });
+			return service;
+		}
+
+		test('turns what the bot reports into entries on their own channels', async () => {
+			await setupWith('');
+			bridge({ type: 'ready', clientId: '1', port: 6967 });
+			expect(service.status).toMatchObject({ ready: true, port: 6967 });
+			expect(last('lifecycle')).toMatchObject({ level: 'success', text: 'Listening on port 6967' });
+
+			bridge({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping', path: join(fixture.root, 'src/commands/ping.js') }] });
+			expect(last('commands')).toMatchObject({ level: 'debug', text: 'Loaded commands: 1 piece', detail: [`ping ${PING}`] });
+
+			bridge({ type: 'dispatch', phase: 'run', route: 'slash:ping', piece: 'Ping' });
+			expect(last('interactions')).toMatchObject({ level: 'debug', text: 'Processing slash:ping with Ping' });
+			bridge({ type: 'dispatch', phase: 'success', route: 'slash:ping', piece: 'Ping', ms: 360 });
+			expect(last('interactions')).toMatchObject({ level: 'trace', text: 'slash:ping handled in 360ms' });
+			bridge({ type: 'dispatch', phase: 'error', route: 'slash:ping', piece: 'Ping', ms: 440, error: { message: 'boom', stack: ['at run'] } });
+			expect(last('interactions')).toMatchObject({ level: 'error', text: 'slash:ping failed in 440ms: boom', detail: ['at run'] });
+
+			bridge({ type: 'request', method: 'POST', path: '/', status: 200, ms: 3 });
+			expect(last('http')).toMatchObject({ level: 'trace', text: 'POST / 200 in 3ms' });
+			bridge({ type: 'request', method: 'POST', path: '/', status: 401, ms: 1 });
+			expect(last('http')).toMatchObject({ level: 'warn' });
+			bridge({ type: 'request', method: 'POST', path: '/', status: 500, ms: 1 });
+			expect(last('http')).toMatchObject({ level: 'error' });
+
+			bridge({ type: 'hmr', event: 'reloaded', store: 'commands', names: ['ping'], path: join(fixture.root, 'src/commands/ping.js') });
+			expect(last('hmr')).toMatchObject({ level: 'debug', text: `Reloaded ping from ${PING}` });
+			bridge({ type: 'hmr', event: 'error', path: join(fixture.root, 'src/commands/ping.js'), message: 'Unexpected token', stack: [] });
+			expect(last('hmr')).toMatchObject({ level: 'error', text: `Could not reload ${PING}: Unexpected token` });
+
+			// A plugin's own channel, and an unknown level falling back to info.
+			bridge({ type: 'log', channel: 'gateway', level: 'verbose', text: 'Shard 0 ready' });
+			expect(last('gateway')).toMatchObject({ source: 'app', level: 'info', text: 'Shard 0 ready' });
+
+			// Anything else on the channel belongs to the bot.
+			const count = service.logs.entries().length;
+			service.supervisor.emit('message', { type: 'ready', port: 1 });
+			expect(service.logs.entries()).toHaveLength(count);
+		});
+
+		test('asks before refreshing changed commands, only when a UI can answer', async () => {
+			await setupWith('');
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+
+			// The first report of a session is the baseline.
+			commands('Ping');
+			expect(service.status.prompt).toBeNull();
+			expect(last('commands')).toMatchObject({ text: 'Loaded commands: 1 global, 0 guild groups', detail: ['ping'] });
+			commands('Ping');
+			expect(service.status.prompt).toBeNull();
+
+			// Without an interactive UI nothing could answer: the change is reported instead.
+			commands('Pong');
+			expect(service.status.prompt).toBeNull();
+			expect(last('commands')).toMatchObject({ level: 'warn', detail: expect.arrayContaining(['changed ping']) });
+
+			service.promptable = true;
+			commands('Ping');
+			expect(service.status.prompt).toEqual({ kind: 'commands', changes: [{ kind: 'changed', name: 'ping', type: 1, guild: null }] });
+			// A second change before the answer is one question about both.
+			commands('Ping', [{ name: 'echo' }]);
+			expect(service.status.prompt?.changes.map((change) => `${change.kind} ${change.name}`)).toEqual(['changed ping', 'added echo']);
+
+			service.answerPrompt(false);
+			expect(service.status.prompt).toBeNull();
+			expect(send).not.toHaveBeenCalled();
+
+			commands('Pong');
+			service.answerPrompt(true);
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh' });
+			bridge({ type: 'refreshed', ok: true, global: 1, guilds: 0 });
+			expect(last('commands')).toMatchObject({ level: 'success', text: 'Deployed 1 global command' });
+			bridge({ type: 'refreshed', ok: false, message: 'Missing Access', stack: [] });
+			expect(last('commands')).toMatchObject({ level: 'error', text: 'Could not refresh the commands: Missing Access' });
+		});
+
+		test("dev.commands.refresh 'auto' redeploys right away and 'off' never does", async () => {
+			await setupWith("commands: { refresh: 'auto' }");
+			service.promptable = true;
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(false);
+			commands('Ping');
+			commands('Pong');
+			expect(send).toHaveBeenCalledTimes(1);
+			expect(service.status.prompt).toBeNull();
+			// The bot is not there to hear it: that is said, not swallowed.
+			expect(last('commands')).toMatchObject({ level: 'warn', text: 'Could not reach the bot to refresh its commands' });
+			await service.stop();
+			await fixture.cleanup();
+
+			await setupWith("commands: { refresh: 'off' }");
+			service.promptable = true;
+			const never = vi.spyOn(service.supervisor, 'send');
+			commands('Ping');
+			commands('Pong');
+			expect(never).not.toHaveBeenCalled();
+			expect(service.status.prompt).toBeNull();
+			expect(last('commands')?.detail).toContain('dev.commands.refresh is off');
+		});
+
+		test('leaves a change to the bot when it hot reloads every file the build rewrote, and restarts otherwise', async () => {
+			await setupWith('');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const pid = service.status.pid;
+
+			// Without hot reload in the bot, a build restarts it.
+			await fixture.write('src/commands/ping.js', '// 1');
+			builder.succeed();
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
+			const hotPid = service.status.pid;
+
+			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			expect(service.status.hmr).toBe(true);
+			await fixture.write('src/commands/ping.js', '// 2');
+			builder.succeed();
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			expect(service.status.pid).toBe(hotPid);
+			expect(service.status.restarts).toBe(1);
+			expect(service.status.progress.fraction).toBe(1);
+			expect(last('hmr')).toMatchObject({ level: 'trace', text: `UPDATE ${PING}` });
+
+			// A build that rewrote the files without changing them is not a reason to hot reload, nor to do nothing.
+			await fixture.write('src/main.js', `${KEEPALIVE_SCRIPT} // changed`);
+			await fixture.write('src/commands/ping.js', '// 2');
+			// A file outside the stores cannot be hot reloaded.
+			await fixture.write('src/commands/ping.js', '// 3');
+			builder.succeed();
+			await waitFor(() => service.status.pid !== null && service.status.pid !== hotPid && service.status.process === 'running');
+			// The new process has not reported hot reload yet.
+			expect(service.status.hmr).toBe(false);
+		});
+
+		test('dev.hmr false always restarts', async () => {
+			await setupWith('hmr: false');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const pid = service.status.pid;
+			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			await fixture.write('src/commands/ping.js', '// 2');
+			builder.succeed();
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
+		});
+
+		test('a rewritten but unchanged output is not hot reloaded: it restarts, as a build with no visible reason does', async () => {
+			await setupWith('');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const pid = service.status.pid;
+			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			await fixture.write('src/commands/ping.js', '');
+			builder.succeed();
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
+		});
+
+		test('a prompt survives a restart, and a refresh asked while the bot restarts waits for it to listen', async () => {
+			await setupWith('');
+			service.promptable = true;
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			commands('Ping');
+			commands('Pong');
+			expect(service.status.prompt).not.toBeNull();
+
+			const pid = service.status.pid;
+			await service.restart('manual');
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
+			// The new process reports the same commands: nothing new to ask, but the question still stands.
+			commands('Pong');
+			expect(service.status.prompt?.changes).toEqual([{ kind: 'changed', name: 'ping', type: 1, guild: null }]);
+
+			service.answerPrompt(true);
+			expect(send).not.toHaveBeenCalled();
+			expect(last('commands')).toMatchObject({ text: 'Refreshing commands once the bot is ready…' });
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh' });
+		});
+
+		test('disconnect stops the bot until a manual restart, whatever builds in between', async () => {
+			await setupWith('');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+
+			await service.disconnect();
+			expect(service.status).toMatchObject({ process: 'stopped', paused: true });
+			builder.succeed();
+			await new Promise((resolve) => setTimeout(resolve, 80));
+			expect(service.status.process).toBe('stopped');
+
+			await service.restart('manual');
+			await waitFor(() => service.status.process === 'running');
+			expect(service.status.paused).toBe(false);
+		});
+	});
 });

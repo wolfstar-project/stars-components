@@ -5,6 +5,7 @@ import { PassThrough } from 'node:stream';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';
 import { DevService } from '../src/dev/dev-service.js';
 import { createPlainRenderer, type Renderer } from '../src/dev/tui/plain.js';
+import { initialLogView } from '../src/dev/tui/log-view.js';
 import { createTuiRenderer } from '../src/dev/tui/tui.js';
 import { createFixture, wait, waitFor, type Fixture } from './helpers.js';
 
@@ -105,6 +106,34 @@ describe('renderers', () => {
 		renderer.stop();
 		service.log('app', 'info', 'ignored');
 		expect(output.split('\n').filter(Boolean)).toEqual(['stars Starting', 'build TS1005', 'Ready', 'stars logs cleared']);
+	});
+	test('plain renderer prefixes other channels, prints detail lines and honours the filter', () => {
+		const stream = new PassThrough();
+		let output = '';
+		stream.on('data', (chunk: Buffer) => (output += chunk.toString()));
+		renderer = createPlainRenderer(service, { stdout: stream, color: false });
+		void renderer.start();
+		service.log('stars', 'debug', 'Reloaded Ping from src/commands/Ping.js', { channel: 'hmr' });
+		service.log('stars', 'info', 'Commands updated', { channel: 'commands', detail: ['changed ping'] });
+		// `trace` is hidden unless asked for: one line per request would drown everything else.
+		service.log('stars', 'trace', 'POST / 200 in 3ms', { channel: 'http' });
+		renderer.stop();
+		expect(output.split('\n').filter(Boolean)).toEqual([
+			'hmr Reloaded Ping from src/commands/Ping.js',
+			'commands Commands updated',
+			'commands   changed ping'
+		]);
+
+		output = '';
+		renderer = createPlainRenderer(service, {
+			stdout: stream,
+			color: false,
+			filter: initialLogView(service.config, { channels: ['http,hmr'], level: 'trace' })
+		});
+		void renderer.start();
+		service.log('stars', 'trace', 'POST / 200 in 3ms', { channel: 'http' });
+		service.log('stars', 'info', 'Commands updated', { channel: 'commands' });
+		expect(output.split('\n').filter(Boolean)).toEqual(['http POST / 200 in 3ms']);
 	});
 	test('pins a spaced panel to the bottom and folds away logs, including banners', async () => {
 		await start();

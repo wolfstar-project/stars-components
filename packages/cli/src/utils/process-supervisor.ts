@@ -17,12 +17,16 @@ export interface ProcessSupervisorOptions {
 	env: NodeJS.ProcessEnv;
 	/** Milliseconds to wait after `SIGTERM` before sending `SIGKILL`. */
 	killTimeout: number;
+	/** Opens an IPC channel to the process, for {@link ProcessSupervisorEvents.message} and {@link ProcessSupervisor.send}. */
+	ipc?: boolean;
 }
 
 export interface ProcessSupervisorEvents {
 	state: [state: ProcessState];
 	stdout: [line: string];
 	stderr: [line: string];
+	/** A message the process sent over the IPC channel. */
+	message: [message: unknown];
 	exit: [exit: ProcessExit];
 	error: [error: Error];
 }
@@ -59,10 +63,15 @@ export class ProcessSupervisor extends EventEmitter<ProcessSupervisorEvents> {
 	public start(): void {
 		if (this.#child) throw new Error('The process is already running, call stop() or restart() first.');
 
-		const { command, args, cwd, env } = this.options;
+		const { command, args, cwd, env, ipc = false } = this.options;
 		this.#setState('starting');
 
-		const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+		const child = spawn(command, args, {
+			cwd,
+			env,
+			stdio: ipc ? ['ignore', 'pipe', 'pipe', 'ipc'] : ['ignore', 'pipe', 'pipe'],
+			windowsHide: true
+		});
 		this.#child = child;
 		this.#startedAt = Date.now();
 
@@ -71,6 +80,7 @@ export class ProcessSupervisor extends EventEmitter<ProcessSupervisorEvents> {
 		const stderr = createLineSplitter((line) => this.emit('stderr', line));
 		child.stdout?.on('data', stdout.push);
 		child.stderr?.on('data', stderr.push);
+		if (ipc) child.on('message', (message) => this.emit('message', message));
 
 		child.once('spawn', () => {
 			if (this.#child === child) this.#setState('running');
@@ -120,6 +130,20 @@ export class ProcessSupervisor extends EventEmitter<ProcessSupervisorEvents> {
 		});
 
 		return this.#stopping;
+	}
+
+	/**
+	 * Sends a message over the IPC channel. Returns whether it could be handed over: `false` without a running process,
+	 * without `ipc`, or once the process closed its end of the channel.
+	 */
+	public send(message: unknown): boolean {
+		const child = this.#child;
+		if (!child?.connected) return false;
+		try {
+			return child.send(message as never);
+		} catch {
+			return false;
+		}
 	}
 
 	/**

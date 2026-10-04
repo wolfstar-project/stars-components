@@ -1,11 +1,12 @@
-import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs';
-import { dirname } from 'node:path';
+import { createWriteStream, mkdirSync, readdirSync, rmSync, type WriteStream } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 import type { LogBuffer, LogEntry } from '../utils/log-buffer.js';
 
 /**
  * Mirrors a dev session's logs into a file, so a run can be read back after the terminal UI is gone (the TUI takes
- * over the alternate screen and its scrollback disappears on exit). Seedcord keeps a `logs/` directory for the same
- * reason; this writes a single, truncated-per-run file instead.
+ * over the alternate screen and its scrollback disappears on exit). `dev.logFile` is a single file truncated on every
+ * run; `dev.logs.dir` adds one file per run (see {@link runLogFile}).
  */
 export class LogFileWriter {
 	#stream: WriteStream | null = null;
@@ -37,10 +38,35 @@ export class LogFileWriter {
 	}
 
 	#write = (entry: LogEntry): void => {
-		this.#stream?.write(`${format(entry)}\n`);
+		this.#stream?.write(`${formatLogLine(entry)}\n`);
 	};
 }
 
-function format(entry: LogEntry): string {
-	return `${new Date(entry.time).toISOString()} ${entry.level.padEnd(7)} ${entry.source.padEnd(6)} ${entry.text}`;
+/** One line per entry, then its detail lines indented under it. Never filtered: the file is the whole session. */
+export function formatLogLine(entry: LogEntry): string {
+	const head = `${new Date(entry.time).toISOString()} ${entry.level.padEnd(7)} ${entry.channel.padEnd(12)} ${stripVTControlCharacters(entry.text)}`;
+	return [head, ...(entry.detail ?? []).map((line) => `  ${stripVTControlCharacters(line)}`)].join('\n');
+}
+
+const RUN_FILE = /^dev-.+\.log$/;
+
+/**
+ * The file of this run inside `dev.logs.dir` (`dev-<timestamp>.log`), after deleting the oldest ones so the directory
+ * holds at most `keep` files with the new one. The names sort by time, so no file needs to be opened to order them.
+ */
+export function runLogFile(directory: string, keep: number, now: Date = new Date()): string {
+	let existing: string[] = [];
+	try {
+		existing = readdirSync(directory)
+			.filter((name) => RUN_FILE.test(name))
+			.sort();
+	} catch {
+		// The directory does not exist yet: nothing to prune.
+	}
+
+	for (const name of existing.slice(0, Math.max(0, existing.length - Math.max(0, keep - 1)))) {
+		rmSync(join(directory, name), { force: true });
+	}
+
+	return join(directory, `dev-${now.toISOString().replaceAll(':', '-')}.log`);
 }

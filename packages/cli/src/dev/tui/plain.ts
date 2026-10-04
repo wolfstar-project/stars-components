@@ -1,12 +1,15 @@
 import { createColors } from 'colorette';
 import type { DevService } from '../dev-service.js';
-import type { LogEntry } from '../../utils/log-buffer.js';
+import { SOURCE_CHANNELS, type LogEntry } from '../../utils/log-buffer.js';
+import { initialLogView, matchesView, type LogViewFilter } from './log-view.js';
 
 export interface PlainRendererOptions {
 	stdout?: NodeJS.WritableStream;
 	color?: boolean;
 	/** Whether to attach process signal handlers. */
 	signals?: boolean;
+	/** Which channels and levels are printed; defaults to `dev.logs`. The log file is never filtered. */
+	filter?: LogViewFilter;
 }
 
 export interface Renderer {
@@ -23,6 +26,7 @@ export function createPlainRenderer(service: DevService, options: PlainRendererO
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: options.color ?? false });
 	const write = (text: string) => stdout.write(`${text}\n`);
+	const filter = options.filter ?? initialLogView(service.config);
 
 	const prefixes = {
 		stars: colors.cyan('stars'),
@@ -33,9 +37,13 @@ export function createPlainRenderer(service: DevService, options: PlainRendererO
 	} as const;
 
 	const onEntry = (entry: LogEntry) => {
-		const prefix = prefixes[entry.source];
+		if (!matchesView(entry, filter)) return;
+		// An entry on a channel of its own (`hmr`, `commands`, `http`, …) is prefixed with it; the bot's own output is
+		// passed through as it is, so its logger's formatting survives.
+		const prefix = entry.channel === SOURCE_CHANNELS[entry.source] ? prefixes[entry.source] : colors.cyan(entry.channel);
 		if (!prefix) {
 			write(entry.text);
+			for (const line of entry.detail ?? []) write(`  ${line}`);
 			return;
 		}
 
@@ -48,6 +56,7 @@ export function createPlainRenderer(service: DevService, options: PlainRendererO
 						? colors.green
 						: (value: string) => value;
 		write(`${prefix} ${paint(entry.text)}`);
+		for (const line of entry.detail ?? []) write(`${prefix}   ${colors.dim(line)}`);
 	};
 
 	const onClear = () => write(`${prefixes.stars} logs cleared`);
