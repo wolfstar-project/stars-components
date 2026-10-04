@@ -18,8 +18,6 @@
 		"@wolfstar/shared-http-pieces": "workspace:*",
 		"@wolfstar/start-banner": "workspace:*",
 		"discord-api-types": "^0.38.8",
-		"dotenv": "^18.0.4",
-		"dotenv-expand": "^13.0.0",
 		"gradient-string": "^3.0.0"
 	},
 	"devDependencies": {

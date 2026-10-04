@@ -18,8 +18,6 @@ const versions: ProjectContext['versions'] = {
 	'@wolfstar/cli': '1.0.0',
 	'discord-api-types': '1.0.0',
 	'@wolfstar/env-utilities': '1.0.0',
-	dotenv: '1.0.0',
-	'dotenv-expand': '1.0.0',
 	'@wolfstar/start-banner': '1.0.0',
 	'gradient-string': '1.0.0',
 	'@wolfstar/plugin-i18next': '1.0.0',
@@ -99,9 +97,6 @@ describe('buildDependencies', () => {
 			const dependencies = buildDependencies(ctx);
 
 			expect(dependencies).toHaveProperty('@wolfstar/env-utilities');
-			// Optional peers of `@wolfstar/env-utilities`, needed by its default `dotenv` loader.
-			expect(dependencies).toHaveProperty('dotenv');
-			expect(dependencies).toHaveProperty('dotenv-expand');
 			expect(dependencies).toHaveProperty('@wolfstar/start-banner');
 			expect(dependencies).toHaveProperty('gradient-string');
 		}

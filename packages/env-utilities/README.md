@@ -19,14 +19,27 @@ Functional utilities for reading and parsing environmental variables, based on [
 
 ## Installation
 
-`dotenv` and `dotenv-expand` are optional peer dependencies: install them to use the `dotenv` loader (the default when the
-project has no varlock schema), and skip them when the project uses the [`varlock` loader](#experimental-varlock-support).
-
 ```sh
-pnpm add @wolfstar/env-utilities dotenv dotenv-expand
+pnpm add @wolfstar/env-utilities
 ```
 
-Without them, `setup()` throws an `Error` that says which package is missing.
+Nothing else is needed: `.env*` files are parsed with Node.js' own `util.parseEnv` (Node.js 20.12 or newer), the `node`
+loader. `dotenv` and `dotenv-expand` are optional peer dependencies: install them if you want the `dotenv` loader, which
+`setup()` then uses by itself.
+
+```sh
+pnpm add dotenv dotenv-expand
+```
+
+The loaders:
+
+- `node`: Node.js' parser, with `$VAR`, `${VAR}`, `${VAR:-default}`, `${VAR:+alternate}` and `\$` expanded the way
+  `dotenv-expand` does. Used when `dotenv` is not installed.
+- `dotenv`: `dotenv` and `dotenv-expand`. Used when both are installed.
+- `varlock`: see [below](#experimental-varlock-support). Used when the project has a `.env.schema`.
+
+Set `loader` or `DOTENV_LOADER` to choose one yourself. Asking for `dotenv` without the packages installed throws an `Error`
+that names the missing one.
 
 ## Usage
 

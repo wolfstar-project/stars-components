@@ -94,8 +94,6 @@ export function buildDependencies(ctx: ProjectContext): Record<string, string> {
 		'@sapphire/pieces': caret(v['@sapphire/pieces']!),
 		'discord-api-types': caret(v['discord-api-types']!),
 		'@wolfstar/env-utilities': caret(v['@wolfstar/env-utilities']!),
-		dotenv: caret(v.dotenv!),
-		'dotenv-expand': caret(v['dotenv-expand']!),
 		'@wolfstar/start-banner': caret(v['@wolfstar/start-banner']!),
 		'gradient-string': caret(v['gradient-string']!)
 	};

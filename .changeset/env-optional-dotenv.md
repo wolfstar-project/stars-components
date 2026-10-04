@@ -1,5 +1,5 @@
 ---
-'@wolfstar/env-utilities': major
+'@wolfstar/env-utilities': minor
 ---
 
-feat(env-utilities)!: make `dotenv` and `dotenv-expand` optional peer dependencies, loaded only when the `dotenv` loader runs, so a project using the `varlock` loader does not install them. **Breaking:** projects that use the `dotenv` loader (the default without a varlock schema) must now install `dotenv` and `dotenv-expand` themselves. The `EnvLoaderOptions` type no longer extends dotenv's `DotenvConfigOptions` (the options `processEnv`, `quiet`, `override`, `fast` and `DOTENV_KEY` were never forwarded), and `EnvSetupResult` is now the package's own `EnvLoaderOutput`.
+feat(env-utilities): add a `node` loader that parses `.env*` files with Node.js' own `util.parseEnv` (Node.js 20.12 or newer) and expands references like `dotenv-expand`, and make `dotenv` and `dotenv-expand` optional peer dependencies. When no loader is requested, `dotenv` is used if both packages are installed and the `node` loader if they are not, so a project that has them installed behaves as before and a varlock or new project installs nothing. Asking for `loader: 'dotenv'` without the packages throws an `Error` naming the missing one. `EnvLoaderOptions` no longer extends dotenv's `DotenvConfigOptions` (its `processEnv`, `quiet`, `override`, `fast` and `DOTENV_KEY` options were never forwarded), and `EnvSetupResult` is now the package's own `EnvLoaderOutput`.

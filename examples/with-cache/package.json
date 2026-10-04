@@ -17,8 +17,6 @@
 		"@wolfstar/plugin-cache": "^0.0.0",
 		"@wolfstar/plugin-gateway": "^0.0.0",
 		"discord-api-types": "^0.38.8",
-		"dotenv": "^18.0.4",
-		"dotenv-expand": "^13.0.0",
 		"ioredis": "^5.11.1"
 	},
 	"devDependencies": {

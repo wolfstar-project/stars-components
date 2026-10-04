@@ -442,10 +442,12 @@ export interface StarsEnvSetupOptions {
 	/** Only keep the variables starting with this prefix (e.g. `BOT_`). */
 	prefix?: string;
 	/**
-	 * **Experimental.** `'varlock'` resolves the environment through [varlock](https://varlock.dev) instead of dotenv.
-	 * @default 'dotenv'
+	 * **Experimental.** `'node'` parses the files with Node.js' own `util.parseEnv`, `'dotenv'` with `dotenv` and
+	 * `dotenv-expand` (optional packages of `@wolfstar/env-utilities`), and `'varlock'` resolves the environment through
+	 * [varlock](https://varlock.dev). When left out, `'varlock'` is used for a project with a `.env.schema`, otherwise
+	 * `'dotenv'` if it is installed and `'node'` if it is not.
 	 */
-	loader?: 'dotenv' | 'varlock';
+	loader?: 'node' | 'dotenv' | 'varlock';
 	/** Logs every file loaded and every prefix match. */
 	debug?: boolean;
 	/**

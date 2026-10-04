@@ -14,9 +14,7 @@
 	"dependencies": {
 		"@wolfstar/env-utilities": "workspace:*",
 		"@wolfstar/http-framework": "workspace:*",
-		"discord-api-types": "^0.38.8",
-		"dotenv": "^18.0.4",
-		"dotenv-expand": "^13.0.0"
+		"discord-api-types": "^0.38.8"
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",

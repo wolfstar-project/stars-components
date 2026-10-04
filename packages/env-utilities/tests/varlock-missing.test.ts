@@ -41,18 +41,59 @@ describe('Varlock loader without the optional package', () => {
 		expect(() => loadEnvFiles({ loader: 'varlock' })).toThrow(/optional `varlock` package is not installed/);
 	});
 
-	test('should keep dotenv when a schema is found but `varlock` is not installed', async () => {
-		// Only `varlock` is missing: `dotenv` still resolves through the real `require`.
+	/** Everything resolves and loads through the real `require`, except the packages in `missing`. */
+	async function withMissing(...missing: string[]) {
 		const { createRequire } = await vi.importActual<typeof import('node:module')>('node:module');
-		requireMock.mockImplementation(createRequire(import.meta.url));
-		requireMock.resolve = vi.fn(() => {
-			throw Object.assign(new Error("Cannot find package 'varlock'"), { code: 'MODULE_NOT_FOUND' });
+		const real = createRequire(import.meta.url);
+		const notFound = (id: string) => Object.assign(new Error(`Cannot find package '${id}'`), { code: 'MODULE_NOT_FOUND' });
+		requireMock.mockImplementation((id: string) => {
+			if (missing.some((name) => id === name || id.startsWith(`${name}/`))) throw notFound(id);
+			return real(id);
 		});
-		vi.spyOn(process, 'cwd').mockReturnValue(fileURLToPath(new URL('./varlock-fixtures/detect/src-schema', import.meta.url)));
+		requireMock.resolve = vi.fn((id: string) => {
+			if (missing.some((name) => id === name || id.startsWith(`${name}/`))) throw notFound(id);
+			return real.resolve(id);
+		});
+	}
+
+	function inProject(name: string) {
+		vi.spyOn(process, 'cwd').mockReturnValue(fileURLToPath(new URL(`./varlock-fixtures/detect/${name}`, import.meta.url)));
+	}
+
+	test('should use dotenv when a schema is found but `varlock` is not installed', async () => {
+		await withMissing('varlock');
+		inProject('src-schema');
 
 		const loadEnvFiles = await load();
 		try {
 			expect(loadEnvFiles().parsed).toEqual({ VARLOCK_TEST_SOURCE: 'dotenv' });
+			expect(requireMock).toHaveBeenCalledWith('dotenv');
+		} finally {
+			delete process.env.VARLOCK_TEST_SOURCE;
+		}
+	});
+
+	test('should fall back to the node loader when neither `varlock` nor `dotenv` is installed', async () => {
+		await withMissing('varlock', 'dotenv', 'dotenv-expand');
+		inProject('src-schema');
+
+		const loadEnvFiles = await load();
+		try {
+			expect(loadEnvFiles().parsed).toEqual({ VARLOCK_TEST_SOURCE: 'dotenv' });
+			expect(requireMock).not.toHaveBeenCalledWith('dotenv');
+		} finally {
+			delete process.env.VARLOCK_TEST_SOURCE;
+		}
+	});
+
+	test('should use the node loader without a schema when `dotenv-expand` is missing', async () => {
+		await withMissing('varlock', 'dotenv-expand');
+		inProject('none');
+
+		const loadEnvFiles = await load();
+		try {
+			expect(loadEnvFiles().parsed).toEqual({ VARLOCK_TEST_SOURCE: 'dotenv' });
+			expect(requireMock).not.toHaveBeenCalledWith('dotenv');
 		} finally {
 			delete process.env.VARLOCK_TEST_SOURCE;
 		}

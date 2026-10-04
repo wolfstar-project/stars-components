@@ -2,7 +2,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { loadEnvFiles } from '../src/lib/env-loader';
+import { loadEnvFiles as loadEnv, type EnvLoaderOptions } from '../src/lib/env-loader';
+
+const LOADERS = ['node', 'dotenv'] as const;
 
 const originalNodeEnv = process.env.NODE_ENV;
 const KEYS = [
@@ -31,7 +33,9 @@ function write(file: string, contents: string) {
 	writeFileSync(join(directory, file), contents);
 }
 
-describe('Env file loader cross-file expansion', () => {
+describe.each(LOADERS)('Env file loader cross-file expansion (%s loader)', (loader) => {
+	const loadEnvFiles = (options?: EnvLoaderOptions) => loadEnv({ loader, ...options });
+
 	beforeEach(() => {
 		process.env.NODE_ENV = 'development';
 		for (const key of KEYS) delete process.env[key];
@@ -169,7 +173,7 @@ describe('Env file loader cross-file expansion', () => {
 		expect(output.parsed).toEqual({ CYCLE_A: 'from-shell-a', CYCLE_B: 'from-shell' });
 	});
 
-	describe('dotenv logging switches', () => {
+	describe.runIf(loader === 'dotenv')('dotenv logging switches', () => {
 		test('logs an injected env line by default', () => {
 			write('.env', 'BASE=base\n');
 			const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
