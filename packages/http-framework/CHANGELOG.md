@@ -1,5 +1,26 @@
 # Changelog
 
+## 6.1.1
+
+### Patch Changes
+
+- [#257](https://github.com/wolfstar-project/stars-components/pull/257) [`0f19bf7`](https://github.com/wolfstar-project/stars-components/commit/0f19bf7105ec4f2640269e16b89267fc83f5aeda) - feat(cli): `stars commands diff` and `deploy`, `stars doctor` and shell completions ([#252](https://github.com/wolfstar-project/stars-components/issues/252))
+
+    - `stars commands diff` compares the commands the built bot defines with the ones Discord has deployed (`--check` for
+      CI); `stars commands deploy` overwrites them after a confirmation (`--yes` for scripts). The commands are read from
+      the bot itself: it is started with the dev bridge, loads its pieces, reports its registry and exits before it
+      listens. This needs `@wolfstar/http-framework` 6.1 or later and a built project.
+    - `stars doctor` checks the runtime, the framework, the credentials, the dev port, the tunnel and the generated files,
+      with a fix for each problem (`--online` also asks Discord, `--json` for scripts).
+    - `stars completions <bash|zsh|fish>` prints a completion script generated from the registered commands.
+    - `stars info` lists the installed modules and the new `dev` options.
+
+    The `@wolfstar/http-framework` README documents the new `dev` options of `stars.config`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- Updated dependencies [[`0f19bf7`](https://github.com/wolfstar-project/stars-components/commit/0f19bf7105ec4f2640269e16b89267fc83f5aeda), [`9d93ca5`](https://github.com/wolfstar-project/stars-components/commit/9d93ca5cc2dfacfc4210e009881b6be995691bda), [`ed1b141`](https://github.com/wolfstar-project/stars-components/commit/ed1b14190cff8d9da1fc803b38d0b1a3dbd27e7c), [`46c6169`](https://github.com/wolfstar-project/stars-components/commit/46c616943363d3db39149a56a8e8e5bd55937b30), [`9374fb0`](https://github.com/wolfstar-project/stars-components/commit/9374fb0b50016ebfcdd28d0940cf8d1262adf85d)]:
+    - @wolfstar/cli@2.3.0
+    - @wolfstar/schema@0.6.0
+
 ## 6.1.0
 
 ### Minor Changes

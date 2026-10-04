@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.8.0
+
+### Minor Changes
+
+- [#258](https://github.com/wolfstar-project/stars-components/pull/258) [`62e40b1`](https://github.com/wolfstar-project/stars-components/commit/62e40b144ac552476eaf00d00e73a8e6f6350f6b) - feat(create-http-framework): scaffold `AGENTS.md`, `llms.txt`, the framework lint rules and an optional dev tunnel ([#252](https://github.com/wolfstar-project/stars-components/issues/252))
+
+    Every project now gets an `AGENTS.md` (its commands, layout and the rules that are easy to get wrong) and an
+    `llms.txt` (the upstream documentation by topic), both describing only the features it was created with. With a
+    linter, the generated `.oxlintrc.json` or `eslint.config.mjs` enables the rules of
+    `@wolfstar/eslint-plugin-http-framework`. `--tunnel` (or the **Dev tunnel** feature in the prompt) writes
+    `dev: { tunnel: true }` to `stars.config`, so `stars dev` opens a cloudflared quick tunnel. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.7.0
 
 ### Minor Changes
