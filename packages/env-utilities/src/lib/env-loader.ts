@@ -363,19 +363,24 @@ function requireDotenv(): {
 	expand: typeof import('dotenv-expand').expand;
 } {
 	const require = createRequire(import.meta.url);
-	try {
-		const { config, populate } = require('dotenv') as typeof import('dotenv');
-		const { expand } = require('dotenv-expand') as typeof import('dotenv-expand');
-		return { config, populate, expand };
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') {
-			throw new Error(
-				"The 'dotenv' loader needs the `dotenv` and `dotenv-expand` packages, which are optional peer dependencies of `@wolfstar/env-utilities`. Install them with your package manager (e.g. `pnpm add dotenv dotenv-expand`), or use the 'varlock' loader."
-			);
-		}
+	const load = <T>(name: string): T => {
+		try {
+			return require(name) as T;
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') {
+				throw new Error(
+					`The 'dotenv' loader needs the \`${name}\` package, which is an optional peer dependency of \`@wolfstar/env-utilities\`. Install it with your package manager (e.g. \`pnpm add ${name}\`), or use the 'varlock' loader.`,
+					{ cause: error }
+				);
+			}
 
-		throw error;
-	}
+			throw error;
+		}
+	};
+
+	const { config, populate } = load<typeof import('dotenv')>('dotenv');
+	const { expand } = load<typeof import('dotenv-expand')>('dotenv-expand');
+	return { config, populate, expand };
 }
 
 /**

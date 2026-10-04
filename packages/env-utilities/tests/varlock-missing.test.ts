@@ -66,7 +66,19 @@ describe('Varlock loader without the optional package', () => {
 		});
 
 		const loadEnvFiles = await load();
-		expect(() => loadEnvFiles({ loader: 'dotenv' })).toThrow(/needs the `dotenv` and `dotenv-expand` packages/);
+		expect(() => loadEnvFiles({ loader: 'dotenv' })).toThrow(/needs the `dotenv` package/);
+	});
+
+	test('should name `dotenv-expand` when only that package is missing', async () => {
+		const { createRequire } = await vi.importActual<typeof import('node:module')>('node:module');
+		const real = createRequire(import.meta.url);
+		requireMock.mockImplementation((id: string) => {
+			if (id !== 'dotenv-expand') return real(id);
+			throw Object.assign(new Error("Cannot find package 'dotenv-expand'"), { code: 'MODULE_NOT_FOUND' });
+		});
+
+		const loadEnvFiles = await load();
+		expect(() => loadEnvFiles({ loader: 'dotenv' })).toThrow(/needs the `dotenv-expand` package/);
 	});
 
 	test('should not require `dotenv` for the varlock loader', async () => {
