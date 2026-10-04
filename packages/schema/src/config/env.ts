@@ -12,7 +12,7 @@ export interface ResolvedEnvConfig {
 }
 
 const ENV_UTILITIES = '@wolfstar/env-utilities';
-const LOADERS = new Set(['dotenv', 'varlock']);
+const LOADERS = new Set(['node', 'dotenv', 'varlock']);
 
 /**
  * Resolves the `env` block. It is on by default from {@link AUTO_ENV_VERSION} on, but only when the project depends on
@@ -51,7 +51,13 @@ export function resolveEnv(
 	if (prefix !== undefined) options.prefix = prefix;
 	const loader = validator.string(raw.loader, 'env.loader');
 	if (loader !== undefined) {
-		if (!LOADERS.has(loader)) throw validator.typeError('env.loader', "'dotenv' or 'varlock'", loader, "Use 'dotenv' (default) or 'varlock'.");
+		if (!LOADERS.has(loader))
+			throw validator.typeError(
+				'env.loader',
+				"'node', 'dotenv' or 'varlock'",
+				loader,
+				"Use 'node', 'dotenv' or 'varlock', or leave it out to have it detected."
+			);
 		options.loader = loader as NonNullable<StarsEnvSetupOptions['loader']>;
 	}
 	const debug = validator.boolean(raw.debug, 'env.debug');

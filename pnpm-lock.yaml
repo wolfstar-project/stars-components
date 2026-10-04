@@ -844,12 +844,6 @@ importers:
       '@sapphire/pieces':
         specifier: ^4.4.1
         version: 4.4.1
-      dotenv:
-        specifier: ^18.0.4
-        version: 18.0.5
-      dotenv-expand:
-        specifier: ^13.0.0
-        version: 13.0.0
     devDependencies:
       '@redstardev/unplugin-version-injector':
         specifier: ^0.0.2
@@ -860,6 +854,12 @@ importers:
       '@wolfstar/schema':
         specifier: workspace:^
         version: link:../schema
+      dotenv:
+        specifier: ^18.0.4
+        version: 18.0.5
+      dotenv-expand:
+        specifier: ^13.0.0
+        version: 13.0.0
       golar:
         specifier: ^0.1.10
         version: 0.1.10

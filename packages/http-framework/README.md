@@ -549,15 +549,15 @@ export default defineConfig({
 });
 ```
 
-| Option     | Type                    | Default                   |
-| ---------- | ----------------------- | ------------------------- |
-| `enabled`  | `boolean`               | see below                 |
-| `path`     | `string`                | `src/.env*`, then `.env*` |
-| `env`      | `string`                | `NODE_ENV`                |
-| `prefix`   | `string`                | none                      |
-| `loader`   | `'dotenv' \| 'varlock'` | `'dotenv'`                |
-| `debug`    | `boolean`               | `false`                   |
-| `encoding` | `string`                | `'utf8'`                  |
+| Option     | Type                              | Default                   |
+| ---------- | --------------------------------- | ------------------------- |
+| `enabled`  | `boolean`                         | see below                 |
+| `path`     | `string`                          | `src/.env*`, then `.env*` |
+| `env`      | `string`                          | `NODE_ENV`                |
+| `prefix`   | `string`                          | none                      |
+| `loader`   | `'node' \| 'dotenv' \| 'varlock'` | detected                  |
+| `debug`    | `boolean`                         | `false`                   |
+| `encoding` | `string`                          | `'utf8'`                  |
 
 - `env: false` turns the registration off; `env: true` turns it on with the defaults. Any option at all is an opt-in
   as well, which requires `@wolfstar/env-utilities` in the project's dependencies (`ENV_REQUIRES_ENV_UTILITIES`).

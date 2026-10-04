@@ -1,12 +1,29 @@
 import { container } from '@sapphire/pieces';
-import { config, populate, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
-import { expand } from 'dotenv-expand';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expand as expandNode } from './expand';
 
-export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
+/** The variables a loader resolved, as `dotenv`'s `config()` reports them. */
+export interface EnvLoaderOutput {
+	parsed?: Record<string, string>;
+	error?: Error;
+}
+
+type DotenvParseOutput = Record<string, string>;
+
+export interface EnvLoaderOptions {
+	/**
+	 * Logs which files are loaded and why a key was or was not set, to help debug missing keys or values.
+	 */
+	debug?: boolean;
+	/**
+	 * The encoding of the files containing the environment variables (ignored by the `varlock` loader).
+	 *
+	 * @default 'utf8'
+	 */
+	encoding?: string;
 	/**
 	 * You may specify a custom environment if `NODE_ENV` isn't sufficient.
 	 */
@@ -37,20 +54,23 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 	/**
 	 * **Experimental.** Selects the loader used to resolve environment variables.
 	 *
-	 * - `'dotenv'`: loads and merges `.env*` files with `dotenv`/`dotenv-expand`, as documented on the
-	 *   other options.
-	 * - `'varlock'`: delegates to {@link https://varlock.dev | varlock} instead of `dotenv`. Varlock resolves a
-	 *   checked-in `.env.schema` (with its own `.env*` file discovery and validation) via its CLI and injects the
-	 *   result into `process.env`. When selected, `path` and `env` are passed to `varlock load` as `--path` and
-	 *   `--env`, `prefix` still filters the returned `parsed`, and `encoding` is ignored. An invalid schema throws
-	 *   an `Error` with varlock's summary. Requires the optional `varlock` package to be installed.
+	 * - `'node'`: loads and merges the `.env*` files with Node.js' own parser (`util.parseEnv`, Node.js 20.12 or newer),
+	 *   and expands `$VAR`, `${VAR}` and `${VAR:-default}` references the way `dotenv-expand` does. Needs no package.
+	 * - `'dotenv'`: loads and merges the `.env*` files with `dotenv`/`dotenv-expand`, as documented on the other options.
+	 *   Requires the optional `dotenv` and `dotenv-expand` packages to be installed.
+	 * - `'varlock'`: delegates to {@link https://varlock.dev | varlock}. Varlock resolves a checked-in `.env.schema`
+	 *   (with its own `.env*` file discovery and validation) via its CLI and injects the result into `process.env`.
+	 *   When selected, `path` and `env` are passed to `varlock load` as `--path` and `--env`, `prefix` still filters the
+	 *   returned `parsed`, and `encoding` is ignored. An invalid schema throws an `Error` with varlock's summary.
+	 *   Requires the optional `varlock` package to be installed.
 	 *
 	 * When not set, `'varlock'` is used if a `.env.schema` is found (`src/.env.schema`, then `.env.schema` at the project
-	 * root, or a `varlock.loadPath` in `package.json`), no `path` is set and `varlock` is installed; otherwise `'dotenv'`.
+	 * root, or a `varlock.loadPath` in `package.json`), no `path` is set and `varlock` is installed. Otherwise `'dotenv'`
+	 * is used if `dotenv` and `dotenv-expand` are installed, and `'node'` if they are not.
 	 *
-	 * @default detected, `'dotenv'` without a varlock schema
+	 * @default detected
 	 */
-	loader?: 'dotenv' | 'varlock';
+	loader?: 'node' | 'dotenv' | 'varlock';
 }
 
 const packageVersion: string = '[VI]{{inject}}[/VI]';
@@ -63,13 +83,14 @@ function resolveDebugLogger(): MinimalDebugLogger {
 	return (container as { logger?: MinimalDebugLogger }).logger ?? console;
 }
 
-export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
+export function loadEnvFiles(options?: EnvLoaderOptions): EnvLoaderOutput {
 	const log = options?.debug
 		? (message: string) => resolveDebugLogger().debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`)
 		: () => undefined;
 
 	// Detected before the `NODE_ENV` check below: varlock's `--env` is not required to be `NODE_ENV`.
-	if ((options?.loader ?? detectLoader(options, log)) === 'varlock') {
+	const loader = options?.loader ?? detectLoader(options, log);
+	if (loader === 'varlock') {
 		return loadWithVarlock(options ?? {}, log);
 	}
 
@@ -79,6 +100,8 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	if (!process.env.NODE_ENV) {
 		throw new Error('The NODE_ENV environment variable is required but was not specified.');
 	}
+
+	const files = loader === 'dotenv' ? dotenvFileLoader(options) : nodeFileLoader(options);
 
 	const env = options?.env || process.env.NODE_ENV;
 	const dotenvPaths = options?.path ? [options.path] : [resolve(process.cwd(), 'src', '.env'), resolve(process.cwd(), '.env')];
@@ -99,47 +122,34 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 
 	// Parse every file first without expanding anything: expanding file by file would resolve references against
 	// the files loaded so far only, so a specific file (e.g. `.env.local`) could never reference a variable defined
-	// in a more generic one (e.g. `.env`). Files are parsed into one shared scratch object so `process.env` stays
-	// untouched until all files are merged, while dotenv still sees its own `DOTENV_CONFIG_*` switches (from the real
-	// environment or from an earlier file) the way it would when writing to `process.env`.
-	const scratch = dotenvSettingsFromProcessEnv();
+	// in a more generic one (e.g. `.env`). `process.env` stays untouched until all files are merged.
 	for (const dotenvFile of dotenvFiles) {
 		const dotenvFileString = typeof dotenvFile === 'string' ? dotenvFile : fileURLToPath(dotenvFile);
 
 		log(`loading \`${basename(dotenvFileString)}\``);
 
-		const result = config({
-			debug: options?.debug,
-			encoding: options?.encoding,
-			path: dotenvFile,
-			processEnv: scratch
-		});
-
-		if (result.error) {
-			if ((result.error as FSError).code === 'ENOENT') {
-				log(`\`${basename(dotenvFileString)}\` file not found`);
-				continue;
-			}
-
-			throw result.error;
+		const result = files.read(dotenvFile);
+		if (result === undefined) {
+			log(`\`${basename(dotenvFileString)}\` file not found`);
+			continue;
 		}
 
 		// Files are loaded from the most specific to the most generic one, so the first value found wins.
-		parsed = { ...result.parsed, ...parsed };
+		parsed = { ...result, ...parsed };
 	}
 
 	// Then inject the merged variables and expand them once. `populate` keeps values already present in process.env
-	// (dotenv never overwrites them) and makes every variable visible to `expand`, so references resolve regardless
-	// of the file, or the position within a file, they are defined in. `expand` itself also leaves a non-empty
-	// process.env value untouched.
+	// (it never overwrites them) and makes every variable visible to `expand`, so references resolve regardless of the
+	// file, or the position within a file, they are defined in. `expand` itself also leaves a non-empty process.env
+	// value untouched.
 	const alreadySet = new Set(Object.keys(parsed).filter((key) => process.env[key]));
 	for (const key of findReferenceCycles(parsed, alreadySet)) {
 		log(`\`${key}\` is part of a circular reference and resolves to an empty string`);
 		parsed[key] = '';
 	}
 
-	populate(process.env, parsed, { debug: options?.debug });
-	parsed = expand({ parsed }).parsed!;
+	files.populate(parsed);
+	parsed = files.expand(parsed);
 
 	/**
 	 * @see {@linkplain https://github.com/facebook/create-react-app/blob/d960b9e38c062584ff6cfb1a70e1512509a966e7/packages/react-scripts/config/env.js#L72-L89}
@@ -171,7 +181,7 @@ interface VarlockSerializedEnv {
  * `varlock/auto-load` does. Its runtime redaction and leak detection are not part of the CLI, import
  * `varlock/auto-load` as well to opt into them.
  */
-function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => void): DotenvConfigOutput {
+function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => void): EnvLoaderOutput {
 	log('resolving environment variables via varlock');
 
 	const require = createRequire(import.meta.url);
@@ -275,21 +285,35 @@ function varlockLoadArguments(env: string | undefined, path: string | URL | unde
 
 /**
  * Picks the loader when none is requested: varlock if the project has a schema and `varlock` is installed, else
- * dotenv. An explicit `path` keeps the dotenv semantics (a base path of `.env*` files, not a schema location), so
- * it never selects varlock on its own.
+ * dotenv if `dotenv` and `dotenv-expand` are installed, else the `node` loader. An explicit `path` keeps the `.env*`
+ * semantics (a base path of `.env*` files, not a schema location), so it never selects varlock on its own.
  */
-function detectLoader(options: EnvLoaderOptions | undefined, log: (message: string) => void): 'dotenv' | 'varlock' {
-	if (options?.path !== undefined || !findVarlockSchema()) return 'dotenv';
+function detectLoader(options: EnvLoaderOptions | undefined, log: (message: string) => void): 'node' | 'dotenv' | 'varlock' {
+	if (options?.path === undefined && findVarlockSchema()) {
+		if (isInstalled('varlock/exec-sync-varlock')) {
+			log('found a varlock schema: using varlock');
+			return 'varlock';
+		}
 
-	try {
-		createRequire(import.meta.url).resolve('varlock/exec-sync-varlock');
-	} catch {
-		log('found a varlock schema, but `varlock` is not installed: using dotenv');
+		log('found a varlock schema, but `varlock` is not installed');
+	}
+
+	if (isInstalled('dotenv') && isInstalled('dotenv-expand')) {
+		log('`dotenv` and `dotenv-expand` are installed: using dotenv');
 		return 'dotenv';
 	}
 
-	log('found a varlock schema: using varlock');
-	return 'varlock';
+	log('using the `node` loader');
+	return 'node';
+}
+
+function isInstalled(specifier: string): boolean {
+	try {
+		createRequire(import.meta.url).resolve(specifier);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -333,6 +357,101 @@ function filterByPrefix(parsed: DotenvParseOutput, prefix: string, log: (message
 			obj[key] = parsed[key];
 			return obj;
 		}, {});
+}
+
+/** Reads one `.env*` file and injects the merged result: the part of a file loader that differs between the two. */
+interface FileLoader {
+	/** The variables of a file, or `undefined` when it does not exist. */
+	read(file: string | URL): DotenvParseOutput | undefined;
+	/** Sets the variables that are not in `process.env` yet. */
+	populate(parsed: DotenvParseOutput): void;
+	/** Expands the references of `parsed`, in place, and writes the result to `process.env`. */
+	expand(parsed: DotenvParseOutput): DotenvParseOutput;
+}
+
+/** The `dotenv` loader: `dotenv` parses the files and `dotenv-expand` expands them. */
+function dotenvFileLoader(options: EnvLoaderOptions | undefined): FileLoader {
+	const { config, populate, expand } = requireDotenv();
+	// Files are parsed into one shared scratch object so `process.env` stays untouched until all files are merged, while
+	// dotenv still sees its own `DOTENV_CONFIG_*` switches (from the real environment or from an earlier file) the way
+	// it would when writing to `process.env`.
+	const scratch = dotenvSettingsFromProcessEnv();
+
+	return {
+		read(file) {
+			const result = config({ debug: options?.debug, encoding: options?.encoding, path: file, processEnv: scratch });
+			if (result.error) {
+				if ((result.error as FSError).code === 'ENOENT') return undefined;
+				throw result.error;
+			}
+
+			return result.parsed ?? {};
+		},
+		populate: (parsed) => void populate(process.env, parsed, { debug: options?.debug }),
+		expand: (parsed) => expand({ parsed }).parsed!
+	};
+}
+
+/** The `node` loader: `util.parseEnv` parses the files, and `expand` mirrors `dotenv-expand`. */
+function nodeFileLoader(options: EnvLoaderOptions | undefined): FileLoader {
+	// `util.parseEnv` is read at run time, not imported: it only exists from Node.js 20.12, and a named import would
+	// stop the whole package from loading on an older version, varlock users included.
+	const { parseEnv } = createRequire(import.meta.url)('node:util') as { parseEnv?: (content: string) => Record<string, string> };
+	if (typeof parseEnv !== 'function') {
+		throw new Error(
+			`The 'node' loader needs Node.js 20.12 or newer (\`util.parseEnv\`), but this is ${process.version}. Upgrade Node.js, or install \`dotenv\` and \`dotenv-expand\` to use the 'dotenv' loader.`
+		);
+	}
+
+	return {
+		read(file) {
+			let content: string;
+			try {
+				content = readFileSync(file, (options?.encoding ?? 'utf8') as BufferEncoding);
+			} catch (error) {
+				if ((error as FSError).code === 'ENOENT') return undefined;
+				throw error;
+			}
+
+			return { ...parseEnv(content) };
+		},
+		populate(parsed) {
+			for (const [key, value] of Object.entries(parsed)) {
+				if (!(key in process.env)) process.env[key] = value;
+			}
+		},
+		expand: (parsed) => expandNode(parsed)
+	};
+}
+
+/**
+ * `dotenv` and `dotenv-expand` are optional peer dependencies, so a project using the `varlock` loader does not have
+ * to install them: they are only required here, when the `dotenv` loader actually runs.
+ */
+function requireDotenv(): {
+	config: typeof import('dotenv').config;
+	populate: typeof import('dotenv').populate;
+	expand: typeof import('dotenv-expand').expand;
+} {
+	const require = createRequire(import.meta.url);
+	const load = <T>(name: string): T => {
+		try {
+			return require(name) as T;
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') {
+				throw new Error(
+					`The 'dotenv' loader needs the \`${name}\` package, which is an optional peer dependency of \`@wolfstar/env-utilities\`. Install it with your package manager (e.g. \`pnpm add ${name}\`), or use the 'varlock' loader.`,
+					{ cause: error }
+				);
+			}
+
+			throw error;
+		}
+	};
+
+	const { config, populate } = load<typeof import('dotenv')>('dotenv');
+	const { expand } = load<typeof import('dotenv-expand')>('dotenv-expand');
+	return { config, populate, expand };
 }
 
 /**

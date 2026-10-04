@@ -18,8 +18,8 @@ export interface Env {
 	DOTENV_PATH?: string;
 	DOTENV_PREFIX?: string;
 	/**
-	 * **Experimental.** Selects the loader used by `setup()`: `'dotenv'` or `'varlock'` (see
-	 * {@link https://varlock.dev}). Detected from a `.env.schema` when not set.
+	 * **Experimental.** Selects the loader used by `setup()`: `'node'`, `'dotenv'` or `'varlock'`
+	 * (see {@link https://varlock.dev}). Detected when not set.
 	 */
-	DOTENV_LOADER?: 'dotenv' | 'varlock';
+	DOTENV_LOADER?: 'node' | 'dotenv' | 'varlock';
 }

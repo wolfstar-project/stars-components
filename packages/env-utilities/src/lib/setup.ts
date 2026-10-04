@@ -1,9 +1,8 @@
-import type { DotenvConfigOutput } from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import { loadEnvFiles, type EnvLoaderOptions } from './env-loader';
+import { loadEnvFiles, type EnvLoaderOptions, type EnvLoaderOutput } from './env-loader';
 import { envIsDefined, envParseBoolean } from './utils';
 
-export function setup(pathOrOptions?: string | URL | EnvSetupOptions): DotenvConfigOutput {
+export function setup(pathOrOptions?: string | URL | EnvSetupOptions): EnvLoaderOutput {
 	// Unless explicitly defined, set NODE_ENV as development:
 	process.env.NODE_ENV ??= 'development';
 
@@ -41,4 +40,4 @@ export interface EnvSetupOptions extends Omit<EnvLoaderOptions, 'path'> {
 	path?: string | URL;
 }
 
-export type EnvSetupResult = DotenvConfigOutput;
+export type EnvSetupResult = EnvLoaderOutput;

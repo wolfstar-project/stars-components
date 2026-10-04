@@ -1,7 +1,9 @@
 import { chmodSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { loadEnvFiles, type EnvLoaderOptions } from '../src/lib/env-loader';
+import { loadEnvFiles as loadEnv, type EnvLoaderOptions } from '../src/lib/env-loader';
+
+const LOADERS = ['node', 'dotenv'] as const;
 
 const originalNodeEnv = process.env.NODE_ENV;
 const fixturesDirectory = resolve(__dirname, 'fixtures');
@@ -27,7 +29,9 @@ function makeDotenvConfigFiles(
 	}
 }
 
-describe('Env file Loader', () => {
+describe.each(LOADERS)('Env file Loader (%s loader)', (loader) => {
+	const loadEnvFiles = (options?: EnvLoaderOptions) => loadEnv({ loader, ...options });
+
 	beforeEach(() => {
 		process.env.NODE_ENV = originalNodeEnv;
 		makeDotenvConfigFiles();

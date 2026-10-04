@@ -77,14 +77,14 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@sapphire/pieces": "^4.4.1",
-		"dotenv": "^18.0.4",
-		"dotenv-expand": "^13.0.0"
+		"@sapphire/pieces": "^4.4.1"
 	},
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
 		"@vitest/coverage-v8": "^5.0.1",
 		"@wolfstar/schema": "workspace:^",
+		"dotenv": "^18.0.4",
+		"dotenv-expand": "^13.0.0",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
@@ -92,9 +92,17 @@
 		"vitest": "^5.0.1"
 	},
 	"peerDependencies": {
+		"dotenv": "^18.0.4",
+		"dotenv-expand": "^13.0.0",
 		"varlock": "^1.19.0"
 	},
 	"peerDependenciesMeta": {
+		"dotenv": {
+			"optional": true
+		},
+		"dotenv-expand": {
+			"optional": true
+		},
 		"varlock": {
 			"optional": true
 		}
