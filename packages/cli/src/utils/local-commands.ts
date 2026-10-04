@@ -17,6 +17,9 @@ export interface ReadLocalCommandsOptions {
  * Commands are declared with builders and decorators that only exist once the bot's modules ran, so nothing short of
  * running them knows the answer. This starts the built bot with the dev bridge in its "dump" mode: it loads its
  * pieces, reports its registry over IPC and exits before it listens or talks to Discord.
+ *
+ * It is a plain start of the bot, not a `stars dev` session: `STARS_DEV` is not set, so commands a project only
+ * registers while developing are not part of what `stars commands deploy` deploys.
  */
 export async function readLocalCommands(config: ResolvedStarsConfig, options: ReadLocalCommandsOptions = {}): Promise<CommandSnapshot> {
 	if (!existsSync(config.build.output)) {
@@ -39,7 +42,9 @@ export async function readLocalCommands(config: ResolvedStarsConfig, options: Re
 		[...envImportArgs(config), ...moduleImportArgs(config), ...bridge, ...config.dev.nodeArgs, config.build.output, ...config.dev.args],
 		{
 			cwd: config.root,
-			env: { ...process.env, ...config.dev.env, NODE_ENV: 'development', [DUMP_ENV]: '1' },
+			// The environment the commands are read under is the caller's: `NODE_ENV=production stars commands deploy`
+			// deploys what a production start registers. Unset, it is development, like the project's env files.
+			env: { ...process.env, ...config.dev.env, NODE_ENV: process.env.NODE_ENV ?? 'development', [DUMP_ENV]: '1' },
 			stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
 			windowsHide: true
 		}

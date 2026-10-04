@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { delimiter, join } from 'node:path';
 import { BRIDGE_FRAMEWORK_VERSION, isAtLeast } from '../dev/bridge.js';
-import { readDiscordCredentials } from '../dev/tunnel.js';
+import { endpointUrl, readDiscordCredentials } from '../dev/tunnel.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { loadProject, withProjectEnv, applyEnvOptions, type StarsHookable } from '../utils/hooks.js';
@@ -217,11 +217,13 @@ async function checkApplication(token: string, config: ResolvedStarsConfig, requ
 		}
 
 		const tunnel = config.dev.tunnel;
-		if (tunnel.mode === 'url' && !endpoint.startsWith(tunnel.url)) {
+		// The whole endpoint: the same origin with another path, or a host that merely starts the same, is elsewhere.
+		const expected = tunnel.mode === 'url' ? endpointUrl(tunnel.url, tunnel.path) : null;
+		if (expected !== null && normalizeUrl(endpoint) !== normalizeUrl(expected)) {
 			return {
 				name: 'discord',
 				status: 'warn',
-				message: `${name} sends interactions to ${endpoint}, not to ${tunnel.url}`,
+				message: `${name} sends interactions to ${endpoint}, not to ${expected}`,
 				fix: 'Set `dev.tunnel.updateEndpoint: true`, or update it in the Discord developer portal.'
 			};
 		}
@@ -229,6 +231,16 @@ async function checkApplication(token: string, config: ResolvedStarsConfig, requ
 		return { name: 'discord', status: 'ok', message: `${name} sends interactions to ${endpoint}` };
 	} catch (error) {
 		return { name: 'discord', status: 'warn', message: `Could not reach Discord: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+
+/** A URL without the difference a trailing slash makes, or the text itself when it is not one. */
+function normalizeUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+		return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}${parsed.search}`;
+	} catch {
+		return url;
 	}
 }
 

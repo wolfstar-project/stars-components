@@ -257,6 +257,37 @@ describe('stars commands', () => {
 			expect([...client.put, ...same.put]).toEqual([]);
 		});
 
+		test('deploy --json never asks on stdout: it needs --yes, even on a terminal', async () => {
+			const client = createClient(REMOTE);
+			const stdin = Object.assign(new PassThrough(), { isTTY: true });
+			await expect(
+				capture((stdout) => runCommandsDeploy({ cwd: fixture.root, client, stdout, local: LOCAL, stdin, json: true }))
+			).rejects.toMatchObject({ code: 'DEPLOY_CONFIRMATION_REQUIRED' });
+			expect(client.put).toEqual([]);
+		});
+
+		test('diff reads the commands with the env files an env:options hook picked', async () => {
+			await fixture.write('.env.ci', 'DISCORD_TOKEN=from-ci\nDISCORD_APPLICATION_ID=77\n');
+			await fixture.write('package.json', JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '*' } }));
+			await fixture.write(
+				'stars.config.mjs',
+				"export default { env: { enabled: true }, hooks: { 'env:options'(options) { options.path = '.env.ci'; } } };"
+			);
+			const fetched: string[] = [];
+			vi.stubGlobal('fetch', (url: string, init: { headers: Record<string, string> }) => {
+				fetched.push(`${init.headers.authorization} ${url}`);
+				return Promise.resolve(new Response('[]', { status: 200 }));
+			});
+			try {
+				await capture((stdout) => runCommandsDiff({ cwd: fixture.root, stdout, local: LOCAL }));
+			} finally {
+				vi.unstubAllGlobals();
+			}
+
+			// The credentials come from the file the hook selected, not from the default `.env`.
+			expect(fetched).toEqual(['Bot from-ci https://discord.com/api/v10/applications/77/commands']);
+		});
+
 		test('deploy --yes --json deploys a guild from a script', async () => {
 			const client = createClient([]);
 			const output = await capture((stdout) =>
@@ -308,6 +339,27 @@ export class Client {
 				global: [{ name: 'ping', description: 'Ping' }],
 				guilds: { '7': [{ name: 'admin' }] }
 			});
+		});
+
+		test("starts the bot in the caller's NODE_ENV (development when unset), and not as a stars dev session", async () => {
+			fixture = await createFixture({
+				...install(),
+				'package.json': '{ "type": "module" }',
+				'src/main.js': "console.error('mode=' + process.env.NODE_ENV + ',dev=' + process.env.STARS_DEV);"
+			});
+			const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+			try {
+				vi.stubEnv('NODE_ENV', 'production');
+				await expect(readLocalCommands(config, { timeout: 10_000 })).rejects.toMatchObject({
+					message: expect.stringContaining('mode=production,dev=undefined')
+				});
+				vi.stubEnv('NODE_ENV', undefined as unknown as string);
+				await expect(readLocalCommands(config, { timeout: 10_000 })).rejects.toMatchObject({
+					message: expect.stringContaining('mode=development,dev=undefined')
+				});
+			} finally {
+				vi.unstubAllEnvs();
+			}
 		});
 
 		test('explains why the commands cannot be read', async () => {

@@ -13,6 +13,12 @@ describe('stars completions', () => {
 		const nested = tree.find((command) => command.name === 'commands')!;
 		expect(nested.subcommands.map((command) => command.name)).toEqual(['list', 'clean', 'diff', 'deploy']);
 		expect(nested.subcommands.find((command) => command.name === 'diff')!.flags.map((flag) => flag.name)).toContain('check');
+		// Short forms and the `--no-` form of a flag that is on by default are completed too.
+		expect(dev.flags.find((flag) => flag.name === 'config')).toMatchObject({ aliases: ['c'], negatable: false });
+		expect(dev.flags.find((flag) => flag.name === 'tui')).toMatchObject({ negatable: true });
+		expect(nested.subcommands.find((command) => command.name === 'deploy')!.flags.find((flag) => flag.name === 'yes')).toMatchObject({
+			aliases: ['y']
+		});
 		// A positional argument is not a flag.
 		expect(tree.find((command) => command.name === 'completions')!.flags).toEqual([]);
 	});
@@ -45,6 +51,11 @@ describe('stars completions', () => {
 		expect(complete('stars', 'commands', 'd').stdout.trim().split(' ')).toEqual(['diff', 'deploy']);
 		expect(complete('stars', 'commands', 'diff', '--ch').stdout.trim()).toBe('--check');
 		expect(complete('stars', 'dev', '--l').stdout.trim().split(' ')).toEqual(['--layout', '--level']);
+		expect(complete('stars', 'dev', '--no').stdout.trim()).toBe('--no-tui');
+		expect(complete('stars', 'dev', '-').stdout.trim().split(' ')).toContain('-c');
+		// Options of the parent may come before the subcommand.
+		expect(complete('stars', 'commands', '--guild', '123', 'diff', '--ch').stdout.trim()).toBe('--check');
+		expect(complete('stars', 'commands', '--guild', '123', 'd').stdout.trim().split(' ')).toEqual(['diff', 'deploy']);
 	});
 
 	test('rejects an unknown shell and prints through the command', async () => {
@@ -56,5 +67,7 @@ describe('stars completions', () => {
 		await runCompletions({ shell: 'fish', stdout });
 		expect(output).toContain('complete -c stars');
 		expect(output).toContain("-a dev -d 'Build, run and restart the bot on changes'");
+		expect(output).toMatch(/__fish_seen_subcommand_from dev" -l config -s c /);
+		expect(output).toMatch(/__fish_seen_subcommand_from dev" -l no-tui /);
 	});
 });

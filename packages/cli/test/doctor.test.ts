@@ -90,6 +90,29 @@ describe('stars doctor', () => {
 		expect(elsewhere.discord).toMatchObject({ status: 'warn', message: expect.stringContaining('not to https://bot.example.com') });
 		await fixture.cleanup();
 
+		// The same prefix is not the same endpoint: another path, or a host that only starts alike.
+		for (const url of ['https://bot.example.com/other', 'https://bot.example.com.evil.test/']) {
+			const prefixed = await check(files, { env, online: true, fetch: answer(200, { name: 'Seed', interactions_endpoint_url: url }) });
+			expect(prefixed.discord, url).toMatchObject({ status: 'warn' });
+			await fixture.cleanup();
+		}
+
+		const withPath = { 'stars.config.mjs': "export default { dev: { tunnel: { url: 'https://bot.example.com', path: '/interactions' } } };" };
+		const matching = await check(withPath, {
+			env,
+			online: true,
+			fetch: answer(200, { name: 'Seed', interactions_endpoint_url: 'https://bot.example.com/interactions/' })
+		});
+		expect(matching.discord).toMatchObject({ status: 'ok' });
+		await fixture.cleanup();
+		const root = await check(withPath, {
+			env,
+			online: true,
+			fetch: answer(200, { name: 'Seed', interactions_endpoint_url: 'https://bot.example.com/' })
+		});
+		expect(root.discord).toMatchObject({ status: 'warn', message: expect.stringContaining('not to https://bot.example.com/interactions') });
+		await fixture.cleanup();
+
 		const unset = await check(files, { env, online: true, fetch: answer(200, { name: 'Seed', interactions_endpoint_url: null }) });
 		expect(unset.discord).toMatchObject({ status: 'warn', message: 'Seed has no interactions endpoint URL' });
 		await fixture.cleanup();

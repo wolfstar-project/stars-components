@@ -1,4 +1,4 @@
-import { loadProject } from '../utils/hooks.js';
+import { applyEnvOptions, loadProject, withProjectEnv } from '../utils/hooks.js';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import type { Diagnostic } from 'nostics';
@@ -120,7 +120,9 @@ async function compare(options: CommandsDiffOptions): Promise<{
 	local: CommandData[];
 	changes: CommandChange[];
 }> {
-	const { config } = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
+	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
+	// What the bot is started with: `env:options` (and varlock) may pick other env files than the defaults.
+	const config = withProjectEnv(await applyEnvOptions(project.config, project.hooks));
 	const { client, guild } = connectTo(config, options);
 	const snapshot = options.local ?? (await readLocalCommands(config));
 	const local = guild === null ? snapshot.global : (snapshot.guilds[guild] ?? []);
@@ -182,7 +184,8 @@ export async function runCommandsDeploy(options: CommandsDeployOptions): Promise
 
 	if (!options.yes) {
 		const stdin = options.stdin ?? process.stdin;
-		if (!options.prompt && !stdin.isTTY) throw cliDiagnostics.DEPLOY_CONFIRMATION_REQUIRED({});
+		// `--json` owns stdout: a question printed there would end up in front of the document.
+		if (!options.prompt && (!stdin.isTTY || options.json)) throw cliDiagnostics.DEPLOY_CONFIRMATION_REQUIRED({});
 		const prompt = options.prompt ?? createClackPrompt();
 		if (!(await prompt.confirm(`Overwrite the commands of ${scope} with the ${local.length} the project defines?`))) {
 			throw cliDiagnostics.ABORTED({});

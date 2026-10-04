@@ -179,9 +179,11 @@ stars dev --level trace                           # this level and every more se
 | `Ctrl+C`           | quit immediately from any view                                   |
 
 **Hot reload.** When the bot runs with the framework's `hmr` option enabled, it tells `stars dev` which directories
-it watches. A build that only changed files in those directories is then left to the bot: the process, its HTTP
-server and its connections stay up, and the `hmr` channel shows what was reloaded. A change to anything else (the
-entry, a shared module, a locale) still restarts the bot, as does a bot without `hmr`. `dev.hmr: false` always
+it watches. A build that only changed pieces in those directories is then left to the bot: the process, its HTTP
+server and its connections stay up, and the `hmr` channel shows what was reloaded. A piece is a file the bot loaded
+one from, or a new file that could be one. A change to anything else still restarts the bot: the entry, a shared
+module, a locale, and also a helper next to the pieces (`_shared.js`, or any file no piece came from), which the bot
+imports once and cannot replace. So does a bot without `hmr`, or one that stopped it. `dev.hmr: false` always
 restarts. What a build changed is judged by content, since a bundler such as `tsdown` rewrites its whole output on
 every rebuild.
 
@@ -189,8 +191,9 @@ every rebuild.
 reload. When they differ from what it reported before, `stars dev` asks (`Refresh commands? (y/n)`) and, on `y`, has
 the bot register them with Discord again. `dev.commands.refresh` picks the behaviour: `'prompt'` (default), `'auto'`
 to redeploy without asking, `'off'` to only report the change. Without the interactive UI a `'prompt'` only reports.
-A question that is still open survives a restart of the bot, and a `y` given while the bot restarts is carried out
-once it listens again.
+A question that is still open survives a restart of the bot, and a `y` given while the bot is stopped or restarting
+is carried out once it listens again. A refresh also empties a guild whose last command was removed since the last
+deploy, which pushing the registry alone would leave as it was.
 
 **Panel** (`dev.layout: 'panel'`, `--layout panel`, `v`, or a terminal smaller than 90×20): a bottom-aligned panel in
 the normal buffer, following the layout and keyboard conventions of
@@ -264,10 +267,13 @@ stars commands deploy --guild 1234 --yes
 Commands are declared with builders and decorators that only exist once the bot's modules ran, so `stars` asks the
 bot: it starts the built entry (run `stars build` first) with the dev bridge, which loads the pieces, reports the
 registry and exits before the bot listens or talks to Discord. This needs `@wolfstar/http-framework` 6.1 or later.
+The bot is started as `stars dev` would start it (the same env files, after the `env:options` hook), in the
+`NODE_ENV` of the caller, `development` when unset: run `NODE_ENV=production stars commands deploy` to deploy what a
+production start registers. It is not a dev session, so `STARS_DEV` is not set.
 A command counts as changed when what the project defines no longer matches what is deployed; the fields Discord
 fills in on its own (`id`, `version`, defaults such as `nsfw: false`) are ignored. `deploy` is Discord's bulk
 overwrite: a deployed command the project no longer defines is deleted, which is why it asks first and refuses to
-run without `--yes` outside a terminal.
+run without `--yes` outside a terminal, or with `--json`.
 
 ### `stars doctor`
 
@@ -306,7 +312,7 @@ stars completions fish | source       # ~/.config/fish/config.fish
 ```
 
 The script is generated from the commands the CLI registers, so it completes every command, subcommand and flag
-`--help` lists.
+`--help` lists, with their short forms (`-c`) and the `--no-` form of the ones that are on by default (`--no-tui`).
 
 ### Type checking, tunnel and logs
 

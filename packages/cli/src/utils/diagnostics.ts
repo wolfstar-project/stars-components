@@ -49,7 +49,7 @@ export const cliDiagnostics = defineDiagnostics({
 		},
 		DEPLOY_CONFIRMATION_REQUIRED: {
 			why: (_p: {}) => 'Refusing to overwrite the deployed commands without a confirmation',
-			fix: (_p: {}) => 'Pass --yes to deploy from a script.'
+			fix: (_p: {}) => 'Pass --yes to deploy from a script, or with --json.'
 		},
 		COMMANDS_DIFFER: {
 			why: (p: { count: number }) => `${p.count} deployed command(s) differ from the ones the project defines`,

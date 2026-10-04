@@ -8,6 +8,10 @@ type AnyCommand = CommandDef<any>;
 export interface CompletionFlag {
 	name: string;
 	description: string;
+	/** Short forms, without the dash (`c` for `-c`). */
+	aliases: string[];
+	/** A boolean that is on by default also has a `--no-<name>` form. */
+	negatable: boolean;
 }
 
 export interface CompletionCommand {
@@ -35,7 +39,12 @@ export async function describeCommands(commands: Record<string, () => Promise<An
 			description: meta.description ?? '',
 			flags: Object.entries(args)
 				.filter(([, arg]) => arg.type !== 'positional')
-				.map(([flag, arg]) => ({ name: flag, description: arg.description ?? '' })),
+				.map(([flag, arg]) => ({
+					name: flag,
+					description: arg.description ?? '',
+					aliases: [(arg as { alias?: string | string[] }).alias ?? []].flat(),
+					negatable: arg.type === 'boolean' && arg.default === true
+				})),
 			subcommands: await Promise.all(Object.entries(children).map(async ([child, value]) => describe(child, (await resolve(value))!)))
 		};
 	};
@@ -43,7 +52,14 @@ export async function describeCommands(commands: Record<string, () => Promise<An
 	return Promise.all(Object.entries(commands).map(async ([name, load]) => describe(name, await load())));
 }
 
-const flagsOf = (command: CompletionCommand) => [...command.flags.map((flag) => `--${flag.name}`), '--help'].join(' ');
+/** Every spelling of a flag: `--name`, `--no-name` when it can be switched off, and its short forms. */
+const spellings = (flag: CompletionFlag) => [
+	`--${flag.name}`,
+	...(flag.negatable ? [`--no-${flag.name}`] : []),
+	...flag.aliases.map((alias) => (alias.length === 1 ? `-${alias}` : `--${alias}`))
+];
+
+const flagsOf = (command: CompletionCommand) => [...command.flags.flatMap(spellings), '--help'].join(' ');
 
 function bash(commands: readonly CompletionCommand[]): string {
 	const cases = commands.map((command) => {
@@ -51,7 +67,12 @@ function bash(commands: readonly CompletionCommand[]): string {
 		const nested = command.subcommands.map((child) => `\t\t\t\t${child.name}) words="${flagsOf(child)}" ;;`).join('\n');
 		return [
 			`\t\t${command.name})`,
-			`\t\t\tcase "\${COMP_WORDS[2]}" in`,
+			// The subcommand is the first of its names after the command: options of the parent may come before it.
+			'\t\t\tsub=""',
+			'\t\t\tfor ((i = 2; i < COMP_CWORD; i++)); do',
+			`\t\t\t\tcase "\${COMP_WORDS[i]}" in ${command.subcommands.map((child) => child.name).join('|')}) sub="\${COMP_WORDS[i]}"; break ;; esac`,
+			'\t\t\tdone',
+			'\t\t\tcase "$sub" in',
 			nested,
 			`\t\t\t\t*) words="${command.subcommands.map((child) => child.name).join(' ')} ${flagsOf(command)}" ;;`,
 			'\t\t\tesac ;;'
@@ -60,7 +81,7 @@ function bash(commands: readonly CompletionCommand[]): string {
 
 	return `# stars completions for bash. Load them with: eval "$(stars completions bash)"
 _stars() {
-	local cur words
+	local cur words sub i
 	cur="\${COMP_WORDS[COMP_CWORD]}"
 	if [ "$COMP_CWORD" -eq 1 ]; then
 		words="${commands.map((command) => command.name).join(' ')} --help --version"
@@ -82,14 +103,21 @@ const described = (name: string, description: string) => quote(`${name}:${descri
 
 function zsh(commands: readonly CompletionCommand[]): string {
 	const flags = (command: CompletionCommand) =>
-		[...command.flags.map((flag) => described(`--${flag.name}`, flag.description)), described('--help', 'Show the usage')].join(' ');
+		[
+			...command.flags.flatMap((flag) => spellings(flag).map((spelling) => described(spelling, flag.description))),
+			described('--help', 'Show the usage')
+		].join(' ');
 	const cases = commands.map((command) => {
 		if (command.subcommands.length === 0) return `\t\t${command.name}) items=(${flags(command)}) ;;`;
 		const nested = command.subcommands.map((child) => `\t\t\t\t${child.name}) items=(${flags(child)}) ;;`).join('\n');
 		const children = command.subcommands.map((child) => described(child.name, child.description)).join(' ');
 		return [
 			`\t\t${command.name})`,
-			'\t\t\tcase "$words[3]" in',
+			'\t\t\tsub=""',
+			'\t\t\tfor word in ${words[3,CURRENT-1]}; do',
+			`\t\t\t\tcase "$word" in ${command.subcommands.map((child) => child.name).join('|')}) sub="$word"; break ;; esac`,
+			'\t\t\tdone',
+			'\t\t\tcase "$sub" in',
 			nested,
 			`\t\t\t\t*) items=(${children} ${flags(command)}) ;;`,
 			'\t\t\tesac ;;'
@@ -100,6 +128,7 @@ function zsh(commands: readonly CompletionCommand[]): string {
 # stars completions for zsh. Load them with: eval "$(stars completions zsh)"
 _stars() {
 	local -a items
+	local sub word
 	if (( CURRENT == 2 )); then
 		items=(${commands.map((command) => described(command.name, command.description)).join(' ')})
 	else
@@ -113,24 +142,29 @@ compdef _stars stars
 `;
 }
 
+function fishFlag(condition: string, flag: CompletionFlag): string[] {
+	const short = flag.aliases
+		.filter((alias) => alias.length === 1)
+		.map((alias) => ` -s ${alias}`)
+		.join('');
+	const line = (name: string) => `complete -c stars -n "${condition}" -l ${name}${name === flag.name ? short : ''} -d ${quote(flag.description)}`;
+	return [line(flag.name), ...(flag.negatable ? [line(`no-${flag.name}`)] : [])];
+}
+
 function fish(commands: readonly CompletionCommand[]): string {
 	const lines = ['# stars completions for fish. Load them with: stars completions fish | source', 'complete -c stars -f'];
 	const names = commands.map((command) => command.name).join(' ');
 	for (const command of commands) {
 		lines.push(`complete -c stars -n "not __fish_seen_subcommand_from ${names}" -a ${command.name} -d ${quote(command.description)}`);
 		const children = command.subcommands.map((child) => child.name).join(' ');
-		for (const flag of command.flags) {
-			lines.push(`complete -c stars -n "__fish_seen_subcommand_from ${command.name}" -l ${flag.name} -d ${quote(flag.description)}`);
-		}
+		for (const flag of command.flags) lines.push(...fishFlag(`__fish_seen_subcommand_from ${command.name}`, flag));
 
 		for (const child of command.subcommands) {
 			lines.push(
 				`complete -c stars -n "__fish_seen_subcommand_from ${command.name}; and not __fish_seen_subcommand_from ${children}" -a ${child.name} -d ${quote(child.description)}`
 			);
 			for (const flag of child.flags.filter((candidate) => !command.flags.some((own) => own.name === candidate.name))) {
-				lines.push(
-					`complete -c stars -n "__fish_seen_subcommand_from ${command.name}; and __fish_seen_subcommand_from ${child.name}" -l ${flag.name} -d ${quote(flag.description)}`
-				);
+				lines.push(...fishFlag(`__fish_seen_subcommand_from ${command.name}; and __fish_seen_subcommand_from ${child.name}`, flag));
 			}
 		}
 	}
