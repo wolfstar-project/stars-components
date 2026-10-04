@@ -87,6 +87,10 @@ To use it, first set up varlock in your project (`npx varlock init`) and install
 a `.env.schema` at the project root, or a `varlock.loadPath` in `package.json`. An explicit `path` or `DOTENV_PATH` keeps
 the dotenv loader, and the `loader` option and the `DOTENV_LOADER` environment variable always have the last word:
 
+> A project that already has a `.env.schema` and `varlock` installed, but loaded its `.env*` files through dotenv, switches to
+> varlock with this detection. Varlock does its own `.env*` discovery, so the values can differ: set `loader: 'dotenv'` to opt
+> out.
+
 ```typescript
 import { setup } from '@wolfstar/env-utilities';
 

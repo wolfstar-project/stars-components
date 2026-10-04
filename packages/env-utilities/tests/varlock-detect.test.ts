@@ -40,6 +40,13 @@ describe('Loader auto-detection', () => {
 		expect(loadEnvFiles().parsed).toEqual({ VARLOCK_TEST_SOURCE: 'src' });
 	});
 
+	test('should detect varlock before the `NODE_ENV` guard of the dotenv loader', () => {
+		inProject('root-schema');
+		delete process.env.NODE_ENV;
+
+		expect(loadEnvFiles().parsed).toEqual({ VARLOCK_TEST_SOURCE: 'root' });
+	});
+
 	test('should pick varlock for a `varlock.loadPath` in `package.json`', () => {
 		inProject('load-path');
 
