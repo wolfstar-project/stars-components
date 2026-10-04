@@ -95,9 +95,18 @@ setup({ loader: 'varlock' });
 DOTENV_LOADER=varlock
 ```
 
-When `loader: 'varlock'` is set, varlock resolves your checked-in `.env.schema` (with its own `.env*` file discovery
-and validation) and injects the result into `process.env`; the dotenv-specific options above (`encoding`, `path`,
-`env`) are ignored in favour of the schema. `prefix` still applies to the resolved variables.
+When `loader: 'varlock'` is set, varlock resolves your checked-in `.env.schema` (with its own `.env*` file discovery and
+validation) by running `varlock load --format json-full`, and the result is injected into `process.env`:
+
+- `path` and `env` are passed to varlock as `--path` and `--env`; `encoding` is ignored in favour of the schema.
+- `prefix` still applies to the returned `parsed` map, which holds exactly the variables the schema resolved (as strings,
+  `@internal` items left out), including those that equal a value `process.env` already held.
+- An invalid schema makes `setup()` throw an `Error` carrying varlock's summary, the same way the dotenv loader throws on
+  an unreadable file, instead of exiting the process.
+- Varlock's runtime redaction and leak detection are not part of the CLI. Add `import 'varlock/auto-load'` to opt into
+  them.
+- `path` and `env` cannot contain whitespace (varlock's CLI helper splits its command on spaces), except that `path` may
+  be a directory with whitespace in its name.
 
 ### Typing Environment Variables
 

@@ -1,75 +1,133 @@
+import { fileURLToPath } from 'node:url';
 import type { loadEnvFiles as LoadEnvFiles } from '../src/lib/env-loader';
 
-const { requireMock } = vi.hoisted(() => ({ requireMock: vi.fn() }));
-
-vi.mock('node:module', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('node:module')>();
-	return { ...actual, createRequire: () => requireMock };
-});
+const fixture = (name: string) => fileURLToPath(new URL(`./varlock-fixtures/${name}`, import.meta.url));
 
 describe('Varlock loader (experimental)', () => {
-	const addedKeys = new Set<string>();
+	const touched = new Set<string>();
+	const original = { ...process.env };
+
 	let loadEnvFiles: typeof LoadEnvFiles;
 
-	beforeEach(async () => {
-		process.env.NODE_ENV = 'development';
-		requireMock.mockReset();
-
-		// The workspace vitest config runs with `isolate: false`, so the module registry is shared across test
-		// files. A prior file may have already imported `env-loader.ts` bound to the real `node:module`, so it
-		// must be re-imported fresh here to pick up the `createRequire` mock registered above.
+	beforeAll(async () => {
+		// The workspace vitest config runs with `isolate: false`: make sure `env-loader.ts` is not bound to a mocked
+		// `node:module` left over by another test file.
+		vi.doUnmock('node:module');
 		vi.resetModules();
 		({ loadEnvFiles } = await import('../src/lib/env-loader'));
 	});
 
+	beforeEach(() => {
+		process.env.NODE_ENV = 'development';
+	});
+
 	afterEach(() => {
-		for (const key of addedKeys) delete process.env[key];
-		addedKeys.clear();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith('VARLOCK_TEST_') || key === '__VARLOCK_ENV') delete process.env[key];
+		}
+
+		for (const key of touched) {
+			if (original[key] === undefined) delete process.env[key];
+			else process.env[key] = original[key];
+		}
+
+		touched.clear();
+		delete (globalThis as { __varlockLoadedEnv?: unknown }).__varlockLoadedEnv;
 	});
 
 	function setEnv(key: string, value: string) {
+		touched.add(key);
 		process.env[key] = value;
-		addedKeys.add(key);
 	}
 
-	test('should throw a friendly error when the optional `varlock` package is not installed', () => {
-		requireMock.mockImplementation(() => {
-			const error = new Error("Cannot find package 'varlock'") as NodeJS.ErrnoException;
-			error.code = 'MODULE_NOT_FOUND';
-			throw error;
-		});
+	test('should report every key resolved by the schema, as strings', () => {
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('valid') });
 
-		expect(() => loadEnvFiles({ loader: 'varlock' })).toThrow(/optional `varlock` package is not installed/);
+		expect(output.parsed).toEqual({
+			VARLOCK_TEST_HOST: 'localhost',
+			VARLOCK_TEST_PORT: '6379',
+			VARLOCK_TEST_ENABLED: 'true',
+			VARLOCK_TEST_MODE: 'fast',
+			VARLOCK_TEST_PRESET: 'from-schema'
+		});
 	});
 
-	test('should rethrow errors unrelated to a missing package', () => {
-		requireMock.mockImplementation(() => {
-			throw new Error('boom');
-		});
+	test('should leave `@internal` items and varlock bookkeeping out of `parsed`', () => {
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('valid') });
 
-		expect(() => loadEnvFiles({ loader: 'varlock' })).toThrow('boom');
+		expect(output.parsed).not.toHaveProperty('VARLOCK_TEST_INTERNAL');
+		expect(Object.keys(output.parsed!).filter((key) => /^_{1,2}VARLOCK_/i.test(key))).toEqual([]);
 	});
 
-	test('should diff `process.env` and report the keys resolved by varlock, excluding internal keys', () => {
-		requireMock.mockImplementation(() => {
-			setEnv('MY_APP_SETTING', 'FOO');
-			setEnv('__VARLOCK_ENV', '{"some":"blob"}');
-			setEnv('_VARLOCK_ENV_KEY', 'secret');
-		});
+	test('should inject the resolved values into `process.env`', () => {
+		loadEnvFiles({ loader: 'varlock', path: fixture('valid') });
 
-		const output = loadEnvFiles({ loader: 'varlock' });
+		expect(process.env.VARLOCK_TEST_PORT).toBe('6379');
+		expect(process.env.VARLOCK_TEST_ENABLED).toBe('true');
+	});
 
-		expect(output.parsed).toEqual({ MY_APP_SETTING: 'FOO' });
+	test('should still report a key that resolves to the value `process.env` already holds', () => {
+		setEnv('VARLOCK_TEST_PRESET', 'from-schema');
+
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('valid') });
+
+		expect(output.parsed).toHaveProperty('VARLOCK_TEST_PRESET', 'from-schema');
+	});
+
+	test('should let `process.env` override the schema, as varlock does', () => {
+		setEnv('VARLOCK_TEST_PORT', '8080');
+
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('valid') });
+
+		expect(output.parsed).toHaveProperty('VARLOCK_TEST_PORT', '8080');
+	});
+
+	test('should map `env` to `--env`', () => {
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('valid'), env: 'production' });
+
+		expect(output.parsed).toHaveProperty('VARLOCK_TEST_HOST', 'production.example.com');
 	});
 
 	test('should filter resolved keys by `prefix`', () => {
-		requireMock.mockImplementation(() => {
-			setEnv('MY_APP_SETTING', 'FOO');
-			setEnv('NOT_MY_SETTING', 'BAR');
-		});
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('valid'), prefix: 'VARLOCK_TEST_P' });
 
-		const output = loadEnvFiles({ loader: 'varlock', prefix: 'MY_APP_' });
+		expect(output.parsed).toEqual({ VARLOCK_TEST_PORT: '6379', VARLOCK_TEST_PRESET: 'from-schema' });
+	});
 
-		expect(output.parsed).toEqual({ MY_APP_SETTING: 'FOO' });
+	test('should accept a `path` containing spaces', () => {
+		const output = loadEnvFiles({ loader: 'varlock', path: fixture('with space') });
+
+		expect(output.parsed).toHaveProperty('VARLOCK_TEST_PORT', '6379');
+	});
+
+	test('should accept a `URL` as `path`', () => {
+		const output = loadEnvFiles({ loader: 'varlock', path: new URL('./varlock-fixtures/valid', import.meta.url) });
+
+		expect(output.parsed).toHaveProperty('VARLOCK_TEST_PORT', '6379');
+	});
+
+	test('should reject an `env` containing whitespace', () => {
+		expect(() => loadEnvFiles({ loader: 'varlock', path: fixture('valid'), env: 'my env' })).toThrow(/'env' option cannot contain whitespace/);
+	});
+
+	test('should not put ANSI colour codes in the message of an invalid schema', () => {
+		setEnv('FORCE_COLOR', '1');
+
+		let message = '';
+		try {
+			loadEnvFiles({ loader: 'varlock', path: fixture('invalid') });
+		} catch (error) {
+			message = (error as Error).message;
+		}
+
+		expect(message).toContain('VARLOCK_TEST_MISSING');
+		expect(message).not.toContain('\u001B');
+	});
+
+	test('should throw an `Error` carrying the summary of an invalid schema instead of exiting', () => {
+		const exit = vi.spyOn(process, 'exit');
+
+		expect(() => loadEnvFiles({ loader: 'varlock', path: fixture('invalid') })).toThrow(/VARLOCK_TEST_MISSING/);
+		expect(exit).not.toHaveBeenCalled();
 	});
 });
