@@ -179,4 +179,20 @@ declare module '@wolfstar/env-utilities' {
 `NODE_ENV` still compiles.
 
 Varlock serializes an `array` with its own separator (`,` by default), while `envParseArray` splits on spaces and needs an
-`ArrayString` key. Read such a variable through the `ENV` object of `varlock/env` (already an array) or declare the key as `ArrayString` by hand.
+`ArrayString` key. Read such a variable through `env` (already an array, see below) or declare the key as `ArrayString` by hand.
+
+#### `env`, varlock's already-coerced values
+
+`@wolfstar/env-utilities/varlock` also exports `env`, the `ENV` object of `varlock/env`. When `setup()` loads a schema
+with the `varlock` loader, `env.REDIS_PORT` is already a validated `number` and `env.API_ENABLED` a `boolean`, typed by
+the file varlock generates, so nothing is parsed a second time:
+
+```typescript
+import { env } from '@wolfstar/env-utilities/varlock';
+
+env.REDIS_PORT; // number
+```
+
+Reach for `env` in new code of a varlock project, and keep `envParse*` for the code that has not moved yet, for projects
+without varlock, and for values read straight from `process.env`. Both work side by side, so a project can migrate one
+call at a time. Importing `@wolfstar/env-utilities/varlock` requires the `varlock` package.
