@@ -9,7 +9,7 @@
 		"lint": "oxlint packages examples && oxfmt --check packages examples",
 		"lint:fix": "oxlint --fix packages examples && oxfmt --write packages examples",
 		"test": "vitest run",
-		"bench": "node --import ./benchmarks/register.mjs benchmarks/index.ts",
+		"bench": "node --experimental-transform-types --import ./benchmarks/register.mjs benchmarks/index.ts",
 		"build": "turbo run build",
 		"typecheck": "turbo run typecheck",
 		"docs:api-json": "typedoc --options typedoc.json --json docs-output/api.json",
