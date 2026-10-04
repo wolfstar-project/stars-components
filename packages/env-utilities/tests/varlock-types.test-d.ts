@@ -31,7 +31,7 @@ describe('EnvFromVarlock', () => {
 	});
 
 	test('leaves `NODE_ENV` to `Env`', () => {
-		expectTypeOf<keyof EnvFromVarlock<CoercedEnvSchema>>().not.toExtend<'NODE_ENV'>();
+		expectTypeOf<Extract<keyof EnvFromVarlock<CoercedEnvSchema>, 'NODE_ENV'>>().toEqualTypeOf<never>();
 		expectTypeOf<Env['NODE_ENV']>().toEqualTypeOf<'test' | 'development' | 'production'>();
 	});
 
