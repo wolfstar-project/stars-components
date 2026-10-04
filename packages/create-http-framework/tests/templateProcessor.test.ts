@@ -124,6 +124,46 @@ describe('processTemplate', () => {
 		};
 	}
 
+	test('GIVEN any project THEN writes AGENTS.md and llms.txt describing it to coding agents', async () => {
+		await processTemplate(outputDir, makeContext({ name: 'my-bot', language: 'ts' }));
+
+		const agents = await readFile(join(outputDir, 'AGENTS.md'), 'utf-8');
+		expect(agents).toContain('working in `my-bot`');
+		expect(agents).toContain('npx stars doctor');
+		expect(agents).toContain('npm run build');
+		expect(agents).toContain('container.rest');
+		expect(agents).not.toContain('generate:i18n');
+		expect(agents).not.toContain('{{');
+
+		const llms = await readFile(join(outputDir, 'llms.txt'), 'utf-8');
+		expect(llms.startsWith('# my-bot\n')).toBe(true);
+		expect(llms).toContain('@wolfstar/cli');
+		expect(llms).not.toContain('plugin-gateway');
+	});
+
+	test('GIVEN features THEN AGENTS.md, llms.txt and the README only describe what the project has', async () => {
+		await processTemplate(outputDir, makeContext({ language: 'js', i18n: true, gateway: true, tunnel: true }));
+
+		const agents = await readFile(join(outputDir, 'AGENTS.md'), 'utf-8');
+		// JavaScript has no build step to run.
+		expect(agents).not.toContain('npm run build');
+		expect(agents).toContain('npm run generate:i18n');
+		expect(agents).toContain('gateway events over a WebSocket');
+		expect(agents).toContain('public cloudflared tunnel');
+
+		const llms = await readFile(join(outputDir, 'llms.txt'), 'utf-8');
+		expect(llms).toContain('@wolfstar/plugin-i18next');
+		expect(llms).toContain('@wolfstar/plugin-gateway');
+
+		const readme = await readFile(join(outputDir, 'README.md'), 'utf-8');
+		expect(readme).toContain('## Tunnel');
+		expect(readme).toContain('npx stars doctor');
+	});
+
+	test('GIVEN no tunnel THEN the README has no tunnel section', async () => {
+		await processTemplate(outputDir, makeContext());
+		expect(await readFile(join(outputDir, 'README.md'), 'utf-8')).not.toContain('## Tunnel');
+	});
 	test.each(['ts', 'js'] as const)('GIVEN a %s project THEN uses the replaceable default Stars banner', async (language) => {
 		await processTemplate(outputDir, makeContext({ language }));
 

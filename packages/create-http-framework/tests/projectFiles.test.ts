@@ -6,9 +6,11 @@ import {
 	buildDevDependencies,
 	buildScripts,
 	packageJson,
+	FRAMEWORK_LINT_RULES,
 	writeProjectFiles,
 	type ProjectContext
 } from '../src/tools/projectFiles.js';
+import { recommendedRules } from '../../eslint-plugin-http-framework/src/index.js';
 
 /** Fixed version for every package name that `projectFiles.ts` may look up, keyed by npm package name. */
 const versions: ProjectContext['versions'] = {
@@ -27,6 +29,7 @@ const versions: ProjectContext['versions'] = {
 	'typescript-eslint': '1.0.0',
 	'@eslint/js': '1.0.0',
 	oxlint: '1.0.0',
+	'@wolfstar/eslint-plugin-http-framework': '1.0.0',
 	prettier: '1.0.0',
 	oxfmt: '1.0.0',
 	vitest: '1.0.0',
@@ -252,6 +255,43 @@ describe('writeProjectFiles', () => {
 		const packageJson = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8'));
 		expect(packageJson.scripts.postinstall).toBe('stars prepare');
 		expect(tsconfig.compilerOptions.paths).toBeUndefined();
+	});
+
+	test('GIVEN tunnel THEN stars.config opens a quick tunnel in dev, next to whatever the build needs', async () => {
+		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsdown', tunnel: true }));
+		expect(await readFile(join(target, 'stars.config.ts'), 'utf-8')).toContain('defineConfig({ dev: { tunnel: true } })');
+
+		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsc7', tunnel: true }));
+		expect(await readFile(join(target, 'stars.config.ts'), 'utf-8')).toContain(
+			"defineConfig({ build: { tool: 'tsc' }, env: false, dev: { tunnel: true } })"
+		);
+
+		writeProjectFiles(target, makeContext({ language: 'js', tunnel: true }));
+		expect(await readFile(join(target, 'stars.config.js'), 'utf-8')).toContain('defineConfig({ env: false, dev: { tunnel: true } })');
+	});
+
+	test('GIVEN oxlint THEN the framework rules run through its JS plugin, and match the plugin', async () => {
+		writeProjectFiles(target, makeContext({ linter: 'oxlint' }));
+
+		const config = JSON.parse(await readFile(join(target, '.oxlintrc.json'), 'utf-8'));
+		expect(config.jsPlugins).toEqual(['@wolfstar/eslint-plugin-http-framework']);
+		expect(config.rules).toEqual(recommendedRules);
+		// The list is spelled out for oxlint's JSON: it must not drift from what the plugin recommends.
+		expect([...FRAMEWORK_LINT_RULES].sort()).toEqual(Object.keys(recommendedRules).sort());
+		expect(buildDevDependencies(makeContext({ linter: 'oxlint' }))['@wolfstar/eslint-plugin-http-framework']).toBe('^1.0.0');
+	});
+
+	test.each(['ts', 'js'] as const)('GIVEN eslint and %s THEN the framework rules are added to the flat config', async (language) => {
+		writeProjectFiles(target, makeContext({ linter: 'eslint', language }));
+
+		const config = await readFile(join(target, 'eslint.config.mjs'), 'utf-8');
+		expect(config).toContain("import wolfstar, { recommendedRules } from '@wolfstar/eslint-plugin-http-framework';");
+		expect(config).toContain('{ plugins: { wolfstar }, rules: recommendedRules }');
+		expect(buildDevDependencies(makeContext({ linter: 'eslint', language }))['@wolfstar/eslint-plugin-http-framework']).toBe('^1.0.0');
+	});
+
+	test('GIVEN no linter THEN the framework lint plugin is not installed', () => {
+		expect(buildDevDependencies(makeContext({ linter: 'none' }))).not.toHaveProperty('@wolfstar/eslint-plugin-http-framework');
 	});
 
 	test('GIVEN tsc THEN stars.config.ts selects tsc and leaves loading the environment to src/lib/setup', async () => {

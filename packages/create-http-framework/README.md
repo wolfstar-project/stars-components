@@ -48,26 +48,27 @@ The CLI will guide you through the following prompts:
 
 ## Options
 
-| Flag                                 | Alias | Description                                                                |
-| ------------------------------------ | ----- | -------------------------------------------------------------------------- |
-| `--overwrite`                        |       | Overwrite the target directory if it already exists                        |
-| `--no-interactive`                   |       | Skip all prompts and use defaults / flags                                  |
-| `--interactive`                      | `-i`  | Force interactive prompts even when an AI agent is detected                |
-| `--package-manager <pm>`             |       | Choose npm, yarn, pnpm, or bun                                             |
-| `--language <lang>`                  |       | Choose TypeScript (`ts`) or JavaScript (`js`)                              |
-| `--build <tool>`                     |       | Choose `tsc6`, `tsc7`, `tsdown`, `vite`, or `vite-nitro` for TypeScript    |
-| `--lint <linter>`                    |       | Choose `none`, `eslint`, or `oxlint`                                       |
-| `--format <formatter>`               |       | Choose `none`, `prettier`, or `oxfmt`                                      |
-| `--port <number>`                    |       | Set the HTTP port (default: `3000`)                                        |
-| `--i18n` / `--no-i18n`               |       | Enable or disable `@wolfstar/plugin-i18next` scaffolding                   |
-| `--subcommands` / `--no-subcommands` |       | Enable or disable the example subcommand command                           |
-| `--testing` / `--no-testing`         |       | Enable or disable the Vitest + `@wolfstar/http-framework-test-utils` setup |
-| `--gateway` / `--no-gateway`         |       | Enable or disable `@wolfstar/plugin-gateway` scaffolding                   |
-| `--cache` / `--no-cache`             |       | Enable or disable `@wolfstar/plugin-cache` (turns `--gateway` on)          |
-| `--redis` / `--no-redis`             |       | Cache in Redis instead of memory (turns `--cache` on)                      |
-| `--sharder` / `--no-sharder`         |       | Enable or disable `@wolfstar/plugin-sharder` (turns `--gateway` on)        |
-| `--install` / `--no-install`         |       | Enable or disable dependency installation                                  |
-| `--help`                             | `-h`  | Print usage and exit                                                       |
+| Flag                                 | Alias | Description                                                                 |
+| ------------------------------------ | ----- | --------------------------------------------------------------------------- |
+| `--overwrite`                        |       | Overwrite the target directory if it already exists                         |
+| `--no-interactive`                   |       | Skip all prompts and use defaults / flags                                   |
+| `--interactive`                      | `-i`  | Force interactive prompts even when an AI agent is detected                 |
+| `--package-manager <pm>`             |       | Choose npm, yarn, pnpm, or bun                                              |
+| `--language <lang>`                  |       | Choose TypeScript (`ts`) or JavaScript (`js`)                               |
+| `--build <tool>`                     |       | Choose `tsc6`, `tsc7`, `tsdown`, `vite`, or `vite-nitro` for TypeScript     |
+| `--lint <linter>`                    |       | Choose `none`, `eslint`, or `oxlint`                                        |
+| `--format <formatter>`               |       | Choose `none`, `prettier`, or `oxfmt`                                       |
+| `--port <number>`                    |       | Set the HTTP port (default: `3000`)                                         |
+| `--i18n` / `--no-i18n`               |       | Enable or disable `@wolfstar/plugin-i18next` scaffolding                    |
+| `--subcommands` / `--no-subcommands` |       | Enable or disable the example subcommand command                            |
+| `--testing` / `--no-testing`         |       | Enable or disable the Vitest + `@wolfstar/http-framework-test-utils` setup  |
+| `--gateway` / `--no-gateway`         |       | Enable or disable `@wolfstar/plugin-gateway` scaffolding                    |
+| `--cache` / `--no-cache`             |       | Enable or disable `@wolfstar/plugin-cache` (turns `--gateway` on)           |
+| `--redis` / `--no-redis`             |       | Cache in Redis instead of memory (turns `--cache` on)                       |
+| `--sharder` / `--no-sharder`         |       | Enable or disable `@wolfstar/plugin-sharder` (turns `--gateway` on)         |
+| `--tunnel` / `--no-tunnel`           |       | Open a cloudflared quick tunnel in `stars dev` (`dev.tunnel` in the config) |
+| `--install` / `--no-install`         |       | Enable or disable dependency installation                                   |
+| `--help`                             | `-h`  | Print usage and exit                                                        |
 
 ## Non-interactive / AI agent mode
 
@@ -106,6 +107,9 @@ my-discord-bot/
 ├── vitest.setup.ts               # Vitest setup file (--testing)
 ├── compose.yaml                  # Local Redis server (--redis)
 ├── README.md                     # Generated project README
+├── AGENTS.md                     # The project's commands, layout and rules, for AI coding agents
+├── llms.txt                      # The upstream documentation by topic, for AI coding agents
+├── stars.config.ts               # The `stars` CLI configuration (build, dev, tunnel)
 ├── .env                          # Environment variables (DISCORD_TOKEN, DISCORD_PUBLIC_KEY)
 ├── .gitignore
 ├── package.json
@@ -117,6 +121,9 @@ my-discord-bot/
 - `src/commands/math.ts` is only generated when **Subcommands** is enabled.
 - `src/lib/cache.ts` is only generated with **Cache**, `src/shard.ts` with **Sharder**, and `compose.yaml` with **Redis**.
 - `tests/ping.test.ts`, `vitest.config.ts`, and `vitest.setup.ts` are only generated when **Testing** is enabled.
+- `AGENTS.md` and `llms.txt` are always generated and only describe the features the project was created with.
+- With a linter, the generated configuration (`.oxlintrc.json` or `eslint.config.mjs`) enables the rules of [`@wolfstar/eslint-plugin-http-framework`](../eslint-plugin-http-framework): decorator order, raw Discord fetches, dynamic translation keys and the other mistakes TypeScript cannot catch.
+- `--tunnel` (or the **Dev tunnel** feature in the prompt) writes `dev: { tunnel: true }` to `stars.config`, so `stars dev` opens a cloudflared quick tunnel and Discord reaches the bot on your machine. Without it, press `t` in `stars dev` to open one on demand.
 
 ### Vite and Nitro
 

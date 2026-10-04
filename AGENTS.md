@@ -102,6 +102,10 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   `{ env: false }` for JavaScript) instead of specifying `entry`/`build`/`future`. Only the scaffolds whose entry goes
   through the `env` transform (TypeScript `tsdown`/`vite`) drop the hand-written `setup()` call; the manifest records
   `autoEnv: true` so a rerun against an older manifest still recognises the old `src/lib/setup` as pristine.
+- `@wolfstar/create-http-framework` always scaffolds `AGENTS.md` and `llms.txt` (`template/base/*.hbs`), wires
+  `@wolfstar/eslint-plugin-http-framework` into the generated oxlint/ESLint configuration (`FRAMEWORK_LINT_RULES` in
+  `src/tools/projectFiles.ts` must match the plugin's `recommendedRules`; a test pins it), and `--tunnel` writes
+  `dev: { tunnel: true }` to `stars.config`.
 - `@wolfstar/create-http-framework`'s `--build` also accepts the experimental, TypeScript-only `vite` and
   `vite-nitro` tools (`experimental.enableVite`/`enableNitro` in the generated `stars.config.ts`), and scaffolds the
   external gateway plugins via `--gateway`/`--cache`/`--redis`/`--sharder` (`@wolfstar/plugin-gateway`/`-cache`/

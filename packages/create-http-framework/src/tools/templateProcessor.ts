@@ -62,6 +62,8 @@ export interface TemplateContext {
 	sharder: boolean;
 	/** Only meaningful when `language === 'ts'`. */
 	buildTool: BuildTool;
+	/** Whether `stars dev` opens a public tunnel (`dev.tunnel` in `stars.config`). Optional: older manifests lack it. */
+	tunnel?: boolean;
 	/**
 	 * Whether the generator relies on `stars` registering `env` in the entry (compatibility version 5). Optional so a
 	 * manifest written before it existed renders `src/lib/setup` the way it was generated: loading the env by hand.
@@ -81,7 +83,7 @@ interface CommandImport {
  */
 function toRenderContext(
 	context: TemplateContext
-): TemplateContext & { vite: boolean; nitro: boolean; registersEnv: boolean; commands: CommandImport[] } {
+): TemplateContext & { typescript: boolean; vite: boolean; nitro: boolean; registersEnv: boolean; commands: CommandImport[] } {
 	const typescript = context.language === 'ts';
 	const commands: CommandImport[] = [{ className: 'PingCommand', file: 'ping' }];
 	if (context.subcommandsAdvanced) commands.push({ className: 'SettingsCommand', file: 'settings' });
@@ -89,6 +91,7 @@ function toRenderContext(
 
 	return {
 		...context,
+		typescript,
 		vite: typescript && isViteBuild(context.buildTool),
 		nitro: typescript && isNitroBuild(context.buildTool),
 		// `stars` registers `env` in the entry of tsdown and Vite builds; Nitro leaves it off by default, and `tsc` or
