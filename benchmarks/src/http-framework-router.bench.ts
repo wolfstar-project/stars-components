@@ -1,8 +1,7 @@
 import { ApplicationCommandOptionType, type APIChatInputApplicationCommandInteractionData } from 'discord-api-types/v10';
 import { bench, describe } from 'vitest';
-import { Command, RegisterCommand, RegisterSubcommand, RegisterSubcommandGroup } from '../../src/index.js';
-import { ChatInputApplicationCommandInteractionData } from '../shared.js';
-import { makeCommand } from '../util/util.js';
+import { Command, RegisterCommand, RegisterSubcommand, RegisterSubcommandGroup } from '@wolfstar/http-framework';
+import { ChatInputApplicationCommandInteractionData, makeCommand } from '@wolfstar/http-framework-test-utils';
 
 @RegisterCommand({ name: 'tools', description: 'Benchmarks the router' })
 class ToolsCommand extends Command {

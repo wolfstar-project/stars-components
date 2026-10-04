@@ -11,6 +11,11 @@
 			"project": ["scripts/**/*.{mjs,ts}"],
 			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog", "golar", "pkg-pr-new"]
 		},
+		"benchmarks": {
+			"entry": ["src/**/*.bench.ts", "vitest.config.ts"],
+			"project": ["src/**/*.ts"],
+			"ignoreDependencies": ["tinybench"]
+		},
 		"packages/*": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],

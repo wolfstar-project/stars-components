@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, bench, describe } from 'vitest';
-import { changedFiles, snapshotFiles, type HashCache } from '../src/dev/changed-files.js';
+import { changedFiles, snapshotFiles, type HashCache } from '../../packages/cli/src/dev/changed-files.js';
 
 const root = mkdtempSync(join(tmpdir(), 'stars-bench-'));
 for (let directory = 0; directory < 10; directory++) {

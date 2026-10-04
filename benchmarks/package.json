@@ -1,0 +1,20 @@
+{
+	"name": "@wolfstar/benchmarks",
+	"version": "0.0.0",
+	"private": true,
+	"description": "CodSpeed benchmarks for the @wolfstar/* packages",
+	"type": "module",
+	"scripts": {
+		"bench": "vitest bench --run"
+	},
+	"devDependencies": {
+		"@codspeed/vitest-plugin": "^5.7.1",
+		"@types/node": "22.15.21",
+		"discord-api-types": "^0.38.8",
+		"tinybench": "^6.2.0",
+		"vitest": "^4.1.11"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

@@ -1,6 +1,6 @@
 import { bench, describe } from 'vitest';
-import { buildRows, highlight, initialLogView, matchesView } from '../src/dev/tui/log-view.js';
-import { LogBuffer, type LogInput } from '../src/utils/log-buffer.js';
+import { buildRows, highlight, initialLogView, matchesView } from '../../packages/cli/src/dev/tui/log-view.js';
+import { LogBuffer, type LogInput } from '../../packages/cli/src/utils/log-buffer.js';
 
 const CHANNELS = ['bot', 'cli', 'hmr', 'http', 'commands', 'build'] as const;
 

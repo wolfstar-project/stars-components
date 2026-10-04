@@ -9,7 +9,7 @@
 	"format": "oxfmt",
 	"privatePackages": { "version": true, "tag": false },
 	"updateInternalDependencies": "patch",
-	"ignore": [],
+	"ignore": ["@wolfstar/benchmarks"],
 	"snapshot": {
 		"useCalculatedVersion": true,
 		"prereleaseTemplate": "{tag}-{datetime}"

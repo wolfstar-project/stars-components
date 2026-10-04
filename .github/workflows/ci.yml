@@ -134,6 +134,36 @@ jobs:
                   flags: unit
                   token: ${{ secrets.CODECOV_TOKEN }}
 
+    benchmark:
+        name: ⏱️ Benchmarks
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        # Forks have no access to `CODSPEED_TOKEN`, and a merge-queue run has no base to compare against.
+        if: github.repository_owner == 'wolfstar-project' && github.event_name != 'merge_group'
+
+        steps:
+            - name: Checkout Project
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Setup pnpm + Node.js v24
+              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3
+              with:
+                  runtime: node@24
+                  cache: true
+                  install: false
+
+            - name: Install Dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run benchmarks
+              uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
+              with:
+                  run: pnpm bench
+                  mode: simulation
+                  token: ${{ secrets.CODSPEED_TOKEN }}
+
     knip:
         name: 🧹 Unused code check
         runs-on: ubuntu-24.04-arm
