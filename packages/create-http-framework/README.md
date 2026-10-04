@@ -121,7 +121,7 @@ my-discord-bot/
 - `src/commands/math.ts` is only generated when **Subcommands** is enabled.
 - `src/lib/cache.ts` is only generated with **Cache**, `src/shard.ts` with **Sharder**, and `compose.yaml` with **Redis**.
 - `tests/ping.test.ts`, `vitest.config.ts`, and `vitest.setup.ts` are only generated when **Testing** is enabled.
-- `AGENTS.md` and `llms.txt` are always generated and only describe the features the project was created with.
+- `AGENTS.md` and `llms.txt` are always generated and only describe the features the project was created with. When one already exists and is not this generator's own unedited output (you wrote it, or edited it), a rerun leaves it as it is and says so.
 - With a linter, the generated configuration (`.oxlintrc.json` or `eslint.config.mjs`) enables the rules of [`@wolfstar/eslint-plugin-http-framework`](../eslint-plugin-http-framework): decorator order, raw Discord fetches, dynamic translation keys and the other mistakes TypeScript cannot catch.
 - `--tunnel` (or the **Dev tunnel** feature in the prompt) writes `dev: { tunnel: true }` to `stars.config`, so `stars dev` opens a cloudflared quick tunnel and Discord reaches the bot on your machine. Without it, press `t` in `stars dev` to open one on demand.
 

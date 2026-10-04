@@ -29,7 +29,7 @@ HTTP{{#if gateway}} and gateway events over a WebSocket (`@wolfstar/plugin-gatew
   (`@RegisterCommand(...)` or `registerApplicationCommands`) and answers in `chatInputRun`.
 - `src/interaction-handlers/` — buttons, select menus and modals, matched by custom id.
 - `src/listeners/` — client event listeners.
-- `src/lib/` — shared code{{#unless vite}}, auto-imported by `stars` (see `.stars/imports.d.ts`){{/unless}}.
+- `src/lib/` — shared code{{#if autoImports}}, auto-imported by `stars` (see `.stars/imports.d.ts`){{else}}; import what you use, nothing is auto-imported{{/if}}.
 {{#if i18n}}
 - `src/locales/<locale>/` — translations. Keys are typed: never build a key from a variable.
 {{/if}}

@@ -462,22 +462,27 @@ async function main(): Promise<void> {
 
 	// ── Generate files ────────────────────────────────────────────────────────
 	s.start('Generating project files...');
-	const preservedFiles = await processTemplate(targetDir, {
-		name: projectName,
-		port,
-		language,
-		i18n: wantsI18n,
-		subcommands: wantsSubcommands,
-		subcommandsAdvanced: wantsSubcommandsAdvanced,
-		testing: wantsTesting,
-		gateway: wantsGateway,
-		cache: wantsCache,
-		redis: wantsRedis,
-		sharder: wantsSharder,
-		buildTool,
-		tunnel: wantsTunnel,
-		autoEnv: true
-	});
+	const keptDocs: string[] = [];
+	const preservedFiles = await processTemplate(
+		targetDir,
+		{
+			name: projectName,
+			port,
+			language,
+			i18n: wantsI18n,
+			subcommands: wantsSubcommands,
+			subcommandsAdvanced: wantsSubcommandsAdvanced,
+			testing: wantsTesting,
+			gateway: wantsGateway,
+			cache: wantsCache,
+			redis: wantsRedis,
+			sharder: wantsSharder,
+			buildTool,
+			tunnel: wantsTunnel,
+			autoEnv: true
+		},
+		(path) => keptDocs.push(path)
+	);
 	writeProjectFiles(targetDir, {
 		name: projectName,
 		port,
@@ -498,6 +503,9 @@ async function main(): Promise<void> {
 		versions
 	});
 	s.stop('Project files generated.');
+	for (const file of keptDocs) {
+		log.warn(`Kept your existing "${file}" as it is — delete it and run again to get the generated one.`);
+	}
 	for (const file of preservedFiles) {
 		log.warn(`Kept hand-edited "${file}" even though its feature is now disabled — remove it manually if it's no longer needed.`);
 	}

@@ -160,6 +160,47 @@ describe('processTemplate', () => {
 		expect(readme).toContain('npx stars doctor');
 	});
 
+	test.each([
+		['tsdown', 'ts', true],
+		['tsc7', 'ts', false],
+		['vite', 'ts', false],
+		['tsdown', 'js', false]
+	] as const)('GIVEN %s and %s THEN AGENTS.md only promises auto imports where they run (%s)', async (buildTool, language, expected) => {
+		await processTemplate(outputDir, makeContext({ buildTool, language }));
+
+		const agents = await readFile(join(outputDir, 'AGENTS.md'), 'utf-8');
+		expect(agents.includes('auto-imported by `stars`')).toBe(expected);
+		expect(agents.includes('nothing is auto-imported')).toBe(!expected);
+	});
+
+	test('GIVEN a rerun THEN an unedited AGENTS.md is regenerated, a hand-written or edited one is kept and reported', async () => {
+		const kept: string[] = [];
+		await processTemplate(outputDir, makeContext({ name: 'first' }), (path) => kept.push(path));
+		expect(kept).toEqual([]);
+
+		// Nobody touched them: a rerun with other options rewrites both.
+		await processTemplate(outputDir, makeContext({ name: 'second' }), (path) => kept.push(path));
+		expect(kept).toEqual([]);
+		expect(await readFile(join(outputDir, 'AGENTS.md'), 'utf-8')).toContain('working in `second`');
+
+		await writeFile(join(outputDir, 'AGENTS.md'), '# Our own rules\n');
+		await processTemplate(outputDir, makeContext({ name: 'third' }), (path) => kept.push(path));
+		expect(kept).toEqual(['AGENTS.md']);
+		expect(await readFile(join(outputDir, 'AGENTS.md'), 'utf-8')).toBe('# Our own rules\n');
+		// The other one was not edited, and follows the new options.
+		expect(await readFile(join(outputDir, 'llms.txt'), 'utf-8')).toContain('# third');
+	});
+
+	test('GIVEN a directory that already has an AGENTS.md and no manifest THEN it is kept', async () => {
+		await writeFile(join(outputDir, 'AGENTS.md'), '# Written before the generator ran\n');
+		const kept: string[] = [];
+		await processTemplate(outputDir, makeContext(), (path) => kept.push(path));
+
+		expect(kept).toEqual(['AGENTS.md']);
+		expect(await readFile(join(outputDir, 'AGENTS.md'), 'utf-8')).toBe('# Written before the generator ran\n');
+		expect(existsSync(join(outputDir, 'llms.txt'))).toBe(true);
+	});
+
 	test('GIVEN no tunnel THEN the README has no tunnel section', async () => {
 		await processTemplate(outputDir, makeContext());
 		expect(await readFile(join(outputDir, 'README.md'), 'utf-8')).not.toContain('## Tunnel');
