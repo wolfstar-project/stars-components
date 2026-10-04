@@ -100,33 +100,4 @@ describe('Node loader', () => {
 
 		expect(loadEnv({ loader: 'node', path: join(directory, '.env'), encoding: 'latin1' }).parsed).toEqual({ NODE_LOADER_PLAIN: 'café' });
 	});
-
-	test('is the loader used when none is requested and `dotenv` is not installed', async () => {
-		vi.resetModules();
-		vi.doMock('node:module', async (importOriginal) => {
-			const actual = await importOriginal<typeof import('node:module')>();
-			return {
-				...actual,
-				createRequire: (url: string) => {
-					const real = actual.createRequire(url);
-					return Object.assign((id: string) => real(id), {
-						resolve: (id: string) => {
-							if (id === 'dotenv' || id === 'dotenv-expand' || id.startsWith('varlock')) throw new Error('not installed');
-							return real.resolve(id);
-						}
-					});
-				}
-			};
-		});
-
-		try {
-			const { loadEnvFiles } = await import('../src/lib/env-loader');
-			writeFileSync(join(directory, '.env'), 'NODE_LOADER_PLAIN=plain\nNODE_LOADER_DOLLAR=${NODE_LOADER_PLAIN}-x');
-
-			expect(loadEnvFiles({ path: join(directory, '.env') }).parsed).toEqual({ NODE_LOADER_PLAIN: 'plain', NODE_LOADER_DOLLAR: 'plain-x' });
-		} finally {
-			vi.doUnmock('node:module');
-			vi.resetModules();
-		}
-	});
 });

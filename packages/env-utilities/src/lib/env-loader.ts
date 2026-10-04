@@ -19,7 +19,7 @@ export interface EnvLoaderOptions {
 	 */
 	debug?: boolean;
 	/**
-	 * The encoding of the files containing the environment variables (`dotenv` loader only).
+	 * The encoding of the files containing the environment variables (ignored by the `varlock` loader).
 	 *
 	 * @default 'utf8'
 	 */
