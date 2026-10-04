@@ -24,7 +24,7 @@ export function register(bench: Bench) {
 	writeFileSync(join(cwd, 'package.json'), JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/http-framework': '*' } }));
 	process.once('exit', () => rmSync(cwd, { recursive: true, force: true }));
 
-	const resolve = (config: StarsConfig) => resolveStarsConfig({ cwd, configFile: null, config, env: {}, projectEnv: {} });
+	const resolve = (config: StarsConfig) => resolveStarsConfig({ cwd, configFile: null, config, env: {} as NodeJS.ProcessEnv, projectEnv: {} });
 	// Fail here, loudly, instead of inside a benchmark.
 	resolve({});
 	resolve(full);

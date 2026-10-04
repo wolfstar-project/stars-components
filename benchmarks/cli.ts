@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ResolvedStarsConfig } from '../packages/schema/src/config/resolve.js';
 import type { Bench } from 'tinybench';
 import { changedFiles, snapshotFiles, type HashCache } from '../packages/cli/src/dev/changed-files.js';
 import { buildRows, highlight, initialLogView, matchesView } from '../packages/cli/src/dev/tui/log-view.js';
@@ -39,7 +40,9 @@ function writeFixture() {
 
 export function register(bench: Bench) {
 	const entries = fillLogs(2000);
-	const filter = initialLogView({ dev: { logs: { channels: null, levels: ['error', 'warn', 'info', 'debug'], dir: null, keep: 10 } } });
+	const config = { dev: { logs: { channels: null, levels: ['error', 'warn', 'info', 'debug'], dir: null, keep: 10 } } };
+	// Only `dev.logs` is read: the rest of the resolved configuration is not needed to build a view.
+	const filter = initialLogView(config as unknown as Pick<ResolvedStarsConfig, 'dev'>);
 	const searching = { ...filter, query: 'ping' };
 	const line = 'POST https://bot.example.com/interactions 200 12ms from ./src/commands/ping.ts:42:7 `ping` slash:ping';
 

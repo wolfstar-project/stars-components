@@ -36,14 +36,17 @@ const grouped: APIChatInputApplicationCommandInteractionData = {
 	]
 };
 
+// `makeCommand` is typed against the built `@wolfstar/http-framework`, the command against its sources: two nominal types.
+const make = () => makeCommand(ToolsCommand as never);
+
 export function register(bench: Bench) {
-	const command = makeCommand(ToolsCommand);
+	const command = make();
 	// Fail here, loudly, instead of inside a benchmark.
 	if (command.router.routeChatInputInteraction(grouped) !== 'runNested') throw new Error('The router did not resolve the subcommand group');
 
 	bench
 		.add('http-framework: build a command with subcommands', () => {
-			makeCommand(ToolsCommand);
+			make();
 		})
 		.add('http-framework: route a top-level chat input interaction', () => {
 			command.router.routeChatInputInteraction(base);

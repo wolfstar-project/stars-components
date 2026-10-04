@@ -6,8 +6,8 @@
 	"scripts": {
 		"clean": "node scripts/clean.mjs",
 		"prepare": "husky || true",
-		"lint": "oxlint packages examples && oxfmt --check packages examples",
-		"lint:fix": "oxlint --fix packages examples && oxfmt --write packages examples",
+		"lint": "oxlint packages examples benchmarks && oxfmt --check packages examples benchmarks",
+		"lint:fix": "oxlint --fix packages examples benchmarks && oxfmt --write packages examples benchmarks",
 		"test": "vitest run",
 		"bench": "node --experimental-transform-types --import ./benchmarks/register.mjs benchmarks/index.ts",
 		"build": "turbo run build",
