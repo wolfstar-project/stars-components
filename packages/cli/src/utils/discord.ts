@@ -18,6 +18,8 @@ export interface DiscordClient {
 	applicationId: string;
 	listCommands(guildId: string | null): Promise<ApplicationCommand[]>;
 	deleteCommand(guildId: string | null, commandId: string): Promise<void>;
+	/** Replaces every command of the scope with `commands` (Discord's bulk overwrite): what is not listed is deleted. */
+	putCommands(guildId: string | null, commands: readonly object[]): Promise<ApplicationCommand[]>;
 }
 
 export const COMMAND_TYPE_NAMES: Record<number, string> = { 1: 'chat input', 2: 'user', 3: 'message' };
@@ -40,10 +42,11 @@ export function createDiscordClient(config: ResolvedStarsConfig, env: NodeJS.Pro
 	const scope = (guildId: string | null) =>
 		guildId ? `/applications/${applicationId}/guilds/${guildId}/commands` : `/applications/${applicationId}/commands`;
 
-	const request = async (method: string, path: string): Promise<unknown> => {
+	const request = async (method: string, path: string, payload?: unknown): Promise<unknown> => {
 		const response = await fetch(`${API}${path}`, {
 			method,
-			headers: { authorization: `Bot ${credentials.token}` },
+			headers: { authorization: `Bot ${credentials.token}`, ...(payload === undefined ? {} : { 'content-type': 'application/json' }) },
+			...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
 			signal: AbortSignal.timeout(15_000)
 		});
 
@@ -66,6 +69,10 @@ export function createDiscordClient(config: ResolvedStarsConfig, env: NodeJS.Pro
 		},
 		async deleteCommand(guildId, commandId) {
 			await request('DELETE', `${scope(guildId)}/${commandId}`);
+		},
+		async putCommands(guildId, commands) {
+			const body = await request('PUT', scope(guildId), commands);
+			return Array.isArray(body) ? (body as ApplicationCommand[]) : [];
 		}
 	};
 }

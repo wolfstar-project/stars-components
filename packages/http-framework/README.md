@@ -394,7 +394,8 @@ to override it, e.g. for a LAN address: `dev: { url: 'http://192.168.1.5:3000' }
 
 `dev.banner` replaces the default Stars wordmark in the interactive CLI. Use a string or an array of lines, for
 example `dev: { banner: ['★ STARYL', 'Twitch notifications'] }`, or `false` to hide it. Up to four lines fit the
-compact panel. Application logs and standalone banners are available behind `l`, not printed over the dev panel.
+compact panel (`dev.layout: 'panel'`); the dashboard, which is what a roomy terminal gets, shows the project's name
+instead. Application logs and standalone banners go to the log stream, not over the dev UI.
 
 `dev` also carries optional overrides for the dev loop. Press `t` in the TUI to toggle a quick tunnel without any
 configuration:
@@ -402,16 +403,29 @@ configuration:
 ```typescript
 export default defineConfig({
 	dev: {
-		// A type checker next to the bot, reported on the dev UI's `tsc` channel. Never blocks a build.
+		// A type checker next to the bot, reported on the dev UI's `types` channel. Never blocks a build.
 		// `checker` is 'tsc' | 'golar' | 'tsz' | 'auto' (default: golar when installed, tsc otherwise).
 		typecheck: { checker: 'golar' },
 		// A cloudflared quick tunnel so Discord can reach the interactions endpoint, or an https URL you serve.
 		tunnel: true,
 		// Where the session's logs are mirrored, so a run can be read after the terminal UI is gone.
-		logFile: '.stars/dev.log'
+		logFile: '.stars/dev.log',
+		// 'auto' (default): the full-screen dashboard on a terminal of at least 90x20, the compact panel otherwise.
+		layout: 'auto',
+		// What the dev UI shows at start; `dir` adds one log file per run next to `logFile`, keeping the last `keep`.
+		logs: { channels: ['bot', 'commands', 'interactions'], levels: ['error', 'warn', 'info'], dir: 'logs', keep: 10 },
+		// When the bot's application commands change: 'prompt' (default) asks before redeploying, 'auto', or 'off'.
+		commands: { refresh: 'prompt' },
+		// `false` restarts the bot on every change, even when the bot hot reloads its pieces (`hmr` on the Client).
+		hmr: true
 	}
 });
 ```
+
+With the `hmr` option of the `Client` enabled, a change that only touches pieces is left to the bot: `stars dev` does
+not restart it, and the `hmr` channel of the dev UI shows what was reloaded. The channels that report what happens
+inside the bot (`hmr`, `commands`, `interactions`, `http`, `lifecycle`) are fed by the bot itself, see
+[`stars dev`](../cli#stars-dev).
 
 `tunnel.updateEndpoint` writes the public URL to the Discord application's `interactions_endpoint_url`; it is opt-in
 because it edits a live application, and needs `DISCORD_TOKEN` in the environment or the project's `.env`.

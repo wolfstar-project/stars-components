@@ -35,6 +35,8 @@ export interface ProjectInfo {
 	env: ResolvedStarsConfig['env'];
 	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
 	hooks: string[];
+	/** The installed modules, and the runtime plugins they registered (`module → export from package`). */
+	modules: { installed: string[]; plugins: string[] };
 	/** Non-fatal configuration diagnostics, as `CODE: message`. */
 	warnings: string[];
 	/**
@@ -69,6 +71,10 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		future: config.future,
 		env: config.env,
 		hooks: Object.keys(config.hooks),
+		modules: {
+			installed: (config.runtime?.modules ?? []).map((module) => module.name),
+			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`)
+		},
 		warnings: [...config.warnings, modulesPreloadWarning(config)]
 			.filter((warning) => warning !== null)
 			.map((warning) => `${warning.code}: ${warning.message}`),
@@ -130,7 +136,13 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 				info.dev.typecheck.enabled ? `${info.dev.typecheck.checker} → ${show(info.dev.typecheck.tsconfig)}` : colors.dim('disabled')
 			),
 			row('tunnel', describeTunnel(info.dev.tunnel, colors)),
-			row('log file', info.dev.logFile ? show(info.dev.logFile) : colors.dim('disabled'))
+			row('log file', info.dev.logFile ? show(info.dev.logFile) : colors.dim('disabled')),
+			row('log dir', info.dev.logs.dir ? `${show(info.dev.logs.dir)} (keeps ${info.dev.logs.keep})` : colors.dim('disabled')),
+			row('layout', info.dev.layout),
+			row('channels', info.dev.logs.channels?.join(', ') ?? colors.dim('all')),
+			row('levels', info.dev.logs.levels.join(', ')),
+			row('commands', `refresh: ${info.dev.commands.refresh}`),
+			row('hmr', info.dev.hmr ? 'left to the bot when it hot reloads' : colors.dim('always restart'))
 		]),
 		section('Codegen', [
 			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled'))
@@ -141,6 +153,10 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		]),
 		section('Env', [row('register', info.env.enabled ? colors.green(describeEnvOptions(info.env.options)) : colors.dim('disabled'))]),
 		section('Hooks', [row('registered', info.hooks.join(', ') || colors.dim('none'))]),
+		section('Modules', [
+			row('installed', info.modules.installed.join(', ') || colors.dim('none')),
+			...info.modules.plugins.map((plugin) => row('plugin', plugin))
+		]),
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),
 			row('nitro', flag(info.experimental.enableNitro, colors)),
