@@ -1,7 +1,20 @@
 import { Box, Text, useInput } from 'ink';
 import { useEffect, useMemo, useState } from 'react';
 import type { DevService, DevStatus } from '../../../dev-service.js';
-import { buildRows, matchesView, soloChannel, soloLevel, toggleChannel, toggleLevel, VIEW_LEVELS, type LogViewFilter } from '../../log-view.js';
+import {
+	buildRows,
+	matchesView,
+	newestErrorRow,
+	pinAt,
+	pinnedEnd,
+	soloChannel,
+	soloLevel,
+	toggleChannel,
+	toggleLevel,
+	VIEW_LEVELS,
+	type LogPin,
+	type LogViewFilter
+} from '../../log-view.js';
 import type { LogCounters } from '../hooks/useLogCounters.js';
 import { useLogVersion } from '../hooks/useLogVersion.js';
 import { usePaint } from '../theme.js';
@@ -44,8 +57,8 @@ export function Dashboard(props: DashboardProps) {
 	const [collapsed, setCollapsed] = useState<Record<SidebarGroup, boolean>>({ channels: false, levels: false });
 	const [grouped, setGrouped] = useState(false);
 	const [searching, setSearching] = useState(false);
-	// One past the last row shown while scrolled back; `null` follows the newest entry.
-	const [pinned, setPinned] = useState<number | null>(null);
+	// Where the view stops while scrolled back; `null` follows the newest entry.
+	const [pinned, setPinned] = useState<LogPin | null>(null);
 	const [marked, setMarked] = useState<number | null>(null);
 	const version = useLogVersion(service.logs);
 
@@ -62,7 +75,11 @@ export function Dashboard(props: DashboardProps) {
 		[service, filter, grouped, version]
 	);
 
-	useEffect(() => onCapture(searching), [searching, onCapture]);
+	useEffect(() => {
+		onCapture(searching);
+		// Unmounted with the search box open (the terminal shrank to the panel): the keys go back to the app.
+		return () => onCapture(false);
+	}, [searching, onCapture]);
 
 	const side = sidebarWidth(width);
 	// The pane's left border takes one column.
@@ -70,7 +87,7 @@ export function Dashboard(props: DashboardProps) {
 	const searchRows = searching || filter.query ? 1 : 0;
 	const cardRows = status.prompt ? promptHeight(status.prompt, Math.max(4, height - searchRows - 3)) : 0;
 	const paneHeight = Math.max(1, height - searchRows - cardRows);
-	const end = pinned === null ? rows.length : Math.min(rows.length, Math.max(pinned, Math.min(paneHeight, rows.length)));
+	const end = pinnedEnd(rows, pinned, paneHeight);
 	const channelWidth = Math.min(12, Math.max(3, ...channels.map((channel) => channel.length)));
 	const items = focus.group === 'channels' ? channels : VIEW_LEVELS;
 
@@ -79,8 +96,7 @@ export function Dashboard(props: DashboardProps) {
 		setPinned(null);
 	};
 	const scroll = (delta: number) => {
-		const next = Math.max(Math.min(paneHeight, rows.length), end + delta);
-		setPinned(next >= rows.length ? null : next);
+		setPinned(pinAt(rows, Math.max(Math.min(paneHeight, rows.length), end + delta)));
 	};
 
 	useInput(
@@ -127,15 +143,15 @@ export function Dashboard(props: DashboardProps) {
 			if (key.downArrow || input === 'j') return scroll(1);
 			if (key.pageUp) return scroll(-Math.max(1, paneHeight - 1));
 			if (key.pageDown) return scroll(Math.max(1, paneHeight - 1));
-			if (key.home || input === 'g') return setPinned(rows.length > paneHeight ? paneHeight : null);
+			if (key.home || input === 'g') return setPinned(pinAt(rows, Math.min(paneHeight, rows.length)));
 			if (key.end || input === 'G') return setPinned(null);
 			if (input === 'e') {
-				const index = rows.findLastIndex((row) => row.kind === 'entry' && row.entry.level === 'error');
+				// The most recent error of what is shown: grouped by channel, that is not the last row.
+				const index = newestErrorRow(rows);
 				if (index < 0) return;
 				const row = rows[index]!;
 				setMarked(row.kind === 'entry' ? row.entry.id : null);
-				const target = index + Math.ceil(paneHeight / 2);
-				setPinned(target >= rows.length ? null : Math.max(paneHeight, target));
+				setPinned(pinAt(rows, Math.max(paneHeight, index + Math.ceil(paneHeight / 2))));
 			}
 		},
 		{ isActive: active }

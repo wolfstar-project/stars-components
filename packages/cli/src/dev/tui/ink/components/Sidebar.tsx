@@ -5,7 +5,7 @@ import { displayPath } from '@wolfstar/schema';
 import { findInstalledVersion } from '../../../../utils/project.js';
 import { readOwnPackageJson } from '../../../../utils/version.js';
 import type { DevStatus } from '../../../dev-service.js';
-import { isChannelVisible, VIEW_LEVELS, type LogViewFilter } from '../../log-view.js';
+import { isChannelVisible, VIEW_LEVELS, windowAround, wrapLabels, type LogViewFilter } from '../../log-view.js';
 import { describeBadge, formatUptime, isBusy } from '../../panel-logic.js';
 import { useUptime } from '../hooks/useUptime.js';
 import { usePaint } from '../theme.js';
@@ -154,13 +154,14 @@ export function Sidebar(props: SidebarProps) {
 			: [])
 	];
 
-	const groupHeader = (group: SidebarGroup) => (
+	const groupHeader = (group: SidebarGroup, suffix = '') => (
 		<Text key={`${group}-header`} wrap="truncate-end">
 			<Text color={focus.group === group ? paint('brand') : undefined}>{collapsed[group] ? '▸' : '▾'}</Text>{' '}
 			<Text bold={focus.group === group} dimColor={focus.group !== group}>
 				{group}
 			</Text>
 			{group === 'channels' && grouped && <Text dimColor> · grouped</Text>}
+			{suffix && <Text dimColor>{suffix}</Text>}
 		</Text>
 	);
 
@@ -173,30 +174,39 @@ export function Sidebar(props: SidebarProps) {
 		);
 	};
 
+	const budget = Math.max(1, height - 1);
+	const labelWidth = Math.max(1, inner - 2);
+	const lines = (group: SidebarGroup, labels: readonly string[], nodes: readonly ReactNode[], range: [number, number] = [0, Infinity]) =>
+		wrapLabels(labels, labelWidth)
+			.slice(...range)
+			.map((line, index) => (
+				<Text key={`${group}-${index}`} wrap="truncate-end">
+					{'  '}
+					{line.flatMap((label, position) => (position > 0 ? [' ', nodes[label]] : [nodes[label]]))}
+				</Text>
+			));
+
+	const levelNodes = VIEW_LEVELS.map((level: StarsLogLevel, index) => item('levels', index, level, filter.levels.has(level), LEVEL_TOKENS[level]));
+	const levelLines = collapsed.levels ? [] : lines('levels', VIEW_LEVELS, levelNodes);
+	const channelNodes = channels.map((channel, index) => item('channels', index, channel, isChannelVisible(filter, channel), channelToken(channel)));
+	// The levels always stay in sight: many channels scroll inside the rows left over, around the selected one.
+	const channelLayout = wrapLabels(channels, labelWidth);
+	const focusedLine =
+		focus.group === 'channels'
+			? Math.max(
+					0,
+					channelLayout.findIndex((line) => line.includes(focus.index))
+				)
+			: 0;
+	const range = windowAround(channelLayout.length, focusedLine, Math.max(1, budget - head.length - 3 - levelLines.length));
+	const hiddenChannels = channelLayout.length - (range[1] - range[0]);
+
 	const filters: ReactNode[] = [
 		<Text key="gap-filters"> </Text>,
-		groupHeader('channels'),
-		...(collapsed.channels
-			? []
-			: wrapItems(
-					channels.map((channel, index) => ({
-						label: channel,
-						node: item('channels', index, channel, isChannelVisible(filter, channel), channelToken(channel))
-					})),
-					inner - 2,
-					'channels'
-				)),
+		groupHeader('channels', !collapsed.channels && hiddenChannels > 0 ? ` · ${range[0] + 1}-${range[1]}/${channelLayout.length}` : ''),
+		...(collapsed.channels ? [] : lines('channels', channels, channelNodes, range)),
 		groupHeader('levels'),
-		...(collapsed.levels
-			? []
-			: wrapItems(
-					VIEW_LEVELS.map((level: StarsLogLevel, index) => ({
-						label: level,
-						node: item('levels', index, level, filter.levels.has(level), LEVEL_TOKENS[level])
-					})),
-					inner - 2,
-					'levels'
-				))
+		...levelLines
 	];
 
 	const keys = KEYS.map((section, sectionIndex) => [
@@ -212,7 +222,6 @@ export function Sidebar(props: SidebarProps) {
 	]);
 
 	// The footer keeps the last line; everything else is dropped from the bottom up when the terminal is short.
-	const budget = Math.max(1, height - 1);
 	let body = [...head, ...filters, ...keys.flat()];
 	if (body.length > budget) body = [...head, ...filters, ...keys[1]!];
 	if (body.length > budget) body = [...head, ...filters];
@@ -233,29 +242,4 @@ export function Sidebar(props: SidebarProps) {
 			</Box>
 		</Box>
 	);
-}
-
-/** Lays filter items out as words, wrapping to the next line when the sidebar runs out of width. */
-function wrapItems(items: readonly { label: string; node: ReactNode }[], width: number, key: string): ReactNode[] {
-	const lines: ReactNode[][] = [[]];
-	let used = 0;
-	for (const { label, node } of items) {
-		if (used > 0 && used + 1 + label.length > width) {
-			lines.push([]);
-			used = 0;
-		}
-
-		if (used > 0) lines.at(-1)!.push(' ');
-		lines.at(-1)!.push(node);
-		used += (used > 0 ? 1 : 0) + label.length;
-	}
-
-	return lines
-		.filter((line) => line.length > 0)
-		.map((line, index) => (
-			<Text key={`${key}-${index}`} wrap="truncate-end">
-				{'  '}
-				{line}
-			</Text>
-		));
 }

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';
 import { DevService } from '../src/dev/dev-service.js';
+import { LogBuffer } from '../src/utils/log-buffer.js';
 import { createPlainRenderer, type Renderer } from '../src/dev/tui/plain.js';
 import { initialLogView } from '../src/dev/tui/log-view.js';
 import { createTuiRenderer } from '../src/dev/tui/tui.js';
@@ -484,6 +485,7 @@ describe('renderers', () => {
 		test('asks before refreshing the commands, and answers through the service', async () => {
 			await dashboard();
 			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			service.supervisor.emit('message', { source: 'stars:bridge', type: 'ready', clientId: '1', port: 3000 });
 			const report = (description: string) =>
 				service.supervisor.emit('message', {
 					source: 'stars:bridge',
@@ -498,7 +500,7 @@ describe('renderers', () => {
 			expect(stdout.screen()).toContain('- ping changed');
 			stdin.press('y');
 			await waitFor(() => !stdout.screen().includes('Refresh commands?'));
-			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh' });
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
 
 			report('Ping again');
 			await waitFor(() => stdout.screen().includes('Refresh commands?'));
@@ -537,6 +539,89 @@ describe('renderers', () => {
 			expect(stdout.screen()).not.toContain('▾ channels');
 			stdout.resize(120, 30);
 			await waitFor(() => stdout.screen().includes('▾ channels'));
+		});
+
+		test('gives the keys back when the terminal shrinks to the panel with the search box open', async () => {
+			const restart = vi.spyOn(service, 'restart').mockResolvedValue();
+			await dashboard();
+			stdin.press('/');
+			await waitFor(() => stdout.screen().includes(' / ▏'));
+			stdout.resize(70, 16);
+			await waitFor(() => stdout.screen().includes('Stars') && stdout.terminal.buffer.active.type === 'normal');
+			await wait(30);
+			stdin.press('r');
+			await waitFor(() => restart.mock.calls.length === 1);
+		});
+
+		test('keeps the lines in view while scrolled back, even when the buffer drops its oldest entries', async () => {
+			service = new DevService(service.config, { builder: new IdleBuilder(), logs: new LogBuffer(60) });
+			await dashboard();
+			for (let i = 0; i < 60; i++) service.log('app', 'info', `line ${i}`);
+			await waitFor(() => stdout.screen().includes('line 59'));
+			for (let i = 0; i < 10; i++) {
+				stdin.press('\u001b[A');
+				await wait(15);
+			}
+			await waitFor(() => stdout.screen().includes('● paused'));
+			// Every key press has been handled before the view is read.
+			await wait(150);
+			const before = stdout
+				.screen()
+				.split('\n')
+				.filter((row) => row.includes('● line'))
+				.at(-1);
+			expect(before).toMatch(/line \d+$/);
+
+			// Twenty more entries push twenty out of the buffer: the view must not slide along with the indices.
+			for (let i = 60; i < 80; i++) service.log('app', 'info', `line ${i}`);
+			await wait(80);
+			expect(
+				stdout
+					.screen()
+					.split('\n')
+					.filter((row) => row.includes('● line'))
+					.at(-1)
+			).toBe(before);
+		});
+
+		test('e jumps to the most recent error, also when the stream is grouped by channel', async () => {
+			await dashboard();
+			service.log('build', 'error', 'older build error');
+			service.log('app', 'info', 'bot line');
+			service.log('app', 'error', 'newest bot error');
+			service.log('build', 'info', 'build line');
+			await waitFor(() => stdout.screen().includes('build line'));
+			// Grouped, the channels are listed build first then bot, so the newest error is not the last error row.
+			stdin.press('b');
+			await waitFor(() => stdout.screen().includes('build · 2'));
+			stdin.press('e');
+			await waitFor(() => stdout.screen().includes('▎'));
+			expect(line('▎')).toContain('newest bot error');
+		});
+
+		test('keeps the level filters in sight however many channels there are', async () => {
+			stdout.terminal.dispose();
+			stdout = new FakeStdout(90, 20);
+			await dashboard();
+			for (let i = 10; i < 50; i++) service.log('stars', 'info', 'x', { channel: `channel-${i}` });
+			await waitFor(() => stdout.screen().includes('  channel-10'));
+			expect(stdout.screen()).toContain('▾ levels');
+			expect(stdout.screen()).toContain('debug trace');
+			expect(stdout.screen()).toMatch(/▾ channels · 1-\d+\/\d+/);
+			// Moving the selection scrolls the channels, never the levels away.
+			for (let i = 0; i < 30; i++) {
+				stdin.press('\u001b[C');
+				await wait(10);
+			}
+			await waitFor(() => /  channel-[34]\d/.test(stdout.screen()));
+			expect(stdout.screen()).not.toContain('  channel-10');
+			expect(stdout.screen()).toContain('debug trace');
+			expect(
+				stdout
+					.screen()
+					.split('\n')
+					.every((row) => row.length <= 90)
+			).toBe(true);
 		});
 
 		test('leaves the alternate buffer on stop', async () => {

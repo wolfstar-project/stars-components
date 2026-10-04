@@ -155,6 +155,76 @@ function layout(entries: readonly LogEntry[]): LogRow[] {
 	return rows;
 }
 
+/**
+ * Where a scrolled-back view stops: the entry of its last line, and how many lines without an entry (a rule) follow
+ * it. An index into the rows would drift as soon as the buffer drops its oldest entries or a filter changes.
+ */
+export interface LogPin {
+	readonly id: number;
+	readonly extra: number;
+}
+
+const entryId = (row: LogRow | undefined): number | null => (row?.kind === 'entry' || row?.kind === 'detail' ? row.entry.id : null);
+
+/** The pin for a view ending at `end` (exclusive), `null` when that is the end of the stream: the view is live. */
+export function pinAt(rows: readonly LogRow[], end: number): LogPin | null {
+	if (end >= rows.length) return null;
+	for (let index = end - 1; index >= 0; index--) {
+		const id = entryId(rows[index]);
+		if (id !== null) return { id, extra: end - 1 - index };
+	}
+
+	return null;
+}
+
+/**
+ * One past the last row a pinned view shows. When the pinned entry is gone (dropped from the buffer, or filtered
+ * out) the view falls back to the oldest rows there are, which is where that entry was heading.
+ */
+export function pinnedEnd(rows: readonly LogRow[], pin: LogPin | null, height: number): number {
+	if (pin === null) return rows.length;
+	const floor = Math.min(height, rows.length);
+	const index = rows.findLastIndex((row) => entryId(row) === pin.id);
+	return index < 0 ? floor : Math.min(rows.length, Math.max(floor, index + 1 + pin.extra));
+}
+
+/** The row of the most recent error among `rows`, whatever order they are listed in, `-1` without one. */
+export function newestErrorRow(rows: readonly LogRow[]): number {
+	let newest = -1;
+	for (const [index, row] of rows.entries()) {
+		if (row.kind !== 'entry' || row.entry.level !== 'error') continue;
+		const current = rows[newest];
+		if (current?.kind !== 'entry' || row.entry.id > current.entry.id) newest = index;
+	}
+
+	return newest;
+}
+
+/** Lays labels out as words on lines of `width` columns. Each line lists the indices of its labels. */
+export function wrapLabels(labels: readonly string[], width: number): number[][] {
+	const lines: number[][] = [];
+	let used = 0;
+	for (const [index, label] of labels.entries()) {
+		if (lines.length === 0 || (used > 0 && used + 1 + label.length > width)) {
+			lines.push([]);
+			used = 0;
+		}
+
+		lines.at(-1)!.push(index);
+		used += (used > 0 ? 1 : 0) + label.length;
+	}
+
+	return lines;
+}
+
+/** The `[start, end)` of at most `max` lines out of `count` that keeps `focused` in sight. */
+export function windowAround(count: number, focused: number, max: number): [start: number, end: number] {
+	if (count <= max) return [0, count];
+	const size = Math.max(1, max);
+	const start = Math.max(0, Math.min(count - size, focused - size + 1));
+	return [start, start + size];
+}
+
 export type TokenKind = 'url' | 'path' | 'number' | 'name' | 'dim' | 'ok' | 'warn' | 'error';
 
 export interface Segment {
