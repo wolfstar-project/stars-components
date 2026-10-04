@@ -1,4 +1,9 @@
-import type { BooleanString, IntegerString, NumberString } from './types';
+// Structurally the same as `BooleanString`, `IntegerString` and `NumberString` from `./types`, declared here so that the
+// `@wolfstar/env-utilities/varlock` entry does not share a declaration chunk with `Env` (a chunk breaks the
+// `IntegerString` lookup inside a `declare module '@wolfstar/env-utilities'` augmentation).
+type BooleanString = 'true' | 'false';
+type IntegerString = `${bigint}`;
+type NumberString = `${number}`;
 
 /**
  * Maps one value type of varlock's generated `CoercedEnvSchema` to the string form `process.env` holds, as
