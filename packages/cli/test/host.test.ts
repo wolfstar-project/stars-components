@@ -2,6 +2,9 @@ const lookup = vi.fn();
 
 vi.mock('node:dns/promises', () => ({ lookup: (...args: unknown[]) => lookup(...args) }));
 
+// The suite shares one module registry (`isolate: false`): a test file that loaded the command registry already
+// imported `host.js` with the real `node:dns/promises`, and the mock above would never be seen.
+vi.resetModules();
 const { resolveLocalhost, withResolvedLocalhost } = await import('../src/dev/host.js');
 
 describe('resolveLocalhost', () => {

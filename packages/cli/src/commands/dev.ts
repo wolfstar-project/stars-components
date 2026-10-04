@@ -3,8 +3,9 @@ import { defineCommand } from 'citty';
 import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
-import { LogFileWriter } from '../dev/log-file.js';
-import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
+import { LogFileWriter, runLogFile } from '../dev/log-file.js';
+import { initialLogView, isLogLevel } from '../dev/tui/log-view.js';
+import { collectFlag, projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { ExitCode, renderCrashReport } from '../utils/errors.js';
 import { applyEnvOptions, loadProject, withProjectEnv } from '../utils/hooks.js';
@@ -16,11 +17,21 @@ export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
 	/** `--theme`. */
 	theme?: string;
+	/** `--channel`, each value possibly a comma-separated list. */
+	channel?: string[];
+	/** `--level`. */
+	level?: string;
 }
+
+const LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const;
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
 	if (options.theme !== undefined && !isThemeSetting(options.theme)) {
 		throw cliDiagnostics.INVALID_THEME({ theme: options.theme, themes: THEME_SETTINGS.join(', ') });
+	}
+
+	if (options.level !== undefined && !isLogLevel(options.level)) {
+		throw cliDiagnostics.INVALID_OPTION({ option: '--level', value: options.level, allowed: LEVELS.join(', ') });
 	}
 
 	// Dev mode applies to config evaluation, build plugins, and the supervised application — not only the child.
@@ -37,8 +48,13 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	await hooks.callHook('builder:created', builder, config);
 	const service = new DevService(config, { builder, hooks });
 	await reportWarnings(config, (text) => service.log('stars', 'warn', text), { production: false });
-	const logFile = config.dev.logFile ? new LogFileWriter(config.dev.logFile, service.logs) : null;
-	logFile?.open();
+	// The files receive every entry: the filter below only decides what the terminal shows.
+	const logFiles = [
+		...(config.dev.logFile ? [config.dev.logFile] : []),
+		...(config.dev.logs?.dir ? [runLogFile(config.dev.logs.dir, config.dev.logs.keep)] : [])
+	].map((file) => new LogFileWriter(file, service.logs));
+	for (const file of logFiles) file.open();
+	const filter = initialLogView(config, { channels: options.channel, level: options.level });
 	const renderer =
 		mode === 'tui'
 			? (await import('../dev/tui/tui.js')).createTuiRenderer(service, {
@@ -49,7 +65,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 						if (!saveTheme(setting)) service.log('stars', 'warn', 'Could not save the theme preference.');
 					}
 				})
-			: (await import('../dev/tui/plain.js')).createPlainRenderer(service, { color });
+			: (await import('../dev/tui/plain.js')).createPlainRenderer(service, { color, filter });
 
 	let exiting: Promise<never> | null = null;
 	const shutdown = (code: ExitCode): Promise<never> => {
@@ -59,7 +75,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 			// Behind any hook still running (an async `build:done`), and logged rather than thrown if it fails.
 			await service.runHook('dev:close', config);
 			await service.stop();
-			logFile?.close();
+			for (const file of logFiles) file.close();
 			process.exit(code);
 		})();
 		return exiting;
@@ -123,9 +139,25 @@ export default defineCommand({
 		theme: {
 			type: 'string',
 			description: `Colour theme of the interactive UI: ${THEME_SETTINGS.join(', ')} (or STARS_THEME; press T in the UI to pick one)`
+		},
+		channel: {
+			type: 'string',
+			description: 'Only show these log channels at start (repeatable, or comma-separated; defaults to dev.logs.channels)'
+		},
+		level: {
+			type: 'string',
+			description: `Only show this log level and the more severe ones at start: ${LEVELS.join(', ')} (defaults to dev.logs.levels)`
 		}
 	},
-	async run({ args }) {
-		await runDev({ config: args.config, cwd: args.cwd, tui: args.tui ? undefined : false, theme: args.theme });
+	async run({ args, rawArgs }) {
+		const channel = collectFlag(rawArgs, 'channel');
+		await runDev({
+			config: args.config,
+			cwd: args.cwd,
+			tui: args.tui ? undefined : false,
+			theme: args.theme,
+			channel: channel.length > 0 ? channel : undefined,
+			level: args.level
+		});
 	}
 });

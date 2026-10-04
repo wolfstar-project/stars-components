@@ -63,6 +63,39 @@ describe('ProcessSupervisor', () => {
 		expect(supervisor.pid).toBeNull();
 	});
 
+	test('exchanges messages with the process over IPC when asked to', async () => {
+		const supervisor = new ProcessSupervisor({
+			command: process.execPath,
+			args: ['-e', "process.on('message', (message) => process.send({ echo: message })); process.send('up');"],
+			cwd: process.cwd(),
+			env: process.env,
+			killTimeout: 2000,
+			ipc: true
+		});
+		const messages: unknown[] = [];
+		supervisor.on('message', (message) => messages.push(message));
+		expect(supervisor.send('too early')).toBe(false);
+
+		supervisor.start();
+		await waitFor(() => messages.includes('up'));
+		expect(supervisor.send({ hello: 'bot' })).toBe(true);
+		await waitFor(() => messages.length === 2);
+		expect(messages[1]).toEqual({ echo: { hello: 'bot' } });
+
+		await supervisor.stop();
+		expect(supervisor.send('too late')).toBe(false);
+	});
+
+	test('send() is refused without an IPC channel', async () => {
+		const supervisor = createSupervisor(KEEPALIVE_SCRIPT);
+		const lines: string[] = [];
+		supervisor.on('stdout', (line) => lines.push(line));
+		supervisor.start();
+		await waitFor(() => lines.includes('ready'));
+		expect(supervisor.send('hello')).toBe(false);
+		await supervisor.stop();
+	});
+
 	test('kill() without a process does nothing', () => {
 		expect(() => createSupervisor(KEEPALIVE_SCRIPT).kill()).not.toThrow();
 	});

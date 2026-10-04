@@ -2,14 +2,25 @@ import { EventEmitter } from 'node:events';
 import { stripVTControlCharacters } from 'node:util';
 
 export type LogSource = 'stars' | 'build' | 'app' | 'tsc' | 'tunnel';
-export type LogLevel = import('@wolfstar/schema').BuilderLogLevel;
+/** The builders' levels, plus `trace` for the per-request entries the bot reports. */
+export type LogLevel = import('@wolfstar/schema').BuilderLogLevel | 'trace';
+
+/**
+ * The channel an entry of each source lands on unless it names one: who wrote it. The bot's own events (`hmr`,
+ * `commands`, `interactions`, `http`, `lifecycle`) and plugins pick their own.
+ */
+export const SOURCE_CHANNELS: Readonly<Record<LogSource, string>> = { stars: 'cli', build: 'build', app: 'bot', tsc: 'types', tunnel: 'tunnel' };
 
 export interface LogEntry {
 	readonly id: number;
 	readonly time: number;
 	readonly source: LogSource;
+	/** What the entry is about, for filtering. Defaults to {@link SOURCE_CHANNELS} of the source. */
+	readonly channel: string;
 	readonly level: LogLevel;
 	readonly text: string;
+	/** Lines that belong to the entry (a list of loaded commands, the hint of an error), shown under it. */
+	readonly detail?: readonly string[];
 }
 
 export interface LogFilter {
@@ -18,13 +29,14 @@ export interface LogFilter {
 	query?: string | null;
 }
 
-export type LogInput = Omit<LogEntry, 'id' | 'time'>;
+export type LogInput = Omit<LogEntry, 'id' | 'time' | 'channel'> & { readonly channel?: string };
 
 /**
  * A bounded, in-memory log store shared by the dev service and its renderers.
  */
 export class LogBuffer extends EventEmitter<{ entry: [LogEntry]; clear: [] }> {
 	#entries: LogEntry[] = [];
+	#channels = new Set<string>();
 	#nextId = 1;
 
 	public constructor(public readonly capacity = 2000) {
@@ -32,7 +44,8 @@ export class LogBuffer extends EventEmitter<{ entry: [LogEntry]; clear: [] }> {
 	}
 
 	public push(input: LogInput): LogEntry {
-		const entry: LogEntry = { id: this.#nextId++, time: Date.now(), ...input };
+		const entry: LogEntry = { id: this.#nextId++, time: Date.now(), ...input, channel: input.channel ?? SOURCE_CHANNELS[input.source] };
+		this.#channels.add(entry.channel);
 		this.#entries.push(entry);
 		if (this.#entries.length > this.capacity) this.#entries.splice(0, this.#entries.length - this.capacity);
 		this.emit('entry', entry);
@@ -41,6 +54,11 @@ export class LogBuffer extends EventEmitter<{ entry: [LogEntry]; clear: [] }> {
 
 	public entries(): readonly LogEntry[] {
 		return this.#entries;
+	}
+
+	/** Every channel an entry was logged on since the session started, sorted. Clearing the logs keeps them. */
+	public channels(): string[] {
+		return [...this.#channels].sort();
 	}
 
 	public filter(filter: LogFilter): LogEntry[] {
@@ -59,7 +77,7 @@ export class LogBuffer extends EventEmitter<{ entry: [LogEntry]; clear: [] }> {
 	}
 }
 
-const LEVEL_ORDER: Record<LogLevel, number> = { debug: 0, info: 1, success: 1, warn: 2, error: 3 };
+const LEVEL_ORDER: Record<LogLevel, number> = { trace: -1, debug: 0, info: 1, success: 1, warn: 2, error: 3 };
 
 /**
  * Whether `level` is at least as severe as `minimum`.

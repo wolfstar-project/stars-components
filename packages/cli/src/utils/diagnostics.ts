@@ -51,6 +51,10 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (p: { theme: string; themes: string }) => `Unknown theme \`${p.theme}\`.`,
 			fix: (p: { theme: string; themes: string }) => `Use one of: ${p.themes}.`
 		},
+		INVALID_OPTION: {
+			why: (p: { option: string; value: string; allowed: string }) => `Unknown value \`${p.value}\` for ${p.option}.`,
+			fix: (p: { option: string; value: string; allowed: string }) => `Use one of: ${p.allowed}.`
+		},
 		CODEGEN_OUTDATED: {
 			why: (_p: {}) => 'Generated files are out of date, run `stars codegen` to update them.'
 		},
