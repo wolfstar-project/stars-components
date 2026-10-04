@@ -13,7 +13,7 @@ preferWorkspacePackages: true
 strictPeerDependencies: false
 
 overrides:
-    ansi-regex: '^6.3.0'
+    ansi-regex: '^6.4.0'
     esbuild: '^0.28.2'
     minimist: '1.2.8'
 

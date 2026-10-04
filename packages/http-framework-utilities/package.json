@@ -68,7 +68,7 @@
 		"@wolfstar/discord-utilities": "workspace:^"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^5.0.1",
+		"@vitest/coverage-v8": "^5.0.3",
 		"@wolfstar/http-framework": "workspace:*",
 		"@wolfstar/http-framework-test-utils": "workspace:*",
 		"@wolfstar/plugin-gateway": "^0.8.0",
@@ -76,7 +76,7 @@
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
-		"vitest": "^5.0.1"
+		"vitest": "^5.0.3"
 	},
 	"peerDependencies": {
 		"@wolfstar/http-framework": "workspace:^",
