@@ -17,6 +17,17 @@
 
 Functional utilities for reading and parsing environmental variables, based on [Wolfstar](https://wolfstar.rocks)'s internal tools.
 
+## Installation
+
+`dotenv` and `dotenv-expand` are optional peer dependencies: install them to use the `dotenv` loader (the default when the
+project has no varlock schema), and skip them when the project uses the [`varlock` loader](#experimental-varlock-support).
+
+```sh
+pnpm add @wolfstar/env-utilities dotenv dotenv-expand
+```
+
+Without them, `setup()` throws an `Error` that says which package is missing.
+
 ## Usage
 
 ### Setup

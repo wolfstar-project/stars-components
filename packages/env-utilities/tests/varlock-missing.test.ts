@@ -42,6 +42,9 @@ describe('Varlock loader without the optional package', () => {
 	});
 
 	test('should keep dotenv when a schema is found but `varlock` is not installed', async () => {
+		// Only `varlock` is missing: `dotenv` still resolves through the real `require`.
+		const { createRequire } = await vi.importActual<typeof import('node:module')>('node:module');
+		requireMock.mockImplementation(createRequire(import.meta.url));
 		requireMock.resolve = vi.fn(() => {
 			throw Object.assign(new Error("Cannot find package 'varlock'"), { code: 'MODULE_NOT_FOUND' });
 		});
@@ -53,6 +56,27 @@ describe('Varlock loader without the optional package', () => {
 		} finally {
 			delete process.env.VARLOCK_TEST_SOURCE;
 		}
+	});
+
+	test('should throw a friendly error when the dotenv loader runs without `dotenv`', async () => {
+		requireMock.mockImplementation(() => {
+			const error = new Error("Cannot find package 'dotenv'") as NodeJS.ErrnoException;
+			error.code = 'MODULE_NOT_FOUND';
+			throw error;
+		});
+
+		const loadEnvFiles = await load();
+		expect(() => loadEnvFiles({ loader: 'dotenv' })).toThrow(/needs the `dotenv` and `dotenv-expand` packages/);
+	});
+
+	test('should not require `dotenv` for the varlock loader', async () => {
+		requireMock.mockImplementation((id: string) => {
+			if (id.startsWith('dotenv')) throw new Error(`unexpected require of ${id}`);
+			throw Object.assign(new Error('stop here'), { code: 'STOP' });
+		});
+
+		const loadEnvFiles = await load();
+		expect(() => loadEnvFiles({ loader: 'varlock' })).toThrow('stop here');
 	});
 
 	test('should rethrow errors unrelated to a missing package', async () => {

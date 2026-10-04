@@ -38,6 +38,9 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 		'@sapphire/pieces',
 		'discord-api-types',
 		'@wolfstar/env-utilities',
+		// Optional peers of `@wolfstar/env-utilities`, needed by its default `dotenv` loader.
+		'dotenv',
+		'dotenv-expand',
 		'@wolfstar/start-banner',
 		'gradient-string',
 		// Backs the dev/build scripts for every project kind.

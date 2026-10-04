@@ -1,12 +1,28 @@
 import { container } from '@sapphire/pieces';
-import { config, populate, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
-import { expand } from 'dotenv-expand';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
+/** The variables a loader resolved, as `dotenv`'s `config()` reports them. */
+export interface EnvLoaderOutput {
+	parsed?: Record<string, string>;
+	error?: Error;
+}
+
+type DotenvParseOutput = Record<string, string>;
+
+export interface EnvLoaderOptions {
+	/**
+	 * Logs which files are loaded and why a key was or was not set, to help debug missing keys or values.
+	 */
+	debug?: boolean;
+	/**
+	 * The encoding of the files containing the environment variables (`dotenv` loader only).
+	 *
+	 * @default 'utf8'
+	 */
+	encoding?: string;
 	/**
 	 * You may specify a custom environment if `NODE_ENV` isn't sufficient.
 	 */
@@ -63,7 +79,7 @@ function resolveDebugLogger(): MinimalDebugLogger {
 	return (container as { logger?: MinimalDebugLogger }).logger ?? console;
 }
 
-export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
+export function loadEnvFiles(options?: EnvLoaderOptions): EnvLoaderOutput {
 	const log = options?.debug
 		? (message: string) => resolveDebugLogger().debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`)
 		: () => undefined;
@@ -79,6 +95,8 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 	if (!process.env.NODE_ENV) {
 		throw new Error('The NODE_ENV environment variable is required but was not specified.');
 	}
+
+	const { config, populate, expand } = requireDotenv();
 
 	const env = options?.env || process.env.NODE_ENV;
 	const dotenvPaths = options?.path ? [options.path] : [resolve(process.cwd(), 'src', '.env'), resolve(process.cwd(), '.env')];
@@ -171,7 +189,7 @@ interface VarlockSerializedEnv {
  * `varlock/auto-load` does. Its runtime redaction and leak detection are not part of the CLI, import
  * `varlock/auto-load` as well to opt into them.
  */
-function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => void): DotenvConfigOutput {
+function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => void): EnvLoaderOutput {
 	log('resolving environment variables via varlock');
 
 	const require = createRequire(import.meta.url);
@@ -333,6 +351,31 @@ function filterByPrefix(parsed: DotenvParseOutput, prefix: string, log: (message
 			obj[key] = parsed[key];
 			return obj;
 		}, {});
+}
+
+/**
+ * `dotenv` and `dotenv-expand` are optional peer dependencies, so a project using the `varlock` loader does not have
+ * to install them: they are only required here, when the `dotenv` loader actually runs.
+ */
+function requireDotenv(): {
+	config: typeof import('dotenv').config;
+	populate: typeof import('dotenv').populate;
+	expand: typeof import('dotenv-expand').expand;
+} {
+	const require = createRequire(import.meta.url);
+	try {
+		const { config, populate } = require('dotenv') as typeof import('dotenv');
+		const { expand } = require('dotenv-expand') as typeof import('dotenv-expand');
+		return { config, populate, expand };
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') {
+			throw new Error(
+				"The 'dotenv' loader needs the `dotenv` and `dotenv-expand` packages, which are optional peer dependencies of `@wolfstar/env-utilities`. Install them with your package manager (e.g. `pnpm add dotenv dotenv-expand`), or use the 'varlock' loader."
+			);
+		}
+
+		throw error;
+	}
 }
 
 /**

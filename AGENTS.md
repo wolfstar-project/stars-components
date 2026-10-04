@@ -114,9 +114,14 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
   be combined with `--sharder`. See `packages/create-http-framework/README.md` for the full flag/prompt reference.
 - `@wolfstar/env-utilities` supports an optional `loader?: 'dotenv' | 'varlock'` (`EnvLoaderOptions`/`EnvSetupOptions`,
   also settable via the `DOTENV_LOADER` env var) to opt into [varlock](https://varlock.dev) — a schema-based,
-  type-safe alternative to `dotenv` — instead of the default `dotenv`/`dotenv-expand` loader; `varlock` is an optional
-  peer dependency and the package throws a friendly error if it's selected but not installed. This is experimental
-  and independent of the `future.compatibilityVersion` default above.
+  type-safe alternative to `dotenv` — instead of the default `dotenv`/`dotenv-expand` loader. It is picked automatically
+  when a `.env.schema` is found and `varlock` is installed (an explicit `path`, `loader` or `DOTENV_LOADER` wins) and
+  runs `varlock load` with the `json-full` format. `dotenv`, `dotenv-expand` and `varlock` are all optional peer
+  dependencies, loaded lazily, and the package throws a friendly error if the packages of the selected loader are not
+  installed (scaffolded projects and the examples depend on `dotenv`/`dotenv-expand` themselves).
+  `@wolfstar/env-utilities/varlock` exports `EnvFromVarlock` (derive `Env` from varlock's generated `CoercedEnvSchema`)
+  and `env` (varlock's typed `ENV`). This is experimental and independent of the `future.compatibilityVersion` default
+  above.
 - `stars prepare` (and `stars dev`/`stars build`, which call it) generates `.stars/tsconfig.json` and `imports.dts`
   (the way `nuxt prepare` generates `.nuxt/`), so projects no longer hand-maintain TypeScript paths/compiler options:
   it materializes Sapphire's base/extra-strict/decorators presets, `@/`, `~/`, `@@/`, `~~/`, and custom filesystem
