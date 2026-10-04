@@ -118,6 +118,10 @@ export const configDiagnostics = defineDiagnostics({
 			why: (p: { url: string }) => `The tunnel URL must be https, received "${p.url}"`,
 			fix: (_p: { url: string }) => 'Discord only accepts an https interactions endpoint.'
 		},
+		INVALID_CHOICE: {
+			why: (p: { path: string; value: string; allowed: string }) => `Unknown value "${p.value}" for \`${p.path}\``,
+			fix: (p: { path: string; value: string; allowed: string }) => `Use one of ${p.allowed}.`
+		},
 		INVALID_TYPECHECKER: {
 			why: (p: { checker: string }) => `Unknown type checker "${p.checker}"`,
 			fix: (_p: { checker: string }) => "Use one of 'tsc', 'golar', 'tsz' or 'auto'."
