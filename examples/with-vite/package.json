@@ -1,6 +1,6 @@
 {
 	"name": "with-vite",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"private": true,
 	"description": "WolfStar HTTP bot example built with Vite through experimental.enableVite",
 	"type": "module",

@@ -1,5 +1,18 @@
 # @wolfstar/schema
 
+## 0.6.0
+
+### Minor Changes
+
+- [#254](https://github.com/wolfstar-project/stars-components/pull/254) [`46c6169`](https://github.com/wolfstar-project/stars-components/commit/46c616943363d3db39149a56a8e8e5bd55937b30) - feat(schema): add `dev.layout`, `dev.logs`, `dev.commands.refresh` and `dev.hmr` to `stars.config` ([#252](https://github.com/wolfstar-project/stars-components/issues/252))
+
+    The options of the `stars dev` rework: `dev.layout` (`'auto' | 'dashboard' | 'panel'`), `dev.logs` (`channels` and
+    `levels` shown at start, `dir` and `keep` for one log file per run), `dev.commands.refresh`
+    (`'prompt' | 'auto' | 'off'`) and `dev.hmr`. An unknown value of a fixed-choice option is reported with the new
+    `INVALID_CHOICE` diagnostic. `LOG_LEVELS` and `DEFAULT_LOG_LEVELS` are exported. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#265](https://github.com/wolfstar-project/stars-components/pull/265) [`9374fb0`](https://github.com/wolfstar-project/stars-components/commit/9374fb0b50016ebfcdd28d0940cf8d1262adf85d) - feat(schema): accept `'node'` as `env.loader` in `stars.config`, and leave the loader to be detected when it is not set. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.5.0
 
 ### Minor Changes

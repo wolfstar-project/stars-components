@@ -1,5 +1,13 @@
 # with-sharder
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`0f19bf7`](https://github.com/wolfstar-project/stars-components/commit/0f19bf7105ec4f2640269e16b89267fc83f5aeda), [`d3ab9fa`](https://github.com/wolfstar-project/stars-components/commit/d3ab9fadca28c2f525ee91097fc94fd425b49eb1), [`081f1e9`](https://github.com/wolfstar-project/stars-components/commit/081f1e911925e71a42865da53545f0f7db40c50b), [`9374fb0`](https://github.com/wolfstar-project/stars-components/commit/9374fb0b50016ebfcdd28d0940cf8d1262adf85d), [`7c327c4`](https://github.com/wolfstar-project/stars-components/commit/7c327c44134a825f4e077a753ac0eae591558d5a), [`8defefe`](https://github.com/wolfstar-project/stars-components/commit/8defefe8b935ded6d0f91a375715064183078952), [`95cdbd4`](https://github.com/wolfstar-project/stars-components/commit/95cdbd470c9f8a61d3201f33448d4f430725e934)]:
+    - @wolfstar/http-framework@6.1.1
+    - @wolfstar/env-utilities@2.3.0
+
 ## 0.0.5
 
 ### Patch Changes

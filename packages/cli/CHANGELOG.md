@@ -1,5 +1,63 @@
 # @wolfstar/cli
 
+## 2.3.0
+
+### Minor Changes
+
+- [#257](https://github.com/wolfstar-project/stars-components/pull/257) [`0f19bf7`](https://github.com/wolfstar-project/stars-components/commit/0f19bf7105ec4f2640269e16b89267fc83f5aeda) - feat(cli): `stars commands diff` and `deploy`, `stars doctor` and shell completions ([#252](https://github.com/wolfstar-project/stars-components/issues/252))
+
+    - `stars commands diff` compares the commands the built bot defines with the ones Discord has deployed (`--check` for
+      CI); `stars commands deploy` overwrites them after a confirmation (`--yes` for scripts). The commands are read from
+      the bot itself: it is started with the dev bridge, loads its pieces, reports its registry and exits before it
+      listens. This needs `@wolfstar/http-framework` 6.1 or later and a built project.
+    - `stars doctor` checks the runtime, the framework, the credentials, the dev port, the tunnel and the generated files,
+      with a fix for each problem (`--online` also asks Discord, `--json` for scripts).
+    - `stars completions <bash|zsh|fish>` prints a completion script generated from the registered commands.
+    - `stars info` lists the installed modules and the new `dev` options.
+
+    The `@wolfstar/http-framework` README documents the new `dev` options of `stars.config`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#255](https://github.com/wolfstar-project/stars-components/pull/255) [`9d93ca5`](https://github.com/wolfstar-project/stars-components/commit/9d93ca5cc2dfacfc4210e009881b6be995691bda) - feat(cli): log channels and a bot-to-CLI bridge in `stars dev` ([#252](https://github.com/wolfstar-project/stars-components/issues/252))
+
+    A dev log entry now has a channel (`cli`, `build`, `bot`, `types`, `tunnel`), a `trace` level and optional detail
+    lines. `dev.logs`, `--channel` and `--level` choose what is shown at start; the log file always receives everything,
+    and `dev.logs.dir` adds one file per run.
+
+    The bot reports what happens inside it over an IPC channel instead of leaving the CLI to guess from stdout: a preload
+    registers a plugin on the project's own `Client` (`@wolfstar/http-framework` 6.1 or later). That feeds the `hmr`,
+    `commands`, `interactions`, `http` and `lifecycle` channels, and two behaviours:
+
+    - **Hot reload.** With the `hmr` option of the `Client` enabled, a build that only changed pieces is left to the bot
+      instead of restarting it. `dev.hmr: false` always restarts.
+    - **Command refresh.** When the application commands the bot registers change, `stars dev` reports it and, with
+      `dev.commands.refresh: 'auto'`, has the bot redeploy them.
+
+    Changed: the log file prints the channel of an entry where it printed its source (`cli`, `bot`, `types` instead of
+    `stars`, `app`, `tsc`), and the detail lines of an entry indented under it. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#256](https://github.com/wolfstar-project/stars-components/pull/256) [`ed1b141`](https://github.com/wolfstar-project/stars-components/commit/ed1b14190cff8d9da1fc803b38d0b1a3dbd27e7c) - feat(cli): a full-screen dashboard for `stars dev` ([#252](https://github.com/wolfstar-project/stars-components/issues/252))
+
+    On a terminal of at least 90x20 `stars dev` opens a dashboard: a sidebar with the state of the session (framework
+    version, uptime, port, tunnel, log file) and the channel and level filters, and the log stream next to it with level
+    badges, highlighted URLs, paths, names and numbers, blocks for entries with detail lines, and stack frames folded
+    under their error. The compact panel is still there (`dev.layout: 'panel'`, `--layout panel`, the `v` key, or a small
+    terminal).
+
+    When the application commands the bot registers change, a card under the stream asks (`Refresh commands? (y/n)`)
+    before the bot redeploys them, with `dev.commands.refresh: 'prompt'` (the default).
+
+    New keys: `d` stops the bot until the next `r`, `v` switches layout, and the dashboard's own: `←`/`→` and `Tab` to
+    select a channel or a level, `Space` to toggle it, `s` to solo it, `a` for all, `b` to group by channel, `g`/`G` for
+    the top and back to live, `/` to search. New flag: `--layout`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`46c6169`](https://github.com/wolfstar-project/stars-components/commit/46c616943363d3db39149a56a8e8e5bd55937b30), [`9374fb0`](https://github.com/wolfstar-project/stars-components/commit/9374fb0b50016ebfcdd28d0940cf8d1262adf85d)]:
+    - @wolfstar/schema@0.6.0
+    - @wolfstar/kit@0.1.1
+    - @wolfstar/nitro-server@0.2.6
+    - @wolfstar/vite-server@0.4.1
+
 ## 2.2.0
 
 ### Minor Changes

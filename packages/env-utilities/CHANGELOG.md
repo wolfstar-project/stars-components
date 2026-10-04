@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.3.0
+
+### Minor Changes
+
+- [#260](https://github.com/wolfstar-project/stars-components/pull/260) [`081f1e9`](https://github.com/wolfstar-project/stars-components/commit/081f1e911925e71a42865da53545f0f7db40c50b) - feat(env-utilities): add `EnvFromVarlock` to derive `Env` from varlock's generated `CoercedEnvSchema`, exported from the package root and from the new `@wolfstar/env-utilities/varlock` subpath. The README now also states that `envParseArray` needs `ArrayString` keys, not plain `string`. `EnvString` also rejects optional number and boolean keys now, like required ones. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#265](https://github.com/wolfstar-project/stars-components/pull/265) [`9374fb0`](https://github.com/wolfstar-project/stars-components/commit/9374fb0b50016ebfcdd28d0940cf8d1262adf85d) - feat(env-utilities): add a `node` loader that parses `.env*` files with Node.js' own `util.parseEnv` (Node.js 20.12 or newer) and expands references like `dotenv-expand`, and make `dotenv` and `dotenv-expand` optional peer dependencies. When no loader is requested, `dotenv` is used if both packages are installed and the `node` loader if they are not, so a project that has them installed behaves as before and a varlock or new project installs nothing. Asking for `loader: 'dotenv'` without the packages throws an `Error` naming the missing one. `EnvLoaderOptions` no longer extends dotenv's `DotenvConfigOptions` (its `processEnv`, `quiet`, `override`, `fast` and `DOTENV_KEY` options were never forwarded), and `EnvSetupResult` is now the package's own `EnvLoaderOutput`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#262](https://github.com/wolfstar-project/stars-components/pull/262) [`7c327c4`](https://github.com/wolfstar-project/stars-components/commit/7c327c44134a825f4e077a753ac0eae591558d5a) - feat(env-utilities): pick the `varlock` loader automatically when `varlock` is installed and the project has a `src/.env.schema`, a `.env.schema` or a `varlock.loadPath` in `package.json`. An explicit `path`, the `loader` option and `DOTENV_LOADER` still win. **Behaviour change:** a project that already has a `.env.schema` and has `varlock` installed, but loaded its `.env*` files through dotenv, now loads through varlock after this release. Varlock reads the schema and its own `.env*` discovery, not `src/.env*` with `NODE_ENV` suffixes, so the values can differ: set `loader: 'dotenv'` (or `DOTENV_LOADER=dotenv`) to keep the previous behaviour. The loader is still experimental. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#261](https://github.com/wolfstar-project/stars-components/pull/261) [`8defefe`](https://github.com/wolfstar-project/stars-components/commit/8defefe8b935ded6d0f91a375715064183078952) - feat(env-utilities): load the experimental `varlock` loader through `varlock load --format json-full` instead of `varlock/auto-load`. `parsed` now holds exactly the resolved keys, `path` and `env` map to `--path` and `--env`, and an invalid schema throws an `Error` with varlock's summary instead of exiting the process. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#263](https://github.com/wolfstar-project/stars-components/pull/263) [`95cdbd4`](https://github.com/wolfstar-project/stars-components/commit/95cdbd470c9f8a61d3201f33448d4f430725e934) - feat(env-utilities): export varlock's typed `ENV` object as `env` from `@wolfstar/env-utilities/varlock`, filled by `setup()` when the `varlock` loader runs. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#230](https://github.com/wolfstar-project/stars-components/pull/230) [`d3ab9fa`](https://github.com/wolfstar-project/stars-components/commit/d3ab9fadca28c2f525ee91097fc94fd425b49eb1) - fix(deps): update dependency dotenv to v18 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 2.2.1
 
 ### Patch Changes
