@@ -4,7 +4,7 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import type { DevStatus } from '../../../dev-service.js';
 import { readOwnPackageJson } from '../../../../utils/version.js';
 import type { LogCounters } from '../hooks/useLogCounters.js';
-import { describeBadge } from '../../panel-logic.js';
+import { describeBadge, isBusy } from '../../panel-logic.js';
 import { usePaint } from '../theme.js';
 import { Hints, PANEL_HINTS } from './Hints.js';
 
@@ -23,9 +23,13 @@ export interface PanelProps {
 export function Panel({ status, config, counters, frame, elapsedMs, width, height, confirmQuit }: PanelProps) {
 	const paint = usePaint();
 	const state = describeBadge(status);
-	const busy = state.badge !== 'ready' && state.badge !== 'error';
+	const busy = isBusy(state.badge);
 	const badge = !busy && counters.errors > 0 ? 'error' : state.badge;
-	const note = badge === 'error' && state.badge === 'ready' ? 'an error was logged · press e to view it' : state.note;
+	const note = status.prompt
+		? 'commands updated · press y to refresh them, n to skip'
+		: badge === 'error' && state.badge === 'ready'
+			? 'an error was logged · press e to view it'
+			: state.note;
 	const filled = Math.round(Math.min(1, Math.max(0, status.progress.fraction)) * 20);
 	const wordmark = config.dev.banner === false ? [] : (config.dev.banner?.flatMap((line) => line.split('\n')) ?? [null]);
 	const blocks: { name: string; content: ReactNode }[] = [
@@ -131,7 +135,7 @@ export function Panel({ status, config, counters, frame, elapsedMs, width, heigh
 					{' '}
 					<Text
 						bold
-						backgroundColor={paint(confirmQuit || busy ? 'busy' : badge === 'error' ? 'error' : 'success')}
+						backgroundColor={paint(confirmQuit || busy || badge === 'stopped' ? 'busy' : badge === 'error' ? 'error' : 'success')}
 						color={paint(badge === 'error' && !confirmQuit ? 'onError' : 'onBright')}
 					>{` ${confirmQuit ? 'QUIT?' : badge === 'restarting' ? 'RESTART' : badge.toUpperCase()} `}</Text>
 					{'  '}

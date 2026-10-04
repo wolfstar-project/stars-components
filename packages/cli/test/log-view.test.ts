@@ -7,11 +7,17 @@ import {
 	isChannelVisible,
 	levelBadge,
 	matchesView,
+	newestErrorRow,
+	pinAt,
+	pinnedEnd,
 	soloChannel,
 	soloLevel,
 	toggleChannel,
-	toggleLevel
+	toggleLevel,
+	windowAround,
+	wrapLabels
 } from '../src/dev/tui/log-view.js';
+import { formatUptime } from '../src/dev/tui/panel-logic.js';
 import { LogBuffer, type LogInput } from '../src/utils/log-buffer.js';
 
 const config = (logs: Partial<ResolvedStarsConfig['dev']['logs']> = {}) =>
@@ -161,6 +167,93 @@ describe('buildRows', () => {
 	});
 });
 
+describe('pinning a scrolled view', () => {
+	const rows = () =>
+		buildRows(
+			entries(
+				{ source: 'app', level: 'info', text: 'one' },
+				{ source: 'stars', channel: 'hmr', level: 'debug', text: 'block', detail: ['detail'] },
+				{ source: 'app', level: 'info', text: 'three' },
+				{ source: 'app', level: 'info', text: 'four' }
+			)
+		);
+
+	test('pins to the entry of the last line, counting a rule after it', () => {
+		// one, rule, block, detail, rule, three, four
+		const list = rows();
+		expect(pinAt(list, list.length)).toBeNull();
+		expect(pinAt(list, 3)).toEqual({ id: 2, extra: 0 });
+		expect(pinAt(list, 4)).toEqual({ id: 2, extra: 1 });
+		expect(pinAt(list, 5)).toEqual({ id: 2, extra: 2 });
+		expect(pinnedEnd(list, pinAt(list, 3), 2)).toBe(3);
+		expect(pinnedEnd(list, pinAt(list, 4), 2)).toBe(4);
+		expect(pinnedEnd(list, pinAt(list, 5), 2)).toBe(5);
+		expect(pinnedEnd(list, null, 2)).toBe(list.length);
+	});
+
+	test('scrolls line by line through an entry of several lines, in both directions', () => {
+		const list = buildRows(
+			entries(
+				{ source: 'app', level: 'info', text: 'one' },
+				{ source: 'stars', channel: 'hmr', level: 'debug', text: 'block', detail: ['d1', 'd2'] },
+				{ source: 'app', level: 'info', text: 'three' }
+			)
+		);
+		// one, rule, block, d1, d2, rule, three
+		const walk = (from: number, delta: number) => {
+			const ends = [from];
+			for (let step = 0; step < 6; step++) ends.push(pinnedEnd(list, pinAt(list, Math.max(1, ends.at(-1)! + delta)), 1));
+			return ends;
+		};
+		expect(walk(7, -1)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+		expect(walk(1, 1)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+	});
+
+	test('stays on the same entry when older rows disappear, and falls back to the top when it is gone', () => {
+		const list = rows();
+		const pin = pinAt(list, 6)!;
+		expect(pin).toEqual({ id: 3, extra: 0 });
+		// The first entry and its rule were dropped: the index moved, the pinned entry did not.
+		const shorter = list.slice(2);
+		expect(shorter[pinnedEnd(shorter, pin, 2) - 1]).toMatchObject({ text: 'three' });
+		// The pinned entry itself is gone.
+		expect(pinnedEnd(list.slice(6), pin, 3)).toBe(1);
+		expect(pinnedEnd([], pin, 3)).toBe(0);
+	});
+
+	test('newestErrorRow goes by the entry, not by its place in the list', () => {
+		const grouped = buildRows(
+			entries(
+				{ source: 'build', level: 'error', text: 'older' },
+				{ source: 'app', level: 'error', text: 'newest' },
+				{ source: 'build', level: 'info', text: 'later build line' }
+			),
+			{ group: true }
+		);
+		expect(grouped[newestErrorRow(grouped)]).toMatchObject({ text: 'newest' });
+		expect(newestErrorRow(buildRows(entries({ source: 'app', level: 'info', text: 'fine' })))).toBe(-1);
+	});
+});
+
+describe('sidebar layout', () => {
+	test('wrapLabels fills each line up to the width', () => {
+		expect(wrapLabels(['bot', 'build', 'cli', 'commands', 'hmr'], 13)).toEqual([
+			[0, 1, 2],
+			[3, 4]
+		]);
+		expect(wrapLabels(['a-label-wider-than-the-line', 'b'], 5)).toEqual([[0], [1]]);
+		expect(wrapLabels([], 10)).toEqual([]);
+	});
+
+	test('windowAround keeps the focused line in sight', () => {
+		expect(windowAround(3, 2, 5)).toEqual([0, 3]);
+		expect(windowAround(10, 0, 3)).toEqual([0, 3]);
+		expect(windowAround(10, 5, 3)).toEqual([3, 6]);
+		expect(windowAround(10, 9, 3)).toEqual([7, 10]);
+		expect(windowAround(10, 4, 0)).toEqual([4, 5]);
+	});
+});
+
 describe('highlight', () => {
 	const tokens = (text: string, channel?: string) =>
 		highlight(text, channel)
@@ -189,8 +282,11 @@ describe('highlight', () => {
 });
 
 describe('formatting', () => {
-	test('badges and clock', () => {
+	test('badges, clock and uptime', () => {
 		expect((['trace', 'debug', 'info', 'success', 'warn', 'error'] as const).map(levelBadge).join('')).toBe('TDIIWE');
 		expect(formatClock(new Date(2026, 9, 3, 7, 5, 9).getTime())).toBe('07:05:09');
+		expect(formatUptime(35_000)).toBe('35s');
+		expect(formatUptime(215_000)).toBe('3m 35s');
+		expect(formatUptime(7_440_000)).toBe('2h 04m');
 	});
 });

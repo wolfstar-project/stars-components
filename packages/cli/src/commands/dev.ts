@@ -17,17 +17,25 @@ export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
 	/** `--theme`. */
 	theme?: string;
+	/** `--layout`. */
+	layout?: string;
 	/** `--channel`, each value possibly a comma-separated list. */
 	channel?: string[];
 	/** `--level`. */
 	level?: string;
 }
 
+const LAYOUTS = ['auto', 'dashboard', 'panel'] as const;
 const LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const;
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
 	if (options.theme !== undefined && !isThemeSetting(options.theme)) {
 		throw cliDiagnostics.INVALID_THEME({ theme: options.theme, themes: THEME_SETTINGS.join(', ') });
+	}
+
+	const layout = options.layout as (typeof LAYOUTS)[number] | undefined;
+	if (layout !== undefined && !LAYOUTS.includes(layout)) {
+		throw cliDiagnostics.INVALID_OPTION({ option: '--layout', value: options.layout!, allowed: LAYOUTS.join(', ') });
 	}
 
 	if (options.level !== undefined && !isLogLevel(options.level)) {
@@ -60,6 +68,8 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 			? (await import('../dev/tui/tui.js')).createTuiRenderer(service, {
 					color,
 					theme,
+					layout,
+					filter,
 					reducedMotion: prefersReducedMotion(),
 					onThemeSave: (setting) => {
 						if (!saveTheme(setting)) service.log('stars', 'warn', 'Could not save the theme preference.');
@@ -140,6 +150,10 @@ export default defineCommand({
 			type: 'string',
 			description: `Colour theme of the interactive UI: ${THEME_SETTINGS.join(', ')} (or STARS_THEME; press T in the UI to pick one)`
 		},
+		layout: {
+			type: 'string',
+			description: `Layout of the interactive UI: ${LAYOUTS.join(', ')} (defaults to dev.layout; press v in the UI to switch)`
+		},
 		channel: {
 			type: 'string',
 			description: 'Only show these log channels at start (repeatable, or comma-separated; defaults to dev.logs.channels)'
@@ -156,6 +170,7 @@ export default defineCommand({
 			cwd: args.cwd,
 			tui: args.tui ? undefined : false,
 			theme: args.theme,
+			layout: args.layout,
 			channel: channel.length > 0 ? channel : undefined,
 			level: args.level
 		});

@@ -1,6 +1,11 @@
 import type { DevStatus } from '../dev-service.js';
 
-export type Badge = 'starting' | 'building' | 'restarting' | 'ready' | 'error';
+export type Badge = 'starting' | 'building' | 'restarting' | 'ready' | 'error' | 'stopped';
+
+/** Whether the badge describes work in progress, as opposed to a state the session rests in. */
+export function isBusy(badge: Badge): boolean {
+	return badge === 'starting' || badge === 'building' || badge === 'restarting';
+}
 
 /**
  * The badge and standing description for the panel's status row, mirroring the states Nuxt CLI v4's own dev panel
@@ -9,6 +14,7 @@ export type Badge = 'starting' | 'building' | 'restarting' | 'ready' | 'error';
 export function describeBadge(status: DevStatus): { badge: Badge; note: string } {
 	if (status.build === 'building') return { badge: status.startedAt === null ? 'starting' : 'building', note: status.progress.message };
 	if (status.process === 'starting') return { badge: 'starting', note: 'starting the bot' };
+	if (status.paused) return { badge: 'stopped', note: 'the bot is stopped, press r to start it' };
 	if (status.process === 'stopping') return { badge: 'restarting', note: 'restarting the bot' };
 	if (status.build === 'failed') return { badge: 'error', note: 'build failed, waiting for changes' };
 	if (status.process === 'crashed') return { badge: 'error', note: 'the bot crashed, press r to restart' };
@@ -18,6 +24,16 @@ export function describeBadge(status: DevStatus): { badge: Badge; note: string }
 	if (status.progress.fraction < 1) return { badge: 'starting', note: status.progress.message };
 	if (status.process === 'running') return { badge: 'ready', note: 'watching for changes' };
 	return { badge: 'starting', note: 'waiting for the first build' };
+}
+
+/** Formats an uptime the way a status line reads it: `35s`, `3m 35s`, `2h 04m`. */
+export function formatUptime(milliseconds: number): string {
+	const total = Math.max(0, Math.floor(milliseconds / 1000));
+	const seconds = total % 60;
+	const minutes = Math.floor(total / 60) % 60;
+	const hours = Math.floor(total / 3600);
+	if (hours > 0) return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
+	return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 }
 
 /** Formats a duration the way a dev session reads it: `mm:ss` under an hour, `h:mm:ss` above. */

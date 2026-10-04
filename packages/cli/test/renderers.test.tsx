@@ -1,9 +1,11 @@
 import { Terminal } from '@xterm/headless';
 import { loadStarsConfig } from '@wolfstar/schema';
 import { EventEmitter } from 'node:events';
+import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';
 import { DevService } from '../src/dev/dev-service.js';
+import { LogBuffer } from '../src/utils/log-buffer.js';
 import { createPlainRenderer, type Renderer } from '../src/dev/tui/plain.js';
 import { initialLogView } from '../src/dev/tui/log-view.js';
 import { createTuiRenderer } from '../src/dev/tui/tui.js';
@@ -83,7 +85,7 @@ describe('renderers', () => {
 		stdout.terminal.dispose();
 	});
 	async function start() {
-		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: false, reducedMotion: true });
+		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: false, reducedMotion: true, layout: 'panel' });
 		void renderer.start();
 		await waitFor(() => stdout.screen().includes('Stars'));
 	}
@@ -240,7 +242,14 @@ describe('renderers', () => {
 	});
 	test('previews themes live, saves the chosen one and restores on cancel', async () => {
 		const onThemeSave = vi.fn();
-		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: true, theme: 'dark', onThemeSave });
+		renderer = createTuiRenderer(service, {
+			stdout: stdout as never,
+			stdin: stdin as never,
+			color: true,
+			theme: 'dark',
+			onThemeSave,
+			layout: 'panel'
+		});
 		void renderer.start();
 		await waitFor(() => stdout.screen().includes('Stars'));
 		expect(stdout.screen()).toContain('theme');
@@ -307,13 +316,318 @@ describe('renderers', () => {
 			{ ...service.config, dev: { ...service.config.dev, banner: ['MY BOT', 'custom banner'] } },
 			{ builder: new IdleBuilder() }
 		);
-		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never });
+		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, layout: 'panel' });
 		await waitFor(() => stdout.screen().includes('MY BOT'));
 		expect(stdout.screen()).toContain('custom banner');
 		expect(stdout.screen()).not.toContain('Stars');
 		renderer.stop();
 		service = new DevService({ ...service.config, dev: { ...service.config.dev, banner: false } }, { builder: new IdleBuilder() });
-		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never });
+		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, layout: 'panel' });
 		await waitFor(() => stdout.screen().includes('STARTING') && !stdout.screen().includes('MY BOT'));
+	});
+	describe('dashboard', () => {
+		beforeEach(() => {
+			stdout.terminal.dispose();
+			stdout = new FakeStdout(120, 30);
+		});
+		async function dashboard(options: Parameters<typeof createTuiRenderer>[1] = {}) {
+			renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: false, reducedMotion: true, ...options });
+			void renderer.start();
+			await waitFor(() => stdout.screen().includes('channels'));
+		}
+		const line = (text: string) =>
+			stdout
+				.screen()
+				.split('\n')
+				.find((row) => row.includes(text));
+
+		test('is the default on a roomy terminal: status sidebar, filters and the log stream on one screen', async () => {
+			await dashboard();
+			expect(stdout.terminal.buffer.active.type).toBe('alternate');
+			service.log('stars', 'info', 'Watching src/main.js');
+			service.log('app', 'info', 'hello from the bot');
+			await waitFor(() => stdout.screen().includes('hello from the bot'));
+			const screen = stdout.screen();
+			expect(screen).toContain('my-bot');
+			expect(screen).toContain('port    3000');
+			expect(screen).toContain('tunnel  off');
+			expect(screen).toContain(`logs    ${join('.stars', 'dev.log')}`);
+			expect(screen).toContain('▾ channels');
+			expect(screen).toContain('▾ levels');
+			expect(screen).toContain('error warn info debug trace');
+			expect(screen).toContain('● live');
+			// Level badge, clock, right-aligned channel, dot, message.
+			expect(line('hello from the bot')).toMatch(/\[I\]\s+\d\d:\d\d:\d\d\s+bot ● hello from the bot/);
+			expect(line('Watching src/main.js')).toMatch(/cli ● Watching/);
+			expect(
+				stdout
+					.screen()
+					.split('\n')
+					.every((row) => row.length <= 120)
+			).toBe(true);
+		});
+
+		test('reports the running state and the ready line once the bot is up', async () => {
+			await dashboard();
+			expect(stdout.screen()).toContain('starting');
+			service.builder.emit('start');
+			service.builder.emit('success', { ok: true, durationMs: 20, message: null });
+			await waitFor(() => stdout.screen().includes('running'));
+			expect(stdout.screen()).toContain('my-bot is ready!');
+			expect(stdout.screen()).toMatch(/up\s+\ds/);
+		});
+
+		test('filters the stream by channel and level from the sidebar', async () => {
+			await dashboard();
+			service.log('app', 'info', 'from the bot');
+			service.log('build', 'warn', 'from the build');
+			service.log('stars', 'trace', 'a traced request', { channel: 'http' });
+			await waitFor(() => stdout.screen().includes('from the build'));
+			// `trace` starts hidden.
+			expect(stdout.screen()).not.toContain('a traced request');
+
+			// channels are sorted: bot, build, http. Space hides the selected one, here `bot`.
+			stdin.press(' ');
+			await waitFor(() => !stdout.screen().includes('from the bot'));
+			expect(stdout.screen()).toContain('from the build');
+			stdin.press(' ');
+			await waitFor(() => stdout.screen().includes('from the bot'));
+
+			// Solo the second channel, then every channel again.
+			stdin.press('\u001b[C');
+			await wait(30);
+			stdin.press('s');
+			await waitFor(() => !stdout.screen().includes('from the bot'));
+			expect(stdout.screen()).toContain('from the build');
+			stdin.press('s');
+			await waitFor(() => stdout.screen().includes('from the bot'));
+
+			// Levels: error warn info debug trace. Tab moves there, four steps right reach `trace`.
+			stdin.press('\t');
+			await wait(30);
+			for (let i = 0; i < 4; i++) {
+				stdin.press('\u001b[C');
+				await wait(30);
+			}
+			stdin.press(' ');
+			await waitFor(() => stdout.screen().includes('a traced request'));
+			expect(line('a traced request')).toMatch(/\[T\].*http ● a traced request/);
+		});
+
+		test('starts with the channels and levels it was given', async () => {
+			await dashboard({ filter: initialLogView(service.config, { channels: ['build'], level: 'warn' }) });
+			service.log('app', 'error', 'bot error');
+			service.log('build', 'info', 'build info');
+			service.log('build', 'warn', 'build warning');
+			await waitFor(() => stdout.screen().includes('build warning'));
+			expect(stdout.screen()).not.toContain('bot error');
+			expect(stdout.screen()).not.toContain('build info');
+		});
+
+		test('sets a block apart with rules, shows its detail lines and folds stack frames under their error', async () => {
+			await dashboard();
+			service.log('stars', 'info', 'before');
+			service.log('stars', 'debug', 'Loaded 1 commands', { channel: 'commands', detail: ['ping src/commands/Ping.ts'] });
+			service.log('app', 'error', 'Error: boom');
+			service.log('app', 'error', '    at main (main.js:1:1)');
+			await waitFor(() => stdout.screen().includes('at main'));
+			const rows = stdout.screen().split('\n');
+			const block = rows.findIndex((row) => row.includes('Loaded 1 commands'));
+			expect(rows[block - 1]).toContain('────');
+			expect(rows[block + 1]).toMatch(/│ ping src\/commands\/Ping\.ts/);
+			expect(rows[block + 2]).toContain('────');
+			expect(line('at main')).toMatch(/│ at main/);
+			expect(line('at main')).not.toContain('[E]');
+			// One error, counted once.
+			expect(stdout.screen()).toContain('✖ 1');
+		});
+
+		test('scrolls back, stops following and returns to live', async () => {
+			await dashboard();
+			for (let i = 0; i < 80; i++) service.log('app', 'info', `line ${i}`);
+			await waitFor(() => stdout.screen().includes('line 79'));
+			stdin.press('g');
+			await waitFor(() => stdout.screen().includes('line 0'));
+			expect(stdout.screen()).toContain('● paused');
+			expect(stdout.screen()).not.toContain('line 79');
+			service.log('app', 'info', 'arrived while scrolled back');
+			await wait(60);
+			expect(stdout.screen()).not.toContain('arrived while scrolled back');
+			stdin.press('G');
+			await waitFor(() => stdout.screen().includes('arrived while scrolled back'));
+			expect(stdout.screen()).toContain('● live');
+		});
+
+		test('searches without treating the typed text as shortcuts', async () => {
+			const restart = vi.spyOn(service, 'restart').mockResolvedValue();
+			const disconnect = vi.spyOn(service, 'disconnect').mockResolvedValue();
+			await dashboard();
+			service.log('app', 'info', 'needle');
+			service.log('app', 'info', 'haystack');
+			await waitFor(() => stdout.screen().includes('haystack'));
+			stdin.press('/');
+			await wait(30);
+			stdin.press('neer');
+			await wait(30);
+			stdin.press('\u007f');
+			await wait(30);
+			stdin.press('d');
+			await wait(30);
+			stdin.press('le');
+			await waitFor(() => stdout.screen().includes('/ needle'));
+			expect(stdout.screen()).not.toContain('haystack');
+			expect(restart).not.toHaveBeenCalled();
+			expect(disconnect).not.toHaveBeenCalled();
+			stdin.press('\u001b');
+			await waitFor(() => stdout.screen().includes('haystack'));
+		});
+
+		test('asks before refreshing the commands, and answers through the service', async () => {
+			await dashboard();
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			service.supervisor.emit('message', { source: 'stars:bridge', type: 'ready', clientId: '1', port: 3000 });
+			const report = (description: string) =>
+				service.supervisor.emit('message', {
+					source: 'stars:bridge',
+					type: 'commands',
+					global: [{ name: 'ping', description }],
+					guilds: {}
+				});
+			report('Ping');
+			report('Pong');
+			await waitFor(() => stdout.screen().includes('Refresh commands?'));
+			expect(stdout.screen()).toContain('Commands updated:');
+			expect(stdout.screen()).toContain('- ping changed');
+			stdin.press('y');
+			await waitFor(() => !stdout.screen().includes('Refresh commands?'));
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
+
+			report('Ping again');
+			await waitFor(() => stdout.screen().includes('Refresh commands?'));
+			stdin.press('n');
+			await waitFor(() => !stdout.screen().includes('Refresh commands?'));
+			expect(send).toHaveBeenCalledTimes(1);
+		});
+
+		test('d disconnects the bot and v switches to the panel and back', async () => {
+			const disconnect = vi.spyOn(service, 'disconnect').mockResolvedValue();
+			await dashboard();
+			stdin.press('d');
+			await waitFor(() => disconnect.mock.calls.length === 1);
+			stdin.press('v');
+			await waitFor(() => stdout.screen().includes('Stars') && stdout.terminal.buffer.active.type === 'normal');
+			expect(stdout.screen()).not.toContain('▾ channels');
+			stdin.press('v');
+			await waitFor(() => stdout.screen().includes('▾ channels'));
+			expect(stdout.terminal.buffer.active.type).toBe('alternate');
+		});
+
+		test('keeps its filters under an overlay and falls back to the panel when the terminal shrinks', async () => {
+			await dashboard();
+			service.log('app', 'info', 'from the bot');
+			await waitFor(() => stdout.screen().includes('from the bot'));
+			stdin.press(' ');
+			await waitFor(() => !stdout.screen().includes('from the bot'));
+			stdin.press('?');
+			await waitFor(() => stdout.screen().includes('keyboard shortcuts'));
+			stdin.press('?');
+			await waitFor(() => stdout.screen().includes('▾ channels'));
+			expect(stdout.screen()).not.toContain('from the bot');
+
+			stdout.resize(70, 16);
+			await waitFor(() => stdout.screen().includes('Stars') && stdout.terminal.buffer.active.type === 'normal');
+			expect(stdout.screen()).not.toContain('▾ channels');
+			stdout.resize(120, 30);
+			await waitFor(() => stdout.screen().includes('▾ channels'));
+		});
+
+		test('gives the keys back when the terminal shrinks to the panel with the search box open', async () => {
+			const restart = vi.spyOn(service, 'restart').mockResolvedValue();
+			await dashboard();
+			stdin.press('/');
+			await waitFor(() => stdout.screen().includes(' / ▏'));
+			stdout.resize(70, 16);
+			await waitFor(() => stdout.screen().includes('Stars') && stdout.terminal.buffer.active.type === 'normal');
+			await wait(30);
+			stdin.press('r');
+			await waitFor(() => restart.mock.calls.length === 1);
+		});
+
+		test('keeps the lines in view while scrolled back, even when the buffer drops its oldest entries', async () => {
+			service = new DevService(service.config, { builder: new IdleBuilder(), logs: new LogBuffer(60) });
+			await dashboard();
+			for (let i = 0; i < 60; i++) service.log('app', 'info', `line ${i}`);
+			await waitFor(() => stdout.screen().includes('line 59'));
+			for (let i = 0; i < 10; i++) {
+				stdin.press('\u001b[A');
+				await wait(15);
+			}
+			await waitFor(() => stdout.screen().includes('● paused'));
+			// Every key press has been handled before the view is read.
+			await wait(150);
+			const before = stdout
+				.screen()
+				.split('\n')
+				.filter((row) => row.includes('● line'))
+				.at(-1);
+			expect(before).toMatch(/line \d+$/);
+
+			// Twenty more entries push twenty out of the buffer: the view must not slide along with the indices.
+			for (let i = 60; i < 80; i++) service.log('app', 'info', `line ${i}`);
+			await wait(80);
+			expect(
+				stdout
+					.screen()
+					.split('\n')
+					.filter((row) => row.includes('● line'))
+					.at(-1)
+			).toBe(before);
+		});
+
+		test('e jumps to the most recent error, also when the stream is grouped by channel', async () => {
+			await dashboard();
+			service.log('build', 'error', 'older build error');
+			service.log('app', 'info', 'bot line');
+			service.log('app', 'error', 'newest bot error');
+			service.log('build', 'info', 'build line');
+			await waitFor(() => stdout.screen().includes('build line'));
+			// Grouped, the channels are listed build first then bot, so the newest error is not the last error row.
+			stdin.press('b');
+			await waitFor(() => stdout.screen().includes('build · 2'));
+			stdin.press('e');
+			await waitFor(() => stdout.screen().includes('▎'));
+			expect(line('▎')).toContain('newest bot error');
+		});
+
+		test('keeps the level filters in sight however many channels there are', async () => {
+			stdout.terminal.dispose();
+			stdout = new FakeStdout(90, 20);
+			await dashboard();
+			for (let i = 10; i < 50; i++) service.log('stars', 'info', 'x', { channel: `channel-${i}` });
+			await waitFor(() => stdout.screen().includes('  channel-10'));
+			expect(stdout.screen()).toContain('▾ levels');
+			expect(stdout.screen()).toContain('debug trace');
+			expect(stdout.screen()).toMatch(/▾ channels · 1-\d+\/\d+/);
+			// Moving the selection scrolls the channels, never the levels away.
+			for (let i = 0; i < 30; i++) {
+				stdin.press('\u001b[C');
+				await wait(10);
+			}
+			await waitFor(() => /  channel-[34]\d/.test(stdout.screen()));
+			expect(stdout.screen()).not.toContain('  channel-10');
+			expect(stdout.screen()).toContain('debug trace');
+			expect(
+				stdout
+					.screen()
+					.split('\n')
+					.every((row) => row.length <= 90)
+			).toBe(true);
+		});
+
+		test('leaves the alternate buffer on stop', async () => {
+			await dashboard();
+			renderer!.stop();
+			await waitFor(() => stdout.terminal.buffer.active.type === 'normal');
+		});
 	});
 });

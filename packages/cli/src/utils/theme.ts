@@ -21,6 +21,12 @@ export interface Theme {
 	success: string;
 	warning: string;
 	error: string;
+	/** The `info`, `debug` and `trace` level badges of the dashboard's log stream. */
+	info: string;
+	debug: string;
+	trace: string;
+	/** Names worth finding in a log line: a command, a piece, a channel that is switched on. */
+	accent: string;
 	text: string | undefined;
 	/** Foreground of a badge painted on `success`, `warning` or `busy`. */
 	onBright: string;
@@ -39,6 +45,10 @@ export const THEMES: Readonly<Record<ThemeName, Theme>> = {
 		success: '#4ade80',
 		warning: '#facc15',
 		error: '#f87171',
+		info: '#4ade80',
+		debug: '#60a5fa',
+		trace: '#c084fc',
+		accent: '#fbbf24',
 		text: undefined,
 		onBright: '#000000',
 		onError: '#000000'
@@ -51,6 +61,10 @@ export const THEMES: Readonly<Record<ThemeName, Theme>> = {
 		success: '#15803d',
 		warning: '#a16207',
 		error: '#b91c1c',
+		info: '#15803d',
+		debug: '#1d4ed8',
+		trace: '#7e22ce',
+		accent: '#b45309',
 		text: undefined,
 		onBright: '#ffffff',
 		onError: '#ffffff'
@@ -64,6 +78,10 @@ export const THEMES: Readonly<Record<ThemeName, Theme>> = {
 		success: '#56b4e9',
 		warning: '#e69f00',
 		error: '#ff8a3d',
+		info: '#56b4e9',
+		debug: '#0072b2',
+		trace: '#cc79a7',
+		accent: '#f0e442',
 		text: undefined,
 		onBright: '#000000',
 		onError: '#000000'
@@ -76,6 +94,10 @@ export const THEMES: Readonly<Record<ThemeName, Theme>> = {
 		success: '#0072b2',
 		warning: '#8a6500',
 		error: '#b84a00',
+		info: '#0072b2',
+		debug: '#004c7a',
+		trace: '#8e3b76',
+		accent: '#8a6500',
 		text: undefined,
 		onBright: '#ffffff',
 		onError: '#ffffff'
@@ -89,6 +111,10 @@ export const THEMES: Readonly<Record<ThemeName, Theme>> = {
 		success: 'greenBright',
 		warning: 'yellowBright',
 		error: 'redBright',
+		info: 'greenBright',
+		debug: 'blueBright',
+		trace: 'magentaBright',
+		accent: 'yellowBright',
 		text: undefined,
 		onBright: 'black',
 		onError: 'black'
@@ -101,6 +127,10 @@ export const THEMES: Readonly<Record<ThemeName, Theme>> = {
 		success: 'green',
 		warning: 'yellow',
 		error: 'red',
+		info: 'green',
+		debug: 'blue',
+		trace: 'magenta',
+		accent: 'yellow',
 		text: undefined,
 		onBright: 'white',
 		onError: 'white'
