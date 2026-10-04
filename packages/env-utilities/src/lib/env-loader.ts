@@ -1,6 +1,7 @@
 import { container } from '@sapphire/pieces';
 import { config, populate, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
+import { statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,8 +41,9 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 	 *   other options.
 	 * - `'varlock'`: delegates to {@link https://varlock.dev | varlock} instead of `dotenv`. Varlock resolves a
 	 *   checked-in `.env.schema` (with its own `.env*` file discovery and validation) via its CLI and injects the
-	 *   result into `process.env`. When selected, `encoding`, `path`, and `env` are ignored — configure the schema
-	 *   itself instead. Requires the optional `varlock` package to be installed.
+	 *   result into `process.env`. When selected, `path` and `env` are passed to `varlock load` as `--path` and
+	 *   `--env`, `prefix` still filters the returned `parsed`, and `encoding` is ignored. An invalid schema throws
+	 *   an `Error` with varlock's summary. Requires the optional `varlock` package to be installed.
 	 *
 	 * @default 'dotenv'
 	 */
@@ -148,20 +150,32 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 }
 
 /**
+ * The part of varlock's `json-full` output that is read here.
+ */
+interface VarlockSerializedEnv {
+	config: Record<string, { value?: unknown; envStr?: string } | undefined>;
+	settings?: { injectUndefinedAsEmpty?: boolean };
+}
+
+/**
  * **Experimental.** Resolves environment variables via {@link https://varlock.dev | varlock} instead of `dotenv`.
  *
- * Varlock ships no synchronous "parse only" API comparable to `dotenv.config()`; its documented Node.js
- * integration (`varlock/auto-load`) resolves the configured `.env.schema` by shelling out to its CLI and injects
- * the result directly into `process.env`. To still return a `dotenv`-compatible {@link DotenvConfigOutput}, this
- * diffs `process.env` before and after loading and reports the keys varlock added or changed.
+ * Runs `varlock load --format json-full` through varlock's own synchronous CLI helper, instead of importing
+ * `varlock/auto-load`: the CLI returns exactly the resolved values (so `parsed` is not a diff of `process.env`),
+ * honours `path` and `env`, and an invalid schema becomes a thrown `Error` rather than a `process.exit()`.
+ * The resolved values are then injected into `process.env` and the typed `ENV` object of `varlock/env`, the way
+ * `varlock/auto-load` does. Its runtime redaction and leak detection are not part of the CLI, import
+ * `varlock/auto-load` as well to opt into them.
  */
 function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => void): DotenvConfigOutput {
 	log('resolving environment variables via varlock');
 
-	const before = { ...process.env };
-
+	const require = createRequire(import.meta.url);
+	let varlock: typeof import('varlock/exec-sync-varlock');
+	let varlockEnv: typeof import('varlock/env');
 	try {
-		createRequire(import.meta.url)('varlock/auto-load');
+		varlock = require('varlock/exec-sync-varlock');
+		varlockEnv = require('varlock/env');
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND') {
 			throw new Error(
@@ -172,16 +186,39 @@ function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => vo
 		throw error;
 	}
 
-	let parsed: DotenvParseOutput = {};
-	for (const [key, value] of Object.entries(process.env)) {
-		// Varlock stores its own resolved-config blob (and related bookkeeping) on `process.env` under these
-		// internal keys; they are not user-facing variables and must not leak into the returned `parsed` map.
-		if (/^_{1,2}VARLOCK_/i.test(key)) continue;
-		if (value !== undefined && before[key] !== value) {
-			log(`\`${key}\` resolved via varlock`);
-			parsed[key] = value;
+	const { args, cwd } = varlockLoadArguments(options);
+	log(`running \`varlock ${args.join(' ')}\`${cwd ? ` in \`${cwd}\`` : ''}`);
+
+	let stdout: string;
+	try {
+		({ stdout } = varlock.execSyncVarlock(args.join(' '), {
+			fullResult: true,
+			callerDir: dirname(fileURLToPath(import.meta.url)),
+			...(cwd && { cwd })
+		}));
+	} catch (error) {
+		if (error instanceof varlock.VarlockExecError) {
+			throw new Error(error.stderr.trim() || error.message, { cause: error });
 		}
+
+		throw error;
 	}
+
+	const serialized = JSON.parse(stdout) as VarlockSerializedEnv;
+	const injectUndefinedAsEmpty = serialized.settings?.injectUndefinedAsEmpty;
+
+	let parsed: DotenvParseOutput = {};
+	for (const [key, item] of Object.entries(serialized.config)) {
+		const value = item?.envStr ?? (item?.value === undefined ? undefined : String(item.value));
+		if (value === undefined && !injectUndefinedAsEmpty) continue;
+
+		log(`\`${key}\` resolved via varlock`);
+		parsed[key] = value ?? '';
+	}
+
+	// Populates `process.env` and the `ENV` object of `varlock/env`, as `varlock/auto-load` does.
+	(globalThis as { __varlockLoadedEnv?: unknown }).__varlockLoadedEnv = serialized;
+	varlockEnv.initVarlockEnv();
 
 	if (options.prefix) {
 		parsed = filterByPrefix(parsed, options.prefix, log);
@@ -190,6 +227,42 @@ function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => vo
 	return {
 		parsed
 	};
+}
+
+/**
+ * Builds the arguments of `varlock load`. The CLI helper splits its command on spaces, so an argument cannot contain
+ * one: a `path` that does is passed relative to the directory the CLI runs in instead (so the name of a file, not of
+ * a directory, cannot contain one).
+ */
+function varlockLoadArguments(options: EnvLoaderOptions): { args: string[]; cwd?: string } {
+	const args = ['load', '--format', 'json-full', '--compact', '--summary-stderr'];
+	let cwd: string | undefined;
+
+	if (options.env) {
+		assertNoWhitespace('env', options.env);
+		args.push('--env', options.env);
+	}
+
+	if (options.path !== undefined) {
+		const path = resolve(typeof options.path === 'string' ? options.path : fileURLToPath(options.path));
+		if (/\s/.test(path)) {
+			// `--path` is a directory or a file: run in the directory itself, or next to the file.
+			const isDirectory = statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
+			cwd = isDirectory ? path : dirname(path);
+			if (!isDirectory) assertNoWhitespace('path', basename(path));
+			args.push('--path', isDirectory ? '.' : basename(path));
+		} else {
+			args.push('--path', path);
+		}
+	}
+
+	return { args, cwd };
+}
+
+function assertNoWhitespace(name: string, value: string): void {
+	if (/\s/.test(value)) {
+		throw new Error(`The '${name}' option cannot contain whitespace when the 'varlock' loader is used, but received '${value}'.`);
+	}
 }
 
 function filterByPrefix(parsed: DotenvParseOutput, prefix: string, log: (message: string) => void): DotenvParseOutput {
