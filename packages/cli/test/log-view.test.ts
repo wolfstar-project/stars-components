@@ -182,11 +182,31 @@ describe('pinning a scrolled view', () => {
 		// one, rule, block, detail, rule, three, four
 		const list = rows();
 		expect(pinAt(list, list.length)).toBeNull();
-		expect(pinAt(list, 4)).toEqual({ id: 2, extra: 0 });
-		expect(pinAt(list, 5)).toEqual({ id: 2, extra: 1 });
+		expect(pinAt(list, 3)).toEqual({ id: 2, extra: 0 });
+		expect(pinAt(list, 4)).toEqual({ id: 2, extra: 1 });
+		expect(pinAt(list, 5)).toEqual({ id: 2, extra: 2 });
+		expect(pinnedEnd(list, pinAt(list, 3), 2)).toBe(3);
 		expect(pinnedEnd(list, pinAt(list, 4), 2)).toBe(4);
 		expect(pinnedEnd(list, pinAt(list, 5), 2)).toBe(5);
 		expect(pinnedEnd(list, null, 2)).toBe(list.length);
+	});
+
+	test('scrolls line by line through an entry of several lines, in both directions', () => {
+		const list = buildRows(
+			entries(
+				{ source: 'app', level: 'info', text: 'one' },
+				{ source: 'stars', channel: 'hmr', level: 'debug', text: 'block', detail: ['d1', 'd2'] },
+				{ source: 'app', level: 'info', text: 'three' }
+			)
+		);
+		// one, rule, block, d1, d2, rule, three
+		const walk = (from: number, delta: number) => {
+			const ends = [from];
+			for (let step = 0; step < 6; step++) ends.push(pinnedEnd(list, pinAt(list, Math.max(1, ends.at(-1)! + delta)), 1));
+			return ends;
+		};
+		expect(walk(7, -1)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+		expect(walk(1, 1)).toEqual([1, 2, 3, 4, 5, 6, 7]);
 	});
 
 	test('stays on the same entry when older rows disappear, and falls back to the top when it is gone', () => {

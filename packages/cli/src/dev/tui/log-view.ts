@@ -156,8 +156,9 @@ function layout(entries: readonly LogEntry[]): LogRow[] {
 }
 
 /**
- * Where a scrolled-back view stops: the entry of its last line, and how many lines without an entry (a rule) follow
- * it. An index into the rows would drift as soon as the buffer drops its oldest entries or a filter changes.
+ * Where a scrolled-back view stops: the entry of its last line, and how many lines past the first line of that
+ * entry (its own detail lines, then a rule). An index into the rows would drift as soon as the buffer drops its
+ * oldest entries or a filter changes.
  */
 export interface LogPin {
 	readonly id: number;
@@ -171,7 +172,10 @@ export function pinAt(rows: readonly LogRow[], end: number): LogPin | null {
 	if (end >= rows.length) return null;
 	for (let index = end - 1; index >= 0; index--) {
 		const id = entryId(rows[index]);
-		if (id !== null) return { id, extra: end - 1 - index };
+		if (id === null) continue;
+		// Counted from the first line of the entry: a view may stop in the middle of a block.
+		const first = rows.findIndex((row) => entryId(row) === id);
+		return { id, extra: end - 1 - first };
 	}
 
 	return null;
@@ -184,8 +188,8 @@ export function pinAt(rows: readonly LogRow[], end: number): LogPin | null {
 export function pinnedEnd(rows: readonly LogRow[], pin: LogPin | null, height: number): number {
 	if (pin === null) return rows.length;
 	const floor = Math.min(height, rows.length);
-	const index = rows.findLastIndex((row) => entryId(row) === pin.id);
-	return index < 0 ? floor : Math.min(rows.length, Math.max(floor, index + 1 + pin.extra));
+	const first = rows.findIndex((row) => entryId(row) === pin.id);
+	return first < 0 ? floor : Math.min(rows.length, Math.max(floor, first + 1 + pin.extra));
 }
 
 /** The row of the most recent error among `rows`, whatever order they are listed in, `-1` without one. */
