@@ -663,7 +663,9 @@ function resolveDevLogs(root: string, config: StarsDevConfig['logs'], validator:
 		oneOf(level, `dev.logs.levels[${index}]`, LOG_LEVELS, validator)!
 	);
 	const dir = config.dir === false || config.dir === undefined ? null : resolve(root, validator.string(config.dir, 'dev.logs.dir')!);
+	// A count of files, the one of the current run included: a fraction or zero has no meaning.
 	const keep = validator.nonNegativeNumber(config.keep, 'dev.logs.keep') ?? DEFAULT_LOGS_KEEP;
+	if (!Number.isInteger(keep) || keep < 1) throw validator.typeError('dev.logs.keep', 'a positive integer', config.keep);
 
 	return { channels, levels, dir, keep };
 }

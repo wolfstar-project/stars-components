@@ -217,6 +217,12 @@ describe('stars.config', () => {
 		expect(dev.logs).toEqual({ channels: ['bot', 'hmr'], levels: ['error', 'trace'], dir: join(fixture.root, 'logs'), keep: 3 });
 	});
 
+	test('dev.logs.dir can be switched off, and dev.logs.keep accepts 1', async () => {
+		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { logs: { dir: false, keep: 1 } } };' });
+		const { dev } = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		expect(dev.logs).toMatchObject({ dir: null, keep: 1 });
+	});
+
 	test('picks the type checker: golar when the project depends on it, otherwise tsc', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
@@ -482,6 +488,12 @@ describe('stars.config', () => {
 			expect((await expectConfigError("export default { dev: { logs: { levels: ['verbose'] } } };")).message).toContain('dev.logs.levels[0]');
 			expect((await expectConfigError("export default { dev: { logs: { channel: ['bot'] } } };")).code).toBe('UNKNOWN_OPTION');
 			expect((await expectConfigError('export default { dev: { logs: true } };')).code).toBe('INVALID_TYPE');
+			// `keep` counts files, the current run included.
+			for (const keep of ['2.5', '0', '-1', "'3'"]) {
+				const error = await expectConfigError(`export default { dev: { logs: { dir: 'logs', keep: ${keep} } } };`);
+				expect(error.code, keep).toBe('INVALID_TYPE');
+				expect(error.message, keep).toContain('dev.logs.keep');
+			}
 			expect((await expectConfigError('export default { dev: { commands: { deploy: true } } };')).code).toBe('UNKNOWN_OPTION');
 		});
 

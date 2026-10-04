@@ -186,7 +186,8 @@ export interface StarsDevLogsConfig {
 	 */
 	dir?: string | false;
 	/**
-	 * How many per-run files {@link StarsDevLogsConfig.dir} keeps; older ones are deleted when a run starts.
+	 * How many per-run files {@link StarsDevLogsConfig.dir} keeps, the file of the current run included; older ones
+	 * are deleted when a run starts. A positive integer: `1` keeps only the current run.
 	 * @default 10
 	 */
 	keep?: number;
