@@ -1,6 +1,7 @@
 import { render } from 'ink';
 import type { DevService } from '../dev-service.js';
-import { DevApp } from './ink/DevApp.js';
+import { DevApp, resolveLayout, type DevLayout } from './ink/DevApp.js';
+import type { LogViewFilter } from './log-view.js';
 import type { Renderer } from './plain.js';
 import { captureOutput } from './capture-output.js';
 import { isErrorDetail } from '../../utils/log-buffer.js';
@@ -18,11 +19,16 @@ export interface TuiRendererOptions {
 	reducedMotion?: boolean;
 	/** Caps how often Ink repaints; the default is Ink's own. */
 	fps?: number;
+	/** `--layout`; defaults to `dev.layout`. */
+	layout?: DevLayout | 'auto';
+	/** The log filter the dashboard starts with; defaults to `dev.logs`. */
+	filter?: LogViewFilter;
 }
 
 /**
- * A normal-buffer, bottom-aligned panel and alternate-buffer overlays. External output is captured for the log
- * browser; the renderer alone writes to the terminal. Switching views and teardown restore the original buffer.
+ * The full-screen dashboard and the overlays in the alternate buffer, the bottom-aligned panel in the normal one.
+ * External output is captured for the log views; the renderer alone writes to the terminal. Switching views and
+ * teardown restore the original buffer.
  *
  * `start()` resolves when the user quits, which is what `stars dev` waits on before shutting the bot down.
  */
@@ -40,14 +46,19 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 	});
 	const restoreOutput =
 		stdout === process.stdout ? [captureOutput(service, process.stdout, 'info'), captureOutput(service, process.stderr, 'warn')] : [];
-	let alternate = false;
+	const layout = options.layout ?? service.config.dev.layout ?? 'auto';
+	// The dashboard is painted from the first frame, so its buffer is entered before Ink writes anything.
+	let alternate = resolveLayout(layout, stdout.columns ?? 80, stdout.rows ?? 24) === 'dashboard';
+	if (alternate) write('\u001B[?1049h\u001B[H');
 	let stopped = false;
-	const switchView = (overlay: boolean) => {
-		if (overlay === alternate || stopped) return;
+	const switchView = (fullScreen: boolean) => {
+		if (fullScreen === alternate || stopped) return;
 		instance.clear();
-		write(overlay ? '\u001B[?1049h\u001B[H' : '\u001B[?1049l');
-		alternate = overlay;
+		write(fullScreen ? '\u001B[?1049h\u001B[H' : '\u001B[?1049l');
+		alternate = fullScreen;
 	};
+	// Only an interactive UI can answer the bot's questions (`Refresh commands?`).
+	service.promptable = true;
 
 	let quit!: () => void;
 	const quitting = new Promise<void>((resolve) => {
@@ -61,6 +72,8 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 			theme={options.theme ?? 'auto'}
 			onThemeSave={options.onThemeSave ?? (() => {})}
 			reducedMotion={options.reducedMotion ?? false}
+			layout={layout}
+			filter={options.filter}
 			onQuit={quit}
 			onViewChange={switchView}
 			onCopy={(text) => write(`\u001B]52;c;${Buffer.from(text.slice(0, 65536)).toString('base64')}\u0007`)}
@@ -88,6 +101,7 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 		stop() {
 			if (stopped) return;
 			stopped = true;
+			service.promptable = false;
 			if (alternate) instance.clear();
 			instance.unmount();
 			if (alternate) write('\u001B[?1049l');

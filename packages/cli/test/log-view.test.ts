@@ -12,6 +12,7 @@ import {
 	toggleChannel,
 	toggleLevel
 } from '../src/dev/tui/log-view.js';
+import { formatUptime } from '../src/dev/tui/panel-logic.js';
 import { LogBuffer, type LogInput } from '../src/utils/log-buffer.js';
 
 const config = (logs: Partial<ResolvedStarsConfig['dev']['logs']> = {}) =>
@@ -189,8 +190,11 @@ describe('highlight', () => {
 });
 
 describe('formatting', () => {
-	test('badges and clock', () => {
+	test('badges, clock and uptime', () => {
 		expect((['trace', 'debug', 'info', 'success', 'warn', 'error'] as const).map(levelBadge).join('')).toBe('TDIIWE');
 		expect(formatClock(new Date(2026, 9, 3, 7, 5, 9).getTime())).toBe('07:05:09');
+		expect(formatUptime(35_000)).toBe('35s');
+		expect(formatUptime(215_000)).toBe('3m 35s');
+		expect(formatUptime(7_440_000)).toBe('2h 04m');
 	});
 });
