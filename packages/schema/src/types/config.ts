@@ -163,9 +163,71 @@ export interface StarsTunnelConfig {
 	path?: string;
 }
 
+/** The severities a dev log entry can be filtered by, from the most verbose to the most severe. */
+export type StarsLogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
+
+export interface StarsDevLogsConfig {
+	/**
+	 * The channels shown when `stars dev` starts (`cli`, `build`, `bot`, `types`, `tunnel`, `hmr`, `commands`,
+	 * `interactions`, `http`, `lifecycle`, or one a plugin logs on). Every other channel starts hidden; the dev UI can
+	 * still toggle each of them, and the log file always receives everything.
+	 * @default every channel
+	 */
+	channels?: string[];
+	/**
+	 * The levels shown when `stars dev` starts.
+	 * @default ['error', 'warn', 'info', 'debug']
+	 */
+	levels?: StarsLogLevel[];
+	/**
+	 * A directory, relative to {@link StarsConfig.root}, that receives one log file per `stars dev` run
+	 * (`dev-<timestamp>.log`), next to {@link StarsDevConfig.logFile} which only keeps the latest run.
+	 * @default false
+	 */
+	dir?: string | false;
+	/**
+	 * How many per-run files {@link StarsDevLogsConfig.dir} keeps; older ones are deleted when a run starts.
+	 * @default 10
+	 */
+	keep?: number;
+}
+
+export interface StarsDevCommandsConfig {
+	/**
+	 * What `stars dev` does when the application commands the bot registers differ from the ones it saw before:
+	 *
+	 * - `'prompt'`: ask in the dev UI (`Refresh commands? (y/n)`) and redeploy on `y`. Without the interactive UI
+	 *   (`--no-tui`, CI) the change is only reported.
+	 * - `'auto'`: redeploy right away.
+	 * - `'off'`: only report the change.
+	 *
+	 * Needs `@wolfstar/http-framework` 6.1 or later in the project: the bot reports its commands to the CLI itself.
+	 * @default 'prompt'
+	 */
+	refresh?: 'prompt' | 'auto' | 'off';
+}
+
 export interface StarsDevConfig {
 	/** Custom terminal wordmark (one or more lines), or `false` to hide it. Defaults to the Stars wordmark. */
 	banner?: string | readonly string[] | false;
+	/**
+	 * The interactive dev UI: `'dashboard'` is the full-screen view (status sidebar, channel and level filters, the
+	 * log stream), `'panel'` the compact one pinned to the bottom of the terminal with the logs folded away. `'auto'`
+	 * picks the dashboard when the terminal is at least 90 columns by 20 rows.
+	 * @default 'auto'
+	 */
+	layout?: 'auto' | 'dashboard' | 'panel';
+	/** Which log channels and levels the dev UI starts with, and where a run's logs are kept. */
+	logs?: StarsDevLogsConfig;
+	/** How `stars dev` reacts when the bot's application commands change. */
+	commands?: StarsDevCommandsConfig;
+	/**
+	 * Leaves a change to the bot's own hot reload instead of restarting it, when the bot runs with `hmr` enabled and
+	 * every file the build changed is a piece it watches. Anything else still restarts the bot. `false` always
+	 * restarts.
+	 * @default true
+	 */
+	hmr?: boolean;
 	/**
 	 * Extra paths to watch, relative to {@link StarsConfig.root}. Only used when
 	 * the build tool is `none`; `tsdown` and `tsc` watch through their own build.

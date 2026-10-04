@@ -193,6 +193,30 @@ describe('stars.config', () => {
 		expect(config.dev.logFile).toBeNull();
 	});
 
+	test('defaults the dev UI options: auto layout, every channel, no trace, prompt before refreshing commands', async () => {
+		fixture = await createFixture({ 'src/main.js': '' });
+		const { dev } = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(dev.layout).toBe('auto');
+		expect(dev.logs).toEqual({ channels: null, levels: ['error', 'warn', 'info', 'debug'], dir: null, keep: 10 });
+		expect(dev.commands).toEqual({ refresh: 'prompt' });
+		expect(dev.hmr).toBe(true);
+	});
+
+	test('resolves dev.layout, dev.logs, dev.commands and dev.hmr', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'stars.config.mjs':
+				"export default { dev: { layout: 'panel', hmr: false, commands: { refresh: 'auto' }, logs: { channels: ['bot', 'hmr'], levels: ['error', 'trace'], dir: 'logs', keep: 3 } } };"
+		});
+		const { dev } = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(dev.layout).toBe('panel');
+		expect(dev.hmr).toBe(false);
+		expect(dev.commands).toEqual({ refresh: 'auto' });
+		expect(dev.logs).toEqual({ channels: ['bot', 'hmr'], levels: ['error', 'trace'], dir: join(fixture.root, 'logs'), keep: 3 });
+	});
+
 	test('picks the type checker: golar when the project depends on it, otherwise tsc', async () => {
 		fixture = await createFixture({
 			'src/main.ts': '',
@@ -447,6 +471,18 @@ describe('stars.config', () => {
 
 		test('rejects invalid urls', async () => {
 			expect((await expectConfigError("export default { dev: { url: 'localhost' } };")).code).toBe('INVALID_URL');
+		});
+
+		test('rejects unknown dev UI choices and options', async () => {
+			const layout = await expectConfigError("export default { dev: { layout: 'grid' } };");
+			expect(layout.code).toBe('INVALID_CHOICE');
+			expect(layout.message).toContain('dev.layout');
+			expect(layout.fix).toContain("'dashboard'");
+			expect((await expectConfigError("export default { dev: { commands: { refresh: 'always' } } };")).code).toBe('INVALID_CHOICE');
+			expect((await expectConfigError("export default { dev: { logs: { levels: ['verbose'] } } };")).message).toContain('dev.logs.levels[0]');
+			expect((await expectConfigError("export default { dev: { logs: { channel: ['bot'] } } };")).code).toBe('UNKNOWN_OPTION');
+			expect((await expectConfigError('export default { dev: { logs: true } };')).code).toBe('INVALID_TYPE');
+			expect((await expectConfigError('export default { dev: { commands: { deploy: true } } };')).code).toBe('UNKNOWN_OPTION');
 		});
 
 		test('rejects a tunnel URL that is not https', async () => {

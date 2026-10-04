@@ -7,6 +7,7 @@ import type {
 	StarsDevConfig,
 	StarsEnvSetupOptions,
 	StarsExperimentalConfig,
+	StarsLogLevel,
 	StarsTypechecker
 } from '../types/config.js';
 import { EMPTY_MODULES_RUNTIME, type ModulesRuntime, type ResolvedModuleEntry } from '../types/modules.js';
@@ -62,8 +63,25 @@ export type ResolvedTunnelConfig =
 	/** An https URL the user already serves. */
 	| { readonly mode: 'url'; readonly url: string; readonly path: string; readonly updateEndpoint: boolean };
 
+export interface ResolvedDevLogsConfig {
+	/** The channels shown at start, `null` for every channel. */
+	readonly channels: readonly string[] | null;
+	readonly levels: readonly StarsLogLevel[];
+	/** Absolute directory of the per-run log files, `null` when disabled. */
+	readonly dir: string | null;
+	readonly keep: number;
+}
+
+export interface ResolvedDevCommandsConfig {
+	readonly refresh: 'prompt' | 'auto' | 'off';
+}
+
 export interface ResolvedDevConfig {
 	readonly banner: readonly string[] | false | null;
+	readonly layout: 'auto' | 'dashboard' | 'panel';
+	readonly logs: ResolvedDevLogsConfig;
+	readonly commands: ResolvedDevCommandsConfig;
+	readonly hmr: boolean;
 	readonly watch: readonly string[];
 	readonly ignore: readonly string[];
 	readonly debounce: number;
@@ -166,9 +184,16 @@ export const DEFAULT_IMPORTS_PRESETS = ['@wolfstar/http-framework', '@wolfstar/d
 export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
 export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
 export const DEFAULT_TUNNEL_PATH = '/';
+/** Every level `dev.logs.levels` accepts, from the most verbose to the most severe. */
+export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const satisfies readonly StarsLogLevel[];
+/** `trace` is the per-request noise: it starts hidden, and the dev UI turns it on. */
+export const DEFAULT_LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const satisfies readonly StarsLogLevel[];
+export const DEFAULT_LOGS_KEEP = 10;
 
 const BUILD_TOOLS = new Set<string>(['tsdown', 'tsc', 'none', 'vite', 'auto']);
 const TYPECHECKERS = new Set<string>(['tsc', 'golar', 'tsz', 'auto']);
+const DEV_LAYOUTS = ['auto', 'dashboard', 'panel'] as const;
+const COMMAND_REFRESH_MODES = ['prompt', 'auto', 'off'] as const;
 const VITE_CONFIG_FILES = ['vite.config.ts', 'vite.config.mts', 'vite.config.cts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs'];
 const TSDOWN_CONFIG_FILES = [
 	'tsdown.config.ts',
@@ -529,6 +554,10 @@ function resolveDev(
 ): ResolvedDevConfig {
 	validator.knownKeys(config, 'dev', [
 		'banner',
+		'layout',
+		'logs',
+		'commands',
+		'hmr',
 		'watch',
 		'ignore',
 		'debounce',
@@ -580,7 +609,75 @@ function resolveDev(
 				? config.banner.split('\n')
 				: (validator.stringArray(config.banner, 'dev.banner') ?? null);
 
-	return { watch, ignore, debounce, env: devEnv, nodeArgs, args, url, health, killTimeout, typecheck, tunnel, logFile, banner };
+	const layout = oneOf(validator.string(config.layout, 'dev.layout'), 'dev.layout', DEV_LAYOUTS, validator) ?? 'auto';
+	const logs = resolveDevLogs(root, config.logs, validator);
+	const commands = resolveDevCommands(config.commands, validator);
+	const hmr = validator.boolean(config.hmr, 'dev.hmr') ?? true;
+
+	return {
+		watch,
+		ignore,
+		debounce,
+		env: devEnv,
+		nodeArgs,
+		args,
+		url,
+		health,
+		killTimeout,
+		typecheck,
+		tunnel,
+		logFile,
+		banner,
+		layout,
+		logs,
+		commands,
+		hmr
+	};
+}
+
+/** A string option limited to a fixed set of values. */
+function oneOf<const Value extends string>(
+	value: string | undefined,
+	path: string,
+	allowed: readonly Value[],
+	validator: Validator
+): Value | undefined {
+	if (value === undefined) return undefined;
+	if ((allowed as readonly string[]).includes(value)) return value as Value;
+	throw validator.error(configDiagnostics.INVALID_CHOICE, { path, value, allowed: allowed.map((item) => `'${item}'`).join(', ') });
+}
+
+/**
+ * Resolves `dev.logs`: which channels and levels the dev UI starts with (the log file is never filtered), and the
+ * optional directory of per-run log files.
+ */
+function resolveDevLogs(root: string, config: StarsDevConfig['logs'], validator: Validator): ResolvedDevLogsConfig {
+	if (config === undefined) return { channels: null, levels: [...DEFAULT_LOG_LEVELS], dir: null, keep: DEFAULT_LOGS_KEEP };
+	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+		throw validator.typeError('dev.logs', 'an object', config, 'Use `{ channels, levels, dir, keep }`.');
+	}
+
+	validator.knownKeys(config, 'dev.logs', ['channels', 'levels', 'dir', 'keep']);
+	const channels = validator.stringArray(config.channels, 'dev.logs.channels') ?? null;
+	const levels = (validator.stringArray(config.levels, 'dev.logs.levels') ?? [...DEFAULT_LOG_LEVELS]).map((level, index) =>
+		oneOf(level, `dev.logs.levels[${index}]`, LOG_LEVELS, validator)!
+	);
+	const dir = config.dir === false || config.dir === undefined ? null : resolve(root, validator.string(config.dir, 'dev.logs.dir')!);
+	const keep = validator.nonNegativeNumber(config.keep, 'dev.logs.keep') ?? DEFAULT_LOGS_KEEP;
+
+	return { channels, levels, dir, keep };
+}
+
+function resolveDevCommands(config: StarsDevConfig['commands'], validator: Validator): ResolvedDevCommandsConfig {
+	if (config === undefined) return { refresh: 'prompt' };
+	if (config === null || typeof config !== 'object' || Array.isArray(config)) {
+		throw validator.typeError('dev.commands', 'an object', config, "Use `{ refresh: 'prompt' | 'auto' | 'off' }`.");
+	}
+
+	validator.knownKeys(config, 'dev.commands', ['refresh']);
+	return {
+		refresh: oneOf(validator.string(config.refresh, 'dev.commands.refresh'), 'dev.commands.refresh', COMMAND_REFRESH_MODES, validator) ?? 'prompt'
+	};
 }
 
 /**
