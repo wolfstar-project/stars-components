@@ -47,6 +47,25 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (_p: {}) => 'Refusing to delete commands without a confirmation',
 			fix: (_p: {}) => 'Pass --yes to delete them, or --name to pick one, from a script.'
 		},
+		DEPLOY_CONFIRMATION_REQUIRED: {
+			why: (_p: {}) => 'Refusing to overwrite the deployed commands without a confirmation',
+			fix: (_p: {}) => 'Pass --yes to deploy from a script, or with --json.'
+		},
+		COMMANDS_DIFFER: {
+			why: (p: { count: number }) => `${p.count} deployed command(s) differ from the ones the project defines`,
+			fix: (_p: { count: number }) => 'Run `stars commands deploy` to deploy them.'
+		},
+		LOCAL_COMMANDS_UNAVAILABLE: {
+			why: (p: { reason: string; fix: string }) => `Could not read the commands the project defines: ${p.reason}`,
+			fix: (p: { reason: string; fix: string }) => p.fix
+		},
+		DOCTOR_FAILED: {
+			why: (p: { count: number }) => `${p.count} check(s) failed`
+		},
+		UNKNOWN_SHELL: {
+			why: (p: { shell: string }) => `No completions for the shell \`${p.shell}\`.`,
+			fix: (_p: { shell: string }) => 'Use one of: bash, zsh, fish.'
+		},
 		INVALID_THEME: {
 			why: (p: { theme: string; themes: string }) => `Unknown theme \`${p.theme}\`.`,
 			fix: (p: { theme: string; themes: string }) => `Use one of: ${p.themes}.`

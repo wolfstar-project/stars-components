@@ -7,6 +7,8 @@ import { findInstalledVersion } from '../utils/project.js';
 export const BRIDGE_SOURCE = 'stars:bridge';
 /** Marks a message `stars dev` sends to the bot. */
 export const CLI_SOURCE = 'stars:cli';
+/** Set on a bot started only to report the commands it registers (see `readLocalCommands`). */
+export const DUMP_ENV = 'STARS_COMMANDS_DUMP';
 /** The first `@wolfstar/http-framework` with object plugins (`Client.use({ name, postListen })`), which the bridge is. */
 export const BRIDGE_FRAMEWORK_VERSION = '6.1.0';
 
@@ -170,6 +172,18 @@ if (typeof process.send === 'function') {
 			name: 'stars:dev-bridge',
 			enforce: 'post',
 			postInitialization(client) {
+				if (process.env[${JSON.stringify(DUMP_ENV)}] === '1') {
+					// \`stars commands diff\` only wants to know what the bot would register: once its pieces are loaded
+					// it has the answer, and exits before it listens or talks to Discord.
+					const load = client.load.bind(client);
+					client.load = async (...args) => {
+						await load(...args);
+						process.send({ source: ${JSON.stringify(BRIDGE_SOURCE)}, type: 'commands', ...commandsOf(client) }, () => process.exit(0));
+						await new Promise(() => {});
+					};
+					return;
+				}
+
 				const started = new WeakMap();
 				const track = (prefix, route, pieceOf) => {
 					client.on(prefix + 'Run', (context) => {
@@ -208,6 +222,7 @@ if (typeof process.send === 'function') {
 				client.on('hmrError', (error, path) => send('hmr', { event: 'error', path, ...describe(error) }));
 			},
 			postListen(client) {
+				if (process.env[${JSON.stringify(DUMP_ENV)}] === '1') return;
 				const server = client.server;
 				server?.on?.('request', (request, response) => {
 					const at = performance.now();
