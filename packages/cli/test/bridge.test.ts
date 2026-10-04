@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { bridgeImportArgs, bridgeModuleSource, isAtLeast, parseBridgeMessage, type BridgeMessage } from '../src/dev/bridge.js';
-import { changedFiles, isInside, snapshotFiles } from '../src/dev/changed-files.js';
+import { changedFiles, couldBePiece, isInside, snapshotFiles, type HashCache } from '../src/dev/changed-files.js';
 import { ProcessSupervisor } from '../src/utils/process-supervisor.js';
 import { loadStarsConfig } from '@wolfstar/schema';
 import { rm } from 'node:fs/promises';
@@ -11,7 +11,11 @@ import { createFixture, waitFor, type Fixture } from './helpers.js';
 const FRAMEWORK = `
 import { EventEmitter } from 'node:events';
 import { createServer } from 'node:http';
-export const container = { stores: new Map(), client: null };
+export const container = {
+	stores: new Map(),
+	client: null,
+	rest: { put: async (route, options) => { console.log('PUT ' + route + ' ' + JSON.stringify(options.body)); } }
+};
 export class Client extends EventEmitter {
 	static plugins = [];
 	static use(plugin) { Client.plugins.push(plugin); }
@@ -51,6 +55,7 @@ client.emit('interactionHandlerError', new Error('edit() was called when nothing
 client.emit('hmrStart', ['/bot/commands']);
 client.emit('hmrPieceReloaded', { name: 'ping', store: { name: 'commands' } }, '/bot/commands/ping.js');
 client.emit('hmrError', new Error('Unexpected token'), '/bot/commands/broken.js');
+client.emit('hmrStop');
 await fetch('http://127.0.0.1:' + client.server.address().port + '/', { method: 'POST' });
 setInterval(() => {}, 1000);
 `;
@@ -112,16 +117,23 @@ describe('bridge', () => {
 		expect(of('hmr')).toEqual([
 			expect.objectContaining({ event: 'start', paths: ['/bot/commands'] }),
 			expect.objectContaining({ event: 'reloaded', store: 'commands', names: ['ping'], path: '/bot/commands/ping.js' }),
-			expect.objectContaining({ event: 'error', path: '/bot/commands/broken.js', message: 'Unexpected token' })
+			expect.objectContaining({ event: 'error', path: '/bot/commands/broken.js', message: 'Unexpected token' }),
+			// Without this the CLI would go on leaving changes to a hot reload that no longer happens.
+			expect.objectContaining({ event: 'stop' })
 		]);
 		expect(of('request')).toEqual([expect.objectContaining({ method: 'POST', path: '/', status: 401, ms: expect.any(Number) })]);
 	});
 
 	test('redeploys the commands when asked, and reports a failure instead of throwing in the bot', async () => {
 		const messages = await startBot();
-		expect(supervisor!.send({ source: 'stars:cli', type: 'commands:refresh' })).toBe(true);
+		const stdout: string[] = [];
+		supervisor!.on('stdout', (line) => stdout.push(line));
+		// Guild 9 lost its last command: the registry no longer names it, so the bridge empties it explicitly.
+		expect(supervisor!.send({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: ['9'] })).toBe(true);
 		await waitFor(() => messages.some((message) => message.type === 'refreshed'));
-		expect(messages.find((message) => message.type === 'refreshed')).toMatchObject({ ok: true, global: 1, guilds: 1 });
+		expect(messages.find((message) => message.type === 'refreshed')).toMatchObject({ ok: true, global: 1, guilds: 1, cleared: 1 });
+		await waitFor(() => stdout.length > 0);
+		expect(stdout).toEqual(['PUT /applications/123/guilds/9/commands []']);
 		await supervisor!.stop();
 
 		const failing = await startBot({ FAIL_PUSH: '1' });
@@ -157,6 +169,28 @@ describe('bridge', () => {
 			await waitFor(() => supervisor!.state === 'stopped');
 			expect(lines).toEqual([`plugins=${ipc ? 1 : 0}`]);
 		}
+	});
+
+	test('parseBridgeMessage drops a bridge message that does not have the shape of its type', () => {
+		const parse = (message: Record<string, unknown>) => parseBridgeMessage({ source: 'stars:bridge', ...message });
+		// `log` is open to plugins: a missing text or channel would otherwise throw in a renderer.
+		expect(parse({ type: 'log', channel: 'gateway', level: 'info', text: 'ok', detail: ['more'] })).not.toBeNull();
+		expect(parse({ type: 'log', channel: 'gateway', level: 'info' })).toBeNull();
+		expect(parse({ type: 'log', channel: 7, level: 'info', text: 'ok' })).toBeNull();
+		expect(parse({ type: 'log', channel: '', level: 'info', text: 'ok' })).toBeNull();
+		expect(parse({ type: 'log', channel: 'gateway', level: 'info', text: 'ok', detail: 'more' })).toBeNull();
+		expect(parse({ type: 'hmr', event: 'start', paths: '/bot' })).toBeNull();
+		expect(parse({ type: 'hmr', event: 'stop' })).not.toBeNull();
+		expect(parse({ type: 'hmr', event: 'exploded' })).toBeNull();
+		expect(parse({ type: 'commands', global: [{ description: 'no name' }], guilds: {} })).toBeNull();
+		expect(parse({ type: 'commands', global: [], guilds: { '1': 'ping' } })).toBeNull();
+		expect(parse({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping' }] })).toBeNull();
+		expect(parse({ type: 'dispatch', phase: 'error', route: 'slash:ping', piece: 'Ping', ms: 1 })).toBeNull();
+		expect(parse({ type: 'dispatch', phase: 'success', route: 'slash:ping', piece: 'Ping', ms: null })).not.toBeNull();
+		expect(parse({ type: 'request', method: 'POST', path: '/', status: '200', ms: 1 })).toBeNull();
+		expect(parse({ type: 'refreshed', ok: true, global: 1, guilds: 0 })).toBeNull();
+		expect(parse({ type: 'refreshed', ok: false, message: 'no', stack: [] })).not.toBeNull();
+		expect(parse({ type: 'ready', clientId: '1', port: '3000' })).toBeNull();
 	});
 
 	test('parseBridgeMessage only accepts the bridge', () => {
@@ -209,6 +243,7 @@ describe('changed files', () => {
 			'dist/commands/old.js': 'old',
 			'dist/locales/en-US/a.json': '{}',
 			'dist/node_modules/pkg/index.js': '',
+			'dist/main.js.map': '{}',
 			'dist/tsconfig.tsbuildinfo': '1'
 		});
 		const roots = [join(fixture.root, 'dist'), join(fixture.root, 'missing')];
@@ -223,6 +258,7 @@ describe('changed files', () => {
 		await fixture.write('dist/commands/ping.js', 'ping, changed');
 		await fixture.write('dist/commands/new.js', 'new');
 		await fixture.write('dist/tsconfig.tsbuildinfo', '2');
+		await fixture.write('dist/main.js.map', '{ "changed": true }');
 		await fixture.write('dist/locales/en-US/a.json', '{ "changed": true }');
 		await rm(join(fixture.root, 'dist/commands/old.js'));
 
@@ -230,6 +266,25 @@ describe('changed files', () => {
 			['dist/commands/new.js', 'dist/commands/old.js', 'dist/commands/ping.js'].map((file) => join(fixture.root, file))
 		);
 		expect(changedFiles(before, before)).toEqual([]);
+	});
+
+	test('reads a file again only when its size or modification time changed', async () => {
+		fixture = await createFixture({ 'dist/main.js': 'main' });
+		const file = join(fixture.root, 'dist/main.js');
+		const cache: HashCache = new Map();
+		const first = snapshotFiles([join(fixture.root, 'dist')], [], cache);
+		// A hash planted in the cache is returned as long as the file looks untouched.
+		cache.set(file, { ...cache.get(file)!, hash: 'planted' });
+		expect(snapshotFiles([join(fixture.root, 'dist')], [], cache).get(file)).toBe('planted');
+		await fixture.write('dist/main.js', 'main, longer');
+		const next = snapshotFiles([join(fixture.root, 'dist')], [], cache).get(file);
+		expect(next).not.toBe('planted');
+		expect(next).not.toBe(first.get(file));
+	});
+
+	test('couldBePiece follows the filter of the stores', () => {
+		expect(['ping.js', 'ping.mjs', 'ping.ts'].map(couldBePiece)).toEqual([true, true, true]);
+		expect(['_shared.js', 'ping.d.ts', 'ping.json', 'ping.js.map'].map(couldBePiece)).toEqual([false, false, false, false]);
 	});
 
 	test('isInside does not mistake a sibling for a child', () => {

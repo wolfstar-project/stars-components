@@ -37,6 +37,7 @@ export type BridgeMessage =
 	| { type: 'ready'; clientId: string; port: number | null }
 	| { type: 'pieces'; store: string; pieces: { name: string; path: string }[] }
 	| { type: 'hmr'; event: 'start'; paths: string[] }
+	| { type: 'hmr'; event: 'stop' }
 	| { type: 'hmr'; event: 'reloaded' | 'loaded' | 'unloaded'; store: string; names: string[]; path: string }
 	| ({ type: 'hmr'; event: 'error'; path: string } & BridgeError)
 	| ({ type: 'commands' } & CommandSnapshot)
@@ -44,19 +45,77 @@ export type BridgeMessage =
 	| { type: 'dispatch'; phase: 'success'; route: string; piece: string; ms: number | null }
 	| { type: 'dispatch'; phase: 'error'; route: string; piece: string; ms: number | null; error: BridgeError }
 	| { type: 'request'; method: string; path: string; status: number; ms: number }
-	| { type: 'refreshed'; ok: true; global: number; guilds: number }
+	| { type: 'refreshed'; ok: true; global: number; guilds: number; cleared: number }
 	| ({ type: 'refreshed'; ok: false } & BridgeError)
 	/** A line on a channel of the sender's choice: how a plugin gets its own channel in the dev UI. */
 	| { type: 'log'; channel: string; level: string; text: string; detail?: string[] };
 
-const MESSAGE_TYPES = new Set(['ready', 'pieces', 'hmr', 'commands', 'dispatch', 'request', 'refreshed', 'log']);
+/** What the CLI asks of the bot. `clearGuilds` are guilds whose last command was removed: nothing registers them any more. */
+export interface RefreshRequest {
+	source: typeof CLI_SOURCE;
+	type: 'commands:refresh';
+	clearGuilds: string[];
+}
 
-/** Narrows an IPC message to one of the bridge's, `null` for anything else the bot sends. */
+type Loose = Record<string, any>;
+
+const isString = (value: unknown): value is string => typeof value === 'string';
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every(isString);
+const isRecord = (value: unknown): value is Loose => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isCommands = (value: unknown): boolean => Array.isArray(value) && value.every((command) => isRecord(command) && isString(command.name));
+const isError = (value: Loose): boolean => isString(value.message) && isStrings(value.stack);
+
+/** The shape each message must have. A plugin can send `log`, so nothing here is taken on trust. */
+const SHAPES: Record<BridgeMessage['type'], (message: Loose) => boolean> = {
+	ready: (message) => isString(message.clientId) && (message.port === null || isNumber(message.port)),
+	pieces: (message) =>
+		isString(message.store) &&
+		Array.isArray(message.pieces) &&
+		message.pieces.every((piece: unknown) => isRecord(piece) && isString(piece.name) && isString(piece.path)),
+	hmr: (message) => {
+		switch (message.event) {
+			case 'start':
+				return isStrings(message.paths);
+			case 'stop':
+				return true;
+			case 'error':
+				return isString(message.path) && isError(message);
+			case 'reloaded':
+			case 'loaded':
+			case 'unloaded':
+				return isString(message.store) && isStrings(message.names) && isString(message.path);
+			default:
+				return false;
+		}
+	},
+	commands: (message) => isCommands(message.global) && isRecord(message.guilds) && Object.values(message.guilds).every(isCommands),
+	dispatch: (message) => {
+		if (!isString(message.route) || !isString(message.piece)) return false;
+		if (message.phase === 'run') return true;
+		if (message.ms !== null && !isNumber(message.ms)) return false;
+		return message.phase === 'success' || (message.phase === 'error' && isRecord(message.error) && isError(message.error));
+	},
+	request: (message) => isString(message.method) && isString(message.path) && isNumber(message.status) && isNumber(message.ms),
+	refreshed: (message) =>
+		message.ok === true
+			? isNumber(message.global) && isNumber(message.guilds) && isNumber(message.cleared)
+			: message.ok === false && isError(message),
+	log: (message) =>
+		isString(message.channel) &&
+		message.channel.length > 0 &&
+		isString(message.level) &&
+		isString(message.text) &&
+		(message.detail === undefined || isStrings(message.detail))
+};
+
+/**
+ * Narrows an IPC message to one of the bridge's, `null` for anything else the bot sends and for a bridge message that
+ * does not have the shape of its type.
+ */
 export function parseBridgeMessage(value: unknown): BridgeMessage | null {
-	if (value === null || typeof value !== 'object') return null;
-	const message = value as { source?: unknown; type?: unknown };
-	if (message.source !== BRIDGE_SOURCE || typeof message.type !== 'string' || !MESSAGE_TYPES.has(message.type)) return null;
-	return value as BridgeMessage;
+	if (!isRecord(value) || value.source !== BRIDGE_SOURCE || !isString(value.type) || !Object.hasOwn(SHAPES, value.type)) return null;
+	return SHAPES[value.type as BridgeMessage['type']](value) ? (value as BridgeMessage) : null;
 }
 
 /**
@@ -142,6 +201,7 @@ if (typeof process.send === 'function') {
 					if (store === 'commands') snapshot(client);
 				};
 				client.on('hmrStart', (paths) => send('hmr', { event: 'start', paths }));
+				client.on('hmrStop', () => send('hmr', { event: 'stop' }));
 				client.on('hmrPieceReloaded', changed('reloaded'));
 				client.on('hmrPiecesLoaded', changed('loaded'));
 				client.on('hmrPieceUnloaded', changed('unloaded'));
@@ -182,7 +242,12 @@ if (typeof process.send === 'function') {
 					const guilds = await client.registry.pushGuildRestrictedCommands();
 					const failed = guilds.find((result) => result.status === 'rejected');
 					if (failed) throw failed.reason;
-					send('refreshed', { ok: true, global: global.length, guilds: guilds.length });
+					// A guild that lost its last command is no longer in the registry, so nothing above overwrote it.
+					const clear = Array.isArray(message.clearGuilds) ? message.clearGuilds.filter((id) => typeof id === 'string') : [];
+					for (const id of clear) {
+						await container.rest.put('/applications/' + client.id + '/guilds/' + id + '/commands', { body: [] });
+					}
+					send('refreshed', { ok: true, global: global.length, guilds: guilds.length, cleared: clear.length });
 				})
 				.catch((error) => send('refreshed', { ok: false, ...describe(error) }));
 		});

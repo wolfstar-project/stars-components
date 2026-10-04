@@ -328,6 +328,7 @@ describe('DevService', () => {
 		test('asks before refreshing changed commands, only when a UI can answer', async () => {
 			await setupWith('');
 			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
 
 			// The first report of a session is the baseline.
 			commands('Ping');
@@ -354,8 +355,8 @@ describe('DevService', () => {
 
 			commands('Pong');
 			service.answerPrompt(true);
-			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh' });
-			bridge({ type: 'refreshed', ok: true, global: 1, guilds: 0 });
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
+			bridge({ type: 'refreshed', ok: true, global: 1, guilds: 0, cleared: 0 });
 			expect(last('commands')).toMatchObject({ level: 'success', text: 'Deployed 1 global command' });
 			bridge({ type: 'refreshed', ok: false, message: 'Missing Access', stack: [] });
 			expect(last('commands')).toMatchObject({ level: 'error', text: 'Could not refresh the commands: Missing Access' });
@@ -365,6 +366,7 @@ describe('DevService', () => {
 			await setupWith("commands: { refresh: 'auto' }");
 			service.promptable = true;
 			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(false);
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
 			commands('Ping');
 			commands('Pong');
 			expect(send).toHaveBeenCalledTimes(1);
@@ -384,6 +386,55 @@ describe('DevService', () => {
 			expect(last('commands')?.detail).toContain('dev.commands.refresh is off');
 		});
 
+		test('a guild that lost its last command is cleared by the refresh, once', async () => {
+			await setupWith("commands: { refresh: 'auto' }");
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			const report = (guilds: Record<string, unknown[]>) => bridge({ type: 'commands', global: [{ name: 'ping' }], guilds });
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			report({ '7': [{ name: 'admin' }], '8': [{ name: 'mod' }] });
+
+			// Nothing registers guild 7 any more, so pushing the registry alone would leave `admin` deployed there.
+			report({ '8': [{ name: 'mod' }] });
+			expect(send).toHaveBeenLastCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: ['7'] });
+			bridge({ type: 'refreshed', ok: true, global: 1, guilds: 1, cleared: 1 });
+			expect(last('commands')).toMatchObject({ text: 'Deployed 1 global command, 1 guild group, cleared 1 guild' });
+
+			// What was deployed is the new baseline: guild 7 is not cleared again.
+			report({ '8': [{ name: 'moderation' }] });
+			expect(send).toHaveBeenLastCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
+		});
+
+		test('a refresh accepted while the bot is stopped is sent when it listens again', async () => {
+			await setupWith('');
+			service.promptable = true;
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			commands('Ping');
+			commands('Pong');
+			// The bot goes away with the question still open.
+			service.supervisor.emit('exit', { code: 0, signal: null, requested: true });
+
+			service.answerPrompt(true);
+			expect(send).not.toHaveBeenCalled();
+			expect(last('commands')).toMatchObject({ text: 'Refreshing commands when the bot starts again…' });
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
+		});
+
+		test('a message that cannot be handled is reported, not thrown', async () => {
+			await setupWith('');
+			vi.spyOn(service.logs, 'push').mockImplementationOnce(() => {
+				throw new Error('renderer exploded');
+			});
+			expect(() => bridge({ type: 'log', channel: 'gateway', level: 'info', text: 'hello' })).not.toThrow();
+			expect(service.logs.entries().at(-1)).toMatchObject({ level: 'warn', text: 'Ignored a log message from the bot: renderer exploded' });
+
+			// A message without the shape of its type never reaches the handler.
+			const count = service.logs.entries().length;
+			bridge({ type: 'log', channel: 'gateway', level: 'info' });
+			expect(service.logs.entries()).toHaveLength(count);
+		});
+
 		test('leaves a change to the bot when it hot reloads every file the build rewrote, and restarts otherwise', async () => {
 			await setupWith('');
 			await service.start();
@@ -397,25 +448,71 @@ describe('DevService', () => {
 			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
 			const hotPid = service.status.pid;
 
-			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			const hot = () => {
+				bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+				bridge({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping', path: join(fixture.root, PING) }] });
+			};
+			hot();
 			expect(service.status.hmr).toBe(true);
 			await fixture.write('src/commands/ping.js', '// 2');
+			// A file the bot never loaded, which could be a piece: its store loads it.
+			await fixture.write('src/commands/echo.js', '// new');
 			builder.succeed();
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			expect(service.status.pid).toBe(hotPid);
 			expect(service.status.restarts).toBe(1);
 			expect(service.status.progress.fraction).toBe(1);
-			expect(last('hmr')).toMatchObject({ level: 'trace', text: `UPDATE ${PING}` });
+			expect(
+				service.logs
+					.entries()
+					.filter((entry) => entry.channel === 'hmr' && entry.level === 'trace')
+					.map((entry) => entry.text)
+					.sort()
+			).toEqual([`UPDATE ${join('src', 'commands', 'echo.js')}`, `UPDATE ${PING}`]);
 
-			// A build that rewrote the files without changing them is not a reason to hot reload, nor to do nothing.
-			await fixture.write('src/main.js', `${KEEPALIVE_SCRIPT} // changed`);
-			await fixture.write('src/commands/ping.js', '// 2');
 			// A file outside the stores cannot be hot reloaded.
+			await fixture.write('src/main.js', `${KEEPALIVE_SCRIPT} // changed`);
 			await fixture.write('src/commands/ping.js', '// 3');
 			builder.succeed();
 			await waitFor(() => service.status.pid !== null && service.status.pid !== hotPid && service.status.process === 'running');
 			// The new process has not reported hot reload yet.
 			expect(service.status.hmr).toBe(false);
+		});
+
+		test('a helper next to the pieces is not a piece: changing it restarts the bot', async () => {
+			await setupWith('');
+			await fixture.write('src/commands/_shared.js', '// 1');
+			await fixture.write('src/commands/format.js', '// 1');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+
+			for (const helper of ['src/commands/_shared.js', 'src/commands/format.js']) {
+				const pid = service.status.pid;
+				bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+				// The bot loaded a piece from `ping.js` only: the two other files are modules that pieces import.
+				bridge({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping', path: join(fixture.root, PING) }] });
+				await fixture.write(helper, '// 2');
+				builder.succeed();
+				await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
+			}
+		});
+
+		test('a bot that stopped its hot reload is restarted again', async () => {
+			await setupWith('');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const pid = service.status.pid;
+			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			bridge({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping', path: join(fixture.root, PING) }] });
+			bridge({ type: 'hmr', event: 'stop' });
+			expect(service.status.hmr).toBe(false);
+			expect(last('hmr')).toMatchObject({ text: 'Hot reload off' });
+
+			await fixture.write('src/commands/ping.js', '// 2');
+			builder.succeed();
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
 		});
 
 		test('dev.hmr false always restarts', async () => {
@@ -465,7 +562,7 @@ describe('DevService', () => {
 			expect(send).not.toHaveBeenCalled();
 			expect(last('commands')).toMatchObject({ text: 'Refreshing commands once the bot is ready…' });
 			bridge({ type: 'ready', clientId: '1', port: 3000 });
-			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh' });
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
 		});
 
 		test('disconnect stops the bot until a manual restart, whatever builds in between', async () => {

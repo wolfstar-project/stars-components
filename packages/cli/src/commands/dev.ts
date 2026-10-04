@@ -5,7 +5,7 @@ import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
 import { LogFileWriter, runLogFile } from '../dev/log-file.js';
 import { initialLogView, isLogLevel } from '../dev/tui/log-view.js';
-import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
+import { collectFlag, projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { ExitCode, renderCrashReport } from '../utils/errors.js';
 import { applyEnvOptions, loadProject, withProjectEnv } from '../utils/hooks.js';
@@ -149,14 +149,14 @@ export default defineCommand({
 			description: `Only show this log level and the more severe ones at start: ${LEVELS.join(', ')} (defaults to dev.logs.levels)`
 		}
 	},
-	async run({ args }) {
-		const channel = Array.isArray(args.channel) ? (args.channel as string[]) : args.channel ? [args.channel] : undefined;
+	async run({ args, rawArgs }) {
+		const channel = collectFlag(rawArgs, 'channel');
 		await runDev({
 			config: args.config,
 			cwd: args.cwd,
 			tui: args.tui ? undefined : false,
 			theme: args.theme,
-			channel,
+			channel: channel.length > 0 ? channel : undefined,
 			level: args.level
 		});
 	}

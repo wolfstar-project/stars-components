@@ -7,8 +7,8 @@ import type { StarsHookable } from '../utils/hooks.js';
 import { classifyAppLine, LogBuffer, type LogLevel, type LogSource } from '../utils/log-buffer.js';
 import { Locales } from '../utils/locales.js';
 import { ProcessSupervisor, type ProcessExit, type ProcessState } from '../utils/process-supervisor.js';
-import { bridgeImportArgs, CLI_SOURCE, parseBridgeMessage, type BridgeMessage, type CommandSnapshot } from './bridge.js';
-import { changedFiles, isInside, snapshotFiles, type FileSnapshot } from './changed-files.js';
+import { bridgeImportArgs, CLI_SOURCE, parseBridgeMessage, type BridgeMessage, type CommandSnapshot, type RefreshRequest } from './bridge.js';
+import { changedFiles, couldBePiece, isInside, snapshotFiles, type FileSnapshot, type HashCache } from './changed-files.js';
 import { Tunnel, type TunnelState } from './tunnel.js';
 import { Typechecker, type TypecheckState } from './typechecker.js';
 
@@ -110,6 +110,11 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	#commands: CommandSnapshot | null = null;
 	/** What the build output held after the previous build, `null` before the first one. */
 	#files: FileSnapshot | null = null;
+	readonly #hashes: HashCache = new Map();
+	/** The files the running bot loaded pieces from: what its hot reload can replace. */
+	#pieces = new Set<string>();
+	/** The commands Discord is assumed to have: the first report of the session, then whatever was last deployed. */
+	#deployed: CommandSnapshot | null = null;
 	/** A refresh of the commands asked for while the bot was not listening; sent once it is. */
 	#refreshPending = false;
 
@@ -150,7 +155,13 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.supervisor.on('stderr', (line) => this.log('app', classifyAppLine(line, 'error'), line));
 		this.supervisor.on('message', (message) => {
 			const parsed = parseBridgeMessage(message);
-			if (parsed) this.#onBridge(parsed);
+			if (parsed === null) return;
+			try {
+				this.#onBridge(parsed);
+			} catch (error) {
+				// Whatever the bot sends, it must not take the session down.
+				this.log('stars', 'warn', `Ignored a ${parsed.type} message from the bot: ${error instanceof Error ? error.message : String(error)}`);
+			}
 		});
 		this.supervisor.on('error', (error) => this.log('stars', 'error', `Failed to start the bot: ${error.message}`));
 		this.supervisor.on('exit', (exit) => this.#onExit(exit));
@@ -271,15 +282,22 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 	/** Asks the bot to register its commands with Discord again. The bot answers on the `commands` channel. */
 	public refreshCommands(): void {
-		// A bot that is restarting has no client to register anything with yet: the refresh waits for it to listen.
-		if (!this.#ready && this.supervisor.running) {
+		// A bot that is stopped or restarting has no client to register anything with: the refresh waits for it to listen.
+		if (!this.#ready) {
 			this.#refreshPending = true;
-			this.log('stars', 'info', 'Refreshing commands once the bot is ready…', { channel: 'commands' });
+			const when = this.supervisor.running ? 'once the bot is ready' : 'when the bot starts again';
+			this.log('stars', 'info', `Refreshing commands ${when}…`, { channel: 'commands' });
 			return;
 		}
 
 		this.#refreshPending = false;
-		if (this.supervisor.send({ source: CLI_SOURCE, type: 'commands:refresh' })) {
+		const current = this.#commands?.guilds ?? {};
+		const request: RefreshRequest = {
+			source: CLI_SOURCE,
+			type: 'commands:refresh',
+			clearGuilds: Object.keys(this.#deployed?.guilds ?? {}).filter((guild) => !Object.hasOwn(current, guild))
+		};
+		if (this.supervisor.send(request)) {
 			this.log('stars', 'info', 'Refreshing commands…', { channel: 'commands' });
 		} else {
 			this.log('stars', 'warn', 'Could not reach the bot to refresh its commands', { channel: 'commands' });
@@ -360,20 +378,25 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	/**
 	 * The files the build rewrote when all of them are pieces the running bot hot reloads, `null` when the bot has to
 	 * be restarted instead: it is not running, it does not hot reload, `dev.hmr` is off, nothing changed (a rebuild for
-	 * a reason that cannot be seen from the output), or a file outside the stores changed. What a build changed is the
-	 * difference in content with the previous output, since a bundler rewrites files it did not change.
+	 * a reason that cannot be seen from the output), or a file changed that the bot cannot replace. What a build changed
+	 * is the difference in content with the previous output, since a bundler rewrites files it did not change.
+	 *
+	 * The bot replaces the files it loaded pieces from, and loads a new file that could be one. A helper module next to
+	 * the pieces (`_shared.js`, or any file no piece came from) is imported once and stays as it was: changing it
+	 * needs a restart, even though it lies in a store path.
 	 */
 	#hotReloadable(): string[] | null {
 		if (this.config.dev.hmr === false) return null;
 
 		const roots = this.config.build.tool === 'none' ? this.config.dev.watch : [this.config.build.outDir];
 		const previous = this.#files;
-		this.#files = snapshotFiles(roots, [this.locales.destination]);
+		this.#files = snapshotFiles(roots, [this.locales.destination], this.#hashes);
 		if (previous === null || this.#hmrPaths.length === 0 || this.supervisor.state !== 'running') return null;
 
 		const changed = changedFiles(previous, this.#files);
-		if (changed.length === 0 || !changed.every((file) => this.#hmrPaths.some((path) => isInside(file, path)))) return null;
-		return changed;
+		const replaceable = (file: string) =>
+			this.#hmrPaths.some((path) => isInside(file, path)) && (this.#pieces.has(file) || (!previous.has(file) && couldBePiece(file)));
+		return changed.length > 0 && changed.every(replaceable) ? changed : null;
 	}
 
 	#onBuildFailure(outcome: BuildOutcome): void {
@@ -390,6 +413,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.#ready = false;
 		this.#port = null;
 		this.#hmrPaths = [];
+		this.#pieces.clear();
 		// A pending prompt stays: the commands still differ from what Discord has, and the next process can deploy them.
 		if (!exit.requested) {
 			const how = exit.signal ? `signal ${exit.signal}` : `code ${exit.code}`;
@@ -471,6 +495,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 				this.#emitStatus();
 				return;
 			case 'pieces':
+				for (const piece of message.pieces) this.#pieces.add(piece.path);
 				if (message.pieces.length === 0) return;
 				this.log('stars', 'debug', `Loaded ${message.store}: ${message.pieces.length} ${message.pieces.length === 1 ? 'piece' : 'pieces'}`, {
 					channel: message.store === 'commands' ? 'commands' : 'lifecycle',
@@ -502,7 +527,10 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 				return;
 			case 'refreshed':
 				if (message.ok) {
-					const guilds = message.guilds > 0 ? `, ${message.guilds} guild ${message.guilds === 1 ? 'group' : 'groups'}` : '';
+					this.#deployed = this.#commands;
+					const guilds =
+						(message.guilds > 0 ? `, ${message.guilds} guild ${message.guilds === 1 ? 'group' : 'groups'}` : '') +
+						(message.cleared > 0 ? `, cleared ${message.cleared} ${message.cleared === 1 ? 'guild' : 'guilds'}` : '');
 					this.log('stars', 'success', `Deployed ${message.global} global ${message.global === 1 ? 'command' : 'commands'}${guilds}`, {
 						channel: 'commands'
 					});
@@ -528,11 +556,21 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			return;
 		}
 
+		if (message.event === 'stop') {
+			// Nothing in the bot watches any more: the next change needs a restart again.
+			this.#hmrPaths = [];
+			this.log('stars', 'debug', 'Hot reload off', { channel: 'hmr' });
+			this.#emitStatus();
+			return;
+		}
+
 		if (message.event === 'error') {
 			this.log('stars', 'error', `Could not reload ${relative(message.path)}: ${message.message}`, { channel: 'hmr', detail: message.stack });
 			return;
 		}
 
+		if (message.event === 'unloaded') this.#pieces.delete(message.path);
+		else this.#pieces.add(message.path);
 		const verb = message.event === 'reloaded' ? 'Reloaded' : message.event === 'loaded' ? 'Loaded' : 'Unloaded';
 		this.log('stars', 'debug', `${verb} ${message.names.join(', ')} from ${relative(message.path)}`, { channel: 'hmr' });
 	}
@@ -545,6 +583,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		const previous = this.#commands;
 		this.#commands = snapshot;
 		if (previous === null) {
+			this.#deployed = snapshot;
 			const guilds = Object.keys(snapshot.guilds).length;
 			this.log('stars', 'debug', `Loaded commands: ${snapshot.global.length} global, ${guilds} guild ${guilds === 1 ? 'group' : 'groups'}`, {
 				channel: 'commands',
