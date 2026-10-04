@@ -13,14 +13,19 @@ type NumberString = `${number}`;
  * - `number` becomes a string that is both an {@link IntegerString} and a {@link NumberString}: the coerced type
  *   cannot tell an integer from a float (and `port` is a number), so the key is accepted by `envParseInteger` and
  *   `envParseNumber` alike.
- * - `string` and `enum` (a union of string literals) are kept as they are.
+ * - `string` and `enum` (a union of string literals) are kept as they are, except an enum whose values look like a
+ *   boolean or a number (`'1' | '2'`): it is widened with `string`, so its key is read with `envParseString` and is not
+ *   handed to a parser that would turn `'1'` into `1`.
+ * - Anything else (an `array`, an `object`) becomes a plain `string`.
  */
 export type EnvValueFromVarlock<V> = V extends boolean
 	? BooleanString
 	: V extends number
 		? IntegerString & NumberString
 		: V extends string
-			? V
+			? [V] extends [BooleanString | IntegerString | NumberString]
+				? V | (string & Record<never, never>)
+				: V
 			: V extends null | undefined
 				? undefined
 				: string;
@@ -28,6 +33,9 @@ export type EnvValueFromVarlock<V> = V extends boolean
 /**
  * Derives the `Env` entries of an application from the `CoercedEnvSchema` type that varlock generates with
  * `@generateTsTypes`, so the schema stays the only place where a variable is declared. Optional keys stay optional.
+ *
+ * `NODE_ENV` is left out: `Env` already declares it as `'test' | 'development' | 'production'`, and a narrower (or
+ * optional) `NODE_ENV` in the schema would make the `interface Env extends ...` below fail to compile.
  *
  * @example
  * ```typescript
@@ -40,4 +48,4 @@ export type EnvValueFromVarlock<V> = V extends boolean
  * }
  * ```
  */
-export type EnvFromVarlock<T> = { [K in keyof T]: EnvValueFromVarlock<T[K]> };
+export type EnvFromVarlock<T> = { [K in keyof T as K extends 'NODE_ENV' ? never : K]: EnvValueFromVarlock<T[K]> };

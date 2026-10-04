@@ -153,8 +153,15 @@ declare module '@wolfstar/env-utilities' {
 
 - `boolean` to `BooleanString`, so `envParseBoolean` accepts the key.
 - `number` to a string that is both an `IntegerString` and a `NumberString`: the coerced type cannot tell an integer from a
-  float (and `port` is a number), so both `envParseInteger` and `envParseNumber` accept the key.
-- `string` and `enum` to their string form, so `envParseString` accepts the key.
+  float (and `port` is a number), so both `envParseInteger` and `envParseNumber` accept the key. `envParseInteger` throws at
+  runtime when a decimal-capable key holds `1.5`: use `envParseNumber` for those.
+- `string` and `enum` to their string form, so `envParseString` accepts the key. An enum whose values look like a number or
+  a boolean (`'1' | '2'`) is widened with `string`, so it stays a string key.
 - optional keys to optional keys.
+- anything else, like an `array`, to a plain `string`.
 
-Varlock has no array type, so a variable read with `envParseArray` still has to be declared as `ArrayString` by hand.
+`NODE_ENV` is left out: `Env` keeps declaring it as `'test' | 'development' | 'production'`, so a schema with a narrower
+`NODE_ENV` still compiles.
+
+Varlock serializes an `array` with its own separator (`,` by default), while `envParseArray` splits on spaces and needs an
+`ArrayString` key. Read such a variable through the `ENV` object of `varlock/env` (already an array) or declare the key as `ArrayString` by hand.
