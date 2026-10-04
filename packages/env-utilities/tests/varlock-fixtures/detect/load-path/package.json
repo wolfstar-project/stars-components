@@ -1,0 +1,6 @@
+{
+	"name": "load-path",
+	"varlock": {
+		"loadPath": "./config"
+	}
+}

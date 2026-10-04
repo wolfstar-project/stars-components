@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 const { requireMock } = vi.hoisted(() => ({ requireMock: vi.fn() }));
 
 vi.mock('node:module', async (importOriginal) => {
@@ -9,6 +11,10 @@ describe('Varlock loader without the optional package', () => {
 	beforeEach(() => {
 		process.env.NODE_ENV = 'development';
 		requireMock.mockReset();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	afterAll(() => {
@@ -33,6 +39,20 @@ describe('Varlock loader without the optional package', () => {
 
 		const loadEnvFiles = await load();
 		expect(() => loadEnvFiles({ loader: 'varlock' })).toThrow(/optional `varlock` package is not installed/);
+	});
+
+	test('should keep dotenv when a schema is found but `varlock` is not installed', async () => {
+		requireMock.resolve = vi.fn(() => {
+			throw Object.assign(new Error("Cannot find package 'varlock'"), { code: 'MODULE_NOT_FOUND' });
+		});
+		vi.spyOn(process, 'cwd').mockReturnValue(fileURLToPath(new URL('./varlock-fixtures/detect/src-schema', import.meta.url)));
+
+		const loadEnvFiles = await load();
+		try {
+			expect(loadEnvFiles().parsed).toEqual({ VARLOCK_TEST_SOURCE: 'dotenv' });
+		} finally {
+			delete process.env.VARLOCK_TEST_SOURCE;
+		}
 	});
 
 	test('should rethrow errors unrelated to a missing package', async () => {

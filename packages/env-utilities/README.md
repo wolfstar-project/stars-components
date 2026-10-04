@@ -82,13 +82,15 @@ Files on the left have more priority than files on the right:
 [varlock](https://varlock.dev), a schema-based alternative to `dotenv` with built-in validation, type-safety, and
 secret protection. Support for it is **experimental**.
 
-To use it, first set up varlock in your project (`npx varlock init`) and install the optional `varlock` package, then
-opt in via the `loader` option or the `DOTENV_LOADER` environment variable:
+To use it, first set up varlock in your project (`npx varlock init`) and install the optional `varlock` package.
+`setup()` then picks it by itself when the project has a schema: a `src/.env.schema` (looked up first, like `src/.env*`),
+a `.env.schema` at the project root, or a `varlock.loadPath` in `package.json`. An explicit `path` or `DOTENV_PATH` keeps
+the dotenv loader, and the `loader` option and the `DOTENV_LOADER` environment variable always have the last word:
 
 ```typescript
 import { setup } from '@wolfstar/env-utilities';
 
-setup({ loader: 'varlock' });
+setup({ loader: 'varlock' }); // or { loader: 'dotenv' } to keep dotenv next to a schema
 ```
 
 ```

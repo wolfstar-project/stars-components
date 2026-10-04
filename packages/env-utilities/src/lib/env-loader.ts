@@ -1,7 +1,7 @@
 import { container } from '@sapphire/pieces';
 import { config, populate, type DotenvConfigOptions, type DotenvConfigOutput, type DotenvParseOutput } from 'dotenv';
 import { expand } from 'dotenv-expand';
-import { statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,7 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 	/**
 	 * **Experimental.** Selects the loader used to resolve environment variables.
 	 *
-	 * - `'dotenv'` (default): loads and merges `.env*` files with `dotenv`/`dotenv-expand`, as documented on the
+	 * - `'dotenv'`: loads and merges `.env*` files with `dotenv`/`dotenv-expand`, as documented on the
 	 *   other options.
 	 * - `'varlock'`: delegates to {@link https://varlock.dev | varlock} instead of `dotenv`. Varlock resolves a
 	 *   checked-in `.env.schema` (with its own `.env*` file discovery and validation) via its CLI and injects the
@@ -45,7 +45,10 @@ export interface EnvLoaderOptions extends Omit<DotenvConfigOptions, 'path'> {
 	 *   `--env`, `prefix` still filters the returned `parsed`, and `encoding` is ignored. An invalid schema throws
 	 *   an `Error` with varlock's summary. Requires the optional `varlock` package to be installed.
 	 *
-	 * @default 'dotenv'
+	 * When not set, `'varlock'` is used if a `.env.schema` is found (`src/.env.schema`, then `.env.schema` at the project
+	 * root, or a `varlock.loadPath` in `package.json`), no `path` is set and `varlock` is installed; otherwise `'dotenv'`.
+	 *
+	 * @default detected, `'dotenv'` without a varlock schema
 	 */
 	loader?: 'dotenv' | 'varlock';
 }
@@ -65,8 +68,9 @@ export function loadEnvFiles(options?: EnvLoaderOptions): DotenvConfigOutput {
 		? (message: string) => resolveDebugLogger().debug(`[@wolfstar/env-utilities@${packageVersion}] ${message}`)
 		: () => undefined;
 
-	if (options?.loader === 'varlock') {
-		return loadWithVarlock(options, log);
+	// Detected before the `NODE_ENV` check below: varlock's `--env` is not required to be `NODE_ENV`.
+	if ((options?.loader ?? detectLoader(options, log)) === 'varlock') {
+		return loadWithVarlock(options ?? {}, log);
 	}
 
 	/**
@@ -186,7 +190,7 @@ function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => vo
 		throw error;
 	}
 
-	const { args, cwd } = varlockLoadArguments(options);
+	const { args, cwd } = varlockLoadArguments(options.env, options.path ?? findVarlockSchema()?.path);
 	log(`running \`varlock ${args.join(' ')}\`${cwd ? ` in \`${cwd}\`` : ''}`);
 
 	let stdout: string;
@@ -194,7 +198,7 @@ function loadWithVarlock(options: EnvLoaderOptions, log: (message: string) => vo
 		({ stdout } = varlock.execSyncVarlock(args.join(' '), {
 			fullResult: true,
 			callerDir: dirname(fileURLToPath(import.meta.url)),
-			...(cwd && { cwd }),
+			cwd: cwd ?? process.cwd(),
 			env: varlockChildEnv()
 		}));
 	} catch (error) {
@@ -244,29 +248,71 @@ function varlockChildEnv(): NodeJS.ProcessEnv {
  * one: a `path` that does is passed relative to the directory the CLI runs in instead (so the name of a file, not of
  * a directory, cannot contain one).
  */
-function varlockLoadArguments(options: EnvLoaderOptions): { args: string[]; cwd?: string } {
+function varlockLoadArguments(env: string | undefined, path: string | URL | undefined): { args: string[]; cwd?: string } {
 	const args = ['load', '--format', 'json-full', '--compact', '--summary-stderr'];
 	let cwd: string | undefined;
 
-	if (options.env) {
-		assertNoWhitespace('env', options.env);
-		args.push('--env', options.env);
+	if (env) {
+		assertNoWhitespace('env', env);
+		args.push('--env', env);
 	}
 
-	if (options.path !== undefined) {
-		const path = resolve(typeof options.path === 'string' ? options.path : fileURLToPath(options.path));
-		if (/\s/.test(path)) {
+	if (path !== undefined) {
+		const resolved = resolve(typeof path === 'string' ? path : fileURLToPath(path));
+		if (/\s/.test(resolved)) {
 			// `--path` is a directory or a file: run in the directory itself, or next to the file.
-			const isDirectory = statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
-			cwd = isDirectory ? path : dirname(path);
-			if (!isDirectory) assertNoWhitespace('path', basename(path));
-			args.push('--path', isDirectory ? '.' : basename(path));
+			const isDirectory = statSync(resolved, { throwIfNoEntry: false })?.isDirectory() ?? false;
+			cwd = isDirectory ? resolved : dirname(resolved);
+			if (!isDirectory) assertNoWhitespace('path', basename(resolved));
+			args.push('--path', isDirectory ? '.' : basename(resolved));
 		} else {
-			args.push('--path', path);
+			args.push('--path', resolved);
 		}
 	}
 
 	return { args, cwd };
+}
+
+/**
+ * Picks the loader when none is requested: varlock if the project has a schema and `varlock` is installed, else
+ * dotenv. An explicit `path` keeps the dotenv semantics (a base path of `.env*` files, not a schema location), so
+ * it never selects varlock on its own.
+ */
+function detectLoader(options: EnvLoaderOptions | undefined, log: (message: string) => void): 'dotenv' | 'varlock' {
+	if (options?.path !== undefined || !findVarlockSchema()) return 'dotenv';
+
+	try {
+		createRequire(import.meta.url).resolve('varlock/exec-sync-varlock');
+	} catch {
+		log('found a varlock schema, but `varlock` is not installed: using dotenv');
+		return 'dotenv';
+	}
+
+	log('found a varlock schema: using varlock');
+	return 'varlock';
+}
+
+/**
+ * Looks for a varlock schema the way `.env*` files are looked for: `src/.env.schema` first, then the project root.
+ * `path` is only set for `src`, since `varlock load` already finds the root schema (or the `varlock.loadPath` of
+ * `package.json`) from the current directory.
+ */
+function findVarlockSchema(): { path?: string } | undefined {
+	const cwd = process.cwd();
+
+	const src = resolve(cwd, 'src');
+	if (existsSync(join(src, '.env.schema'))) return { path: src };
+
+	if (existsSync(join(cwd, '.env.schema'))) return {};
+
+	try {
+		const pkg = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8')) as { varlock?: { loadPath?: unknown } };
+		if (pkg.varlock?.loadPath) return {};
+	} catch {
+		// No readable `package.json`: there is no `varlock.loadPath` to honour.
+	}
+
+	return undefined;
 }
 
 function assertNoWhitespace(name: string, value: string): void {
