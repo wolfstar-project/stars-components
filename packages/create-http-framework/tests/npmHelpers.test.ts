@@ -53,6 +53,15 @@ describe('fetchDependencyVersions', () => {
 		expect(names).toContain('@wolfstar/i18next-type-generator');
 	});
 
+	test('GIVEN a linter THEN requests the framework lint plugin, and not without one', async () => {
+		await fetchDependencyVersions(makeSelections({ linter: 'eslint' }));
+		expect(requestedPackageNames(fetchMock)).toContain('@wolfstar/eslint-plugin-http-framework');
+
+		fetchMock.mockClear();
+		await fetchDependencyVersions(makeSelections({ linter: 'none' }));
+		expect(requestedPackageNames(fetchMock)).not.toContain('@wolfstar/eslint-plugin-http-framework');
+	});
+
 	test('GIVEN any selection THEN never requests @wolfstar/http-framework-i18n or @discordjs/builders', async () => {
 		await fetchDependencyVersions(makeSelections({ i18n: true, subcommands: true, testing: true }));
 

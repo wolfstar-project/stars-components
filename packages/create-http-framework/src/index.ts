@@ -64,6 +64,7 @@ Options:
   --cache / --no-cache         Toggle @wolfstar/plugin-cache, the gateway entity cache (default: off; enables --gateway)
   --redis / --no-redis         Store the cache in Redis instead of memory (default: off; enables --cache)
   --sharder / --no-sharder     Toggle @wolfstar/plugin-sharder, gateway shards across cluster workers (default: off; enables --gateway)
+  --tunnel / --no-tunnel       Open a cloudflared quick tunnel in \`stars dev\`, so Discord reaches the bot (default: off)
   --install / --no-install     Toggle dependency installation (default: on)
   --ignore                     Write into an existing, non-empty directory without clearing it
   --help, -h                   Print this message and exit
@@ -113,6 +114,7 @@ async function main(): Promise<void> {
 	const cliCache = argv['cache'] as boolean | undefined;
 	const cliRedis = argv['redis'] as boolean | undefined;
 	const cliSharder = argv['sharder'] as boolean | undefined;
+	const cliTunnel = argv['tunnel'] as boolean | undefined;
 	const cliInstall = argv['install'] as boolean;
 
 	// Detect whether a known AI agent is driving this session
@@ -344,6 +346,7 @@ async function main(): Promise<void> {
 	let wantsCache: boolean;
 	let wantsRedis: boolean;
 	let wantsSharder: boolean;
+	let wantsTunnel: boolean;
 
 	// Nitro forwards requests to a default-exported client, which the sharder's manager process never has.
 	const nitro = language === 'ts' && isNitroBuild(buildTool);
@@ -357,6 +360,7 @@ async function main(): Promise<void> {
 		wantsCache = cliCache ?? false;
 		wantsRedis = cliRedis ?? false;
 		wantsSharder = cliSharder ?? false;
+		wantsTunnel = cliTunnel ?? false;
 	} else {
 		const featuresResult = await multiselect({
 			message: 'Which optional features would you like to add?',
@@ -367,9 +371,11 @@ async function main(): Promise<void> {
 				{ value: 'testing', label: 'Testing setup (vitest)' },
 				{ value: 'gateway', label: 'Gateway events (@wolfstar/plugin-gateway)' },
 				{ value: 'cache', label: 'Gateway entity cache (@wolfstar/plugin-cache)' },
-				...(nitro ? [] : [{ value: 'sharder', label: 'Gateway sharding across cluster workers (@wolfstar/plugin-sharder)' }])
+				...(nitro ? [] : [{ value: 'sharder', label: 'Gateway sharding across cluster workers (@wolfstar/plugin-sharder)' }]),
+				{ value: 'tunnel', label: 'Dev tunnel (a cloudflared quick tunnel, so Discord reaches the bot while developing)' }
 			],
-			initialValues: [],
+			// `--tunnel` already answers this one.
+			initialValues: cliTunnel ? ['tunnel'] : [],
 			required: false
 		});
 		if (isCancel(featuresResult)) {
@@ -384,6 +390,7 @@ async function main(): Promise<void> {
 		wantsGateway = features.has('gateway');
 		wantsCache = features.has('cache');
 		wantsSharder = features.has('sharder');
+		wantsTunnel = features.has('tunnel');
 		wantsRedis = cliRedis ?? false;
 
 		// `--redis` already answers whether to use Redis, only ask when the flag was left out.
@@ -455,21 +462,27 @@ async function main(): Promise<void> {
 
 	// ── Generate files ────────────────────────────────────────────────────────
 	s.start('Generating project files...');
-	const preservedFiles = await processTemplate(targetDir, {
-		name: projectName,
-		port,
-		language,
-		i18n: wantsI18n,
-		subcommands: wantsSubcommands,
-		subcommandsAdvanced: wantsSubcommandsAdvanced,
-		testing: wantsTesting,
-		gateway: wantsGateway,
-		cache: wantsCache,
-		redis: wantsRedis,
-		sharder: wantsSharder,
-		buildTool,
-		autoEnv: true
-	});
+	const keptDocs: string[] = [];
+	const preservedFiles = await processTemplate(
+		targetDir,
+		{
+			name: projectName,
+			port,
+			language,
+			i18n: wantsI18n,
+			subcommands: wantsSubcommands,
+			subcommandsAdvanced: wantsSubcommandsAdvanced,
+			testing: wantsTesting,
+			gateway: wantsGateway,
+			cache: wantsCache,
+			redis: wantsRedis,
+			sharder: wantsSharder,
+			buildTool,
+			tunnel: wantsTunnel,
+			autoEnv: true
+		},
+		(path) => keptDocs.push(path)
+	);
 	writeProjectFiles(targetDir, {
 		name: projectName,
 		port,
@@ -481,6 +494,7 @@ async function main(): Promise<void> {
 		cache: wantsCache,
 		redis: wantsRedis,
 		sharder: wantsSharder,
+		tunnel: wantsTunnel,
 		packageManager,
 		language,
 		buildTool,
@@ -489,6 +503,9 @@ async function main(): Promise<void> {
 		versions
 	});
 	s.stop('Project files generated.');
+	for (const file of keptDocs) {
+		log.warn(`Kept your existing "${file}" as it is — delete it and run again to get the generated one.`);
+	}
 	for (const file of preservedFiles) {
 		log.warn(`Kept hand-edited "${file}" even though its feature is now disabled — remove it manually if it's no longer needed.`);
 	}

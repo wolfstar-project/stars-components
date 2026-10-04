@@ -77,6 +77,8 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 		names.add(selections.language === 'ts' ? 'typescript-eslint' : '@eslint/js');
 	}
 	if (selections.linter === 'oxlint') names.add('oxlint');
+	// The framework's own lint rules, for either linter.
+	if (selections.linter !== 'none') names.add('@wolfstar/eslint-plugin-http-framework');
 	if (selections.formatter === 'prettier') names.add('prettier');
 	if (selections.formatter === 'oxfmt') names.add('oxfmt');
 

@@ -15,6 +15,8 @@ export interface ProjectContext {
 	cache: boolean;
 	redis: boolean;
 	sharder: boolean;
+	/** Whether `stars dev` opens a cloudflared quick tunnel for the interactions endpoint. */
+	tunnel?: boolean;
 	packageManager: PackageManager;
 	language: Language;
 	/** Only meaningful when `language === 'ts'`. */
@@ -25,6 +27,19 @@ export interface ProjectContext {
 }
 
 const caret = (version: string): string => `^${version}`;
+
+export const FRAMEWORK_LINT_PLUGIN = '@wolfstar/eslint-plugin-http-framework';
+
+/** The rules of {@link FRAMEWORK_LINT_PLUGIN}, listed for oxlint, whose JSON configuration cannot import them. */
+export const FRAMEWORK_LINT_RULES = [
+	'wolfstar/apply-options-decorator-order',
+	'wolfstar/require-subcommand-parent',
+	'wolfstar/no-raw-discord-fetch',
+	'wolfstar/no-dynamic-translation-key',
+	'wolfstar/prefer-apply-localized-builder',
+	'wolfstar/no-hoisted-plugin-register-import',
+	'wolfstar/no-deprecated-i18n-package'
+] as const;
 
 function sortKeys<T extends Record<string, string>>(record: T): T {
 	return Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b))) as T;
@@ -125,6 +140,9 @@ export function buildDevDependencies(ctx: ProjectContext): Record<string, string
 	} else if (ctx.linter === 'oxlint') {
 		dev['oxlint'] = caret(v['oxlint']!);
 	}
+
+	// The framework's own rules (decorator order, raw Discord fetches, …) run in both linters from one plugin.
+	if (ctx.linter !== 'none') dev[FRAMEWORK_LINT_PLUGIN] = caret(v[FRAMEWORK_LINT_PLUGIN]!);
 
 	if (ctx.formatter === 'prettier') {
 		dev['prettier'] = caret(v['prettier']!);
@@ -236,12 +254,15 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
 	const isJs = ctx.language === 'js';
 	const usesTsc = !isJs && (ctx.buildTool === 'tsc6' || ctx.buildTool === 'tsc7');
-	let options = usesTsc ? "{ build: { tool: 'tsc' }, env: false }" : isJs ? '{ env: false }' : '{}';
+	const parts = usesTsc ? ["build: { tool: 'tsc' }", 'env: false'] : isJs ? ['env: false'] : [];
 	if (!isJs && isViteBuild(ctx.buildTool)) {
 		// Nitro v3 is itself a Vite plugin, so `enableNitro` also needs `enableVite`.
 		const nitro = isNitroBuild(ctx.buildTool) ? ", enableNitro: true, nitro: { preset: 'node-server' }" : '';
-		options = `{ build: { tool: 'vite' }, experimental: { enableVite: true${nitro} } }`;
+		parts.push("build: { tool: 'vite' }", `experimental: { enableVite: true${nitro} }`);
 	}
+	// A cloudflared quick tunnel, so Discord reaches the bot on the developer's machine.
+	if (ctx.tunnel) parts.push('dev: { tunnel: true }');
+	const options = parts.length > 0 ? `{ ${parts.join(', ')} }` : '{}';
 	const content = ["import { defineConfig } from '@wolfstar/http-framework/config';", '', `export default defineConfig(${options});`, ''].join(
 		'\n'
 	);
@@ -255,7 +276,9 @@ function writeLinterConfig(targetDir: string, ctx: ProjectContext): void {
 			json({
 				$schema: './node_modules/oxlint/configuration_schema.json',
 				...(ctx.language === 'ts' ? { plugins: ['typescript'] } : {}),
+				jsPlugins: [FRAMEWORK_LINT_PLUGIN],
 				categories: { correctness: 'error', suspicious: 'warn' },
+				rules: Object.fromEntries(FRAMEWORK_LINT_RULES.map((rule) => [rule, 'error'])),
 				ignorePatterns: ['dist/**', 'node_modules/**']
 			})
 		);
@@ -263,17 +286,27 @@ function writeLinterConfig(targetDir: string, ctx: ProjectContext): void {
 		const content =
 			ctx.language === 'ts'
 				? [
+						`import wolfstar, { recommendedRules } from '${FRAMEWORK_LINT_PLUGIN}';`,
 						"import tseslint from 'typescript-eslint';",
 						'',
 						'export default tseslint.config(',
 						"\t{ ignores: ['dist/**'] },",
-						'\t...tseslint.configs.recommended',
+						'\t...tseslint.configs.recommended,',
+						'\t{ plugins: { wolfstar }, rules: recommendedRules }',
 						');',
 						''
 					].join('\n')
-				: ["import js from '@eslint/js';", '', 'export default [', "\t{ ignores: ['dist/**'] },", '\tjs.configs.recommended', '];', ''].join(
-						'\n'
-					);
+				: [
+						"import js from '@eslint/js';",
+						`import wolfstar, { recommendedRules } from '${FRAMEWORK_LINT_PLUGIN}';`,
+						'',
+						'export default [',
+						"\t{ ignores: ['dist/**'] },",
+						'\tjs.configs.recommended,',
+						'\t{ plugins: { wolfstar }, rules: recommendedRules }',
+						'];',
+						''
+					].join('\n');
 		writeFile(join(targetDir, 'eslint.config.mjs'), content);
 	}
 }

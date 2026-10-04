@@ -2,6 +2,8 @@
 
 A Discord bot built with [`@wolfstar/http-framework`](https://www.npmjs.com/package/@wolfstar/http-framework), an HTTP-interactions framework for Discord bots.
 
+`AGENTS.md` and `llms.txt` describe the project to AI coding agents: its commands, its layout and the rules that are easy to get wrong.
+
 ## Setup
 
 1. Install dependencies (skip this if the generator already installed them for you).
@@ -40,14 +42,22 @@ The project is bundled with [Vite](https://vite.dev) into a single file, so the 
 
 The `dev` and `build` scripts are powered by the [`stars`](https://www.npmjs.com/package/@wolfstar/cli) CLI and read the `stars.config` file at the project root.
 
-- `npm run dev` — build, run and restart the bot on changes, with an interactive terminal UI (`npm run dev -- --no-tui` for plain logs).
+- `npm run dev` — build, run and restart the bot on changes, with an interactive terminal dashboard: status, log channels and levels you can filter, and a prompt before changed commands are redeployed (`npm run dev -- --no-tui` for plain logs).
 - `npm run build` — {{#if nitro}}build the deployable `.output/` directory{{else}}compile the project{{/if}} (TypeScript projects only).
 - `npm start` — run the bot.
 - `npx stars info` — print the resolved configuration.
+- `npx stars doctor` — check the runtime, the credentials, the interactions endpoint and the generated files.
+- `npx stars commands diff` / `npx stars commands deploy` — compare the commands the bot defines with the ones Discord has, and deploy them.
 {{#if testing}}
 - `npm test` — run the test suite with vitest.
 {{/if}}
 
+{{#if tunnel}}
+## Tunnel
+
+`stars dev` opens a [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) quick tunnel (`dev.tunnel` in `stars.config`), so Discord can reach the bot on your machine. Its URL changes on every run: paste it as the **Interactions Endpoint URL** of the application, or set `dev: { tunnel: { updateEndpoint: true } }` to let `stars dev` do it. Press `t` in the dev UI to close or reopen it.
+
+{{/if}}
 ## Commands
 
 - `/ping` — replies with `Pong!`.

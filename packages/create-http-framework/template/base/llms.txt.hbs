@@ -1,0 +1,39 @@
+# {{name}}
+
+> A Discord bot built with @wolfstar/http-framework: HTTP interactions{{#if gateway}} and gateway events{{/if}}, built and run with the `stars` CLI.
+
+Start with `AGENTS.md` for this project's commands, layout and rules. The links below are the upstream documentation.
+
+## Framework
+
+- [@wolfstar/http-framework](https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework#readme): the client, commands, interaction handlers, listeners, plugins
+- [@wolfstar/decorators](https://github.com/wolfstar-project/stars-components/tree/main/packages/decorators#readme): `ApplyOptions`, permission and context preconditions
+- [@wolfstar/env-utilities](https://github.com/wolfstar-project/stars-components/tree/main/packages/env-utilities#readme): typed environment variables
+
+## CLI
+
+- [@wolfstar/cli](https://github.com/wolfstar-project/stars-components/tree/main/packages/cli#readme): `stars dev`, `build`, `prepare`, `info`, `doctor`, `commands`, `codegen`, `completions`, and every `stars.config` option
+{{#if i18n}}
+
+## Internationalisation
+
+- [@wolfstar/plugin-i18next](https://www.npmjs.com/package/@wolfstar/plugin-i18next): the i18next plugin
+- [@wolfstar/i18next-type-generator](https://github.com/wolfstar-project/stars-components/tree/main/packages/i18next-type-generator#readme): typed translation keys
+{{/if}}
+{{#if gateway}}
+
+## Gateway
+
+- [@wolfstar/plugin-gateway](https://www.npmjs.com/package/@wolfstar/plugin-gateway): gateway events next to HTTP interactions
+{{#if cache}}
+- [@wolfstar/plugin-cache](https://www.npmjs.com/package/@wolfstar/plugin-cache): the gateway entity cache
+{{/if}}
+{{#if sharder}}
+- [@wolfstar/plugin-sharder](https://www.npmjs.com/package/@wolfstar/plugin-sharder): shards across cluster workers
+{{/if}}
+{{/if}}
+
+## Discord
+
+- [Receiving and responding to interactions](https://discord.com/developers/docs/interactions/receiving-and-responding)
+- [Application commands](https://discord.com/developers/docs/interactions/application-commands)

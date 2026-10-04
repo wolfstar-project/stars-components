@@ -47,6 +47,13 @@ function removeI18nDeclaration(outputDir: string): void {
 	if (existsSync(typesDir) && readdirSync(typesDir).length === 0) rmSync(typesDir, { recursive: true });
 }
 
+/**
+ * The files that describe a project to coding agents. A project often has its own already, and unlike the sources
+ * they are prose a rerun cannot merge: an existing one is only replaced when this generator wrote it and nobody
+ * edited it since.
+ */
+const AGENT_DOCS = new Set(['AGENTS.md', 'llms.txt']);
+
 /** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
 export interface TemplateContext {
 	name: string;
@@ -62,6 +69,8 @@ export interface TemplateContext {
 	sharder: boolean;
 	/** Only meaningful when `language === 'ts'`. */
 	buildTool: BuildTool;
+	/** Whether `stars dev` opens a public tunnel (`dev.tunnel` in `stars.config`). Optional: older manifests lack it. */
+	tunnel?: boolean;
 	/**
 	 * Whether the generator relies on `stars` registering `env` in the entry (compatibility version 5). Optional so a
 	 * manifest written before it existed renders `src/lib/setup` the way it was generated: loading the env by hand.
@@ -79,9 +88,14 @@ interface CommandImport {
  * What the Handlebars sources see: the persisted {@link TemplateContext} plus values derived from it. Deriving at render
  * time keeps the manifest small and lets manifests written before these fields existed still render.
  */
-function toRenderContext(
-	context: TemplateContext
-): TemplateContext & { vite: boolean; nitro: boolean; registersEnv: boolean; commands: CommandImport[] } {
+function toRenderContext(context: TemplateContext): TemplateContext & {
+	typescript: boolean;
+	vite: boolean;
+	nitro: boolean;
+	autoImports: boolean;
+	registersEnv: boolean;
+	commands: CommandImport[];
+} {
 	const typescript = context.language === 'ts';
 	const commands: CommandImport[] = [{ className: 'PingCommand', file: 'ping' }];
 	if (context.subcommandsAdvanced) commands.push({ className: 'SettingsCommand', file: 'settings' });
@@ -89,8 +103,11 @@ function toRenderContext(
 
 	return {
 		...context,
+		typescript,
 		vite: typescript && isViteBuild(context.buildTool),
 		nitro: typescript && isNitroBuild(context.buildTool),
+		// Auto imports only run through tsdown's pipeline: `tsc`, Vite and JavaScript projects import by hand.
+		autoImports: typescript && context.buildTool === 'tsdown',
 		// `stars` registers `env` in the entry of tsdown and Vite builds; Nitro leaves it off by default, and `tsc` or
 		// a JavaScript entry never pass through the transform, so those keep loading the environment themselves.
 		registersEnv: Boolean(context.autoEnv) && typescript && (context.buildTool === 'tsdown' || context.buildTool === 'vite'),
@@ -309,7 +326,7 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
  * - Non-`.hbs` files (e.g. static locale JSON under a feature's `src/locales/**`) are copied verbatim —
  *   no extension stripped, no Handlebars compilation.
  */
-function processDir(root: string, outputDir: string, context: TemplateContext): void {
+function processDir(root: string, outputDir: string, context: TemplateContext, keep?: (outputRelative: string, content: string) => boolean): void {
 	for (const absoluteSource of walkDir(root)) {
 		// Source files exist in both `.ts.hbs` and `.js.hbs` variants — keep only the chosen language.
 		const outputRelative = toOutputRelative(root, absoluteSource, context.language);
@@ -319,6 +336,7 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
 		const isHandlebars = absoluteSource.endsWith('.hbs');
 		const outputPath = join(outputDir, outputRelative);
 		const content = isHandlebars ? Handlebars.compile(rawContent)(toRenderContext(context)) : rawContent;
+		if (keep?.(outputRelative, content)) continue;
 		writeFile(outputPath, content);
 	}
 }
@@ -328,14 +346,28 @@ function processDir(root: string, outputDir: string, context: TemplateContext): 
  * {@link resolveFeatureDirs} on top, in order — feature files overwrite base files at the same
  * output-relative path (e.g. `features/i18n/src/main.ts.hbs` overwrites `base/src/main.ts.hbs`).
  *
+ * @param onKept Called with each of `AGENTS.md`/`llms.txt` that was left as it is, because it exists and is not this
+ * generator's own unedited output.
  * @returns Output-relative paths that looked stale (belong to a disabled feature or the other
  * language) but were left in place because they'd been hand-edited since the last run.
  */
-export async function processTemplate(outputDir: string, context: TemplateContext): Promise<string[]> {
+export async function processTemplate(outputDir: string, context: TemplateContext, onKept?: (path: string) => void): Promise<string[]> {
+	// Read before anything is written: it is what tells a file this generator wrote from one somebody wrote.
+	const manifestContext = readManifest(outputDir);
 	const preserved = removeStaleGeneratedFiles(outputDir, context);
 	if (!context.i18n) removeI18nDeclaration(outputDir);
 
-	processDir(baseDir, outputDir, context);
+	processDir(baseDir, outputDir, context, (outputRelative, content) => {
+		if (!AGENT_DOCS.has(outputRelative)) return false;
+		const target = join(outputDir, outputRelative);
+		if (!existsSync(target)) return false;
+
+		const actual = readFileSync(target, 'utf-8');
+		const source = join(baseDir, `${outputRelative}.hbs`);
+		const pristine = actual === content || (manifestContext !== undefined && renderSource(source, manifestContext) === actual);
+		if (!pristine) onKept?.(outputRelative);
+		return !pristine;
+	});
 
 	for (const feature of resolveFeatureDirs(context)) {
 		processDir(join(featuresDir, feature), outputDir, context);
