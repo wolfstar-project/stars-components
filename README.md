@@ -10,6 +10,7 @@
 [![GitHub License](https://img.shields.io/github/license/wolfstar-project/stars-components?style=flat-square&color=informational)](https://github.com/wolfstar-project/stars-components/blob/main/LICENSE)
 [![Greptile: The War on Bugs](https://www.greptile.com/badge.svg)](https://www.greptile.com/?utm_source=oss_badge&utm_medium=readme&utm_campaign=greptile_for_open_source)
 [![codecov](https://codecov.io/gh/wolfstar-project/stars-components/branch/main/graph/badge.svg?token=CJP65GQC8K&style=flat-square)](https://codecov.io/gh/wolfstar-project/stars-components)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/wolfstar-project/stars-components?utm_source=badge)
 
 </div>
 
@@ -151,6 +152,10 @@ Contributions are welcome! Please read our [Contributing Guide](https://github.c
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) using `cz` (commitizen)
 - **Changes:** Use `pnpm changeset` to add changesets; **do not edit** `package.json#version` or `CHANGELOG.md` directly (these are managed by Changesets)
 - **Release Process:** Changesets automatically publishes independent versions for affected packages
+
+### Benchmarks
+
+Performance-sensitive code paths are benchmarked in [`benchmarks/`](./benchmarks) with [tinybench](https://github.com/tinylibs/tinybench) and tracked continuously by [CodSpeed](https://app.codspeed.io/wolfstar-project/stars-components). Run them locally with `pnpm bench`.
 
 ### Contributors
 

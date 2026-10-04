@@ -7,8 +7,8 @@
 	},
 	"workspaces": {
 		".": {
-			"entry": ["scripts/*.{mjs,ts}"],
-			"project": ["scripts/**/*.{mjs,ts}"],
+			"entry": ["scripts/*.{mjs,ts}", "benchmarks/ts-resolver.mjs"],
+			"project": ["scripts/**/*.{mjs,ts}", "benchmarks/**/*.{mjs,ts}"],
 			"ignoreDependencies": ["@favware/npm-deprecate", "@swc/core", "@types/ws", "cz-conventional-changelog", "golar", "pkg-pr-new"]
 		},
 		"packages/*": {
