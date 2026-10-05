@@ -1,5 +1,11 @@
 # @wolfstar/cli
 
+## 2.3.1
+
+### Patch Changes
+
+- [#270](https://github.com/wolfstar-project/stars-components/pull/270) [`a82447b`](https://github.com/wolfstar-project/stars-components/commit/a82447b72657e6cedf9e3513663a9eb33eb901a7) - Fix `stars dev` crashing with an unhandled `cloudflared exited (code=0, ...) before URL was ready` error when the tunnel closes (for example on Ctrl+C). `untun` leaves a connection promise unhandled when cloudflared exits, so the CLI now guards against that one error while the tunnel exists, removes the signal listeners `untun` installs so shutdown goes through `DevService#stop()`, and no longer reports a requested close as a tunnel failure. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.3.0
 
 ### Minor Changes
