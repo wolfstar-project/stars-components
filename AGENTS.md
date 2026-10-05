@@ -61,7 +61,7 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
 - AI disclosure: when an AI agent wrote or edited the code or the PR description, end the PR body with a disclosure line, outside the template sections, in this form:
 
     ```md
-    > 🤖 AI disclosure: <agent or tool name> modified this description. Code written with <model id>; PR description written with <model id>.
+    > 🤖 AI disclosure: <agent or tool name> modified this description. Code written with <model id>; PR description written with <model id>. [My AI open-source policy](https://redstar071.dev/blog/ai-in-open-source).
     ```
 
     Use the exact model ids you ran on (for example `claude-opus-5-5`), never a guess; if the code and the description were produced by different models or tools, name each one. Leave the line out when no AI tool was involved. Add it whenever you edit an existing PR description too, and never remove a disclosure line another contributor left.
@@ -228,3 +228,14 @@ Applies to any agent running in a cloud VM (Cursor Cloud, Claude Code on the web
   Vite plugin (Nitro v3 requires Vite 8), reusing the project's Vite config and adding a generated server entry that
   wraps the `@wolfstar/http-framework` `Client` in `createFetchHandler` (from `@wolfstar/http-framework/fetch`),
   producing a `.output/` deployable to any Nitro preset instead of a `node:http` process.
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->
