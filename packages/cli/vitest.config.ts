@@ -33,7 +33,10 @@ export default mergeConfig(
 			target: 'es2022'
 		},
 		test: {
-			testTimeout: process.platform === 'win32' ? 60_000 : 30_000
+			testTimeout: process.platform === 'win32' ? 60_000 : 30_000,
+			// Absorb the Windows tmpdir-lock/timing flakes on CI (see #254). Scoped here because the shared config runs
+			// with `isolate: false`, where a retry reuses module state the failed attempt may have mutated.
+			retry: process.env.CI ? 2 : 0
 		}
 	})
 );
