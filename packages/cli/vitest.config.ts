@@ -33,7 +33,7 @@ export default mergeConfig(
 			target: 'es2022'
 		},
 		test: {
-			testTimeout: 30_000
+			testTimeout: process.platform === 'win32' ? 60_000 : 30_000
 		}
 	})
 );
