@@ -58,6 +58,14 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
 - When you need to commit, use the `/git-commit` skill if it is available in your environment (otherwise commit by hand following the Conventional Commits rules above; commitlint rejects body lines longer than 100 characters).
 - When you need to open a PR, use the `/create-pull-request` skill if it is available in your environment (otherwise use `gh pr create`). Either way, the PR must follow the template rule below.
 - Always open a PR with [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md): keep every section (linked issue, context, description, key changes, type of change, pre-flight checklist), fill them in, and tick the checklist items that apply. Never replace the body with a free-form summary, and never drop a section; write in your own words rather than pasting generated text. Pass the filled template to `gh pr create --body-file`.
+- AI disclosure: when an AI agent wrote or edited the code or the PR description, end the PR body with a disclosure line, outside the template sections, in this form:
+
+    ```md
+    > 🤖 AI disclosure: <agent or tool name> modified this description. Code written with <model id>; PR description written with <model id>.
+    ```
+
+    Use the exact model ids you ran on (for example `claude-opus-5-5`), never a guess; if the code and the description were produced by different models or tools, name each one. Leave the line out when no AI tool was involved. Add it whenever you edit an existing PR description too, and never remove a disclosure line another contributor left.
+
 - File paths in CI use the npm scope as `--filter @<scope>/<package>` for turbo.
 - Each package declares: `name`, `author` (scope handle), `repository.url`, `bugs.url`, `homepage`, `keywords`.
 - 27 publishable `@wolfstar/*` packages under `packages/`, each with its own independent semver — there is no lockstep version. Merging a changeset (`pnpm changeset`) to `main` makes `changesets/action` (pinned v2, see `.github/workflows/release.yml`) open/update a `chore: update changelog and release` PR; merging that PR bumps the affected packages' versions, regenerates their CHANGELOGs (via `.changeset/generator.ts`), and publishes to npm. Any other push to `main` touching `packages/` or `package.json` also publishes an `@next` snapshot (`pnpm publish:snapshot` → `scripts/publish-snapshot.mjs`, which skips the publish when there are no pending changesets because `changeset version` exits `1` in that case since v3).
