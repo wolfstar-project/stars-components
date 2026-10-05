@@ -55,6 +55,8 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
     - Use `deps` for dependency updates, `release` for the release PR, and `ci` for workflow changes. Documentation about a package uses that package's scope (e.g. `docs(http-framework): ...`).
     - Omit the scope when the change is too broad for a single one.
     - A new package must be added to the `scopes` list in that workflow, or PRs scoped to it fail title validation.
+- When you need to commit, use the `/git-commit` skill if it is available in your environment (otherwise commit by hand following the Conventional Commits rules above; commitlint rejects body lines longer than 100 characters).
+- When you need to open a PR, use the `/create-pull-request` skill if it is available in your environment (otherwise use `gh pr create`). Either way, the PR must follow the template rule below.
 - Always open a PR with [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md): keep every section (linked issue, context, description, key changes, type of change, pre-flight checklist), fill them in, and tick the checklist items that apply. Never replace the body with a free-form summary, and never drop a section; write in your own words rather than pasting generated text. Pass the filled template to `gh pr create --body-file`.
 - File paths in CI use the npm scope as `--filter @<scope>/<package>` for turbo.
 - Each package declares: `name`, `author` (scope handle), `repository.url`, `bugs.url`, `homepage`, `keywords`.
