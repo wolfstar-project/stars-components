@@ -315,12 +315,27 @@ export interface StarsI18nCodegenConfig {
 	output?: string;
 }
 
+export interface StarsCommandsCodegenConfig {
+	/**
+	 * The generated declaration file, relative to {@link StarsConfig.root}.
+	 * @default 'src/@types/commands.d.ts'
+	 */
+	output?: string;
+}
+
 export interface StarsCodegenConfig {
 	/**
 	 * i18next type generation through `@wolfstar/i18next-type-generator`.
 	 * `false` disables it, an object enables it, unset auto-detects from the presence of the locales directory.
 	 */
 	i18n?: StarsI18nCodegenConfig | false;
+	/**
+	 * Typed command options, generated from the commands the project registers (see `Command.OptionsOf`). It needs a
+	 * build (`stars build`): the commands are read from the built bot, the same way `stars commands diff` does, because
+	 * only running the builders (loops, factories, localized names) gives the exact payload Discord receives.
+	 * `true` enables it with the default output, an object configures it, and it is off when unset.
+	 */
+	commands?: StarsCommandsCodegenConfig | boolean;
 }
 
 export interface StarsImportsConfig {

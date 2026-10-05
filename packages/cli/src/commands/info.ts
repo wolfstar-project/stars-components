@@ -145,7 +145,8 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('hmr', info.dev.hmr ? 'left to the bot when it hot reloads' : colors.dim('always restart'))
 		]),
 		section('Codegen', [
-			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled'))
+			row('i18n', info.codegen.i18n ? `${show(info.codegen.i18n.locales)} → ${show(info.codegen.i18n.output)}` : colors.dim('disabled')),
+			row('commands', info.codegen.commands ? show(info.codegen.commands.output) : colors.dim('disabled'))
 		]),
 		section('Future', [
 			row('compat', `v${info.future.compatibilityVersion} defaults`),

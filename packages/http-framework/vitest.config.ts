@@ -4,6 +4,9 @@ import configShared from '../../vitest.shared.js';
 
 export default defineProject(
 	mergeConfig(configShared, {
+		// `tests/**/*.test-d.ts` are type-level tests (see `Command.options.test-d.ts`): the root `tsconfig.json` leaves
+		// `tests/` out of `pnpm typecheck`, so vitest checks them instead.
+		test: { typecheck: { enabled: true, include: ['tests/**/*.test-d.ts'], tsconfig: './tests/tsconfig.typecheck.json' } },
 		resolve: {
 			alias: [
 				{
