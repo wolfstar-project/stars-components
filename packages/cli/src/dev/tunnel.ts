@@ -6,6 +6,12 @@ import type { LogLevel } from '../utils/log-buffer.js';
 
 export type TunnelState = 'off' | 'starting' | 'up' | 'failed';
 
+const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const;
+
+function isCloudflaredExit(reason: unknown): reason is Error {
+	return reason instanceof Error && reason.message.startsWith('cloudflared exited (');
+}
+
 export interface TunnelEvents {
 	log: [level: LogLevel, text: string];
 	state: [state: TunnelState, url: string | null];
@@ -29,6 +35,7 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 	#state: TunnelState = 'off';
 	#url: string | null = null;
 	#wanted = false;
+	#rejectionGuard: ((reason: unknown) => void) | null = null;
 
 	public constructor(
 		private readonly config: ResolvedStarsConfig,
@@ -74,7 +81,11 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		const tunnel = this.#tunnel;
 		this.#tunnel = null;
 		this.#setState('off', null);
-		if (tunnel) await tunnel.close();
+		try {
+			if (tunnel) await tunnel.close();
+		} finally {
+			this.#releaseRejectionGuard();
+		}
 	}
 
 	async #useConfiguredUrl(tunnel: Extract<ResolvedTunnelConfig, { mode: 'url' }>): Promise<string | null> {
@@ -95,26 +106,83 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		}
 
 		this.emit('log', 'info', 'Opening a cloudflared quick tunnel…');
+		this.#installRejectionGuard();
 
 		try {
-			const tunnel = await this.#startTunnel({ url: target, acceptCloudflareNotice: true });
+			const tunnel = await this.#startWithoutSignalHandlers(target);
 			if (!this.#wanted) {
 				await tunnel?.close();
+				this.#releaseRejectionGuard();
 				return null;
 			}
 			if (!tunnel) {
 				this.emit('log', 'error', 'cloudflared setup was cancelled');
 				this.#setState('failed', null);
+				this.#releaseRejectionGuard();
 				return null;
 			}
 
 			this.#tunnel = tunnel;
 			return await tunnel.getURL();
 		} catch (error) {
+			this.#releaseRejectionGuard();
+			// Closing the tunnel makes cloudflared exit, which `untun` reports as a failure: that is not one.
+			if (!this.#wanted) return null;
 			this.emit('log', 'error', `cloudflared failed: ${error instanceof Error ? error.message : String(error)}`);
 			this.#setState('failed', null);
 			return null;
 		}
+	}
+
+	/**
+	 * `untun` adds its own `SIGINT`/`SIGTERM`/`SIGHUP` listeners that call `process.exit()` once cloudflared is closed,
+	 * which races `stars dev`'s graceful shutdown (it closes the tunnel through {@link close} anyway), so they are removed.
+	 */
+	async #startWithoutSignalHandlers(target: string): Promise<UntunTunnel | undefined> {
+		const before = SIGNALS.map((signal) => new Set(process.listeners(signal)));
+		try {
+			return await this.#startTunnel({ url: target, acceptCloudflareNotice: true });
+		} finally {
+			SIGNALS.forEach((signal, index) => {
+				for (const listener of process.listeners(signal)) {
+					if (!before[index]!.has(listener)) process.off(signal, listener);
+				}
+			});
+		}
+	}
+
+	/**
+	 * `untun` rejects a promise per connection when cloudflared exits and never handles it (and its location pattern
+	 * does not match lowercase codes such as `mxp03`, so that promise is never settled before), which Node reports as an
+	 * unhandled rejection that ends the process, whenever the tunnel closes. The guard swallows that one error for as
+	 * long as this tunnel exists; anything else it sees is thrown again, as if it was not installed.
+	 */
+	#installRejectionGuard(): void {
+		if (this.#rejectionGuard) return;
+
+		const guard = (reason: unknown): void => {
+			if (!isCloudflaredExit(reason)) {
+				// The guard is the only listener, so without this the rejection would be ignored instead of ending the process.
+				if (process.listeners('unhandledRejection').length === 1) throw reason;
+				return;
+			}
+
+			if (this.#state !== 'up' || !this.#wanted) return;
+			this.#tunnel = null;
+			this.emit('log', 'error', `cloudflared stopped unexpectedly: ${reason.message}`);
+			this.#setState('failed', null);
+			this.#releaseRejectionGuard();
+		};
+
+		this.#rejectionGuard = guard;
+		process.on('unhandledRejection', guard);
+	}
+
+	/** Node reports an unhandled rejection after the microtasks that follow it, so the guard has to outlive them. */
+	#releaseRejectionGuard(): void {
+		const guard = this.#rejectionGuard;
+		this.#rejectionGuard = null;
+		if (guard) setImmediate(() => process.off('unhandledRejection', guard));
 	}
 
 	/**

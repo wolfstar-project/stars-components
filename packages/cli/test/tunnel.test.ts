@@ -1,5 +1,5 @@
 import { loadStarsConfig } from '@wolfstar/schema';
-import { Tunnel, endpointUrl, readDiscordCredentials } from '../src/dev/tunnel.js';
+import { Tunnel, endpointUrl, readDiscordCredentials, type TunnelOptions } from '../src/dev/tunnel.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 describe('endpointUrl', () => {
@@ -180,5 +180,134 @@ describe('Tunnel', () => {
 		expect(close).toHaveBeenCalledOnce();
 		expect(tunnel.state).toBe('off');
 		expect(tunnel.url).toBeNull();
+	});
+
+	describe('cloudflared exiting', () => {
+		const exitError = () => new Error('cloudflared exited (code=0, signal=null) before URL was ready\n\nINF Tunnel server stopped');
+		let unhandledRejectionListeners: Array<(...args: unknown[]) => void> = [];
+
+		// Vitest reports every unhandled rejection as a failure, which would hide whether the tunnel's own guard handled it.
+		beforeEach(() => {
+			unhandledRejectionListeners = process.listeners('unhandledRejection') as Array<(...args: unknown[]) => void>;
+			process.removeAllListeners('unhandledRejection');
+		});
+
+		afterEach(() => {
+			process.removeAllListeners('unhandledRejection');
+			for (const listener of unhandledRejectionListeners) process.on('unhandledRejection', listener);
+		});
+
+		const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+		async function createTunnel(startTunnel: TunnelOptions['startTunnel']) {
+			fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { tunnel: true } };' });
+			const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+			const tunnel = new Tunnel(config, { startTunnel });
+			const logs: Array<[string, string]> = [];
+			tunnel.on('log', (level, text) => logs.push([level, text]));
+			return { tunnel, logs };
+		}
+
+		test('does not crash when closing the tunnel rejects untun’s unsettled connection promise', async () => {
+			const startTunnelMock = vi.fn().mockResolvedValue({
+				getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'),
+				// Like `untun`'s `exit` handler: a promise nobody awaits is rejected once cloudflared is gone.
+				close: vi.fn(async () => void Promise.reject(exitError()))
+			});
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+			const uncaught = vi.fn();
+			process.once('uncaughtException', uncaught);
+
+			await tunnel.start();
+			await tunnel.close();
+			await settle();
+			process.off('uncaughtException', uncaught);
+
+			expect(uncaught).not.toHaveBeenCalled();
+			expect(tunnel.state).toBe('off');
+			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
+			expect(process.listenerCount('unhandledRejection')).toBe(0);
+		});
+
+		test('stays silent when closing the tunnel while it is still starting', async () => {
+			let rejectUrl!: (error: Error) => void;
+			const getURL = vi.fn(() => new Promise<string>((_, reject) => (rejectUrl = reject)));
+			const startTunnelMock = vi.fn().mockResolvedValue({
+				getURL,
+				close: vi.fn(async () => {
+					Promise.reject(exitError()).catch(() => undefined);
+					rejectUrl(exitError());
+				})
+			});
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+
+			const starting = tunnel.start();
+			await vi.waitFor(() => expect(getURL).toHaveBeenCalled());
+			await tunnel.close();
+			await starting;
+			await settle();
+
+			expect(tunnel.state).toBe('off');
+			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
+		});
+
+		test('reports a tunnel that stops on its own as failed', async () => {
+			const startTunnelMock = vi.fn().mockResolvedValue({
+				getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'),
+				close: vi.fn().mockResolvedValue(undefined)
+			});
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+			await tunnel.start();
+
+			void Promise.reject(exitError());
+			await settle();
+
+			expect(tunnel.state).toBe('failed');
+			expect(tunnel.url).toBeNull();
+			expect(logs).toContainEqual(['error', expect.stringContaining('cloudflared stopped unexpectedly')]);
+			expect(process.listenerCount('unhandledRejection')).toBe(0);
+		});
+
+		test('throws unrelated unhandled rejections again instead of swallowing them', async () => {
+			const startTunnelMock = vi.fn().mockResolvedValue({
+				getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'),
+				close: vi.fn().mockResolvedValue(undefined)
+			});
+			const { tunnel } = await createTunnel(startTunnelMock);
+			const uncaught = vi.fn();
+			process.once('uncaughtException', uncaught);
+			await tunnel.start();
+
+			void Promise.reject(new Error('something else'));
+			await settle();
+			process.off('uncaughtException', uncaught);
+			await tunnel.close();
+
+			expect(uncaught).toHaveBeenCalledWith(expect.objectContaining({ message: 'something else' }), expect.anything());
+		});
+	});
+
+	test('removes the signal listeners untun adds so the CLI shuts the tunnel down itself', async () => {
+		const before = process.listenerCount('SIGINT');
+		const startTunnelMock = vi.fn(async () => {
+			process.once('SIGINT', () => process.exit(130));
+			process.once('SIGTERM', () => process.exit(143));
+			process.once('SIGHUP', () => process.exit(129));
+			return { getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'), close: vi.fn().mockResolvedValue(undefined) };
+		});
+		const own = vi.fn();
+		process.on('SIGHUP', own);
+		const hangups = process.listeners('SIGHUP');
+
+		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { tunnel: true } };' });
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const tunnel = new Tunnel(config, { startTunnel: startTunnelMock as never });
+
+		await tunnel.start();
+
+		expect(process.listenerCount('SIGINT')).toBe(before);
+		expect(process.listeners('SIGHUP')).toEqual(hangups);
+		await tunnel.close();
+		process.off('SIGHUP', own);
 	});
 });
