@@ -251,6 +251,32 @@ describe('Tunnel', () => {
 			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
 		});
 
+		test('keeps guarding while a tunnel that is still being started is closed once it arrives', async () => {
+			let resolveStartTunnel!: (tunnel: { getURL: () => Promise<string>; close: () => Promise<void> }) => void;
+			const startTunnelMock = vi.fn(
+				() => new Promise<{ getURL: () => Promise<string>; close: () => Promise<void> }>((resolve) => (resolveStartTunnel = resolve))
+			);
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+			const uncaught = vi.fn();
+			process.once('uncaughtException', uncaught);
+
+			const starting = tunnel.start();
+			await tunnel.close();
+			await settle();
+			resolveStartTunnel({
+				getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'),
+				close: vi.fn(async () => void Promise.reject(exitError()))
+			});
+			await starting;
+			await settle();
+			process.off('uncaughtException', uncaught);
+
+			expect(uncaught).not.toHaveBeenCalled();
+			expect(tunnel.state).toBe('off');
+			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
+			expect(process.listenerCount('unhandledRejection')).toBe(0);
+		});
+
 		test('reports a tunnel that stops on its own as failed', async () => {
 			const startTunnelMock = vi.fn().mockResolvedValue({
 				getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'),

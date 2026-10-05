@@ -81,8 +81,10 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		const tunnel = this.#tunnel;
 		this.#tunnel = null;
 		this.#setState('off', null);
+		// Without a tunnel, `#openQuickTunnel` is still waiting for one and closes it (then releases the guard) when it arrives.
+		if (!tunnel) return;
 		try {
-			if (tunnel) await tunnel.close();
+			await tunnel.close();
 		} finally {
 			this.#releaseRejectionGuard();
 		}
