@@ -43,22 +43,29 @@ jobs:
                       cli
                       create-http-framework
                       decorators
+                      discord-utilities
                       env-utilities
+                      eslint-config
+                      eslint-plugin-http-framework
                       http-framework
-                      http-framework-i18n
+                      http-framework-test-utils
+                      http-framework-utilities
                       i18next-backend
+                      i18next-type-generator
                       influx-utilities
                       kit
-                      logger
+                      nitro-server
+                      oxfmt-config
+                      oxlint-config
+                      prettier-config
                       reddit-helpers
                       safe-fetch
                       schema
-                      nitro-server
-                      vite-server
                       shared-http-pieces
                       shared-influx-pieces
                       start-banner
                       twitch-helpers
+                      vite-server
                       weather-helpers
                       deps
                       release

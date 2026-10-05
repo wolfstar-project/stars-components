@@ -25,9 +25,37 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 3. `pnpm typecheck` (resolves cross-package imports against built `dist/*.d.ts`, so it needs `pnpm build` first)
 4. `pnpm test`
 
+## Commands
+
+```bash
+pnpm install                          # setup (also installs the husky hooks)
+pnpm build                            # turbo run build (tsdown per package); needed before typecheck
+pnpm typecheck                        # turbo run typecheck (golar tsc per package/example)
+pnpm lint                             # oxlint + oxfmt --check over packages, examples and benchmarks
+pnpm lint:fix                         # oxlint --fix + oxfmt --write
+pnpm test                             # vitest run (all projects)
+pnpm vitest run <path>                # single test file from the repo root, e.g. pnpm vitest run packages/cli/test/bridge.test.ts
+pnpm --filter @wolfstar/cli test      # one package's tests
+pnpm --filter @wolfstar/cli build     # build one package (tsdown); `watch` rebuilds on change
+pnpm --filter @wolfstar/cli typecheck # typecheck one package (needs its dependencies built)
+pnpm bench                            # CodSpeed benchmarks (tinybench), see Stack
+pnpm changeset                        # add a changeset (`pnpm changeset add --empty` when no release is needed)
+```
+
+- The root `vitest.config.ts` only lists projects (`packages/**/vitest.config.ts`, `examples/**/vitest.config.{ts,js}`) with `globals: true` and v8 coverage on; a package without a `vitest.config.ts` is not run by `pnpm test`. Tests live in `test/` (`@wolfstar/cli`) or `tests/` (most other packages).
+- Examples build and run through the CLI by path: `cd examples/<name> && pnpm dev` (`stars dev`), `pnpm build`, `pnpm start`. Build `packages/cli` first (`pnpm --filter @wolfstar/cli build`), since they run `packages/cli/dist/cli.js`.
+- Per-package `pnpm --filter <pkg> lint` runs `oxlint src --fix`, which rewrites files; use the root `pnpm lint` for a read-only check.
+- Do not run `pnpm publish`, `pnpm publish:snapshot` or `pnpm tolgee:push` locally without asking (see "Secrets, approvals, and definition of done").
+
 ## Conventions
 
 - Commits: Conventional Commits (`@commitlint/config-conventional`); `cz-conventional-changelog` via commitizen.
+- PR titles follow Conventional Commits and are validated by `.github/workflows/semantic-pull-requests.yml` (the allowed types and scopes are listed there; the subject must not start with an uppercase letter). Scope rules:
+    - Use the package directory name without the `@wolfstar/` prefix (e.g. `feat(cli): ...`, `fix(schema): ...`).
+    - Use `deps` for dependency updates, `release` for the release PR, and `ci` for workflow changes. Documentation about a package uses that package's scope (e.g. `docs(http-framework): ...`).
+    - Omit the scope when the change is too broad for a single one.
+    - A new package must be added to the `scopes` list in that workflow, or PRs scoped to it fail title validation.
+- Always open a PR with [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md): keep every section (linked issue, context, description, key changes, type of change, pre-flight checklist), fill them in, and tick the checklist items that apply. Never replace the body with a free-form summary, and never drop a section; write in your own words rather than pasting generated text. Pass the filled template to `gh pr create --body-file`.
 - File paths in CI use the npm scope as `--filter @<scope>/<package>` for turbo.
 - Each package declares: `name`, `author` (scope handle), `repository.url`, `bugs.url`, `homepage`, `keywords`.
 - 27 publishable `@wolfstar/*` packages under `packages/`, each with its own independent semver — there is no lockstep version. Merging a changeset (`pnpm changeset`) to `main` makes `changesets/action` (pinned v2, see `.github/workflows/release.yml`) open/update a `chore: update changelog and release` PR; merging that PR bumps the affected packages' versions, regenerates their CHANGELOGs (via `.changeset/generator.ts`), and publishes to npm. Any other push to `main` touching `packages/` or `package.json` also publishes an `@next` snapshot (`pnpm publish:snapshot` → `scripts/publish-snapshot.mjs`, which skips the publish when there are no pending changesets because `changeset version` exits `1` in that case since v3).
