@@ -25,6 +25,28 @@ Project conventions discovered for `stars-components` (formerly `archid-componen
 3. `pnpm typecheck` (resolves cross-package imports against built `dist/*.d.ts`, so it needs `pnpm build` first)
 4. `pnpm test`
 
+## Commands
+
+```bash
+pnpm install                          # setup (also installs the husky hooks)
+pnpm build                            # turbo run build (tsdown per package); needed before typecheck
+pnpm typecheck                        # turbo run typecheck (golar tsc per package/example)
+pnpm lint                             # oxlint + oxfmt --check over packages, examples and benchmarks
+pnpm lint:fix                         # oxlint --fix + oxfmt --write
+pnpm test                             # vitest run (all projects)
+pnpm vitest run <path>                # single test file from the repo root, e.g. pnpm vitest run packages/cli/test/bridge.test.ts
+pnpm --filter @wolfstar/cli test      # one package's tests
+pnpm --filter @wolfstar/cli build     # build one package (tsdown); `watch` rebuilds on change
+pnpm --filter @wolfstar/cli typecheck # typecheck one package (needs its dependencies built)
+pnpm bench                            # CodSpeed benchmarks (tinybench), see Stack
+pnpm changeset                        # add a changeset (`pnpm changeset add --empty` when no release is needed)
+```
+
+- The root `vitest.config.ts` only lists projects (`packages/**/vitest.config.ts`, `examples/**/vitest.config.{ts,js}`) with `globals: true` and v8 coverage on; a package without a `vitest.config.ts` is not run by `pnpm test`. Tests live in `test/` (`@wolfstar/cli`) or `tests/` (most other packages).
+- Examples build and run through the CLI by path: `cd examples/<name> && pnpm dev` (`stars dev`), `pnpm build`, `pnpm start`. Build `packages/cli` first (`pnpm --filter @wolfstar/cli build`), since they run `packages/cli/dist/cli.js`.
+- Per-package `pnpm --filter <pkg> lint` runs `oxlint src --fix`, which rewrites files; use the root `pnpm lint` for a read-only check.
+- Do not run `pnpm publish`, `pnpm publish:snapshot` or `pnpm tolgee:push` locally without asking (see "Secrets, approvals, and definition of done").
+
 ## Conventions
 
 - Commits: Conventional Commits (`@commitlint/config-conventional`); `cz-conventional-changelog` via commitizen.
