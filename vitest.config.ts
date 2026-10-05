@@ -8,7 +8,7 @@ export default defineConfig({
 			provider: 'v8',
 			enabled: true,
 			reporter: ['text', 'lcov', 'clover'],
-			exclude: [...coverageConfigDefaults.exclude]
+			exclude: [...coverageConfigDefaults.exclude, '**/test/**', '**/tests/**', 'benchmarks', 'examples', 'scripts']
 		}
 	}
 });
