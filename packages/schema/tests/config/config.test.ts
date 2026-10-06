@@ -1,7 +1,16 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Diagnostic } from 'nostics';
-import { CONFIG_FILE_NAMES, defineConfig, discoverConfigFile, loadStarsConfig } from '../../src/index.js';
+import {
+	AUTO_ENV_VERSION,
+	CONFIG_FILE_NAMES,
+	DEFAULT_COMPATIBILITY_VERSION,
+	LATEST_COMPATIBILITY_VERSION,
+	SPLIT_TSCONFIG_VERSION,
+	defineConfig,
+	discoverConfigFile,
+	loadStarsConfig
+} from '../../src/index.js';
 import { defineConfig as defineLightweightConfig } from '../../src/config.js';
 import { createFixture, type Fixture } from './helpers.js';
 
@@ -49,7 +58,8 @@ describe('stars.config', () => {
 		expect(config.root).toBe(fixture.root);
 		expect(config.entry).toBe(join(fixture.root, 'src', 'main.js'));
 		expect(config.build).toEqual({ tool: 'none', outDir: join(fixture.root, 'dist'), tsconfig: null, output: config.entry, configFile: null });
-		expect(config.future.compatibilityVersion).toBe(5);
+		expect(config.future.compatibilityVersion).toBe(DEFAULT_COMPATIBILITY_VERSION);
+		expect(config.future.compatibilityVersion).toBe(6);
 		expect(config.warnings).toEqual([]);
 		expect(config.dev.watch).toEqual([join(fixture.root, 'src')]);
 		expect(config.dev.debounce).toBe(150);
@@ -95,6 +105,33 @@ describe('stars.config', () => {
 		expect(config.build.tool).toBe('tsdown');
 		expect(config.build.configFile).toBeNull();
 		expect(config.tsdown).toEqual({ minify: true });
+	});
+
+	test('pins the supported compatibility versions and the split tsconfig gate', () => {
+		expect([DEFAULT_COMPATIBILITY_VERSION, LATEST_COMPATIBILITY_VERSION, SPLIT_TSCONFIG_VERSION]).toEqual([6, 6, 6]);
+		expect(AUTO_ENV_VERSION).toBe(5);
+	});
+
+	test('splits the tsconfig from compatibility version 6, and keeps one file below it', async () => {
+		const files = { 'src/main.ts': '', 'src/tsconfig.json': '{}' };
+		const load = async (future: string, extra = '') => {
+			fixture = await createFixture({ ...files, 'stars.config.mjs': `export default { ${future}${extra} };` });
+			const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+			const root = fixture.root;
+			await fixture.cleanup();
+			return { config, app: join(root, '.stars', 'tsconfig.app.json'), node: join(root, '.stars', 'tsconfig.node.json'), root };
+		};
+
+		const six = await load('');
+		expect(six.config.build.tsconfig).toBe(six.app);
+		expect(six.config.dev.typecheck.projects).toEqual([six.app, six.node]);
+
+		const five = await load('future: { compatibilityVersion: 5 }');
+		expect(five.config.build.tsconfig).toBe(join(five.root, 'src', 'tsconfig.json'));
+		expect(five.config.dev.typecheck.projects).toEqual([join(five.root, 'src', 'tsconfig.json')]);
+
+		const explicit = await load('', "dev: { typecheck: { tsconfig: 'src/tsconfig.json' } }");
+		expect(explicit.config.dev.typecheck.projects).toEqual([join(explicit.root, 'src', 'tsconfig.json')]);
 	});
 
 	test('accepts compatibility version 5 explicitly', async () => {
@@ -179,7 +216,12 @@ describe('stars.config', () => {
 		});
 
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
-		expect(config.dev.typecheck).toEqual({ enabled: true, tsconfig: join(fixture.root, 'tsconfig.json'), checker: 'tsc' });
+		expect(config.dev.typecheck).toEqual({
+			enabled: true,
+			tsconfig: join(fixture.root, 'tsconfig.json'),
+			projects: [join(fixture.root, 'tsconfig.json')],
+			checker: 'tsc'
+		});
 		expect(config.dev.tunnel).toEqual({ mode: 'url', url: 'https://bot.example.com', path: '/interactions', updateEndpoint: true });
 		expect(config.dev.logFile).toBe(join(fixture.root, '.stars', 'dev.log'));
 	});
@@ -188,7 +230,7 @@ describe('stars.config', () => {
 		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { tunnel: true, logFile: false } };' });
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 
-		expect(config.dev.typecheck).toEqual({ enabled: false, tsconfig: null, checker: 'tsc' });
+		expect(config.dev.typecheck).toEqual({ enabled: false, tsconfig: null, projects: [], checker: 'tsc' });
 		expect(config.dev.tunnel).toEqual({ mode: 'quick', path: '/', updateEndpoint: false });
 		expect(config.dev.logFile).toBeNull();
 	});
@@ -557,10 +599,10 @@ describe('stars.config', () => {
 		});
 
 		test('rejects an unknown compatibility version and unknown `future` options', async () => {
-			const error = await expectConfigError('export default { future: { compatibilityVersion: 6 } };');
+			const error = await expectConfigError('export default { future: { compatibilityVersion: 7 } };');
 			expect(error.code).toBe('INVALID_COMPATIBILITY_VERSION');
-			expect(error.message).toContain('6');
-			expect(error.fix).toContain('5');
+			expect(error.message).toContain('7');
+			expect(error.fix).toContain('6');
 
 			expect((await expectConfigError("export default { future: { compatibilityVersion: '4' } };")).code).toBe('INVALID_COMPATIBILITY_VERSION');
 			expect((await expectConfigError('export default { future: { compatVersion: 4 } };')).code).toBe('UNKNOWN_OPTION');

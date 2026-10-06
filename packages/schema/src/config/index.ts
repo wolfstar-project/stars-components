@@ -35,6 +35,7 @@ export {
 	EOL_COMPATIBILITY_VERSIONS,
 	LATEST_COMPATIBILITY_VERSION,
 	LEGACY_COMPATIBILITY_VERSION,
+	SPLIT_TSCONFIG_VERSION,
 	STARS_CONFIG_TSDOWN_VERSION
 } from './compatibility.js';
 export { resolveEnv } from './env.js';
@@ -44,7 +45,15 @@ export { resolveHooks, STARS_HOOK_NAMES } from './hooks.js';
 export type { ResolvedHooksConfig } from './hooks.js';
 export type { ConfigDiagnosticCode } from './errors.js';
 export { resolveModules } from './modules.js';
-export { DEFAULT_LOG_LEVELS, LOG_LEVELS, displayPath, readProjectEnvFiles, resolveStarsConfig } from './resolve.js';
+export {
+	DEFAULT_APP_TSCONFIG,
+	DEFAULT_LOG_LEVELS,
+	DEFAULT_NODE_TSCONFIG,
+	LOG_LEVELS,
+	displayPath,
+	readProjectEnvFiles,
+	resolveStarsConfig
+} from './resolve.js';
 export type {
 	PackageJsonLike,
 	ResolveConfigOptions,

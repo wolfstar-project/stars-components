@@ -88,10 +88,10 @@ export interface StarsTsdownConfig {
 }
 
 /**
- * The build-default generation the project runs on. Version 5 is current and version 4 remains supported.
+ * The build-default generation the project runs on. Version 6 is current; versions 5 and 4 remain supported.
  * Version 3 is end-of-life: it still resolves, with a warning, and is removed in the next major.
  */
-export type StarsCompatibilityVersion = 3 | 4 | 5;
+export type StarsCompatibilityVersion = 3 | 4 | 5 | 6;
 
 /**
  * Nuxt-style compatibility block. New projects need not set it; version 4 stays available, and version 3 is kept only
@@ -101,7 +101,14 @@ export interface StarsFutureConfig {
 	/**
 	 * The major whose defaults apply.
 	 *
-	 * `5` is the default: everything in `4`, plus `env` registered automatically in the built entry
+	 * `6` is the default: everything in `5`, plus the generated TypeScript configuration split in two, the way a Nuxt 4
+	 * project has it. `stars prepare` writes `.stars/tsconfig.app.json` (the bot sources) and
+	 * `.stars/tsconfig.node.json` (`stars.config.*`, `vitest.config.*`, `scripts/**`, ...) instead of a single
+	 * `.stars/tsconfig.json`, and the project's own `tsconfig.json` becomes a solution-style file that only references
+	 * them. The `tsdown` build uses the app config, and `stars typecheck` checks both. `5` and `4` keep the single
+	 * `.stars/tsconfig.json` and the `extends` a project's `tsconfig.json` already has, byte for byte.
+	 *
+	 * `5`: everything in `4`, plus `env` registered automatically in the built entry
 	 * (see {@link StarsConfig.env}) when the project depends on `@wolfstar/env-utilities`.
 	 *
 	 * `4`:
@@ -115,7 +122,7 @@ export interface StarsFutureConfig {
 	 *
 	 * `3` (**end-of-life**) keeps the legacy behaviour: auto imports off unless asked for, and a `tsdown.config.*`
 	 * loaded and merged with {@link StarsConfig.tsdown}. It prints a warning and is removed in the next major.
-	 * @default 5
+	 * @default 6
 	 */
 	compatibilityVersion?: StarsCompatibilityVersion;
 }
