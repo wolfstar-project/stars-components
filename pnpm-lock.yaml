@@ -1044,8 +1044,8 @@ importers:
         specifier: workspace:*
         version: link:../http-framework-test-utils
       '@wolfstar/plugin-gateway':
-        specifier: ^0.8.0
-        version: 0.8.0(@wolfstar/http-framework@packages+http-framework)
+        specifier: ^0.11.0
+        version: 0.11.0(@wolfstar/http-framework@packages+http-framework)(@wolfstar/kit@packages+kit)
       discord-api-types:
         specifier: ^0.38.30
         version: 0.38.56
@@ -3196,12 +3196,15 @@ packages:
     resolution: {integrity: sha512-nlcPuvEbmCuBPG2oASiMyga7NVIjgo5/s4R9LnMBfdF9LTFSsJjKSIAnb63bWYSqrWdjGcc3Xd8LX3YXAuS4DQ==}
     engines: {node: '>=20.0.0'}
 
-  '@wolfstar/plugin-cache@0.5.1':
-    resolution: {integrity: sha512-gwvliWPVL2jUcbiCIHiQrmGINokm9LLyU6e/RFcO6BNADRshs7hjF58JItbWkLr5vTyC7trmcafOH1vFrEyDIQ==}
+  '@wolfstar/plugin-cache@0.6.0':
+    resolution: {integrity: sha512-kR0E6xXUHcrJU72/jshY4PS1Zg7fh3oIdd6BvXdQ1R8d8hcW5C7Zvl68QaTKcL2vEk1CEjSsyrhm6l6R3GhkOA==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
+      '@wolfstar/kit': ^0.1.0
       msgpackr: ^2.0.0
     peerDependenciesMeta:
+      '@wolfstar/kit':
+        optional: true
       msgpackr:
         optional: true
 
@@ -3211,11 +3214,15 @@ packages:
     peerDependencies:
       '@wolfstar/http-framework': ^3.4.0 || ^5.0.0
 
-  '@wolfstar/plugin-gateway@0.8.0':
-    resolution: {integrity: sha512-XWJpcOpYHHxXQTF2UZe+PQ3lpOp7Ok7Kwxsu4O2GIwcLwCLNpmVtt1XsG6D1U35ZfyUIB/kQQU31V5UIqgocAg==}
+  '@wolfstar/plugin-gateway@0.11.0':
+    resolution: {integrity: sha512-eQhgpBlmObosqOinusCaI8uiPmgT21kZNFlBj7t3UvaO+mYMAboLRv0A5EzxYjrkPaTXmzdKo5WuqSNWiGWIIA==}
     engines: {node: '>=24.17.0'}
     peerDependencies:
-      '@wolfstar/http-framework': ^3.4.0 || ^5.0.0
+      '@wolfstar/http-framework': ^3.4.0 || ^5.0.0 || ^6.0.0
+      '@wolfstar/kit': ^0.1.0
+    peerDependenciesMeta:
+      '@wolfstar/kit':
+        optional: true
 
   '@wolfstar/plugin-i18next@2.0.3':
     resolution: {integrity: sha512-tz65AcO7vTpYnSeWyuOfaHvAVhGyjk79uPAl2ow4oloEcDytkrylLmRbT1KM7AfaRTL+6l0TE50epesSVMp0bA==}
@@ -7473,9 +7480,11 @@ snapshots:
     dependencies:
       discord-api-types: 0.38.56
 
-  '@wolfstar/plugin-cache@0.5.1':
+  '@wolfstar/plugin-cache@0.6.0(@wolfstar/kit@packages+kit)':
     dependencies:
       discord-api-types: 0.38.56
+    optionalDependencies:
+      '@wolfstar/kit': link:packages/kit
 
   '@wolfstar/plugin-gateway@0.0.0(@wolfstar/http-framework@packages+http-framework)':
     dependencies:
@@ -7490,16 +7499,19 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@wolfstar/plugin-gateway@0.8.0(@wolfstar/http-framework@packages+http-framework)':
+  '@wolfstar/plugin-gateway@0.11.0(@wolfstar/http-framework@packages+http-framework)(@wolfstar/kit@packages+kit)':
     dependencies:
+      '@discordjs/collection': 2.1.1
       '@discordjs/core': 2.6.0
       '@discordjs/rest': 2.6.3
       '@discordjs/structures': 1.0.0-pr-11602.1789066132-275cd4b42
       '@discordjs/ws': 2.0.4
       '@sapphire/pieces': 4.4.1
       '@wolfstar/http-framework': link:packages/http-framework
-      '@wolfstar/plugin-cache': 0.5.1
+      '@wolfstar/plugin-cache': 0.6.0(@wolfstar/kit@packages+kit)
       discord-api-types: 0.38.56
+    optionalDependencies:
+      '@wolfstar/kit': link:packages/kit
     transitivePeerDependencies:
       - bufferutil
       - msgpackr

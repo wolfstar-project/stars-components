@@ -295,7 +295,7 @@ structures. It is optional: the main entrypoint never imports it.
 pnpm add @wolfstar/plugin-gateway
 ```
 
-`@wolfstar/plugin-gateway` (`^0.8.0`) is an optional peer dependency and requires Node `>=24.17`. Gateway bots must still
+`@wolfstar/plugin-gateway` (`>=0.8.0`) is an optional peer dependency and requires Node `>=24.17`. Gateway bots must still
 serve their HTTP interactions endpoint (`GatewayClient.start({ listen })`), because button and select clicks arrive as
 interactions, and must import [`@wolfstar/http-framework-utilities/register`](#setup) like an HTTP bot.
 
