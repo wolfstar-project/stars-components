@@ -56,14 +56,14 @@
 	},
 	"devDependencies": {
 		"@types/node": "22.15.21",
-		"@vitest/coverage-v8": "^5.0.1",
+		"@vitest/coverage-v8": "^5.0.3",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
 		"typescript": "~7.0.2",
-		"vitest": "^5.0.1"
+		"vitest": "^5.0.3"
 	},
 	"optionalDependencies": {
-		"oxfmt": "^0.70.0",
+		"oxfmt": "^0.71.0",
 		"prettier": "^3.9.9"
 	},
 	"engines": {

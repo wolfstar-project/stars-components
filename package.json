@@ -32,28 +32,28 @@
 		"@commitlint/config-conventional": "^21.2.3",
 		"@favware/npm-deprecate": "^2.0.0",
 		"@sapphire/ts-config": "^5.0.3",
-		"@swc/core": "^1.16.2",
+		"@swc/core": "^1.16.13",
 		"@tolgee/cli": "^2.20.0",
 		"@types/node": "22.15.21",
-		"@types/ws": "^8.18.1",
-		"@vitest/coverage-v8": "^5.0.1",
+		"@types/ws": "^8.18.2",
+		"@vitest/coverage-v8": "^5.0.3",
 		"cz-conventional-changelog": "^3.3.0",
 		"discord-api-types": "^0.38.56",
 		"golar": "^0.1.10",
 		"husky": "9.1.7",
-		"knip": "6.38.0",
+		"knip": "6.39.0",
 		"nano-staged": "1.0.2",
-		"oxfmt": "0.70.0",
-		"oxlint": "1.85.0",
+		"oxfmt": "0.71.0",
+		"oxlint": "1.86.0",
 		"pkg-pr-new": "^0.0.88",
 		"publint": "^0.3.24",
 		"tinybench": "^5.1.0",
 		"tsdown": "^0.23.0",
-		"turbo": "^2.11.3",
+		"turbo": "^2.11.5",
 		"typedoc": "^0.28.20",
 		"typescript": "~5.8.3",
 		"unrun": "0.3.1",
-		"vitest": "^5.0.1"
+		"vitest": "^5.0.3"
 	},
 	"nano-staged": {
 		"*.{ts,mts,cts,tsx,mjs,cjs,js,jsx,json,jsonc,yml,yaml,md}": "oxfmt --no-error-on-unmatched-pattern",
@@ -72,5 +72,5 @@
 	"engines": {
 		"node": "^22.11 || ^24 || >=26"
 	},
-	"packageManager": "pnpm@12.6.0"
+	"packageManager": "pnpm@12.8.2"
 }
