@@ -42,6 +42,25 @@ describe('resolveTypecheckCommand', () => {
 		]);
 	});
 
+	test('checks the given project once, without watching, for `stars typecheck`', async () => {
+		await installBinary(fixture, 'typescript', 'tsc', 'bin/tsc');
+		await installBinary(fixture, 'golar', 'golar', 'dist/bin.js');
+		await fixture.write('stars.config.mjs', CONFIG('tsc'));
+		const project = join(fixture.root, '.stars', 'tsconfig.node.json');
+
+		const tsc = resolveTypecheckCommand(await loadStarsConfig({ cwd: fixture.root, env: {} }), { project, once: true });
+		expect(tsc).toMatchObject({ node: true, watch: false });
+		expect(tsc.args).toEqual(['--noEmit', '-p', project]);
+
+		// A separate file: the config loader caches a module by its path.
+		await fixture.write('stars.golar.mjs', CONFIG('golar'));
+		const golar = resolveTypecheckCommand(await loadStarsConfig({ cwd: fixture.root, configFile: 'stars.golar.mjs', env: {} }), {
+			project,
+			once: true
+		});
+		expect(golar.args).toEqual(['tsc', '--noEmit', '-p', project]);
+	});
+
 	test('forwards to TypeScript through `golar tsc` for the golar checker', async () => {
 		await installBinary(fixture, 'golar', 'golar', 'dist/bin.js');
 		await fixture.write('stars.config.mjs', CONFIG('golar'));

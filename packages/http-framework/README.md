@@ -514,7 +514,7 @@ into the project's own `vite.config.*`, the way `vite: {}` in a Nuxt config is.
 
 ### Compatibility version
 
-`future.compatibilityVersion` selects the build-default generation. Version 5 is the default and version 4 remains
+`future.compatibilityVersion` selects the build-default generation. Version 6 is the default; versions 5 and 4 remain
 supported. Version 3 is **end-of-life**: it still works for projects that have a standalone `tsdown.config.*`, but
 every command prints a `COMPATIBILITY_VERSION_EOL` warning, and it is removed in the next major.
 
@@ -530,7 +530,8 @@ export default defineConfig({
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `3` (EOL)     | Legacy behaviour: a `tsdown.config.*` drives the build, auto imports off unless asked for                                                                |
 | `4`           | `tsdown` configured from `stars.config` alone, auto imports on and wired in, `'auto'` picks `tsdown` for TypeScript; [`env`](#environment-env) is opt-in |
-| `5` (default) | Everything in `4`, plus [`env`](#environment-env) registered automatically when the project depends on `@wolfstar/env-utilities`                         |
+| `5`           | Everything in `4`, plus [`env`](#environment-env) registered automatically when the project depends on `@wolfstar/env-utilities`                         |
+| `6` (default) | Everything in `5`, plus the generated TypeScript configuration split in two: `.stars/tsconfig.app.json` and `.stars/tsconfig.node.json`                  |
 
 From version 4 on:
 

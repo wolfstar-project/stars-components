@@ -11,6 +11,7 @@ import { cliDiagnostics } from '../utils/diagnostics.js';
 import { loadProject, withProjectEnv, applyEnvOptions, type StarsHookable } from '../utils/hooks.js';
 import { modulesPreloadWarning } from '../utils/modules.js';
 import { shouldUseColor } from '../utils/output-mode.js';
+import { findLegacyRootTsconfig } from '../utils/tsconfig.js';
 import { readProjectEnv } from '../utils/project-env.js';
 import { findInstalledVersion } from '../utils/project.js';
 import { readOwnPackageJson } from '../utils/version.js';
@@ -171,7 +172,7 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 	try {
 		const prepared = await prepareProject(config, hooks, true);
 		const stale = [
-			prepared.tsconfig.status === 'outdated' ? show(prepared.tsconfig.path) : null,
+			...prepared.tsconfigs.filter((file) => file.status === 'outdated').map((file) => show(file.path)),
 			prepared.status === 'outdated' ? show(prepared.dts) : null,
 			prepared.modules?.status === 'outdated' ? show(prepared.modules.path) : null
 		].filter((path) => path !== null);
@@ -180,6 +181,8 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 				? { name: 'prepare', status: 'ok', message: 'The generated files are up to date' }
 				: { name: 'prepare', status: 'warn', message: `Out of date: ${stale.join(', ')}`, fix: 'Run `stars prepare`.' }
 		);
+		const legacy = await findLegacyRootTsconfig(config);
+		if (legacy) checks.push({ name: 'tsconfig', status: 'warn', message: legacy.message, ...(legacy.fix ? { fix: legacy.fix } : {}) });
 	} catch (error) {
 		checks.push({ name: 'prepare', status: 'error', message: error instanceof Error ? error.message : String(error) });
 	}

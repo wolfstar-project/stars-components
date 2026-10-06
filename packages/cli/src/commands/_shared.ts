@@ -5,7 +5,7 @@ import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { formatError } from '../utils/errors.js';
 import type { StarsHookable } from '../utils/hooks.js';
 import { modulesPreloadWarning, prepareModulesPreload } from '../utils/modules.js';
-import { prepareTsconfig } from '../utils/tsconfig.js';
+import { findLegacyRootTsconfig, prepareTsconfig } from '../utils/tsconfig.js';
 
 export type PrepareResult =
 	| { enabled: false; dts: null; status: null }
@@ -35,14 +35,20 @@ export async function prepareAutoImports(config: ResolvedStarsConfig, check = fa
 /** Prepares TypeScript configuration and auto import declarations before building. */
 export async function prepareProject(config: ResolvedStarsConfig, hooks?: StarsHookable, check = false) {
 	await hooks?.callHook('prepare:before', config);
-	const tsconfig = await prepareTsconfig(config, check);
-	const result = { ...(await prepareAutoImports(config, check)), tsconfig, modules: await prepareModulesPreload(config, check) };
+	const tsconfigs = await prepareTsconfig(config, check);
+	const result = {
+		...(await prepareAutoImports(config, check)),
+		// The app config from version 6, the single file below it; `tsconfigs` has every generated file.
+		tsconfig: tsconfigs[0]!,
+		tsconfigs,
+		modules: await prepareModulesPreload(config, check)
+	};
 	await hooks?.callHook('prepare:done', config, { dts: result.dts, status: result.status });
 	return result;
 }
 
 /**
- * Prints the non-fatal configuration diagnostics (e.g. an end-of-life compatibility version), and, unless `production`
+ * Prints the non-fatal configuration diagnostics (e.g. an end-of-life compatibility version, or a root `tsconfig.json` still extending `.stars/tsconfig.json`), and, unless `production`
  * is `false` (`stars dev`, which does that itself), what a production start of the project still needs to do.
  */
 export async function reportWarnings(
@@ -51,6 +57,9 @@ export async function reportWarnings(
 	options: { production?: boolean } = {}
 ): Promise<void> {
 	for (const warning of config.warnings) write(await formatError(warning));
+
+	const legacyTsconfig = await findLegacyRootTsconfig(config);
+	if (legacyTsconfig) write(await formatError(legacyTsconfig));
 
 	const preload = options.production === false ? null : modulesPreloadWarning(config);
 	if (preload) write(await formatError(preload));

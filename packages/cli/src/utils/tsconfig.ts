@@ -1,19 +1,74 @@
-import type { ResolvedStarsConfig } from '@wolfstar/schema';
+import { SPLIT_TSCONFIG_VERSION, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import type { Diagnostic } from 'nostics';
+import { cliDiagnostics } from './diagnostics.js';
 
 const require = createRequire(import.meta.url);
-const sapphireOptions = Object.assign(
-	{},
-	...['@sapphire/ts-config', '@sapphire/ts-config/extra-strict', '@sapphire/ts-config/decorators'].map(
-		(id) => (require(id) as { compilerOptions: Record<string, unknown> }).compilerOptions
-	)
-) as Record<string, unknown>;
+const presetOptions = (ids: string[]) =>
+	Object.assign({}, ...ids.map((id) => (require(id) as { compilerOptions: Record<string, unknown> }).compilerOptions)) as Record<string, unknown>;
+// Strictness belongs to every project; the decorator options only to the code the bundler compiles.
+const strictOptions = presetOptions(['@sapphire/ts-config', '@sapphire/ts-config/extra-strict']);
+const sapphireOptions = presetOptions(['@sapphire/ts-config', '@sapphire/ts-config/extra-strict', '@sapphire/ts-config/decorators']);
 
-/** Generates an extendable config without changing the project's own tsconfig. */
-export async function prepareTsconfig(config: ResolvedStarsConfig, check = false) {
-	const path = join(config.root, '.stars', 'tsconfig.json');
+export type TsconfigName = 'tsconfig' | 'app' | 'node';
+
+export interface TsconfigStatus {
+	/** `tsconfig` is the single file of compatibility versions below 6, `app` and `node` the split ones. */
+	name: TsconfigName;
+	path: string;
+	status: 'written' | 'up-to-date' | 'outdated';
+}
+
+/** The root config files that run in Node and never go through the bundler. */
+const NODE_PROJECT_FILES = ['stars.config.*', 'vitest.config.*', 'tsdown.config.*', 'vite.config.*', 'scripts/**/*'] as const;
+
+/**
+ * Generates the TypeScript configuration without changing the project's own tsconfig: one extendable
+ * `.stars/tsconfig.json` below compatibility version 6, and from 6 the `.stars/tsconfig.app.json` (the bot sources) and
+ * `.stars/tsconfig.node.json` (the root files that run in Node) a solution-style `tsconfig.json` references.
+ * Returns one status per file.
+ */
+export async function prepareTsconfig(config: ResolvedStarsConfig, check = false): Promise<TsconfigStatus[]> {
+	if (config.future.compatibilityVersion < SPLIT_TSCONFIG_VERSION) {
+		return [await emit(config, 'tsconfig', appTsconfig(config, 'tsconfig'), check)];
+	}
+
+	// Written for every build tool: the node project is about files Node runs whatever builds the bot. A `tsc` or `none`
+	// project keeps its own tsconfig for the bot sources, so for it the app file is generated but nothing references it.
+	return [await emit(config, 'app', appTsconfig(config, 'app'), check), await emit(config, 'node', nodeTsconfig(config), check)];
+}
+
+/**
+ * Reports a root `tsconfig.json` that still extends the single `.stars/tsconfig.json` of compatibility versions below 6,
+ * a file `stars prepare` no longer writes from version 6 on. A project moving to 6 updates it once.
+ */
+export async function findLegacyRootTsconfig(config: ResolvedStarsConfig): Promise<Diagnostic | null> {
+	if (config.future.compatibilityVersion < SPLIT_TSCONFIG_VERSION) return null;
+
+	const path = join(config.root, 'tsconfig.json');
+	const content = await readFile(path, 'utf-8').catch(() => null);
+	if (content === null || !/["']extends["']\s*:\s*(?:\[[^\]]*)?["']\.\/\.stars\/tsconfig\.json["']/.test(content)) return null;
+
+	return cliDiagnostics.TSCONFIG_LEGACY_EXTENDS({ file: relative(config.root, path) || 'tsconfig.json' });
+}
+
+async function emit(config: ResolvedStarsConfig, name: TsconfigName, compilerConfig: object, check: boolean): Promise<TsconfigStatus> {
+	const path = join(config.root, '.stars', name === 'tsconfig' ? 'tsconfig.json' : `tsconfig.${name}.json`);
+	const content = `${JSON.stringify(compilerConfig, null, 2)}\n`;
+	if (check) {
+		const existing = await readFile(path, 'utf-8').catch(() => null);
+		return { name, path, status: existing === content ? 'up-to-date' : 'outdated' };
+	}
+	await mkdir(dirname(path), { recursive: true });
+	await writeFile(path, content);
+	return { name, path, status: 'written' };
+}
+
+/** What `.stars/tsconfig.json` has always been: the bot sources, with the aliases and the bundler's compiler options. */
+function appTsconfig(config: ResolvedStarsConfig, name: TsconfigName) {
+	const path = join(config.root, '.stars', name === 'tsconfig' ? 'tsconfig.json' : `tsconfig.${name}.json`);
 	const fromGenerated = (target: string) => `./${relative(dirname(path), target).replaceAll('\\', '/')}`;
 	const paths: Record<string, string[]> = {};
 	if (config.build.tool === 'tsdown') {
@@ -39,42 +94,69 @@ export async function prepareTsconfig(config: ResolvedStarsConfig, check = false
 			paths[`${alias}/*`] = [`${resolved}/*`];
 		}
 	}
-	const content = `${JSON.stringify(
-		{
-			compilerOptions: {
-				...sapphireOptions,
-				// Bundlers emit the application; TypeScript only checks it. Keep Node16 emit for tsc.
-				...(config.build.tool === 'tsdown' || config.build.tool === 'vite'
-					? {
-							module: 'ESNext',
-							moduleResolution: 'Bundler',
-							moduleDetection: 'force',
-							isolatedModules: true,
-							verbatimModuleSyntax: true,
-							allowJs: true,
-							allowImportingTsExtensions: true,
-							resolvePackageJsonImports: true,
-							lib: ['ESNext', 'DOM'],
-							noEmit: true
-						}
-					: {}),
-				target: 'ES2022',
-				forceConsistentCasingInFileNames: true,
-				skipLibCheck: true,
-				tsBuildInfoFile: './tsconfig.tsbuildinfo',
-				paths
-			},
-			include: [`${fromGenerated(dirname(config.entry))}/**/*`, ...(config.imports.enabled ? [fromGenerated(config.imports.dts)] : [])],
-			exclude: [fromGenerated(join(config.root, 'node_modules')), fromGenerated(config.build.outDir)]
+	return {
+		compilerOptions: {
+			...sapphireOptions,
+			// Bundlers emit the application; TypeScript only checks it. Keep Node16 emit for tsc.
+			...(config.build.tool === 'tsdown' || config.build.tool === 'vite'
+				? {
+						module: 'ESNext',
+						moduleResolution: 'Bundler',
+						moduleDetection: 'force',
+						isolatedModules: true,
+						verbatimModuleSyntax: true,
+						allowJs: true,
+						allowImportingTsExtensions: true,
+						resolvePackageJsonImports: true,
+						lib: ['ESNext', 'DOM'],
+						noEmit: true
+					}
+				: {}),
+			target: 'ES2022',
+			forceConsistentCasingInFileNames: true,
+			skipLibCheck: true,
+			tsBuildInfoFile: name === 'tsconfig' ? './tsconfig.tsbuildinfo' : `./tsconfig.${name}.tsbuildinfo`,
+			paths
 		},
-		null,
-		2
-	)}\n`;
-	if (check) {
-		const existing = await readFile(path, 'utf-8').catch(() => null);
-		return { path, status: existing === content ? ('up-to-date' as const) : ('outdated' as const) };
-	}
-	await mkdir(dirname(path), { recursive: true });
-	await writeFile(path, content);
-	return { path, status: 'written' as const };
+		include: [`${fromGenerated(dirname(config.entry))}/**/*`, ...(config.imports.enabled ? [fromGenerated(config.imports.dts)] : [])],
+		exclude: [fromGenerated(join(config.root, 'node_modules')), fromGenerated(config.build.outDir)]
+	};
+}
+
+/**
+ * The root files that run in Node: `stars.config.*`, `vitest.config.*`, `scripts/**` and the like. No DOM, no
+ * bundler resolution, no aliases or auto imports (none of it applies to a file Node loads itself), and no decorators.
+ */
+function nodeTsconfig(config: ResolvedStarsConfig) {
+	const path = join(config.root, '.stars', 'tsconfig.node.json');
+	const fromGenerated = (target: string) => `./${relative(dirname(path), target).replaceAll('\\', '/')}`;
+	const source = dirname(config.entry);
+	const include = NODE_PROJECT_FILES.map((pattern) => fromGenerated(join(config.root, pattern)));
+	// A custom `--config` file name is not covered by the globs.
+	if (config.configFile !== null) include.push(fromGenerated(config.configFile));
+
+	return {
+		compilerOptions: {
+			...strictOptions,
+			target: 'ES2022',
+			module: 'NodeNext',
+			moduleResolution: 'NodeNext',
+			moduleDetection: 'force',
+			lib: ['ESNext'],
+			types: ['node'],
+			allowJs: true,
+			noEmit: true,
+			forceConsistentCasingInFileNames: true,
+			skipLibCheck: true,
+			tsBuildInfoFile: './tsconfig.node.tsbuildinfo'
+		},
+		include: [...new Set(include)],
+		// The two projects must not overlap: the bot sources belong to the app one. An entry in the project root has
+		// no directory of its own to leave out.
+		exclude: [
+			fromGenerated(join(config.root, 'node_modules')),
+			fromGenerated(config.build.outDir),
+			...(source === config.root ? [] : [fromGenerated(source)])
+		]
+	};
 }

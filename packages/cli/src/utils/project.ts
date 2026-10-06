@@ -34,7 +34,9 @@ export async function importFromProject<T>(root: string, id: string, hint: strin
  * `lib/tsc.js` behind its `exports` map, and packages move their entry points between releases.
  */
 export function resolveBinary(root: string, packageName: string, binName: string): string | null {
-	const packageJsonPath = resolveFromProject(root, `${packageName}/package.json`);
+	// A package whose `exports` map hides `package.json` (golar's does) cannot be resolved to it, so the lookup falls back
+	// to walking `node_modules` up from the project, the way `findInstalledVersion` does.
+	const packageJsonPath = resolveFromProject(root, `${packageName}/package.json`) ?? findInstalledPackageJson(root, packageName);
 	if (!packageJsonPath) return null;
 
 	try {
@@ -43,6 +45,19 @@ export function resolveBinary(root: string, packageName: string, binName: string
 		return bin ? join(dirname(packageJsonPath), bin) : null;
 	} catch {
 		return null;
+	}
+}
+
+/** The `package.json` of an installed package, found by walking `node_modules` up from `root`. */
+function findInstalledPackageJson(root: string, name: string): string | null {
+	let directory = root;
+	for (;;) {
+		const file = join(directory, 'node_modules', name, 'package.json');
+		if (existsSync(file)) return file;
+
+		const parent = dirname(directory);
+		if (parent === directory) return null;
+		directory = parent;
 	}
 }
 

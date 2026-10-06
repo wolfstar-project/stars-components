@@ -10,6 +10,7 @@ export const commands: Record<string, () => Promise<AnyCommand>> = {
 	info: () => import('./info.js').then((module) => module.default),
 	codegen: () => import('./codegen.js').then((module) => module.default),
 	prepare: () => import('./prepare.js').then((module) => module.default),
+	typecheck: () => import('./typecheck.js').then((module) => module.default),
 	commands: () => import('./commands.js').then((module) => module.default),
 	doctor: () => import('./doctor.js').then((module) => module.default),
 	completions: () => import('./completions.js').then((module) => module.default)

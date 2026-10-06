@@ -173,9 +173,12 @@ export class Typechecker extends EventEmitter<TypecheckerEvents> {
  *
  * @throws {Diagnostic} when the checker is not installed in the project.
  */
-export function resolveTypecheckCommand(config: ResolvedStarsConfig): TypecheckCommand {
+export function resolveTypecheckCommand(config: ResolvedStarsConfig, options: { project?: string; once?: boolean } = {}): TypecheckCommand {
 	const { checker, tsconfig } = config.dev.typecheck;
-	const project = tsconfig!;
+	const project = options.project ?? tsconfig!;
+	// `stars typecheck` checks a project once, with the checker's own output; `stars dev` watches it quietly.
+	const flags = options.once ? ONCE_ARGS : WATCH_ARGS;
+	const watch = !options.once;
 
 	switch (checker) {
 		case 'golar': {
@@ -183,7 +186,7 @@ export function resolveTypecheckCommand(config: ResolvedStarsConfig): TypecheckC
 			const golar = resolveBinary(config.root, 'golar', 'golar');
 			if (!golar) throw missing(config, 'golar', 'Install it with `pnpm add -D golar`');
 
-			return { command: golar, args: ['tsc', ...WATCH_ARGS, '-p', project], node: true, watch: true };
+			return { command: golar, args: ['tsc', ...flags, '-p', project], node: true, watch };
 		}
 
 		case 'tsz': {
@@ -201,11 +204,12 @@ export function resolveTypecheckCommand(config: ResolvedStarsConfig): TypecheckC
 			const tsc = resolveTscBinary(config.root);
 			if (!tsc) throw missing(config, 'typescript', 'Install it with `pnpm add -D typescript`');
 
-			return { command: tsc, args: [...WATCH_ARGS, '-p', project], node: true, watch: true };
+			return { command: tsc, args: [...flags, '-p', project], node: true, watch };
 		}
 	}
 }
 
+const ONCE_ARGS = ['--noEmit'] as const;
 const WATCH_ARGS = ['--noEmit', '--watch', '--preserveWatchOutput', '--pretty', 'false'] as const;
 
 function missing(config: ResolvedStarsConfig, name: string, install: string): Diagnostic {
