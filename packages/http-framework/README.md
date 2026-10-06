@@ -423,6 +423,8 @@ export default defineConfig({
 		logFile: '.stars/dev.log',
 		// 'auto' (default): the full-screen dashboard on a terminal of at least 90x20, the compact panel otherwise.
 		layout: 'auto',
+		// `false` leaves the mouse to the terminal: the dashboard's sidebar is clickable and the wheel scrolls the logs.
+		mouse: true,
 		// What the dev UI shows at start; `dir` adds one log file per run next to `logFile`, keeping the last `keep`.
 		logs: { channels: ['bot', 'commands', 'interactions'], levels: ['error', 'warn', 'info'], dir: 'logs', keep: 10 },
 		// When the bot's application commands change: 'prompt' (default) asks before redeploying, 'auto', or 'off'.

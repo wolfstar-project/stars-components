@@ -225,6 +225,14 @@ export interface StarsDevConfig {
 	 * @default 'auto'
 	 */
 	layout?: 'auto' | 'dashboard' | 'panel';
+	/**
+	 * Whether the dashboard reacts to the mouse: a click on a channel, a level, a group header or a key of the sidebar
+	 * does what its key does, and the wheel scrolls the logs. The terminal reports the mouse to `stars dev` while the
+	 * dashboard is shown, so selecting text needs `Shift` held in most terminals; `false` leaves the mouse to the
+	 * terminal.
+	 * @default true
+	 */
+	mouse?: boolean;
 	/** Which log channels and levels the dev UI starts with, and where a run's logs are kept. */
 	logs?: StarsDevLogsConfig;
 	/** How `stars dev` reacts when the bot's application commands change. */

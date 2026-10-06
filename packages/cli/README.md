@@ -72,7 +72,7 @@ console.log(config.entry, config.build.output);
 ## Commands
 
 ```sh
-stars dev [--no-tui] [--tunnel|--no-tunnel] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
+stars dev [--no-tui] [--tunnel|--no-tunnel] [--no-mouse] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
 stars build [--config <file>] [--cwd <dir>]
 stars info [--json] [--config <file>] [--cwd <dir>]
 stars codegen [--check] [--json] [--config <file>] [--cwd <dir>]
@@ -181,6 +181,20 @@ stars dev --level trace                           # this level and every more se
 | `h` / `?`          | show keyboard shortcuts                                          |
 | `q` / `Ctrl+D`     | quit; confirm with `y` while a build/restart is in flight        |
 | `Ctrl+C`           | quit immediately from any view                                   |
+
+**Mouse.** In the dashboard the sidebar is clickable, and each click does what a key does:
+
+| Click on                                    | Does                                             |
+| ------------------------------------------- | ------------------------------------------------ |
+| a channel or a level                        | shows or hides it, like `Space`                  |
+| the same one again, or `Alt`/`Ctrl` + click | solo, like `s`                                   |
+| a group header (`channels`, `levels`)       | folds or unfolds the group, like `Enter`         |
+| a key of the list (`q quit`, `? help`)      | that key, when the entry stands for a single one |
+| the wheel, over the logs                    | scrolls three rows                               |
+
+The terminal reports the mouse to `stars dev` while the dashboard is on screen, so selecting text there needs
+`Shift` held in most terminals. `dev.mouse: false`, or `--no-mouse` for one session, leaves the mouse to the
+terminal; the panel and the plain output never take it.
 
 **Hot reload.** When the bot runs with the framework's `hmr` option enabled, it tells `stars dev` which directories
 it watches. A build that only changed pieces in those directories is then left to the bot: the process, its HTTP

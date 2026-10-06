@@ -96,6 +96,7 @@ export interface ResolvedDevCommandsConfig {
 export interface ResolvedDevConfig {
 	readonly banner: readonly string[] | false | null;
 	readonly layout: 'auto' | 'dashboard' | 'panel';
+	readonly mouse: boolean;
 	readonly logs: ResolvedDevLogsConfig;
 	readonly commands: ResolvedDevCommandsConfig;
 	readonly hmr: boolean;
@@ -582,6 +583,7 @@ function resolveDev(
 	validator.knownKeys(config, 'dev', [
 		'banner',
 		'layout',
+		'mouse',
 		'logs',
 		'commands',
 		'hmr',
@@ -637,6 +639,7 @@ function resolveDev(
 				: (validator.stringArray(config.banner, 'dev.banner') ?? null);
 
 	const layout = oneOf(validator.string(config.layout, 'dev.layout'), 'dev.layout', DEV_LAYOUTS, validator) ?? 'auto';
+	const mouse = validator.boolean(config.mouse, 'dev.mouse') ?? true;
 	const logs = resolveDevLogs(root, config.logs, validator);
 	const commands = resolveDevCommands(config.commands, validator);
 	const hmr = validator.boolean(config.hmr, 'dev.hmr') ?? true;
@@ -656,6 +659,7 @@ function resolveDev(
 		logFile,
 		banner,
 		layout,
+		mouse,
 		logs,
 		commands,
 		hmr

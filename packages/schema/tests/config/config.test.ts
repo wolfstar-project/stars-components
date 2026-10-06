@@ -259,6 +259,7 @@ describe('stars.config', () => {
 		const { dev } = await loadStarsConfig({ cwd: fixture.root, env: {} });
 
 		expect(dev.layout).toBe('auto');
+		expect(dev.mouse).toBe(true);
 		expect(dev.logs).toEqual({ channels: null, levels: ['error', 'warn', 'info', 'debug'], dir: null, keep: 10 });
 		expect(dev.commands).toEqual({ refresh: 'prompt' });
 		expect(dev.hmr).toBe(true);
@@ -268,11 +269,12 @@ describe('stars.config', () => {
 		fixture = await createFixture({
 			'src/main.js': '',
 			'stars.config.mjs':
-				"export default { dev: { layout: 'panel', hmr: false, commands: { refresh: 'auto' }, logs: { channels: ['bot', 'hmr'], levels: ['error', 'trace'], dir: 'logs', keep: 3 } } };"
+				"export default { dev: { layout: 'panel', mouse: false, hmr: false, commands: { refresh: 'auto' }, logs: { channels: ['bot', 'hmr'], levels: ['error', 'trace'], dir: 'logs', keep: 3 } } };"
 		});
 		const { dev } = await loadStarsConfig({ cwd: fixture.root, env: {} });
 
 		expect(dev.layout).toBe('panel');
+		expect(dev.mouse).toBe(false);
 		expect(dev.hmr).toBe(false);
 		expect(dev.commands).toEqual({ refresh: 'auto' });
 		expect(dev.logs).toEqual({ channels: ['bot', 'hmr'], levels: ['error', 'trace'], dir: join(fixture.root, 'logs'), keep: 3 });
