@@ -1,5 +1,12 @@
 # with-testing-js
 
+## 0.0.24
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/http-framework@6.2.1
+
 ## 0.0.23
 
 ### Patch Changes

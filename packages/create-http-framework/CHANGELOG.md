@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.9.0
+
+### Minor Changes
+
+- [#284](https://github.com/wolfstar-project/stars-components/pull/284) [`c71eb0f`](https://github.com/wolfstar-project/stars-components/commit/c71eb0fca8b4dc54aa080d2b9e96854c918c2c40) - Scaffold the solution-style root `tsconfig.json` of compatibility version 6 for `tsdown`, `vite` and `vite-nitro` projects.
+
+    The generated `tsconfig.json` is `{ "files": [], "references": [...] }` pointing at the `.stars/tsconfig.app.json` and `.stars/tsconfig.node.json` that `stars prepare` writes, instead of extending `./.stars/tsconfig.json` and repeating `include`/`exclude`/`rootDir`/`outDir` per build tool, and the project gets a `typecheck` script running `stars typecheck`. The manifest records the `compatibilityVersion` the project was generated for. A rerun replaces the root `tsconfig.json` only when it is what the generator wrote before (this version's or the old `extends` one, compared as JSON so a formatter does not matter) and keeps, and warns about, a hand-edited one. The generated `AGENTS.md` and `README.md` document the script. The `tsc` branch is unchanged. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.8.1
 
 ### Patch Changes

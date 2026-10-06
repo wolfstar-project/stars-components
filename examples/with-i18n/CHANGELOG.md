@@ -1,5 +1,13 @@
 # with-i18n
 
+## 0.0.27
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/env-utilities@2.3.1
+    - @wolfstar/http-framework@6.2.1
+
 ## 0.0.26
 
 ### Patch Changes

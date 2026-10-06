@@ -1,5 +1,11 @@
 # @wolfstar/schema
 
+## 0.8.0
+
+### Minor Changes
+
+- [#282](https://github.com/wolfstar-project/stars-components/pull/282) [`1e69874`](https://github.com/wolfstar-project/stars-components/commit/1e698742d1ec940e1cc310a66073af9ce406dddc) - Add `future.compatibilityVersion` `6`, now the latest and the default, gated by the new `SPLIT_TSCONFIG_VERSION` constant. From `6` a `tsdown` build's default `build.tsconfig` is the generated `.stars/tsconfig.app.json`, and `dev.typecheck.projects` lists what `stars typecheck` checks: the generated app and node configs (a `tsc` or `none` project keeps its own tsconfig and gets the node config on top) (`DEFAULT_APP_TSCONFIG`, `DEFAULT_NODE_TSCONFIG`). Projects that pin `5` or `4` keep today's single `.stars/tsconfig.json` and the `tsconfig.json` lookup unchanged. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.7.0
 
 ### Minor Changes
