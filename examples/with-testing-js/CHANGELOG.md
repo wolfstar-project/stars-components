@@ -1,5 +1,12 @@
 # with-testing-js
 
+## 0.0.23
+
+### Patch Changes
+
+- Updated dependencies [[`05a8443`](https://github.com/wolfstar-project/stars-components/commit/05a8443cf6ba64950c9e2fed5ebdd13c03b6cc06), [`814c8f9`](https://github.com/wolfstar-project/stars-components/commit/814c8f9aed2b5b96150806f09886bac7b76de736)]:
+    - @wolfstar/http-framework@6.2.0
+
 ## 0.0.22
 
 ### Patch Changes

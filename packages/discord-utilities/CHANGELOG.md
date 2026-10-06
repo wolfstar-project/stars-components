@@ -1,5 +1,11 @@
 # @wolfstar/discord-utilities
 
+## 0.1.1
+
+### Patch Changes
+
+- [#253](https://github.com/wolfstar-project/stars-components/pull/253) [`05a8443`](https://github.com/wolfstar-project/stars-components/commit/05a8443cf6ba64950c9e2fed5ebdd13c03b6cc06) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 0.1.0
 
 ### Minor Changes
