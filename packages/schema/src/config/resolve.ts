@@ -3,6 +3,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import type { Diagnostic } from 'nostics';
 import type {
 	StarsBuildTool,
+	StarsCodegenConfig,
 	StarsConfig,
 	StarsDevConfig,
 	StarsEnvSetupOptions,
@@ -124,8 +125,14 @@ export interface ResolvedI18nCodegenConfig {
 	readonly output: string;
 }
 
+export interface ResolvedCommandsCodegenConfig {
+	/** Absolute path of the generated declaration file. */
+	readonly output: string;
+}
+
 export interface ResolvedCodegenConfig {
 	readonly i18n: ResolvedI18nCodegenConfig | null;
+	readonly commands: ResolvedCommandsCodegenConfig | null;
 }
 
 export interface ResolvedStarsConfig {
@@ -179,6 +186,7 @@ export const DEFAULT_NODE_ARGS = ['--enable-source-maps'] as const;
 export const DEFAULT_DEV_PORT = 3000;
 export const DEFAULT_I18N_LOCALES = 'src/locales/en-US';
 export const DEFAULT_I18N_OUTPUT = 'src/@types/i18next.d.ts';
+export const DEFAULT_COMMANDS_OUTPUT = 'src/@types/commands.d.ts';
 export const DEFAULT_IMPORTS_DIRS = ['src/lib/**', 'src/utils/**'] as const;
 export const DEFAULT_IMPORTS_PRESETS = ['@wolfstar/http-framework', '@wolfstar/decorators', '@wolfstar/env-utilities'] as const;
 export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
@@ -788,32 +796,47 @@ function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): 
 }
 
 function resolveCodegen(root: string, config: NonNullable<StarsConfig['codegen']>, validator: Validator): ResolvedCodegenConfig {
-	validator.knownKeys(config, 'codegen', ['i18n']);
+	validator.knownKeys(config, 'codegen', ['i18n', 'commands']);
+	return { i18n: resolveI18nCodegen(root, config.i18n, validator), commands: resolveCommandsCodegen(root, config.commands, validator) };
+}
 
-	if (config.i18n === false) return { i18n: null };
+function resolveI18nCodegen(root: string, config: StarsCodegenConfig['i18n'], validator: Validator): ResolvedI18nCodegenConfig | null {
+	if (config === false) return null;
 
-	if (config.i18n === undefined) {
+	if (config === undefined) {
 		const locales = join(root, DEFAULT_I18N_LOCALES);
-		return { i18n: isDirectory(locales) ? { locales, output: join(root, DEFAULT_I18N_OUTPUT) } : null };
+		return isDirectory(locales) ? { locales, output: join(root, DEFAULT_I18N_OUTPUT) } : null;
 	}
 
-	if (config.i18n === null || typeof config.i18n !== 'object') {
+	if (config === null || typeof config !== 'object') {
 		throw validator.typeError(
 			'codegen.i18n',
 			'an object or `false`',
-			config.i18n,
+			config,
 			'Use `{ locales, output }` to configure it or `false` to disable it.'
 		);
 	}
 
-	validator.knownKeys(config.i18n, 'codegen.i18n', ['locales', 'output']);
-	const locales = resolve(root, validator.string(config.i18n.locales, 'codegen.i18n.locales') ?? DEFAULT_I18N_LOCALES);
+	validator.knownKeys(config, 'codegen.i18n', ['locales', 'output']);
+	const locales = resolve(root, validator.string(config.locales, 'codegen.i18n.locales') ?? DEFAULT_I18N_LOCALES);
 	if (!isDirectory(locales)) {
 		throw validator.error(configDiagnostics.LOCALES_NOT_FOUND, { locales });
 	}
 
-	const output = resolve(root, validator.string(config.i18n.output, 'codegen.i18n.output') ?? DEFAULT_I18N_OUTPUT);
-	return { i18n: { locales, output } };
+	const output = resolve(root, validator.string(config.output, 'codegen.i18n.output') ?? DEFAULT_I18N_OUTPUT);
+	return { locales, output };
+}
+
+function resolveCommandsCodegen(root: string, config: StarsCodegenConfig['commands'], validator: Validator): ResolvedCommandsCodegenConfig | null {
+	if (config === undefined || config === false) return null;
+	if (config === true) return { output: join(root, DEFAULT_COMMANDS_OUTPUT) };
+
+	if (config === null || typeof config !== 'object') {
+		throw validator.typeError('codegen.commands', 'a boolean or an object', config, 'Use `true` to enable it or `{ output }` to configure it.');
+	}
+
+	validator.knownKeys(config, 'codegen.commands', ['output']);
+	return { output: resolve(root, validator.string(config.output, 'codegen.commands.output') ?? DEFAULT_COMMANDS_OUTPUT) };
 }
 
 /**

@@ -402,6 +402,30 @@ describe('stars.config', () => {
 		expect((await loadStarsConfig({ cwd: fixture.root, env: {} })).codegen.i18n).toBeNull();
 	});
 
+	describe('codegen.commands', () => {
+		async function resolveCommands(content?: string) {
+			fixture = await createFixture({ 'src/main.js': '', ...(content ? { 'stars.config.mjs': content } : {}) });
+			return (await loadStarsConfig({ cwd: fixture.root, env: {} })).codegen.commands;
+		}
+
+		test('is off unless enabled', async () => {
+			expect(await resolveCommands()).toBeNull();
+			expect(await resolveCommands('export default { codegen: { commands: false } };')).toBeNull();
+		});
+
+		test('defaults its output when enabled', async () => {
+			expect(await resolveCommands('export default { codegen: { commands: true } };')).toEqual({
+				output: join(fixture.root, 'src', '@types', 'commands.d.ts')
+			});
+		});
+
+		test('takes a custom output relative to the root', async () => {
+			expect(await resolveCommands("export default { codegen: { commands: { output: 'types/commands.d.ts' } } };")).toEqual({
+				output: join(fixture.root, 'types', 'commands.d.ts')
+			});
+		});
+	});
+
 	describe('validation', () => {
 		async function expectConfigError(content: string, files: Record<string, string> = { 'src/main.js': '' }) {
 			fixture = await createFixture({ ...files, 'stars.config.mjs': content });
@@ -458,6 +482,15 @@ describe('stars.config', () => {
 		test('rejects a codegen.i18n.locales directory that does not exist', async () => {
 			const error = await expectConfigError("export default { codegen: { i18n: { locales: 'nope' } } };");
 			expect(error.code).toBe('LOCALES_NOT_FOUND');
+		});
+
+		test('rejects a codegen.commands that is neither a boolean nor an object', async () => {
+			const error = await expectConfigError("export default { codegen: { commands: 'yes' } };");
+			expect(error.message).toContain('codegen.commands');
+			const output = await expectConfigError('export default { codegen: { commands: { output: 3 } } };');
+			expect(output.message).toContain('codegen.commands.output');
+			const unknown = await expectConfigError('export default { codegen: { commands: { nope: true } } };');
+			expect(unknown.message).toContain('codegen.commands');
 		});
 
 		test('rejects a missing entry', async () => {

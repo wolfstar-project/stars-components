@@ -24,7 +24,7 @@ package has no install-time dependency on `@wolfstar/http-framework` in return, 
 - `stars dev` builds the project, starts the bot, restarts it (or leaves the change to the bot's hot reload) and shows what is happening in a full-screen dashboard: status, log channels and levels you can filter, and a prompt before changed commands are redeployed (or plain logs).
 - `stars build` runs the configured build tool once.
 - `stars info` prints the resolved configuration and environment (`--json` for scripts).
-- `stars codegen` runs the configured code generators (`--check` for CI).
+- `stars codegen` runs the configured code generators: i18next types and the typed options of your commands (`--check` for CI).
 - `stars prepare` generates `.stars/tsconfig.json` and the auto imports declaration file (`--check` for CI).
 - `stars commands` inspects, compares, deploys and cleans the application commands Discord has deployed.
 - `stars doctor` checks that the project is ready: runtime, framework, credentials, interactions endpoint, generated files.
@@ -274,6 +274,48 @@ A command counts as changed when what the project defines no longer matches what
 fills in on its own (`id`, `version`, defaults such as `nsfw: false`) are ignored. `deploy` is Discord's bulk
 overwrite: a deployed command the project no longer defines is deleted, which is why it asks first and refuses to
 run without `--yes` outside a terminal, or with `--json`.
+
+### `stars codegen`
+
+Runs the code generators `codegen` in `stars.config` enables, writing their files (`--check` fails with
+`CODEGEN_OUTDATED` instead when one is stale, `--json` prints `{ check, results }`):
+
+- `codegen.i18n` types the i18next resources with `@wolfstar/i18next-type-generator`. It is on by default when
+  `src/locales/en-US` exists.
+- `codegen.commands` types the options of every command from its builder. It is off by default: `true` writes
+  `src/@types/commands.d.ts`, `{ output }` picks another file.
+
+```typescript
+export default defineConfig({ codegen: { commands: true } });
+```
+
+The generated file augments `CommandOptionsRegistry` with one entry per command path (`'ping'`, `'math add'`,
+`'subscriptions twitch add'`), and `Command.OptionsOf<'math add'>` reads it, so the handler needs no hand-written
+`interface Options` that can drift from the builder:
+
+```typescript
+public add(interaction: Command.ChatInputInteraction, { left, right }: Command.OptionsOf<'math add'>) {}
+```
+
+Every option has the shape the framework resolves it to at runtime (`user` is `TransformedArguments.User`, `role` is
+`APIRole`, ...), a `required` option is not optional, `choices` are a literal union and `channel_types` narrow a
+channel. A localized command is keyed by its default name, the one the handler receives. Context menu commands have no
+options and are skipped. For an autocomplete, `Command.AutocompleteArguments<Command.OptionsOf<'math add'>>` types
+`focused` from the same entry.
+
+The types come from what the bot registers, so loops and factories need no special care: `stars codegen` reads the
+commands from the built bot the way `stars commands diff` does (run `stars build` first), by starting it in a mode
+that loads its pieces, reports its registry and exits before it listens or talks to Discord. It does not call
+`client.login`, but the bot still has to get through its own setup: values it reads while starting (`DISCORD_CLIENT_ID`,
+`DISCORD_PUBLIC_KEY`, ...) have to be set, with placeholders in CI where the real secrets are not available:
+
+```sh
+DISCORD_CLIENT_ID=1 DISCORD_TOKEN=x DISCORD_PUBLIC_KEY=0 stars codegen --check
+```
+
+It is not part of `stars dev` or `stars prepare` (which has no build to read from yet): run `stars codegen` after
+changing an option, and `stars codegen --check` in CI to keep the file up to date. A path registered more than once
+(a command restricted to several guilds) keeps its first definition.
 
 ### `stars doctor`
 

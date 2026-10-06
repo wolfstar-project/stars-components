@@ -1,0 +1,9 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		// Resolve the package to its sources so the module augmentation in the tests merges with `CommandOptionsRegistry`.
+		"paths": { "@wolfstar/http-framework": ["../src/index.ts"], "@wolfstar/schema": ["../../schema/src/index.ts"] }
+	},
+	"include": ["./**/*.test-d.ts"]
+}
