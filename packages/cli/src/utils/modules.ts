@@ -1,5 +1,5 @@
 import { ModuleError, setupModules } from '@wolfstar/kit';
-import type { ResolvedStarsConfig } from '@wolfstar/schema';
+import { assertModuleOptionsClaimed, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { envModuleSource, modulesModuleSource } from '@wolfstar/vite-server/internal';
 import { resolve as resolveModule } from 'mlly';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -27,9 +27,16 @@ async function resolveSpecifier(root: string, specifier: string): Promise<string
  * Runs `setup` of every module in `modules` (see `@wolfstar/kit`) and returns the configuration carrying what they
  * contributed: `runtime`, and `imports.presets` extended by `ctx.addImports`. Without modules the configuration is
  * returned as it is.
+ *
+ * Afterwards, a top-level `stars.config` key that is not built in and that no installed module claimed with
+ * `meta.configKey` is an `UNKNOWN_OPTION` error: the schema keeps such keys aside (`moduleOptions`) because only the
+ * modules know which ones are theirs. That check runs without modules too, where every extra key is unknown.
  */
 export async function installModules(config: ResolvedStarsConfig, hooks: StarsHookable): Promise<ResolvedStarsConfig> {
-	if (config.modules.length === 0) return config;
+	if (config.modules.length === 0) {
+		assertModuleOptionsClaimed(config, []);
+		return config;
+	}
 
 	try {
 		const runtime = await setupModules({
@@ -38,6 +45,8 @@ export async function installModules(config: ResolvedStarsConfig, hooks: StarsHo
 			versions: { framework: findInstalledVersion(config.root, '@wolfstar/http-framework'), stars: readOwnPackageJson().version },
 			load: async (specifier) => import(await resolveSpecifier(config.root, specifier))
 		});
+
+		assertModuleOptionsClaimed(config, runtime.configKeys);
 
 		const presets = [...config.imports.presets, ...runtime.imports.filter((preset) => !config.imports.presets.includes(preset))];
 		return { ...config, runtime, imports: { ...config.imports, presets } };
