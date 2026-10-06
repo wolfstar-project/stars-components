@@ -16,7 +16,7 @@ export class Backend<T = object> implements BackendModule<Backend.Options<T>> {
 	public read(language: string, namespace: string, callback: ReadCallback): void {
 		if (this.paths.length === 0) return callback(new Error('No files registered'), null);
 
-		if (this.i18nextOptions.initImmediate === true) {
+		if (this.i18nextOptions.initAsync === true) {
 			try {
 				return callback(null, this.readPathsSync(language, namespace));
 			} catch (error) {
