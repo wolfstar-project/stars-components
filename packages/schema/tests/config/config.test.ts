@@ -132,6 +132,20 @@ describe('stars.config', () => {
 
 		const explicit = await load('', "dev: { typecheck: { tsconfig: 'src/tsconfig.json' } }");
 		expect(explicit.config.dev.typecheck.projects).toEqual([join(explicit.root, 'src', 'tsconfig.json')]);
+
+		// The branch most projects hit: the dev checker watches the app project, `stars typecheck` runs both.
+		const enabled = await load('', 'dev: { typecheck: true }');
+		expect(enabled.config.dev.typecheck).toEqual({ enabled: true, tsconfig: enabled.app, projects: [enabled.app, enabled.node], checker: 'tsc' });
+
+		// A `tsc` project keeps its own tsconfig for the bot, and still gets the node config.
+		const tsc = await load('', "build: { tool: 'tsc' }, dev: { typecheck: true }");
+		expect(tsc.config.dev.typecheck.tsconfig).toBe(join(tsc.root, 'src', 'tsconfig.json'));
+		expect(tsc.config.dev.typecheck.projects).toEqual([join(tsc.root, 'src', 'tsconfig.json'), tsc.node]);
+
+		// `none` (JavaScript) with no tsconfig of its own: only the node config is left.
+		fixture = await createFixture({ 'src/main.js': '', 'stars.none.mjs': "export default { build: { tool: 'none' } };" });
+		const none = await loadStarsConfig({ cwd: fixture.root, configFile: 'stars.none.mjs', env: {} });
+		expect(none.dev.typecheck.projects).toEqual([join(fixture.root, '.stars', 'tsconfig.node.json')]);
 	});
 
 	test('accepts compatibility version 5 explicitly', async () => {
@@ -219,7 +233,7 @@ describe('stars.config', () => {
 		expect(config.dev.typecheck).toEqual({
 			enabled: true,
 			tsconfig: join(fixture.root, 'tsconfig.json'),
-			projects: [join(fixture.root, 'tsconfig.json')],
+			projects: [join(fixture.root, 'tsconfig.json'), join(fixture.root, '.stars', 'tsconfig.node.json')],
 			checker: 'tsc'
 		});
 		expect(config.dev.tunnel).toEqual({ mode: 'url', url: 'https://bot.example.com', path: '/interactions', updateEndpoint: true });
@@ -230,7 +244,12 @@ describe('stars.config', () => {
 		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { tunnel: true, logFile: false } };' });
 		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
 
-		expect(config.dev.typecheck).toEqual({ enabled: false, tsconfig: null, projects: [], checker: 'tsc' });
+		expect(config.dev.typecheck).toEqual({
+			enabled: false,
+			tsconfig: null,
+			projects: [join(fixture.root, '.stars', 'tsconfig.node.json')],
+			checker: 'tsc'
+		});
 		expect(config.dev.tunnel).toEqual({ mode: 'quick', path: '/', updateEndpoint: false });
 		expect(config.dev.logFile).toBeNull();
 	});

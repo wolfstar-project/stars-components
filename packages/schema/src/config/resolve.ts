@@ -63,8 +63,9 @@ export interface ResolvedTypecheckConfig {
 	/** Absolute `tsconfig.json` the dev type checker runs against, `null` when it could not be found. */
 	readonly tsconfig: string | null;
 	/**
-	 * Every project `stars typecheck` checks: the generated app and node configs from `future.compatibilityVersion` 6
-	 * (unless a `tsconfig` is configured, or the build tool is `tsc`), the single `tsconfig` otherwise.
+	 * Every project `stars typecheck` checks. From `future.compatibilityVersion` 6 that is the generated app and node
+	 * configs of a `tsdown` or `vite` project, and the project's own tsconfig plus the node config for `tsc` and `none`;
+	 * a configured `tsconfig` is checked alone, and below 6 the single tsconfig is.
 	 */
 	readonly projects: readonly string[];
 	/** The type checker to run, with `'auto'` already resolved. */
@@ -726,13 +727,23 @@ function resolveTypecheck(
 	config: StarsDevConfig['typecheck'],
 	validator: Validator
 ): ResolvedTypecheckConfig {
-	// From version 6 a `tsdown`/`vite` project's root `tsconfig.json` only references the generated projects, so
-	// checking it alone would check nothing: the bot sources are the dev checker's target, `stars typecheck` runs both.
-	const split = future.compatibilityVersion >= SPLIT_TSCONFIG_VERSION && buildTool !== 'tsc' && buildTool !== 'none';
-	const generated = [join(root, DEFAULT_APP_TSCONFIG), join(root, DEFAULT_NODE_TSCONFIG)];
+	// From version 6 `stars prepare` writes the node config whatever the build tool is. A `tsdown`/`vite` project's root
+	// `tsconfig.json` only references the generated projects, so checking it alone would check nothing: the bot sources
+	// are the dev checker's target and `stars typecheck` runs both. A `tsc` or `none` project keeps its own tsconfig
+	// for the bot sources and gets the node config on top.
+	const generated = future.compatibilityVersion >= SPLIT_TSCONFIG_VERSION;
+	const bundled = generated && buildTool !== 'tsc' && buildTool !== 'none';
+	const appProject = join(root, DEFAULT_APP_TSCONFIG);
+	const nodeProject = join(root, DEFAULT_NODE_TSCONFIG);
+	const projectsOf = (found: string | null): string[] =>
+		bundled ? [appProject, nodeProject] : [...(found ? [found] : []), ...(generated ? [nodeProject] : [])];
 	if (config === undefined || config === false) {
-		const found = split ? null : findProjectTsconfig(root);
-		return { enabled: false, tsconfig: null, projects: split ? generated : found ? [found] : [], checker: detectTypechecker(packageJson) };
+		return {
+			enabled: false,
+			tsconfig: null,
+			projects: projectsOf(bundled ? null : findProjectTsconfig(root)),
+			checker: detectTypechecker(packageJson)
+		};
 	}
 
 	let configured: string | undefined;
@@ -765,14 +776,14 @@ function resolveTypecheck(
 		return { enabled: true, tsconfig, projects: [tsconfig], checker };
 	}
 
-	if (split) return { enabled: true, tsconfig: generated[0]!, projects: generated, checker };
+	if (bundled) return { enabled: true, tsconfig: appProject, projects: projectsOf(null), checker };
 
 	const found = findProjectTsconfig(root);
 	if (!found) {
 		throw validator.error(configDiagnostics.TSCONFIG_NOT_FOUND, { root, suggestion: 'dev.typecheck.tsconfig' });
 	}
 
-	return { enabled: true, tsconfig: found, projects: [found], checker };
+	return { enabled: true, tsconfig: found, projects: projectsOf(found), checker };
 }
 
 function findProjectTsconfig(root: string): string | null {
