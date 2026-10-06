@@ -1,5 +1,17 @@
 # @wolfstar/schema
 
+## 0.7.0
+
+### Minor Changes
+
+- [#275](https://github.com/wolfstar-project/stars-components/pull/275) [`814c8f9`](https://github.com/wolfstar-project/stars-components/commit/814c8f9aed2b5b96150806f09886bac7b76de736) - Generate typed command options from the builders with `stars codegen`.
+
+    `codegen.commands` in `stars.config` (`true`, or `{ output }`, default `src/@types/commands.d.ts`) makes `stars codegen` read the commands from the built bot and write a `CommandOptionsRegistry` entry per command path (`'ping'`, `'math add'`, `'subscriptions twitch add'`). The new `Command.OptionsOf<'math add'>` reads it, so a handler no longer needs a hand-written `interface Options` that can drift from the builder: `required` options are not optional, `choices` are a literal union, `channel_types` narrow the channel and every option has the shape the framework resolves it to. `stars codegen --check` fails with `CODEGEN_OUTDATED` when the file is stale, and `--json` reports it like the i18n generator. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#253](https://github.com/wolfstar-project/stars-components/pull/253) [`05a8443`](https://github.com/wolfstar-project/stars-components/commit/05a8443cf6ba64950c9e2fed5ebdd13c03b6cc06) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 0.6.0
 
 ### Minor Changes

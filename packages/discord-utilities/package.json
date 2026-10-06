@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/discord-utilities",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Library-agnostic Discord utilities: limits, regexes, and option resolvers for raw API payloads",
 	"keywords": [
 		"api",

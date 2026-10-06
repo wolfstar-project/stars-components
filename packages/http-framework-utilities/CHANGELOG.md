@@ -1,5 +1,15 @@
 # @wolfstar/http-framework-utilities
 
+## 0.1.1
+
+### Patch Changes
+
+- [#253](https://github.com/wolfstar-project/stars-components/pull/253) [`05a8443`](https://github.com/wolfstar-project/stars-components/commit/05a8443cf6ba64950c9e2fed5ebdd13c03b6cc06) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+
+- [#281](https://github.com/wolfstar-project/stars-components/pull/281) [`fbd01bc`](https://github.com/wolfstar-project/stars-components/commit/fbd01bceade40786fe3fa8dceb263d00fd88db10) - Widen the optional `@wolfstar/plugin-gateway` peer dependency to `>=0.8.0`. A caret range on a `0.x` version only matches one minor, so `^0.8.0` reported an unmet peer for every newer plugin release, including the current 0.11.0. Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`05a8443`](https://github.com/wolfstar-project/stars-components/commit/05a8443cf6ba64950c9e2fed5ebdd13c03b6cc06)]:
+    - @wolfstar/discord-utilities@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

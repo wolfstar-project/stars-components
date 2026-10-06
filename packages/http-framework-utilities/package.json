@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/http-framework-utilities",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Utilities for @wolfstar/http-framework: type guards, permission helpers, message builder, paginated messages, and prompters",
 	"keywords": [
 		"discord",
