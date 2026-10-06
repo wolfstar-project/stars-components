@@ -48,7 +48,38 @@ framework or the CLI.
 ## What `setup` can do
 
 `setup(options, ctx)` runs once, in the CLI process, while the project loads. `options` is the module's `defaults`
-merged under the ones written in `stars.config` (plain objects merge deeply, arrays are replaced).
+merged under the ones written in `stars.config` (plain objects merge deeply, arrays are replaced). They come from two
+places, the inline ones winning: the `[name, options]` tuple in `modules`, and, when the module declares
+`meta.configKey`, a top-level key of that name.
+
+```ts
+// the module
+export default defineModule<ScheduledTasksOptions>({
+	meta: { name: '@wolfstar/plugin-scheduled-tasks', configKey: 'scheduledTasks' },
+	defaults: { concurrency: 1 },
+	setup(options, ctx) {}
+});
+
+declare module '@wolfstar/schema' {
+	interface StarsConfig {
+		scheduledTasks?: ScheduledTasksOptions;
+	}
+}
+
+// stars.config.ts
+export default defineConfig({
+	modules: ['@wolfstar/plugin-scheduled-tasks'],
+	scheduledTasks: { bull: { connection: { host: 'localhost', port: 6379 } } }
+});
+```
+
+A key that no installed module claims is reported by the CLI as an unknown option, so a misspelled one is still an
+error. The `declare module` augmentation only applies once the module's types are loaded: import the package in
+`stars.config.ts` (`stars prepare` does not reference installed modules yet).
+
+A `configKey` must be a non-empty string, not a built-in key of `stars.config` and not claimed by another installed
+module; the value under it must be a plain object. A module installed through `dependencies` or `ctx.installModule`
+reads its key as well, with the options passed to `installModule` taking the inline place.
 
 - `ctx.addPlugin(source)` registers a runtime plugin. The plugin lives in the bot's process and `setup` in the CLI's,
   so a plugin is given by **source** — `{ from, export?, options? }` — rather than by value. `from` is a package
@@ -64,7 +95,7 @@ merged under the ones written in `stars.config` (plain objects merge deeply, arr
 
 `meta.compatibility` (`framework`, `stars`) is a semver range checked against the project's installed
 `@wolfstar/http-framework` and the running `@wolfstar/cli`; a mismatch fails early instead of leaving a plugin that
-silently never runs. `meta.configKey` is reserved.
+silently never runs.
 
 ## Production with `tsc` or `none`
 
@@ -77,5 +108,5 @@ transformed: `stars dev` preloads the plugins with `node --import`, and for prod
 
 `setupModules({ config, hooks, load, versions })` is what the CLI calls: `load` imports a specifier from the project,
 `hooks` is a `hookable`-shaped registry, and the result (`ModulesRuntime`) lists the installed modules, the runtime
-plugins and the import presets they contributed. Failures are `ModuleError`s with a `code` (`MODULE_LOAD_FAILED`,
+plugins, the import presets and the `configKeys` they contributed. Failures are `ModuleError`s with a `code` (`MODULE_LOAD_FAILED`,
 `MODULE_INVALID`, `MODULE_INCOMPATIBLE`, `MODULE_SETUP_FAILED`, `MODULE_PLUGIN_INVALID`) and the `moduleName`.
