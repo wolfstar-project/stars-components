@@ -1,6 +1,6 @@
 {
 	"name": "with-i18n",
-	"version": "0.0.26",
+	"version": "0.0.27",
 	"private": true,
 	"description": "WolfStar HTTP bot example with multi-locale @wolfstar/plugin-i18next",
 	"type": "module",

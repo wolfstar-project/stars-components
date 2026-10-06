@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`42c13f4`](https://github.com/wolfstar-project/stars-components/commit/42c13f4b0238524ffdd99bdb14c719da0d725cc5), [`1e69874`](https://github.com/wolfstar-project/stars-components/commit/1e698742d1ec940e1cc310a66073af9ce406dddc)]:
+    - @wolfstar/cli@2.5.0
+    - @wolfstar/schema@0.8.0
+
 ## 6.2.0
 
 ### Minor Changes
