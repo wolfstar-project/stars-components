@@ -233,6 +233,13 @@ describe('processTemplate', () => {
 		expect(await readFile(join(outputDir, 'src/lib/setup/all.ts'), 'utf8')).toContain('envRun()');
 	});
 
+	test('GIVEN a generated project THEN the manifest records the compatibility version it was generated for', async () => {
+		await processTemplate(outputDir, makeContext({ buildTool: 'tsdown', compatibilityVersion: 6 }));
+
+		const manifest = JSON.parse(await readFile(join(outputDir, '.create-http-framework.json'), 'utf8'));
+		expect(manifest.compatibilityVersion).toBe(6);
+	});
+
 	test('GIVEN a JavaScript project THEN src/lib/setup loads the environment by hand', async () => {
 		await processTemplate(outputDir, makeContext({ language: 'js', buildTool: 'tsdown', autoEnv: true }));
 

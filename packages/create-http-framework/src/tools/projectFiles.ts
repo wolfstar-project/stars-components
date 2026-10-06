@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeFile } from './fileSystem.js';
 import type { DependencyVersions } from './npmHelpers.js';
@@ -17,6 +18,11 @@ export interface ProjectContext {
 	sharder: boolean;
 	/** Whether `stars dev` opens a cloudflared quick tunnel for the interactions endpoint. */
 	tunnel?: boolean;
+	/**
+	 * The `future.compatibilityVersion` the project is generated for. From 6 the root `tsconfig.json` of a `tsdown` or
+	 * Vite project only references the `.stars/` configs `stars prepare` writes. Defaults to {@link GENERATED_COMPATIBILITY_VERSION}.
+	 */
+	compatibilityVersion?: number;
 	packageManager: PackageManager;
 	language: Language;
 	/** Only meaningful when `language === 'ts'`. */
@@ -27,6 +33,11 @@ export interface ProjectContext {
 }
 
 const caret = (version: string): string => `^${version}`;
+
+/** The compatibility version a generated project runs on: the default of `@wolfstar/schema`'s current latest version. */
+export const GENERATED_COMPATIBILITY_VERSION = 6;
+/** From this version on `stars prepare` splits `.stars/tsconfig.json` into an app and a node config (`SPLIT_TSCONFIG_VERSION`). */
+const SPLIT_TSCONFIG_VERSION = 6;
 
 export const FRAMEWORK_LINT_PLUGIN = '@wolfstar/eslint-plugin-http-framework';
 
@@ -62,6 +73,8 @@ export function buildScripts(ctx: ProjectContext): Record<string, string> {
 		dev: 'stars dev',
 		...(ctx.language === 'ts' && (ctx.buildTool === 'tsdown' || isViteBuild(ctx.buildTool)) ? { postinstall: 'stars prepare' } : {}),
 		...(ctx.language === 'js' ? {} : { build: 'stars build' }),
+		// A root `tsconfig.json` that only references the generated projects checks nothing on its own.
+		...(splitsTsconfig(ctx) ? { typecheck: 'stars typecheck' } : {}),
 		start: `node ${entryFile(ctx)}`
 	};
 
@@ -193,39 +206,79 @@ const sharedCompilerOptions = {
 	emitDecoratorMetadata: true
 } as const;
 
-/** Writes the tsconfig(s). The tsc branches use a composite build so `tsc -b src` resolves `src/tsconfig.json`. */
-function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
-	if (ctx.language === 'js') return;
+/** Whether the root `tsconfig.json` is the solution-style one that references `.stars/tsconfig.{app,node}.json`. */
+function splitsTsconfig(ctx: ProjectContext): boolean {
+	return (
+		ctx.language === 'ts' &&
+		(ctx.buildTool === 'tsdown' || isViteBuild(ctx.buildTool)) &&
+		(ctx.compatibilityVersion ?? GENERATED_COMPATIBILITY_VERSION) >= SPLIT_TSCONFIG_VERSION
+	);
+}
 
+/** The root `tsconfig.json` of compatibility versions 5 and below: it extends the single generated config. */
+function legacyTsconfig(ctx: ProjectContext): object {
 	if (isViteBuild(ctx.buildTool)) {
-		writeFile(
-			join(targetDir, 'tsconfig.json'),
-			json({
-				extends: './.stars/tsconfig.json',
-				compilerOptions: { types: ['node'] },
-				// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
-				include: ['src/**/*.ts', '.stars/*.d.ts'],
-				exclude: ['node_modules', 'dist', '.output']
-			})
-		);
-		return;
+		return {
+			extends: './.stars/tsconfig.json',
+			compilerOptions: { types: ['node'] },
+			// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
+			include: ['src/**/*.ts', '.stars/*.d.ts'],
+			exclude: ['node_modules', 'dist', '.output']
+		};
 	}
 
-	if (ctx.buildTool === 'tsdown') {
-		writeFile(
-			join(targetDir, 'tsconfig.json'),
-			json({
-				extends: './.stars/tsconfig.json',
-				compilerOptions: {
-					outDir: './dist',
-					rootDir: './src'
-				},
-				// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
-				include: ['src/**/*.ts', '.stars/*.d.ts'],
-				exclude: ['node_modules', 'dist']
-			})
-		);
-		return;
+	return {
+		extends: './.stars/tsconfig.json',
+		compilerOptions: { outDir: './dist', rootDir: './src' },
+		// `.stars/imports.d.ts` types the auto imports; `stars dev`/`stars build` regenerate it.
+		include: ['src/**/*.ts', '.stars/*.d.ts'],
+		exclude: ['node_modules', 'dist']
+	};
+}
+
+/** The solution-style root `tsconfig.json`, the way a Nuxt 4 project has it: only the generated projects are checked. */
+const solutionTsconfig = {
+	files: [],
+	references: [{ path: './.stars/tsconfig.app.json' }, { path: './.stars/tsconfig.node.json' }]
+};
+
+const parseJson = (content: string): unknown => {
+	try {
+		return JSON.parse(content);
+	} catch {
+		return undefined;
+	}
+};
+
+/**
+ * Writes the root `tsconfig.json` of a `tsdown` or Vite project. An existing one is only replaced when it is what the
+ * generator wrote before (this version's, or the `extends` one of compatibility version 5 and below): `tsconfig.json`
+ * is where a project keeps its own options. Compared as JSON, since the formatter run after generation rewrites the
+ * whitespace.
+ *
+ * @returns Whether an existing, hand-edited file was kept.
+ */
+function writeBundlerTsconfig(targetDir: string, ctx: ProjectContext): boolean {
+	const path = join(targetDir, 'tsconfig.json');
+	const next = splitsTsconfig(ctx) ? solutionTsconfig : legacyTsconfig(ctx);
+	const existing = existsSync(path) ? parseJson(readFileSync(path, 'utf-8')) : null;
+	const generated = [next, legacyTsconfig(ctx), solutionTsconfig].map((candidate) => JSON.stringify(candidate));
+	if (existing !== null && !generated.includes(JSON.stringify(existing))) return true;
+
+	writeFile(path, json(next));
+	return false;
+}
+
+/**
+ * Writes the tsconfig(s). The tsc branches use a composite build so `tsc -b src` resolves `src/tsconfig.json`.
+ *
+ * @returns The files kept because they were hand-edited.
+ */
+function writeTsconfig(targetDir: string, ctx: ProjectContext): string[] {
+	if (ctx.language === 'js') return [];
+
+	if (isViteBuild(ctx.buildTool) || ctx.buildTool === 'tsdown') {
+		return writeBundlerTsconfig(targetDir, ctx) ? ['tsconfig.json'] : [];
 	}
 
 	writeFile(join(targetDir, 'tsconfig.json'), json({ files: [], references: [{ path: './src' }] }));
@@ -242,6 +295,7 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): void {
 			include: ['**/*.ts']
 		})
 	);
+	return [];
 }
 
 /**
@@ -335,10 +389,12 @@ function writeFormatterConfig(targetDir: string, ctx: ProjectContext): void {
 }
 
 /** Generates every config-style file in code so the output is always valid, formatted JSON/TS. */
-export function writeProjectFiles(targetDir: string, ctx: ProjectContext): void {
+/** @returns The generated files that were kept because the project hand-edited them. */
+export function writeProjectFiles(targetDir: string, ctx: ProjectContext): string[] {
 	writeFile(join(targetDir, 'package.json'), packageJson(ctx));
-	writeTsconfig(targetDir, ctx);
+	const kept = writeTsconfig(targetDir, ctx);
 	writeStarsConfig(targetDir, ctx);
 	writeLinterConfig(targetDir, ctx);
 	writeFormatterConfig(targetDir, ctx);
+	return kept;
 }
