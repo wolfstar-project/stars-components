@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { importFromProject, resolveBinary } from '../src/utils/project.js';
 import { createFixture, type Fixture } from './helpers.js';
 
@@ -33,7 +34,7 @@ describe('resolveBinary', () => {
 			'node_modules/golar/dist/bin.js': ''
 		});
 
-		expect(resolveBinary(fixture.root, 'golar', 'golar')).toBe(`${fixture.root}/node_modules/golar/dist/bin.js`);
+		expect(resolveBinary(fixture.root, 'golar', 'golar')).toBe(join(fixture.root, 'node_modules', 'golar', 'dist', 'bin.js'));
 		expect(resolveBinary(fixture.root, 'missing', 'missing')).toBeNull();
 	});
 });
