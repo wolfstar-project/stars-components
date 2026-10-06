@@ -50,6 +50,7 @@ export type {
 	ResolveConfigOptions,
 	ResolvedBuildConfig,
 	ResolvedCodegenConfig,
+	ResolvedCommandsCodegenConfig,
 	ResolvedDevCommandsConfig,
 	ResolvedDevConfig,
 	ResolvedDevLogsConfig,

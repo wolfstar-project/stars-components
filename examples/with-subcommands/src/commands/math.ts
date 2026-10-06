@@ -13,7 +13,7 @@ export class UserCommand extends Command {
 			.addNumberOption((option) => applyLocalizedBuilder(option, 'commands/math:optionsLeft').setRequired(true))
 			.addNumberOption((option) => applyLocalizedBuilder(option, 'commands/math:optionsRight').setRequired(true))
 	)
-	public add(interaction: Command.ChatInputInteraction, { left, right }: Options) {
+	public add(interaction: Command.ChatInputInteraction, { left, right }: Command.OptionsOf<'math add'>) {
 		const t = getSupportedUserLanguageT(interaction);
 		return interaction.reply({
 			content: t('commands/math:result', { left, right, result: left + right })
@@ -25,15 +25,10 @@ export class UserCommand extends Command {
 			.addNumberOption((option) => applyLocalizedBuilder(option, 'commands/math:optionsLeft').setRequired(true))
 			.addNumberOption((option) => applyLocalizedBuilder(option, 'commands/math:optionsRight').setRequired(true))
 	)
-	public subtract(interaction: Command.ChatInputInteraction, { left, right }: Options) {
+	public subtract(interaction: Command.ChatInputInteraction, { left, right }: Command.OptionsOf<'math subtract'>) {
 		const t = getSupportedUserLanguageT(interaction);
 		return interaction.reply({
 			content: t('commands/math:result', { left, right, result: left - right })
 		});
 	}
-}
-
-interface Options {
-	left: number;
-	right: number;
 }

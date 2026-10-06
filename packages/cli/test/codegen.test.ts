@@ -92,4 +92,70 @@ describe('runCodegen', () => {
 
 		await expect(runCodegen({ cwd: fixture.root, stdout: capture().stream })).rejects.toMatchObject({ code: 'CODEGEN_FAILED' });
 	});
+
+	describe('commands', () => {
+		const commands = { global: [{ name: 'ping', options: [{ type: 3, name: 'text', required: true }] }], guilds: {} };
+
+		async function createCommandsProject(config = 'commands: true'): Promise<Fixture> {
+			return createFixture({
+				'package.json': '{"name":"bot","type":"module"}',
+				'src/main.ts': '',
+				'stars.config.mjs': `export default { imports: false, codegen: { i18n: false, ${config} } };`
+			});
+		}
+
+		test('writes the declaration file, creating its directory, then reports it as up to date', async () => {
+			fixture = await createCommandsProject();
+			const out = capture();
+
+			await runCodegen({ cwd: fixture.root, stdout: out.stream, commands });
+			expect(out.text()).toContain('commands: written');
+			const written = await readFile(join(fixture.root, 'src/@types/commands.d.ts'), 'utf-8');
+			expect(written).toContain("'ping': {\n      text: string;\n    };");
+
+			const check = capture();
+			await runCodegen({ cwd: fixture.root, stdout: check.stream, check: true, commands });
+			expect(check.text()).toContain('commands: up-to-date');
+		});
+
+		test('--check fails when a builder changed since the file was written, and leaves the file alone', async () => {
+			fixture = await createCommandsProject("commands: { output: 'types/commands.d.ts' }");
+			await runCodegen({ cwd: fixture.root, stdout: capture().stream, commands });
+			const before = await readFile(join(fixture.root, 'types/commands.d.ts'), 'utf-8');
+
+			const changed = { global: [{ name: 'ping', options: [{ type: 3, name: 'text' }] }], guilds: {} };
+			const error = await runCodegen({ cwd: fixture.root, stdout: capture().stream, check: true, commands: changed }).catch(
+				(caught: unknown) => caught
+			);
+
+			expect(error).toMatchObject({ code: 'CODEGEN_OUTDATED' });
+			await expect(readFile(join(fixture.root, 'types/commands.d.ts'), 'utf-8')).resolves.toBe(before);
+		});
+
+		test('--check fails when the file does not exist yet', async () => {
+			fixture = await createCommandsProject();
+
+			await expect(runCodegen({ cwd: fixture.root, stdout: capture().stream, check: true, commands })).rejects.toMatchObject({
+				code: 'CODEGEN_OUTDATED'
+			});
+		});
+
+		test('reports it with --json like the i18n generator', async () => {
+			fixture = await createCommandsProject();
+			const out = capture();
+
+			await runCodegen({ cwd: fixture.root, stdout: out.stream, json: true, commands });
+
+			expect(JSON.parse(out.text())).toEqual({
+				check: false,
+				results: [{ generator: 'commands', output: join(fixture.root, 'src/@types/commands.d.ts'), status: 'written' }]
+			});
+		});
+
+		test('asks for a build when the bot has not been built', async () => {
+			fixture = await createCommandsProject();
+
+			await expect(runCodegen({ cwd: fixture.root, stdout: capture().stream })).rejects.toMatchObject({ code: 'LOCAL_COMMANDS_UNAVAILABLE' });
+		});
+	});
 });
