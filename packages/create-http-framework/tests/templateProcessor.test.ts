@@ -141,6 +141,23 @@ describe('processTemplate', () => {
 		expect(llms).not.toContain('plugin-gateway');
 	});
 
+	test.each([
+		['tsdown', 6, true],
+		['vite', 6, true],
+		['vite-nitro', 6, true],
+		['tsc7', 6, false],
+		['tsdown', undefined, false]
+	] as const)(
+		'GIVEN a %s project generated for compatibility version %s THEN AGENTS.md and the README document the typecheck script: %s',
+		async (buildTool, compatibilityVersion, documented) => {
+			await processTemplate(outputDir, makeContext({ language: 'ts', buildTool, compatibilityVersion }));
+
+			for (const file of ['AGENTS.md', 'README.md']) {
+				expect(await readFile(join(outputDir, file), 'utf-8')).toSatisfy((text: string) => text.includes('npm run typecheck') === documented);
+			}
+		}
+	);
+
 	test('GIVEN features THEN AGENTS.md, llms.txt and the README only describe what the project has', async () => {
 		await processTemplate(outputDir, makeContext({ language: 'js', i18n: true, gateway: true, tunnel: true }));
 

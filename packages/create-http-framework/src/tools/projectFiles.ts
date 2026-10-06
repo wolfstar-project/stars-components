@@ -37,7 +37,7 @@ const caret = (version: string): string => `^${version}`;
 /** The compatibility version a generated project runs on: the default of `@wolfstar/schema`'s current latest version. */
 export const GENERATED_COMPATIBILITY_VERSION = 6;
 /** From this version on `stars prepare` splits `.stars/tsconfig.json` into an app and a node config (`SPLIT_TSCONFIG_VERSION`). */
-const SPLIT_TSCONFIG_VERSION = 6;
+export const SPLIT_TSCONFIG_VERSION = 6;
 
 export const FRAMEWORK_LINT_PLUGIN = '@wolfstar/eslint-plugin-http-framework';
 

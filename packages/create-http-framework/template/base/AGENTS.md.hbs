@@ -11,6 +11,9 @@ HTTP{{#if gateway}} and gateway events over a WebSocket (`@wolfstar/plugin-gatew
 {{#if typescript}}
 - `npm run build` — build once (`stars build`).
 {{/if}}
+{{#if typecheckScript}}
+- `npm run typecheck` — type-check the bot and the files Node runs (`stars typecheck`). A bare `tsc` on the root `tsconfig.json` checks nothing: it only references `.stars/`.
+{{/if}}
 - `npm start` — run the built bot.
 - `npx stars doctor` — check the runtime, the credentials and the generated files. Run it first when something is off.
 - `npx stars info --json` — the resolved configuration.

@@ -510,7 +510,7 @@ async function main(): Promise<void> {
 	}
 	for (const file of keptProjectFiles) {
 		log.warn(
-			`Kept your edited "${file}" as it is — for the split TypeScript configuration, make it reference ./.stars/tsconfig.app.json and ./.stars/tsconfig.node.json.`
+			`Kept your edited "${file}" as it is. If it extends ./.stars/tsconfig.json, that file is gone: \`stars prepare\` now writes ./.stars/tsconfig.app.json and ./.stars/tsconfig.node.json, so make it reference them.`
 		);
 	}
 	for (const file of preservedFiles) {

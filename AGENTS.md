@@ -149,6 +149,13 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   `@wolfstar/eslint-plugin-http-framework` into the generated oxlint/ESLint configuration (`FRAMEWORK_LINT_RULES` in
   `src/tools/projectFiles.ts` must match the plugin's `recommendedRules`; a test pins it), and `--tunnel` writes
   `dev: { tunnel: true }` to `stars.config`.
+  The root `tsconfig.json` of a `tsdown`/`vite`/`vite-nitro` project is the solution-style one from compatibility
+  version 6 (`writeBundlerTsconfig` in `src/tools/projectFiles.ts`, plus a `typecheck: 'stars typecheck'` script and its
+  line in the generated `AGENTS.md`/`README.md`); a rerun replaces an existing one only when its parsed JSON equals what
+  the generator wrote (this version's, or the older `extends` one), and keeps and warns about a hand-edited file. The
+  manifest records `compatibilityVersion`; templates read it through `typecheckScript`, so a manifest without it renders as
+  before. `GENERATED_COMPATIBILITY_VERSION` and `SPLIT_TSCONFIG_VERSION` mirror `@wolfstar/schema`'s (pinned by
+  `tests/schema-mirror.test.ts`). The `tsc` branch keeps its composite `src/tsconfig.json`.
 - `@wolfstar/create-http-framework`'s `--build` also accepts the experimental, TypeScript-only `vite` and
   `vite-nitro` tools (`experimental.enableVite`/`enableNitro` in the generated `stars.config.ts`), and scaffolds the
   external gateway plugins via `--gateway`/`--cache`/`--redis`/`--sharder` (`@wolfstar/plugin-gateway`/`-cache`/
