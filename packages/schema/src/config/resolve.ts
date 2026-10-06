@@ -12,7 +12,13 @@ import type {
 	StarsTypechecker
 } from '../types/config.js';
 import { EMPTY_MODULES_RUNTIME, type ModulesRuntime, type ResolvedModuleEntry } from '../types/modules.js';
-import { LEGACY_COMPATIBILITY_VERSION, STARS_CONFIG_TSDOWN_VERSION, resolveFuture, type ResolvedFutureConfig } from './compatibility.js';
+import {
+	LEGACY_COMPATIBILITY_VERSION,
+	SPLIT_TSCONFIG_VERSION,
+	STARS_CONFIG_TSDOWN_VERSION,
+	resolveFuture,
+	type ResolvedFutureConfig
+} from './compatibility.js';
 import { resolveEnv, type ResolvedEnvConfig } from './env.js';
 import { configDiagnostics } from './errors.js';
 import { resolveHooks, type ResolvedHooksConfig } from './hooks.js';
@@ -37,7 +43,10 @@ export interface ResolvedBuildConfig {
 	readonly tool: StarsBuildTool;
 	/** Absolute output directory. */
 	readonly outDir: string;
-	/** Absolute `tsconfig.json` used by `tsc`, `null` for the other tools. */
+	/**
+	 * Absolute `tsconfig` used by `tsc` and `tsdown`, `null` for the other tools. From `future.compatibilityVersion` 6
+	 * the `tsdown` default is the generated {@link DEFAULT_APP_TSCONFIG}, which `stars prepare` writes before a build.
+	 */
 	readonly tsconfig: string | null;
 	/** Absolute path of the file `node` runs, i.e. the built entry (or the entry itself when `tool` is `none`). */
 	readonly output: string;
@@ -51,8 +60,14 @@ export interface ResolvedBuildConfig {
 
 export interface ResolvedTypecheckConfig {
 	readonly enabled: boolean;
-	/** Absolute `tsconfig.json` the type checker runs against, `null` when it could not be found. */
+	/** Absolute `tsconfig.json` the dev type checker runs against, `null` when it could not be found. */
 	readonly tsconfig: string | null;
+	/**
+	 * Every project `stars typecheck` checks. From `future.compatibilityVersion` 6 that is the generated app and node
+	 * configs of a `tsdown` or `vite` project, and the project's own tsconfig plus the node config for `tsc` and `none`;
+	 * a configured `tsconfig` is checked alone, and below 6 the single tsconfig is.
+	 */
+	readonly projects: readonly string[];
 	/** The type checker to run, with `'auto'` already resolved. */
 	readonly checker: StarsTypechecker;
 }
@@ -191,6 +206,10 @@ export const DEFAULT_IMPORTS_DIRS = ['src/lib/**', 'src/utils/**'] as const;
 export const DEFAULT_IMPORTS_PRESETS = ['@wolfstar/http-framework', '@wolfstar/decorators', '@wolfstar/env-utilities'] as const;
 export const DEFAULT_IMPORTS_DTS = '.stars/imports.d.ts';
 export const DEFAULT_DEV_LOG_FILE = '.stars/dev.log';
+/** The generated tsconfig of the bot sources, written from `future.compatibilityVersion` 6 on. */
+export const DEFAULT_APP_TSCONFIG = '.stars/tsconfig.app.json';
+/** The generated tsconfig of the project root files that run in Node, written from `future.compatibilityVersion` 6 on. */
+export const DEFAULT_NODE_TSCONFIG = '.stars/tsconfig.node.json';
 export const DEFAULT_TUNNEL_PATH = '/';
 /** Every level `dev.logs.levels` accepts, from the most verbose to the most severe. */
 export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const satisfies readonly StarsLogLevel[];
@@ -261,7 +280,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const hooks = resolveHooks(config.hooks, validator);
 	const modules = resolveModules(config.modules, validator);
 	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator);
-	const dev = resolveDev(root, entry, packageJson, config.dev ?? {}, env, envConfig.options, options.projectEnv, validator);
+	const dev = resolveDev(root, entry, packageJson, build.tool, future, config.dev ?? {}, env, envConfig.options, options.projectEnv, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
@@ -363,6 +382,10 @@ function resolveBuild(
 		if (!isFile(tsconfig)) {
 			throw validator.error(configDiagnostics.TSCONFIG_EXPLICIT_NOT_FOUND, { tsconfig, path: 'build.tsconfig' });
 		}
+	} else if (tool === 'tsdown' && future.compatibilityVersion >= SPLIT_TSCONFIG_VERSION) {
+		// The root `tsconfig.json` is a solution-style file with no compiler options of its own, so the bundler gets the
+		// generated config of the bot sources: it carries the target, the decorator options and the `paths`.
+		tsconfig = join(root, DEFAULT_APP_TSCONFIG);
 	} else if (tool === 'tsc' || tool === 'tsdown') {
 		// `tsdown` only looks for a `tsconfig.json` next to the project root, so a bot keeping its sources' one in
 		// `src/` (the layout both the scaffold and the examples use) would silently build without its paths and
@@ -554,6 +577,8 @@ function resolveDev(
 	root: string,
 	entry: string,
 	packageJson: PackageJsonLike | null,
+	buildTool: StarsBuildTool,
+	future: ResolvedFutureConfig,
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
 	envOptions: Readonly<StarsEnvSetupOptions>,
@@ -607,7 +632,7 @@ function resolveDev(
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}
 
-	const typecheck = resolveTypecheck(root, packageJson, config.typecheck, validator);
+	const typecheck = resolveTypecheck(root, packageJson, buildTool, future, config.typecheck, validator);
 	const tunnel = resolveTunnel(config.tunnel, validator);
 	const logFile = config.logFile === false ? null : resolve(root, validator.string(config.logFile, 'dev.logFile') ?? DEFAULT_DEV_LOG_FILE);
 	const banner =
@@ -697,10 +722,29 @@ function resolveDevCommands(config: StarsDevConfig['commands'], validator: Valid
 function resolveTypecheck(
 	root: string,
 	packageJson: PackageJsonLike | null,
+	buildTool: StarsBuildTool,
+	future: ResolvedFutureConfig,
 	config: StarsDevConfig['typecheck'],
 	validator: Validator
 ): ResolvedTypecheckConfig {
-	if (config === undefined || config === false) return { enabled: false, tsconfig: null, checker: detectTypechecker(packageJson) };
+	// From version 6 `stars prepare` writes the node config whatever the build tool is. A `tsdown`/`vite` project's root
+	// `tsconfig.json` only references the generated projects, so checking it alone would check nothing: the bot sources
+	// are the dev checker's target and `stars typecheck` runs both. A `tsc` or `none` project keeps its own tsconfig
+	// for the bot sources and gets the node config on top.
+	const generated = future.compatibilityVersion >= SPLIT_TSCONFIG_VERSION;
+	const bundled = generated && buildTool !== 'tsc' && buildTool !== 'none';
+	const appProject = join(root, DEFAULT_APP_TSCONFIG);
+	const nodeProject = join(root, DEFAULT_NODE_TSCONFIG);
+	const projectsOf = (found: string | null): string[] =>
+		bundled ? [appProject, nodeProject] : [...(found ? [found] : []), ...(generated ? [nodeProject] : [])];
+	if (config === undefined || config === false) {
+		return {
+			enabled: false,
+			tsconfig: null,
+			projects: projectsOf(bundled ? null : findProjectTsconfig(root)),
+			checker: detectTypechecker(packageJson)
+		};
+	}
 
 	let configured: string | undefined;
 	let requestedChecker = 'auto';
@@ -729,15 +773,21 @@ function resolveTypecheck(
 		if (!isFile(tsconfig)) {
 			throw validator.error(configDiagnostics.TSCONFIG_EXPLICIT_NOT_FOUND, { tsconfig, path: 'dev.typecheck.tsconfig' });
 		}
-		return { enabled: true, tsconfig, checker };
+		return { enabled: true, tsconfig, projects: [tsconfig], checker };
 	}
 
-	const found = [join(root, 'src', 'tsconfig.json'), join(root, 'tsconfig.json')].find((candidate) => isFile(candidate)) ?? null;
+	if (bundled) return { enabled: true, tsconfig: appProject, projects: projectsOf(null), checker };
+
+	const found = findProjectTsconfig(root);
 	if (!found) {
 		throw validator.error(configDiagnostics.TSCONFIG_NOT_FOUND, { root, suggestion: 'dev.typecheck.tsconfig' });
 	}
 
-	return { enabled: true, tsconfig: found, checker };
+	return { enabled: true, tsconfig: found, projects: projectsOf(found), checker };
+}
+
+function findProjectTsconfig(root: string): string | null {
+	return [join(root, 'src', 'tsconfig.json'), join(root, 'tsconfig.json')].find((candidate) => isFile(candidate)) ?? null;
 }
 
 /**
