@@ -1,4 +1,5 @@
 import { PassThrough } from 'node:stream';
+import { StringDecoder } from 'node:string_decoder';
 
 /**
  * Asks the terminal to report button presses and the wheel (`1000`), with coordinates in the SGR form (`1006`),
@@ -44,10 +45,12 @@ export function parseMouse(chunk: string): { events: MouseEvent[]; rest: string 
 	const events: MouseEvent[] = [];
 	const rest = chunk.replace(SGR_MOUSE, (_match, code: string, column: string, row: string, final: string) => {
 		const bits = Number(code);
-		// Bit 5 is motion, which is not asked for; a terminal that sends it anyway is ignored.
-		if ((bits & 32) !== 0) return '';
+		// Bit 5 is motion, which is not asked for, and bit 7 the extra buttons (back, forward): neither is a click.
+		if ((bits & 32) !== 0 || (bits & 128) !== 0) return '';
 
 		const wheel = (bits & 64) !== 0;
+		// The wheel also turns sideways (66, 67), which scrolls nothing here.
+		if (wheel && (bits & 2) !== 0) return '';
 		const event = {
 			column: Number(column) - 1,
 			row: Number(row) - 1,
@@ -81,10 +84,12 @@ export interface MouseInput {
 export function createMouseInput(source: NodeJS.ReadStream): MouseInput {
 	const filtered = new PassThrough();
 	const listeners = new Set<MouseListener>();
+	// A character cut in two by a read (a paste) is put back together, as Ink's `setEncoding` did on the terminal.
+	const decoder = new StringDecoder('utf8');
 	let pending = '';
 
 	const onData = (data: Buffer | string) => {
-		const { events, rest } = parseMouse(pending + data.toString());
+		const { events, rest } = parseMouse(pending + (typeof data === 'string' ? data : decoder.write(data)));
 		// A lone ESC is the Escape key: only what looks like the start of a report waits for the next chunk.
 		const partial = rest.length > 1 ? PARTIAL_SGR_MOUSE.exec(rest) : null;
 		const held = partial && partial[0].length > 1 ? partial[0] : '';

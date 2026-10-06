@@ -651,6 +651,18 @@ describe('renderers', () => {
 				expect(stdout.output).toContain('\u001B[?1006l\u001B[?1000l');
 			});
 
+			test('gives the mouse back while an overlay is open', async () => {
+				await dashboard();
+				const reports = () => stdout.output.split('\u001B[?1000h').length - 1;
+				const releases = () => stdout.output.split('\u001B[?1000l').length - 1;
+				expect([reports(), releases()]).toEqual([1, 0]);
+
+				stdin.press('?');
+				await waitFor(() => releases() === 1);
+				stdin.press('\u001B');
+				await waitFor(() => reports() === 2);
+			});
+
 			test('leaves the mouse to the terminal with dev.mouse off, and in the panel', async () => {
 				await dashboard({ mouse: false });
 				expect(stdout.output).not.toContain('\u001B[?1000h');
@@ -693,12 +705,19 @@ describe('renderers', () => {
 				await waitFor(() => !stdout.screen().includes('from the bot'));
 				expect(stdout.screen()).toContain('from the build');
 
-				// A double click on `bot`: the first click shows it, the second solos it.
+				// A double click on `bot`: it solos `bot`, as `s` does.
 				await wait(450);
 				press(2);
 				await wait(30);
 				press(2);
 				await waitFor(() => stdout.screen().includes('from the bot') && !stdout.screen().includes('from the build'));
+
+				// Another double click on it, now that it is alone, shows every channel again, as `s` does.
+				await wait(450);
+				press(2);
+				await wait(30);
+				press(2);
+				await waitFor(() => stdout.screen().includes('from the bot') && stdout.screen().includes('from the build'));
 
 				// The indentation in front of the labels is not a channel.
 				await wait(450);
@@ -765,6 +784,13 @@ describe('renderers', () => {
 				await waitFor(() => stdout.screen().includes('▸ levels'));
 				expect(stdout.screen()).toContain(' / ab▏');
 				expect(stdout.screen()).not.toContain('[<');
+
+				// Nor is a click on a key of the list: `space` would type a space, `q` would quit.
+				click('space filter');
+				click('q quit');
+				await wait(80);
+				expect(stdout.screen()).toContain(' / ab▏');
+				expect(stdout.screen()).toContain('▾ channels');
 			});
 		});
 	});

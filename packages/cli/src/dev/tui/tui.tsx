@@ -52,16 +52,21 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 	const layout = options.layout ?? service.config.dev.layout ?? 'auto';
 	// The dashboard is painted from the first frame, so its buffer is entered before Ink writes anything.
 	let alternate = resolveLayout(layout, stdout.columns ?? 80, stdout.rows ?? 24) === 'dashboard';
-	// The mouse is only reported in the alternate buffer: the panel leaves the terminal its own text selection.
 	const mouse = (options.mouse ?? service.config.dev.mouse) ? createMouseInput(stdin) : null;
-	const enter = `\u001B[?1049h\u001B[H${mouse ? ENABLE_MOUSE : ''}`;
-	const leave = `${mouse ? DISABLE_MOUSE : ''}\u001B[?1049l`;
-	if (alternate) write(enter);
+	// The mouse is only reported while the dashboard is on screen: the panel and the overlays leave the terminal its
+	// own wheel and text selection.
+	let reporting = false;
+	const reportMouse = (wanted: boolean) => {
+		if (!mouse || wanted === reporting) return;
+		reporting = wanted;
+		write(wanted ? ENABLE_MOUSE : DISABLE_MOUSE);
+	};
+	if (alternate) write('\u001B[?1049h\u001B[H');
 	let stopped = false;
 	const switchView = (fullScreen: boolean) => {
 		if (fullScreen === alternate || stopped) return;
 		instance.clear();
-		write(fullScreen ? enter : leave);
+		write(fullScreen ? '\u001B[?1049h\u001B[H' : '\u001B[?1049l');
 		alternate = fullScreen;
 	};
 	// Only an interactive UI can answer the bot's questions (`Refresh commands?`).
@@ -85,6 +90,9 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 			onViewChange={switchView}
 			onCopy={(text) => write(`\u001B]52;c;${Buffer.from(text.slice(0, 65536)).toString('base64')}\u0007`)}
 			mouse={mouse ?? undefined}
+			onMouseChange={(wanted) => {
+				if (!stopped) reportMouse(wanted);
+			}}
 		/>,
 		{
 			stdout: sink,
@@ -112,7 +120,8 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 			service.promptable = false;
 			if (alternate) instance.clear();
 			instance.unmount();
-			if (alternate) write(leave);
+			reportMouse(false);
+			if (alternate) write('\u001B[?1049l');
 			mouse?.dispose();
 			write('\u001B[?25h');
 			for (const restore of restoreOutput) restore();

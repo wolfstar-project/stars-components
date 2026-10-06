@@ -28,6 +28,11 @@ describe('parseMouse', () => {
 		expect(parseMouse('a\u001B[<0;3;2Mb\u001B[A')).toMatchObject({ rest: 'ab\u001B[A', events: [{ column: 2, row: 1 }] });
 		expect(parseMouse('\u001B[<32;3;2M')).toEqual({ events: [], rest: '' });
 	});
+
+	test('ignores the sideways wheel and the extra buttons', () => {
+		expect(parseMouse('\u001B[<66;3;2M\u001B[<67;3;2M').events).toEqual([]);
+		expect(parseMouse('\u001B[<128;3;2M\u001B[<129;3;2M')).toEqual({ events: [], rest: '' });
+	});
 });
 
 describe('createMouseInput', () => {
@@ -72,6 +77,17 @@ describe('createMouseInput', () => {
 
 		input.stdin.setRawMode(true);
 		expect(source.setRawMode).toHaveBeenCalledWith(true);
+		input.dispose();
+	});
+
+	test('puts a character split across two reads back together', async () => {
+		const { source, input, typed } = setup();
+		const bytes = Buffer.from('è');
+		source.write(bytes.subarray(0, 1));
+		source.write(bytes.subarray(1));
+		await new Promise((resolve) => setImmediate(resolve));
+
+		expect(typed()).toBe('è');
 		input.dispose();
 	});
 

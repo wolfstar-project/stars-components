@@ -38,6 +38,8 @@ export interface DevAppProps {
 	onThemeSave: (setting: ThemeSetting) => void;
 	/** The mouse of the terminal, when `dev.mouse` is on: the dashboard listens to it. */
 	mouse?: Pick<MouseInput, 'subscribe'>;
+	/** Called with whether the dashboard, the only view that takes the mouse, is the one on screen. */
+	onMouseChange?: (wanted: boolean) => void;
 }
 
 type Overlay = 'logs' | 'errors' | 'help' | 'info' | 'theme';
@@ -63,7 +65,7 @@ export function resolveLayout(layout: DevLayout | 'auto', columns: number, rows:
  * overlays use the alternate buffer from either, preserving the terminal's history and the panel when they close.
  */
 export function DevApp(props: DevAppProps) {
-	const { service, color, theme, reducedMotion, layout = 'auto', filter, onQuit, onViewChange, onCopy, onThemeSave, mouse } = props;
+	const { service, color, theme, reducedMotion, layout = 'auto', filter, onQuit, onViewChange, onCopy, onThemeSave, mouse, onMouseChange } = props;
 	const { columns, rows } = useWindowSize();
 	const [overlay, setOverlay] = useState<Overlay | null>(null);
 	const [chosen, setChosen] = useState(layout);
@@ -102,6 +104,12 @@ export function DevApp(props: DevAppProps) {
 		onViewChange(fullScreen);
 		repaint((count) => count + 1);
 	}, [fullScreen, onViewChange]);
+
+	// The overlays and the panel keep the terminal's own wheel and text selection.
+	const takesMouse = base === 'dashboard' && overlay === null;
+	useEffect(() => {
+		onMouseChange?.(takesMouse);
+	}, [takesMouse, onMouseChange]);
 
 	const onCapture = useCallback((capturing: boolean) => setCaptured(capturing), []);
 

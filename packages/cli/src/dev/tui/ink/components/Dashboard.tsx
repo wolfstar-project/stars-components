@@ -79,7 +79,7 @@ export function Dashboard(props: DashboardProps) {
 	const [marked, setMarked] = useState<number | null>(null);
 	const version = useLogVersion(service.logs);
 	const regions = useRef<readonly SidebarRegion[]>([]);
-	const lastClick = useRef<{ group: SidebarGroup; index: number; at: number } | null>(null);
+	const lastClick = useRef<{ group: SidebarGroup; index: number; at: number; filter: LogViewFilter } | null>(null);
 	const onRegions = useCallback((next: readonly SidebarRegion[]) => {
 		regions.current = next;
 	}, []);
@@ -177,13 +177,13 @@ export function Dashboard(props: DashboardProps) {
 	};
 	useInput(handleKey, { isActive: active });
 
-	const select = (group: SidebarGroup, index: number, solo: boolean) => {
+	const select = (from: LogViewFilter, group: SidebarGroup, index: number, solo: boolean) => {
 		const target = (group === 'channels' ? channels : VIEW_LEVELS)[index];
 		if (target === undefined) return;
 		setFocus({ group, index });
-		if (group === 'channels') return change(solo ? soloChannel(filter, target) : toggleChannel(filter, target));
+		if (group === 'channels') return change(solo ? soloChannel(from, target) : toggleChannel(from, target));
 		const level = target as (typeof VIEW_LEVELS)[number];
-		return change(solo ? soloLevel(filter, level) : toggleLevel(filter, level));
+		return change(solo ? soloLevel(from, level) : toggleLevel(from, level));
 	};
 
 	const handleMouse = (event: MouseEvent) => {
@@ -202,17 +202,22 @@ export function Dashboard(props: DashboardProps) {
 			return setCollapsed((current) => ({ ...current, [region.group]: !current[region.group] }));
 		}
 		if (region.kind === 'key') {
+			// While searching the keys are text: a click must not type one into the query, nor quit behind the search box.
+			if (searching) return;
 			const own = HINT_KEYS[region.key];
 			return own ? handleKey(own[0], { ...NO_KEY, ...own[1] }) : onKey(region.key);
 		}
 
-		// A click toggles, like space; a second click on the same entry, or a click with alt or ctrl, solos it like `s`.
+		// A click toggles, like space. A second click on the same entry solos it like `s`, from the filter as it was
+		// before the first one, so that a double click on an entry that is already alone shows everything again.
 		const now = Date.now();
 		const previous = lastClick.current;
 		const double =
 			previous !== null && previous.group === region.group && previous.index === region.index && now - previous.at <= DOUBLE_CLICK_MS;
-		lastClick.current = double ? null : { group: region.group, index: region.index, at: now };
-		select(region.group, region.index, double || event.alt || event.ctrl);
+		lastClick.current = double ? null : { group: region.group, index: region.index, at: now, filter };
+		if (double) return select(previous.filter, region.group, region.index, true);
+		// alt or ctrl + click solos at once.
+		return select(filter, region.group, region.index, event.alt || event.ctrl);
 	};
 	// The subscription outlives a paint, the handler does not: it reads the state of the paint it was made in.
 	const mouseHandler = useRef(handleMouse);

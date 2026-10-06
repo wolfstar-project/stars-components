@@ -194,7 +194,7 @@ stars dev --level trace                           # this level and every more se
 
 The terminal reports the mouse to `stars dev` while the dashboard is on screen, so selecting text there needs
 `Shift` held in most terminals. `dev.mouse: false`, or `--no-mouse` for one session, leaves the mouse to the
-terminal; the panel and the plain output never take it.
+terminal; the overlays (`l`, `?`, `i`, `T`), the panel and the plain output never take it.
 
 **Hot reload.** When the bot runs with the framework's `hmr` option enabled, it tells `stars dev` which directories
 it watches. A build that only changed pieces in those directories is then left to the bot: the process, its HTTP
