@@ -60,7 +60,8 @@ export async function runCodegen(options: CodegenTaskOptions): Promise<void> {
 
 /**
  * Types the options of the commands the project registers. The commands are read from the built bot, the way
- * `stars commands diff` reads them: nothing connects to Discord, so `--check` runs in CI without secrets.
+ * `stars commands diff` reads them: nothing connects to Discord, but the bot still runs its own env setup, so `--check`
+ * in CI needs placeholders for the values it reads while starting (`DISCORD_CLIENT_ID`, `DISCORD_PUBLIC_KEY`, ...).
  */
 async function runCommands(config: ResolvedStarsConfig, check: boolean, local?: CommandSnapshot): Promise<CodegenResult> {
 	const { output } = config.codegen.commands!;
