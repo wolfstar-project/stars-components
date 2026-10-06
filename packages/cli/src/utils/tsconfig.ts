@@ -35,6 +35,8 @@ export async function prepareTsconfig(config: ResolvedStarsConfig, check = false
 		return [await emit(config, 'tsconfig', appTsconfig(config, 'tsconfig'), check)];
 	}
 
+	// Written for every build tool: the node project is about files Node runs whatever builds the bot. A `tsc` or `none`
+	// project keeps its own tsconfig for the bot sources, so for it the app file is generated but nothing references it.
 	return [await emit(config, 'app', appTsconfig(config, 'app'), check), await emit(config, 'node', nodeTsconfig(config), check)];
 }
 

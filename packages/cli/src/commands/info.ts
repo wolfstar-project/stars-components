@@ -122,7 +122,8 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('options', describeOptions(info, colors)),
 			row('outDir', show(info.build.outDir)),
 			row('tsconfig', show(info.build.tsconfig)),
-			// Everything `stars typecheck` checks: both generated projects from compatibility version 6.
+			// Everything `stars typecheck` checks: the generated app and node projects from compatibility version 6 (a `tsc`
+			// or `none` project keeps its own tsconfig for the bot and gets the node one on top).
 			row('typechecks', info.dev.typecheck.projects.length > 0 ? info.dev.typecheck.projects.map(show).join(', ') : colors.dim('none')),
 			row('runs', show(info.build.output))
 		]),

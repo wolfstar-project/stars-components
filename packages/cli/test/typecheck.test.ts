@@ -55,4 +55,19 @@ describe('stars typecheck', () => {
 		});
 		expect(out.text()).toContain('tsconfig.app.json');
 	});
+
+	test('checks the project tsconfig and the node project of a tsc build', async () => {
+		await fixture.write('stars.tsc.mjs', "export default { build: { tool: 'tsc' }, imports: false };");
+		await fixture.write(
+			'src/tsconfig.json',
+			'{ "compilerOptions": { "strict": true, "noEmit": true, "skipLibCheck": true }, "include": ["**/*.ts"] }'
+		);
+		const out = capture();
+
+		await runTypecheck({ cwd: fixture.root, config: 'stars.tsc.mjs', stdout: out.stdout });
+
+		expect(out.text()).toContain(join('src', 'tsconfig.json'));
+		expect(out.text()).toContain(join('.stars', 'tsconfig.node.json'));
+		expect(out.text()).not.toContain('tsconfig.app.json');
+	});
 });
