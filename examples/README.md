@@ -40,8 +40,11 @@ src/
   .env                    # copied from .env.example (gitignored)
 ```
 
-TypeScript projects extend the generated `.stars/tsconfig.json`; `stars prepare` (run by the `typecheck` scripts,
-`stars dev` and `stars build`) writes it. `container.logger` is built into the framework.
+The Vite, Nitro and gateway (`with-gateway`, `with-cache`, `with-sharder`) examples have a solution-style `tsconfig.json` that references the generated
+`.stars/tsconfig.app.json` and `.stars/tsconfig.node.json`; `stars prepare` (run by `stars typecheck`, `stars dev` and
+`stars build`) writes them, and their `typecheck` script is `stars typecheck`.
+
+`container.logger` is built into the framework.
 
 ## Prerequisites
 

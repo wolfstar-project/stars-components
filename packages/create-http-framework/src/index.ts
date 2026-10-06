@@ -26,7 +26,7 @@ import {
 	runCommand,
 	type PackageManager
 } from './tools/packageManager.js';
-import { writeProjectFiles } from './tools/projectFiles.js';
+import { GENERATED_COMPATIBILITY_VERSION, writeProjectFiles } from './tools/projectFiles.js';
 import { processTemplate } from './tools/templateProcessor.js';
 
 function isValidPackageName(name: string): boolean {
@@ -479,11 +479,12 @@ async function main(): Promise<void> {
 			sharder: wantsSharder,
 			buildTool,
 			tunnel: wantsTunnel,
-			autoEnv: true
+			autoEnv: true,
+			compatibilityVersion: GENERATED_COMPATIBILITY_VERSION
 		},
 		(path) => keptDocs.push(path)
 	);
-	writeProjectFiles(targetDir, {
+	const keptProjectFiles = writeProjectFiles(targetDir, {
 		name: projectName,
 		port,
 		i18n: wantsI18n,
@@ -495,6 +496,7 @@ async function main(): Promise<void> {
 		redis: wantsRedis,
 		sharder: wantsSharder,
 		tunnel: wantsTunnel,
+		compatibilityVersion: GENERATED_COMPATIBILITY_VERSION,
 		packageManager,
 		language,
 		buildTool,
@@ -505,6 +507,11 @@ async function main(): Promise<void> {
 	s.stop('Project files generated.');
 	for (const file of keptDocs) {
 		log.warn(`Kept your existing "${file}" as it is — delete it and run again to get the generated one.`);
+	}
+	for (const file of keptProjectFiles) {
+		log.warn(
+			`Kept your edited "${file}" as it is. If it extends ./.stars/tsconfig.json, that file is gone: \`stars prepare\` now writes ./.stars/tsconfig.app.json and ./.stars/tsconfig.node.json, so make it reference them.`
+		);
 	}
 	for (const file of preservedFiles) {
 		log.warn(`Kept hand-edited "${file}" even though its feature is now disabled — remove it manually if it's no longer needed.`);

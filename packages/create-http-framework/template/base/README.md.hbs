@@ -44,6 +44,9 @@ The `dev` and `build` scripts are powered by the [`stars`](https://www.npmjs.com
 
 - `npm run dev` — build, run and restart the bot on changes, with an interactive terminal dashboard: status, log channels and levels you can filter, and a prompt before changed commands are redeployed (`npm run dev -- --no-tui` for plain logs).
 - `npm run build` — {{#if nitro}}build the deployable `.output/` directory{{else}}compile the project{{/if}} (TypeScript projects only).
+{{#if typecheckScript}}
+- `npm run typecheck` — type-check the bot and the files Node runs.
+{{/if}}
 - `npm start` — run the bot.
 - `npx stars info` — print the resolved configuration.
 - `npx stars doctor` — check the runtime, the credentials, the interactions endpoint and the generated files.

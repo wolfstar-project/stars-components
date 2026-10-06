@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -248,13 +248,47 @@ describe('writeProjectFiles', () => {
 		expect(config).not.toContain('tsdown:');
 		await expect(readFile(join(target, 'tsdown.config.ts'), 'utf-8')).rejects.toMatchObject({ code: 'ENOENT' });
 
+		// The root tsconfig only references what `stars prepare` generates: the auto imports declaration file is part of
+		// the app project, and `stars.config.ts` of the node one.
 		const tsconfig = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
-		// The auto imports declaration file is only typed if the tsconfig can see it.
-		expect(tsconfig.include).toContain('.stars/*.d.ts');
-		expect(tsconfig.extends).toBe('./.stars/tsconfig.json');
+		expect(tsconfig).toEqual({
+			files: [],
+			references: [{ path: './.stars/tsconfig.app.json' }, { path: './.stars/tsconfig.node.json' }]
+		});
 		const packageJson = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8'));
 		expect(packageJson.scripts.postinstall).toBe('stars prepare');
-		expect(tsconfig.compilerOptions.paths).toBeUndefined();
+		// A `tsc` on a `files: []` root checks nothing, so the script is `stars typecheck`.
+		expect(packageJson.scripts.typecheck).toBe('stars typecheck');
+	});
+
+	test('GIVEN compatibility version 5 THEN tsdown keeps the tsconfig extending the single generated one', async () => {
+		writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsdown', compatibilityVersion: 5 }));
+
+		const tsconfig = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
+		expect(tsconfig.extends).toBe('./.stars/tsconfig.json');
+		expect(tsconfig.include).toContain('.stars/*.d.ts');
+		expect(tsconfig.compilerOptions).toEqual({ outDir: './dist', rootDir: './src' });
+		const packageJson = JSON.parse(await readFile(join(target, 'package.json'), 'utf-8'));
+		expect(packageJson.scripts.typecheck).toBeUndefined();
+	});
+
+	test('GIVEN a rerun over the files of version 5 THEN the root tsconfig moves to the solution-style one, formatted or not', async () => {
+		const first = makeContext({ language: 'ts', buildTool: 'tsdown', compatibilityVersion: 5 });
+		expect(writeProjectFiles(target, first)).toEqual([]);
+		// The formatter that runs after generation rewrites the whitespace, which does not make the file hand-edited.
+		const legacy = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
+		await writeFile(join(target, 'tsconfig.json'), `${JSON.stringify(legacy)}\n`);
+
+		expect(writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsdown' }))).toEqual([]);
+		expect(JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8')).references).toHaveLength(2);
+	});
+
+	test('GIVEN a hand-edited root tsconfig THEN a rerun keeps it and says so', async () => {
+		const edited = '{ "extends": "./.stars/tsconfig.json", "compilerOptions": { "strict": false } }';
+		await writeFile(join(target, 'tsconfig.json'), edited);
+
+		expect(writeProjectFiles(target, makeContext({ language: 'ts', buildTool: 'tsdown' }))).toEqual(['tsconfig.json']);
+		expect(await readFile(join(target, 'tsconfig.json'), 'utf-8')).toBe(edited);
 	});
 
 	test('GIVEN tunnel THEN stars.config opens a quick tunnel in dev, next to whatever the build needs', async () => {
@@ -374,8 +408,8 @@ describe('vite build tools', () => {
 			expect(config).not.toContain('enableNitro');
 
 			const tsconfig = JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf-8'));
-			expect(tsconfig.extends).toBe('./.stars/tsconfig.json');
-			expect(tsconfig.include).toContain('.stars/*.d.ts');
+			expect(tsconfig.extends).toBeUndefined();
+			expect(tsconfig.references).toEqual([{ path: './.stars/tsconfig.app.json' }, { path: './.stars/tsconfig.node.json' }]);
 		});
 
 		test('GIVEN vite-nitro THEN stars.config.ts also enables Nitro, which needs Vite, with the node-server preset', async () => {

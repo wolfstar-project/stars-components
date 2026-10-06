@@ -76,6 +76,12 @@ export interface TemplateContext {
 	 * manifest written before it existed renders `src/lib/setup` the way it was generated: loading the env by hand.
 	 */
 	autoEnv?: boolean;
+	/**
+	 * The `future.compatibilityVersion` the project was generated for. Optional: a manifest without it was written for
+	 * version 5 or below, whose files (a root `tsconfig.json` extending `.stars/tsconfig.json`) stay recognisable as the
+	 * generator's own output when a rerun moves the project to 6.
+	 */
+	compatibilityVersion?: number;
 }
 
 /** A command the bundled builds (Vite, Nitro) import and load explicitly, since there is no `commands` directory to scan. */
@@ -94,6 +100,7 @@ function toRenderContext(context: TemplateContext): TemplateContext & {
 	nitro: boolean;
 	autoImports: boolean;
 	registersEnv: boolean;
+	typecheckScript: boolean;
 	commands: CommandImport[];
 } {
 	const typescript = context.language === 'ts';
@@ -111,6 +118,8 @@ function toRenderContext(context: TemplateContext): TemplateContext & {
 		// `stars` registers `env` in the entry of tsdown and Vite builds; Nitro leaves it off by default, and `tsc` or
 		// a JavaScript entry never pass through the transform, so those keep loading the environment themselves.
 		registersEnv: Boolean(context.autoEnv) && typescript && (context.buildTool === 'tsdown' || context.buildTool === 'vite'),
+		// The `typecheck` script of `projectFiles.ts`; a manifest without the version renders as it did before it existed.
+		typecheckScript: typescript && (context.buildTool === 'tsdown' || isViteBuild(context.buildTool)) && (context.compatibilityVersion ?? 5) >= 6,
 		commands
 	};
 }
