@@ -16,7 +16,8 @@ export interface PrepareTaskOptions extends ProjectArgs {
 }
 
 /**
- * Generates `.stars/tsconfig.json` and `imports.dts` (see {@link StarsImportsConfig} in `@wolfstar/schema`), the way `nuxt
+ * Generates `.stars/tsconfig.app.json` and `.stars/tsconfig.node.json` (a single `.stars/tsconfig.json` below
+ * compatibility version 6) and `imports.dts` (see {@link StarsImportsConfig} in `@wolfstar/schema`), the way `nuxt
  * prepare` regenerates `.nuxt/imports.d.ts`. Run automatically by `stars dev` and `stars build` before the first
  * build; `--check` fails instead of writing, for CI.
  */
@@ -30,8 +31,11 @@ export async function runPrepare(options: PrepareTaskOptions): Promise<void> {
 	if (options.json) {
 		stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 	} else {
-		const paintConfig = result.tsconfig.status === 'outdated' ? colors.red : colors.green;
-		stdout.write(`${colors.dim('stars')} tsconfig: ${paintConfig(result.tsconfig.status)} ${displayPath(config.root, result.tsconfig.path)}\n`);
+		for (const file of result.tsconfigs) {
+			const paintConfig = file.status === 'outdated' ? colors.red : colors.green;
+			const label = file.name === 'tsconfig' ? 'tsconfig' : `tsconfig ${file.name}`;
+			stdout.write(`${colors.dim('stars')} ${label}: ${paintConfig(file.status)} ${displayPath(config.root, file.path)}\n`);
+		}
 		if (result.modules) {
 			const paint = result.modules.status === 'outdated' ? colors.red : colors.green;
 			stdout.write(`${colors.dim('stars')} modules: ${paint(result.modules.status)} ${displayPath(config.root, result.modules.path)}\n`);
@@ -42,7 +46,7 @@ export async function runPrepare(options: PrepareTaskOptions): Promise<void> {
 		}
 	}
 
-	if (result.status === 'outdated' || result.tsconfig.status === 'outdated' || result.modules?.status === 'outdated') {
+	if (result.status === 'outdated' || result.tsconfigs.some((file) => file.status === 'outdated') || result.modules?.status === 'outdated') {
 		throw cliDiagnostics.PREPARE_OUTDATED({});
 	}
 }

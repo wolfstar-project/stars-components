@@ -39,6 +39,34 @@ describe('stars doctor', () => {
 		expect(checks.application).toBeUndefined();
 	});
 
+	test('flags a root tsconfig.json that still extends the single generated one from compatibility version 6', async () => {
+		const files = { 'src/main.ts': '', 'stars.config.mjs': 'export default {};' };
+		const legacy = await check({ ...files, 'tsconfig.json': '{ "extends": "./.stars/tsconfig.json" }' });
+		expect(legacy.tsconfig).toMatchObject({ status: 'warn', fix: expect.stringContaining('.stars/tsconfig.app.json') });
+		await fixture.cleanup();
+
+		const solution = await check({
+			...files,
+			'tsconfig.json': '{ "files": [], "references": [{ "path": "./.stars/tsconfig.app.json" }] }'
+		});
+		expect(solution.tsconfig).toBeUndefined();
+		await fixture.cleanup();
+
+		const five = await check({
+			...files,
+			'tsconfig.json': '{ "extends": "./.stars/tsconfig.json" }',
+			'stars.config.mjs': 'export default { future: { compatibilityVersion: 5 } };'
+		});
+		expect(five.tsconfig).toBeUndefined();
+	});
+
+	test('lists both outdated generated tsconfigs', async () => {
+		const checks = await check({ 'src/main.ts': '', 'stars.config.mjs': 'export default { imports: false };' });
+		expect(checks.prepare).toMatchObject({ status: 'warn' });
+		expect(checks.prepare!.message).toContain('tsconfig.app.json');
+		expect(checks.prepare!.message).toContain('tsconfig.node.json');
+	});
+
 	test('says what is missing and how to fix it', async () => {
 		const checks = await check(
 			{ 'package.json': JSON.stringify({ name: 'bot', engines: { node: '>=99' } }) },

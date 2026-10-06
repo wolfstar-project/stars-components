@@ -122,6 +122,8 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('options', describeOptions(info, colors)),
 			row('outDir', show(info.build.outDir)),
 			row('tsconfig', show(info.build.tsconfig)),
+			// Everything `stars typecheck` checks: both generated projects from compatibility version 6.
+			row('typechecks', info.dev.typecheck.projects.length > 0 ? info.dev.typecheck.projects.map(show).join(', ') : colors.dim('none')),
 			row('runs', show(info.build.output))
 		]),
 		section('Dev', [

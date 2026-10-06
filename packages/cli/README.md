@@ -25,7 +25,8 @@ package has no install-time dependency on `@wolfstar/http-framework` in return, 
 - `stars build` runs the configured build tool once.
 - `stars info` prints the resolved configuration and environment (`--json` for scripts).
 - `stars codegen` runs the configured code generators: i18next types and the typed options of your commands (`--check` for CI).
-- `stars prepare` generates `.stars/tsconfig.json` and the auto imports declaration file (`--check` for CI).
+- `stars prepare` generates the TypeScript configuration in `.stars/` (`tsconfig.app.json` and `tsconfig.node.json`) and the auto imports declaration file (`--check` for CI).
+- `stars typecheck` regenerates `.stars/` and type-checks every project once, the way `nuxt typecheck` does.
 - `stars commands` inspects, compares, deploys and cleans the application commands Discord has deployed.
 - `stars doctor` checks that the project is ready: runtime, framework, credentials, interactions endpoint, generated files.
 - `stars completions` prints the shell completion script for bash, zsh or fish.
@@ -74,6 +75,7 @@ stars build [--config <file>] [--cwd <dir>]
 stars info [--json] [--config <file>] [--cwd <dir>]
 stars codegen [--check] [--json] [--config <file>] [--cwd <dir>]
 stars prepare [--check] [--json] [--config <file>] [--cwd <dir>]
+stars typecheck [--config <file>] [--cwd <dir>]
 stars commands [list|clean|diff|deploy] [--guild <id>] [--name <name>] [--check] [--yes] [--json]
 stars doctor [--online] [--json] [--config <file>] [--cwd <dir>]
 stars completions <bash|zsh|fish>
@@ -333,7 +335,7 @@ stars doctor v2.3.0
                 → Stop it, or set another HTTP_PORT, unless it is this bot running.
   ℹ tunnel      No tunnel: Discord cannot reach a bot on localhost
                 → Set `dev.tunnel: true` for a cloudflared quick tunnel, or press t in `stars dev`.
-  ⚠ prepare     Out of date: .stars/tsconfig.json
+  ⚠ prepare     Out of date: .stars/tsconfig.app.json, .stars/tsconfig.node.json
                 → Run `stars prepare`.
 
   1 error(s), 2 warning(s)
@@ -410,7 +412,8 @@ and which options the block sets.
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `3` (EOL)     | Legacy behaviour: a `tsdown.config.*` drives the build, auto imports off unless asked for; prints `COMPATIBILITY_VERSION_EOL` |
 | `4`           | `tsdown` configured from `stars.config` alone, auto imports on and wired in, `'auto'` picks `tsdown` for TypeScript           |
-| `5` (default) | Everything in `4`, plus `env` registered automatically when the project depends on `@wolfstar/env-utilities`                  |
+| `5`           | Everything in `4`, plus `env` registered automatically when the project depends on `@wolfstar/env-utilities`                  |
+| `6` (default) | Everything in `5`, plus the generated tsconfig split into `.stars/tsconfig.app.json` and `.stars/tsconfig.node.json`          |
 
 ### Environment and hooks
 
@@ -477,7 +480,30 @@ package.json imports, and ESNext/DOM libraries. Use `import type` and `export ty
 These options apply to tsdown and Vite; tsc keeps its emit-compatible settings. Sapphire's decorator options and
 the ES2022 target remain in effect. This does not enable Stars' experimental Nitro runtime integration.
 
-Run `stars prepare` and extend the generated config from your project's `tsconfig.json`:
+From compatibility version 6, `stars prepare` writes two files, the way a Nuxt 4 project has them:
+
+- `.stars/tsconfig.app.json` is the bot: everything under the entry's directory plus the auto imports declaration,
+  with the `~`/`@`/`~~`/`@@` paths and the options above. `tsdown` builds with it.
+- `.stars/tsconfig.node.json` is what Node runs without a bundler: `stars.config.*`, `vitest.config.*`,
+  `tsdown.config.*`, `vite.config.*` and `scripts/**`. It uses `NodeNext` resolution, `types: ["node"]`, no DOM
+  library, no aliases or auto imports and no decorators, and leaves the entry's directory to the app project.
+
+Your own `tsconfig.json` only references them:
+
+```json
+{
+	"files": [],
+	"references": [{ "path": "./.stars/tsconfig.app.json" }, { "path": "./.stars/tsconfig.node.json" }]
+}
+```
+
+`stars typecheck` regenerates `.stars/` and runs your checker (`dev.typecheck.checker`: `golar` or `tsc`; bare `tsc -p`
+on that root would check nothing) once per project. `stars dev`'s `dev.typecheck` watches the app project. A root
+`tsconfig.json` that still extends `./.stars/tsconfig.json` gets a `TSCONFIG_LEGACY_EXTENDS` warning from
+`stars prepare` and `stars doctor`: update it once, or keep `future.compatibilityVersion` at `5`.
+
+On `5` and `4` nothing changes: `stars prepare` writes the single `.stars/tsconfig.json`, which you extend from your
+project's `tsconfig.json`:
 
 ```json
 {
@@ -485,18 +511,17 @@ Run `stars prepare` and extend the generated config from your project's `tsconfi
 }
 ```
 
-New tsdown projects already extend this file and run `stars prepare` through `postinstall`.
-Keep your existing compiler options alongside `extends`. `stars dev` and `stars build` also regenerate this file.
-For tsdown builds, `@/` and `~/` resolve to the entry file's directory (normally `src/`), while `@@/` and `~~/`
+Keep your existing compiler options alongside `extends`. `stars dev` and `stars build` also regenerate the generated
+files. For tsdown builds, `@/` and `~/` resolve to the entry file's directory (normally `src/`), while `@@/` and `~~/`
 resolve to the project root. Filesystem aliases in `stars.config.ts`'s `tsdown.alias` are included too, with custom
 values taking precedence. Legacy builds using a separate tsdown config only include aliases declared in
 `stars.config.ts`. Other build tools do not get tsdown aliases, since TypeScript alone does not rewrite imports.
 
-The generated config includes source files and the auto imports declaration, including a custom `imports.dts`
+The generated app config includes source files and the auto imports declaration, including a custom `imports.dts`
 location. Explicit `include` or `compilerOptions.paths` in your own tsconfig replace the inherited values;
 remove manually duplicated paths to use the generated aliases. Generation works with `imports: false` too.
-Use `stars prepare --check` to check both generated files without writing them. Do not edit `.stars/tsconfig.json`
-by hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.
+Use `stars prepare --check` to check the generated files without writing them. Do not edit anything in `.stars/` by
+hand; keep `.stars/` ignored by Git and run `stars prepare` after installing dependencies on a fresh checkout.
 
 ## Server integrations
 

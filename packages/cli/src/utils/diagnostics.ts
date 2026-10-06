@@ -20,6 +20,19 @@ export const cliDiagnostics = defineDiagnostics({
 		PREPARE_OUTDATED: {
 			why: (_p: {}) => 'The generated project files are out of date, run `stars prepare` to update it.'
 		},
+		TSCONFIG_LEGACY_EXTENDS: {
+			why: (p: { file: string }) =>
+				`${p.file} extends ./.stars/tsconfig.json, which \`stars prepare\` no longer writes from compatibility version 6`,
+			fix: (_p: { file: string }) =>
+				'Replace it with `{ "files": [], "references": [{ "path": "./.stars/tsconfig.app.json" }, { "path": "./.stars/tsconfig.node.json" }] }`, or set `future.compatibilityVersion` to 5.'
+		},
+		TYPECHECK_FAILED: {
+			why: (p: { projects: string }) => `Type errors in ${p.projects}`
+		},
+		TYPECHECK_NO_PROJECT: {
+			why: (p: { root: string }) => `No tsconfig to type-check in ${p.root}`,
+			fix: (_p: { root: string }) => 'Create src/tsconfig.json or tsconfig.json, or set `dev.typecheck.tsconfig`.'
+		},
 		DISCORD_TOKEN_MISSING: {
 			why: (_p: {}) => 'DISCORD_TOKEN is not set',
 			fix: (_p: {}) => 'Set DISCORD_TOKEN in the environment or in the project .env file.'

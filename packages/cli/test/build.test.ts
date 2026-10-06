@@ -28,7 +28,7 @@ describe('runBuild', () => {
 		await runBuild({ cwd: fixture.root, stdout });
 
 		expect(output).toContain('nothing to build');
-		await expect(readFile(join(fixture.root, '.stars/tsconfig.json'), 'utf-8')).resolves.toContain('compilerOptions');
+		await expect(readFile(join(fixture.root, '.stars/tsconfig.app.json'), 'utf-8')).resolves.toContain('compilerOptions');
 	});
 
 	test('runs the hooks in the same order as stars dev', async () => {

@@ -67,7 +67,7 @@ describe('stars', () => {
 	test('--help lists the commands', async () => {
 		const result = await runCli(['--help']);
 		expect(result.code).toBe(0);
-		for (const command of ['dev', 'build', 'info', 'codegen', 'prepare', 'commands']) expect(result.stdout).toContain(command);
+		for (const command of ['dev', 'build', 'info', 'codegen', 'prepare', 'typecheck', 'commands']) expect(result.stdout).toContain(command);
 		expect(await runCli([])).toMatchObject({ code: 0 });
 	});
 
