@@ -22,6 +22,7 @@ import {
 import { resolveEnv, type ResolvedEnvConfig } from './env.js';
 import { configDiagnostics } from './errors.js';
 import { resolveHooks, type ResolvedHooksConfig } from './hooks.js';
+import { pickModuleOptions } from './module-options.js';
 import { resolveModules } from './modules.js';
 import { Validator } from './validator.js';
 
@@ -169,6 +170,12 @@ export interface ResolvedStarsConfig {
 	readonly hooks: ResolvedHooksConfig;
 	/** The `modules` block, normalised. */
 	readonly modules: readonly ResolvedModuleEntry[];
+	/**
+	 * The top-level keys of `stars.config` that are not built in, as written. They belong to the modules that claim
+	 * them with `meta.configKey`, which the schema cannot know yet, so nothing is validated here: the host reports the
+	 * keys no installed module claimed with `assertModuleOptionsClaimed`.
+	 */
+	readonly moduleOptions: Readonly<Record<string, unknown>>;
 	/** What the installed modules contributed. Empty until the CLI ran their `setup`. */
 	readonly runtime: ModulesRuntime;
 	readonly experimental: ResolvedExperimentalConfig;
@@ -246,21 +253,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const validator = new Validator(file);
 	const warnings: Diagnostic[] = [];
 
-	validator.knownKeys(config, '', [
-		'root',
-		'entry',
-		'build',
-		'dev',
-		'codegen',
-		'imports',
-		'env',
-		'hooks',
-		'modules',
-		'experimental',
-		'future',
-		'vite',
-		'tsdown'
-	]);
+	const moduleOptions = pickModuleOptions(config);
 	const baseDirectory = file ? dirname(file) : cwd;
 
 	const root = resolve(baseDirectory, validator.string(config.root, 'root') ?? '.');
@@ -305,6 +298,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 		env: envConfig,
 		hooks,
 		modules,
+		moduleOptions,
 		runtime: EMPTY_MODULES_RUNTIME,
 		experimental,
 		future,

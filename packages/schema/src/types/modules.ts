@@ -42,6 +42,8 @@ export interface ModulesRuntime {
 	readonly plugins: readonly RuntimePluginRegistration[];
 	/** Packages added to `imports.presets` by `ctx.addImports`. */
 	readonly imports: readonly string[];
+	/** The `meta.configKey` of every installed module that declares one: the top-level `stars.config` keys they own. */
+	readonly configKeys: readonly string[];
 }
 
-export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({ modules: [], plugins: [], imports: [] });
+export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({ modules: [], plugins: [], imports: [], configKeys: [] });

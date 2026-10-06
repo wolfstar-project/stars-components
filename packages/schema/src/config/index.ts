@@ -44,6 +44,7 @@ export { configDiagnostics } from './errors.js';
 export { resolveHooks, STARS_HOOK_NAMES } from './hooks.js';
 export type { ResolvedHooksConfig } from './hooks.js';
 export type { ConfigDiagnosticCode } from './errors.js';
+export { BUILT_IN_CONFIG_KEYS, assertModuleOptionsClaimed } from './module-options.js';
 export { resolveModules } from './modules.js';
 export {
 	DEFAULT_APP_TSCONFIG,
