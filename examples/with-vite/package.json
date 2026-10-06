@@ -9,7 +9,7 @@
 		"build": "node ../../packages/cli/dist/cli.js build",
 		"dev": "node ../../packages/cli/dist/cli.js dev",
 		"start": "node --enable-source-maps dist/main.js",
-		"typecheck": "node ../../packages/cli/dist/cli.js prepare && golar tsc -p tsconfig.json --noEmit"
+		"typecheck": "node ../../packages/cli/dist/cli.js typecheck"
 	},
 	"dependencies": {
 		"@wolfstar/env-utilities": "workspace:*",

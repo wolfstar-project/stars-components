@@ -9,7 +9,7 @@
 		"build": "node ../../packages/cli/dist/cli.js build",
 		"dev": "node ../../packages/cli/dist/cli.js dev",
 		"start": "node --enable-source-maps .output/server/index.mjs",
-		"typecheck": "node ../../packages/cli/dist/cli.js prepare && golar tsc -p tsconfig.json --noEmit"
+		"typecheck": "node ../../packages/cli/dist/cli.js typecheck"
 	},
 	"dependencies": {
 		"@wolfstar/http-framework": "workspace:*",
