@@ -266,7 +266,7 @@ Decisions taken while aligning the implementation with this spec and adding gate
 
 ### Gateway support: `@wolfstar/http-framework-utilities/gateway`
 
-- A subpath export with `@wolfstar/plugin-gateway` (`^0.8.0`) as an **optional** peer dependency; the main
+- A subpath export with `@wolfstar/plugin-gateway` (`>=0.8.0`) as an **optional** peer dependency; the main
   entrypoint never imports it. Clicks still arrive as HTTP interactions and use the same `wolfstar-pm` /
   `wolfstar-mp` handlers, so a gateway bot also serves its interactions endpoint (`GatewayClient.start({ listen })`).
 - **Type guards** with the main entrypoint's names, narrowing to `@wolfstar/plugin-gateway` structures
