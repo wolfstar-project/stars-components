@@ -167,7 +167,8 @@ export default defineCommand({
 		// No default: left out, `dev.tunnel` decides.
 		tunnel: {
 			type: 'boolean',
-			description: 'Open the public tunnel at start; --no-tunnel keeps it closed at start even when dev.tunnel enables it'
+			description: 'Open the public tunnel at start, whatever dev.tunnel says',
+			negativeDescription: 'Keep the public tunnel closed at start even when dev.tunnel enables it'
 		}
 	},
 	async run({ args, rawArgs }) {
