@@ -23,6 +23,8 @@ export interface DevTaskOptions extends ProjectArgs {
 	channel?: string[];
 	/** `--level`. */
 	level?: string;
+	/** `--tunnel` opens the tunnel at start whatever `dev.tunnel` says, `--no-tunnel` keeps it closed. */
+	tunnel?: boolean;
 }
 
 const LAYOUTS = ['auto', 'dashboard', 'panel'] as const;
@@ -54,7 +56,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 
 	const builder = await createBuilder(config, hooks);
 	await hooks.callHook('builder:created', builder, config);
-	const service = new DevService(config, { builder, hooks });
+	const service = new DevService(config, { builder, hooks, openTunnel: options.tunnel });
 	await reportWarnings(config, (text) => service.log('stars', 'warn', text), { production: false });
 	// The files receive every entry: the filter below only decides what the terminal shows.
 	const logFiles = [
@@ -161,6 +163,12 @@ export default defineCommand({
 		level: {
 			type: 'string',
 			description: `Only show this log level and the more severe ones at start: ${LEVELS.join(', ')} (defaults to dev.logs.levels)`
+		},
+		// No default: left out, `dev.tunnel` decides.
+		tunnel: {
+			type: 'boolean',
+			description: 'Open the public tunnel at start, whatever dev.tunnel says',
+			negativeDescription: 'Keep the public tunnel closed at start even when dev.tunnel enables it'
 		}
 	},
 	async run({ args, rawArgs }) {
@@ -172,7 +180,8 @@ export default defineCommand({
 			theme: args.theme,
 			layout: args.layout,
 			channel: channel.length > 0 ? channel : undefined,
-			level: args.level
+			level: args.level,
+			tunnel: args.tunnel
 		});
 	}
 });

@@ -69,6 +69,11 @@ export interface DevServiceOptions {
 	typechecker?: Typechecker;
 	tunnel?: Tunnel;
 	healthInterval?: number;
+	/**
+	 * Whether the tunnel opens at start: `true` opens it whatever `dev.tunnel` says (a quick tunnel when it is off),
+	 * `false` keeps it closed, and `undefined` leaves it to `dev.tunnel`. The `--tunnel`/`--no-tunnel` flags.
+	 */
+	openTunnel?: boolean;
 }
 
 /**
@@ -85,6 +90,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	/** Whether something can answer a {@link DevPrompt}: the interactive UI sets it, the plain renderer cannot. */
 	public promptable = false;
 	readonly #hooks: StarsHookable | null;
+	readonly #openTunnel: boolean | undefined;
 	/** Runs hooks one at a time, so an async `build:done` settles before the next build's hooks or a restart. */
 	#hookChain: Promise<void> = Promise.resolve();
 
@@ -130,6 +136,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.tunnel = options.tunnel ?? new Tunnel(config);
 		this.locales = new Locales(config);
 		this.#hooks = options.hooks ?? null;
+		this.#openTunnel = options.openTunnel;
 
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
@@ -221,7 +228,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		if (this.config.dev.typecheck.enabled) this.typechecker.start();
 		await this.locales.watch();
 		// The tunnel comes up next to the build: neither waits for the other, and a failed tunnel never stops the bot.
-		void this.tunnel.start();
+		// `--no-tunnel` only keeps it closed at start: the `t` key still opens one.
+		if (this.#openTunnel !== false) void this.tunnel.start(this.#openTunnel === true);
 		await this.builder.watch();
 	}
 

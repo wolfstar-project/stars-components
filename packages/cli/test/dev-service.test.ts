@@ -1,8 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import type { Builder, BuilderEvents, BuildOutcome } from '../src/builders/types.js';
 import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { DevService } from '../src/dev/dev-service.js';
+import { createPlainRenderer } from '../src/dev/tui/plain.js';
+import { Tunnel } from '../src/dev/tunnel.js';
 import { createStarsHooks } from '../src/utils/hooks.js';
 import { CRASH_SCRIPT, KEEPALIVE_SCRIPT, createFixture, waitFor, type Fixture } from './helpers.js';
 
@@ -581,5 +584,75 @@ describe('DevService', () => {
 			await waitFor(() => service.status.process === 'running');
 			expect(service.status.paused).toBe(false);
 		});
+	});
+});
+
+describe('DevService tunnel at start', () => {
+	let fixture: Fixture;
+	let service: DevService;
+
+	async function setup(devConfig: string, openTunnel?: boolean) {
+		fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': `export default { dev: ${devConfig} };` });
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const startTunnel = vi.fn().mockResolvedValue({
+			getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'),
+			close: vi.fn().mockResolvedValue(undefined)
+		});
+		service = new DevService(config, { builder: new FakeBuilder(), tunnel: new Tunnel(config, { startTunnel }), openTunnel });
+		return startTunnel;
+	}
+
+	afterEach(async () => {
+		await service?.stop();
+		await fixture?.cleanup();
+	});
+
+	test('opens a quick tunnel with --tunnel although dev.tunnel is off', async () => {
+		const startTunnel = await setup('{ typecheck: false }', true);
+		await service.start();
+		await waitFor(() => service.tunnel.state === 'up');
+
+		expect(startTunnel).toHaveBeenCalledOnce();
+		expect(service.tunnel.url).toBe('https://foo.trycloudflare.com');
+	});
+
+	test('keeps the tunnel closed with --no-tunnel although dev.tunnel enables it, and t still opens it', async () => {
+		const startTunnel = await setup('{ typecheck: false, tunnel: true }', false);
+		await service.start();
+
+		expect(startTunnel).not.toHaveBeenCalled();
+		expect(service.tunnel.state).toBe('off');
+
+		await service.toggleTunnel();
+		expect(startTunnel).toHaveBeenCalledOnce();
+		expect(service.tunnel.state).toBe('up');
+	});
+
+	test('leaves the tunnel to dev.tunnel without the flag', async () => {
+		const off = await setup('{ typecheck: false }');
+		await service.start();
+		expect(off).not.toHaveBeenCalled();
+		await service.stop();
+		await fixture.cleanup();
+
+		const on = await setup('{ typecheck: false, tunnel: true }');
+		await service.start();
+		await waitFor(() => service.tunnel.state === 'up');
+		expect(on).toHaveBeenCalledOnce();
+	});
+
+	test('prints the URL of the tunnel in plain output, where there is no key to press', async () => {
+		await setup('{ typecheck: false }', true);
+		const stream = new PassThrough();
+		let output = '';
+		stream.on('data', (chunk: Buffer) => (output += chunk.toString()));
+		const renderer = createPlainRenderer(service, { stdout: stream, color: false });
+		void renderer.start();
+
+		await service.start();
+		await waitFor(() => output.includes('Tunnel ready at'));
+		renderer.stop();
+
+		expect(output).toContain('tunnel Tunnel ready at https://foo.trycloudflare.com');
 	});
 });

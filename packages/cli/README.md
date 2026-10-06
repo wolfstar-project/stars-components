@@ -70,7 +70,7 @@ console.log(config.entry, config.build.output);
 ## Commands
 
 ```sh
-stars dev [--no-tui] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
+stars dev [--no-tui] [--tunnel|--no-tunnel] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
 stars build [--config <file>] [--cwd <dir>]
 stars info [--json] [--config <file>] [--cwd <dir>]
 stars codegen [--check] [--json] [--config <file>] [--cwd <dir>]
@@ -369,7 +369,8 @@ Three `dev` options round out the dev loop (all documented in
   mode), `tsz` (the tsc-compatible checker, re-run after every build since it has no watch mode), or `auto` — the
   default, which uses `golar` when the project depends on it and `tsc` otherwise.
 - Pressing `t` opens and closes a `cloudflared` quick tunnel without configuration. `dev.tunnel: true` opens it at startup so Discord can reach the bot's interactions endpoint from the
-  internet; a string is an https URL you already serve, which the CLI only probes. `dev.tunnel.updateEndpoint` writes
+  internet, and so does `stars dev --tunnel` for one session, whatever `dev.tunnel` says (`--no-tunnel` keeps it closed at
+  start; `t` still opens it). With `--no-tui` the URL is printed on the `tunnel` channel; a string is an https URL you already serve, which the CLI only probes. `dev.tunnel.updateEndpoint` writes
   the URL to the Discord application, and is opt-in because it edits a live application.
 - `dev.logFile` (default `.stars/dev.log`) mirrors the session's logs to disk, so a run can be read back after the
   terminal UI is gone. Set it to `false` to disable it. It is truncated on every run; `dev.logs.dir` (for example
