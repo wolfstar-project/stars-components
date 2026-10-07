@@ -11,11 +11,17 @@ function host() {
 	return { hooks, registered, called };
 }
 
-function run(modules: StarsModule<any>[] | Record<string, unknown>, entries: [string, Record<string, unknown>?][], versions = {}) {
+function run(
+	modules: StarsModule<any>[] | Record<string, unknown>,
+	entries: [string, Record<string, unknown>?][],
+	versions = {},
+	moduleOptions: Record<string, unknown> = {}
+) {
 	const loaded = Array.isArray(modules) ? Object.fromEntries(modules.map((module) => [module.meta.name, module])) : modules;
 	const { hooks, registered, called } = host();
 	const config = {
 		root: '/app',
+		moduleOptions,
 		modules: entries.map(([specifier, options]) => ({ specifier, options: options ?? {} }))
 	} as unknown as ResolvedStarsConfig;
 	return {
@@ -64,6 +70,119 @@ describe('setupModules', () => {
 		);
 		await result;
 		expect(setup).toHaveBeenCalledExactlyOnceWith({ ttl: 60_000, prefix: 'x' }, expect.objectContaining({ root: '/app' }));
+	});
+
+	describe('meta.configKey', () => {
+		const tasks = (setup = vi.fn(), extra: Partial<StarsModule<any>> = {}) =>
+			defineModule<{ concurrency: number; bull: { host: string; port: number }; prefix?: string }>({
+				meta: { name: 'tasks', configKey: 'scheduledTasks' },
+				defaults: { concurrency: 1, bull: { host: 'localhost', port: 6379 } },
+				setup,
+				...extra
+			} as StarsModule<any>);
+
+		test('GIVEN a configKey THEN setup receives defaults, then the config key, then the inline options', async () => {
+			const setup = vi.fn();
+			const { result } = run(
+				[tasks(setup)],
+				[['tasks', { bull: { port: 1 }, prefix: 'inline' }]],
+				{},
+				{ scheduledTasks: { concurrency: 4, bull: { host: 'redis', port: 7000 }, prefix: 'key' } }
+			);
+			await result;
+			expect(setup).toHaveBeenCalledExactlyOnceWith({ concurrency: 4, bull: { host: 'redis', port: 1 }, prefix: 'inline' }, expect.anything());
+		});
+
+		test('GIVEN a configKey and no value in the config THEN setup receives the defaults and the inline options', async () => {
+			const setup = vi.fn();
+			await run([tasks(setup)], [['tasks', { concurrency: 2 }]]).result;
+			expect(setup).toHaveBeenCalledExactlyOnceWith({ concurrency: 2, bull: { host: 'localhost', port: 6379 } }, expect.anything());
+		});
+
+		test('GIVEN a value under a key no module declares THEN it is left alone', async () => {
+			const setup = vi.fn();
+			const { result } = run([defineModule({ meta: { name: 'plain' }, setup })], [['plain']], {}, { scheduledTasks: { concurrency: 9 } });
+			expect(await result).toMatchObject({ configKeys: [] });
+			expect(setup).toHaveBeenCalledExactlyOnceWith({}, expect.anything());
+		});
+
+		test('GIVEN a configKey THEN it is reported as claimed, once per module', async () => {
+			const other = defineModule({ meta: { name: 'other', configKey: 'other' } });
+			const { result } = run([tasks(), other], [['tasks'], ['other'], ['tasks']], {}, { other: {} });
+			expect(await result).toMatchObject({ modules: [{ name: 'tasks' }, { name: 'other' }], configKeys: ['scheduledTasks', 'other'] });
+		});
+
+		test('GIVEN two modules with the same configKey THEN it throws MODULE_INVALID naming both', async () => {
+			const rival = defineModule({ meta: { name: 'rival', configKey: 'scheduledTasks' } });
+			const { result } = run([tasks(), rival], [['tasks'], ['rival']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_INVALID', moduleName: 'rival' });
+			await expect(result).rejects.toThrow(/"tasks" and "rival" both declare the `configKey` "scheduledTasks"/);
+		});
+
+		test.each(['build', 'dev', 'modules', 'tsdown'])(
+			'GIVEN the built-in key %s as configKey THEN it throws MODULE_INVALID',
+			async (configKey) => {
+				const { result } = run([defineModule({ meta: { name: 'greedy', configKey } })], [['greedy']]);
+				await expect(result).rejects.toMatchObject({ code: 'MODULE_INVALID', moduleName: 'greedy' });
+				await expect(result).rejects.toThrow(/built-in key/);
+			}
+		);
+
+		test.each([
+			['an empty string', ''],
+			['a number', 1]
+		])('GIVEN %s as configKey THEN it throws MODULE_INVALID', async (_name, configKey) => {
+			const { result } = run([{ meta: { name: 'odd', configKey } } as unknown as StarsModule], [['odd']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_INVALID', moduleName: 'odd' });
+			await expect(result).rejects.toThrow(/non-empty string/);
+		});
+
+		test.each([
+			['an array', [], 'an array'],
+			['a string', 'redis', 'a string'],
+			['null', null, 'null']
+		])('GIVEN %s under the configKey THEN it throws MODULE_INVALID', async (_name, value, described) => {
+			const { result } = run([tasks()], [['tasks']], {}, { scheduledTasks: value });
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_INVALID', moduleName: 'tasks' });
+			await expect(result).rejects.toThrow(new RegExp(`must be an object, got ${described}`));
+		});
+
+		test('GIVEN a module installed as a dependency THEN its configKey is read, with no inline options', async () => {
+			const setup = vi.fn();
+			const parent = defineModule({ meta: { name: 'parent' }, dependencies: [tasks(setup)] });
+			const { result } = run([parent], [['parent']], {}, { scheduledTasks: { concurrency: 3 } });
+			expect(await result).toMatchObject({ configKeys: ['scheduledTasks'] });
+			expect(setup).toHaveBeenCalledExactlyOnceWith({ concurrency: 3, bull: { host: 'localhost', port: 6379 } }, expect.anything());
+		});
+
+		test('GIVEN ctx.installModule THEN the options passed take the inline slot over the config key', async () => {
+			const setup = vi.fn();
+			const parent = defineModule({ meta: { name: 'parent' }, setup: (_options, ctx) => ctx.installModule(tasks(setup), { concurrency: 8 }) });
+			const { result } = run([parent], [['parent']], {}, { scheduledTasks: { concurrency: 3, prefix: 'key' } });
+			await result;
+			expect(setup).toHaveBeenCalledExactlyOnceWith(
+				{ concurrency: 8, bull: { host: 'localhost', port: 6379 }, prefix: 'key' },
+				expect.anything()
+			);
+		});
+
+		test('GIVEN a module skipped because it is installed THEN its key is not read again', async () => {
+			const setup = vi.fn();
+			const { result } = run(
+				[tasks(setup)],
+				[
+					['tasks', { concurrency: 2 }],
+					['tasks', { concurrency: 9 }]
+				],
+				{},
+				{ scheduledTasks: { prefix: 'key' } }
+			);
+			await result;
+			expect(setup).toHaveBeenCalledExactlyOnceWith(
+				{ concurrency: 2, bull: { host: 'localhost', port: 6379 }, prefix: 'key' },
+				expect.anything()
+			);
+		});
 	});
 
 	test('GIVEN addPlugin and addImports THEN they are collected with the module name', async () => {

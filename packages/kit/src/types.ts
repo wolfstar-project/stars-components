@@ -9,7 +9,12 @@ export interface ModuleMeta {
 	/** The module's identity, used to install it once, to attribute errors and to report it. Usually the package name. */
 	name: string;
 	version?: string;
-	/** Reserved for reading the module's options from a `stars.config` key of this name. */
+	/**
+	 * A top-level `stars.config` key the module owns: what is written under it is merged over `defaults`, and the options
+	 * given inline (`[name, options]`, or `ctx.installModule`) over that. It must be a plain object, unique among the
+	 * installed modules and not a built-in key (`build`, `dev`, `modules`, …). To type it in `defineConfig`, augment
+	 * `StarsConfig`: `declare module '@wolfstar/schema' { interface StarsConfig { scheduledTasks?: Options } }`.
+	 */
 	configKey?: string;
 	/** Version ranges the module works with. A range is only checked when the host knows the version. */
 	compatibility?: {
