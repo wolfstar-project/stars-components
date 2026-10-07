@@ -9,7 +9,7 @@ import {
 	type APIPrimaryEntryPointCommandInteraction
 } from 'discord-api-types/v10';
 import type { ServerResponse } from 'node:http';
-import { Events, type ClientEventCommandContext } from '../ClientEvents.js';
+import { Events, type ClientEventAutocompleteContext, type ClientEventCommandContext } from '../ClientEvents.js';
 import { HttpCodes } from '../api/HttpCodes.js';
 import { isUserError } from '../errors/UserError.js';
 import {
@@ -20,6 +20,7 @@ import {
 } from '../interactions/index.js';
 import { handleError, makeInteraction } from '../interactions/utils/util.js';
 import { ErrorMessages } from '../utils/constants.js';
+import { runPreconditions } from '../utils/preconditions.js';
 import { Command } from './Command.js';
 import { CommandLoaderStrategy } from './CommandLoaderStrategy.js';
 import { CommandStoreRouter } from './CommandStoreRouter.js';
@@ -63,8 +64,32 @@ export class CommandStore extends Store<Command, 'commands'> {
 			return response.end(ErrorMessages.UnknownCommandHandler);
 		}
 
+		const kind = interaction.data.type === ApplicationCommandType.ChatInput ? 'chatInput' : 'contextMenu';
+		if (kind === 'chatInput') container.client.emit(Events.PreChatInputCommandRun, context);
+		else container.client.emit(Events.PreContextMenuCommandRun, context);
+
+		const checked = await Result.fromAsync(async () => {
+			const commandInteraction = makeInteraction(response, interaction);
+			const preconditions = await runPreconditions(command, kind, commandInteraction);
+			// Rethrown so that a denial takes the same route as a `UserError` thrown by the command itself.
+			if (preconditions.isErr()) throw preconditions.unwrapErr();
+
+			return commandInteraction;
+		});
+
+		if (checked.isErr()) {
+			const error = checked.unwrapErr();
+			this.#emitCommandFailure(error, context);
+			handleError(response, error);
+			container.client.emit(Events.CommandFinish, context);
+			return response;
+		}
+
+		if (kind === 'chatInput') container.client.emit(Events.ChatInputCommandAccepted, context);
+		else container.client.emit(Events.ContextMenuCommandAccepted, context);
+
 		container.client.emit(Events.CommandRun, context);
-		const result = await Result.fromAsync(() => this.#runCommandMethod(command, method, makeInteraction(response, interaction)));
+		const result = await Result.fromAsync(() => this.#runCommandMethod(command, method, checked.unwrap()));
 		result
 			.inspect((value) => container.client.emit(Events.CommandSuccess, context, value))
 			.inspectErr((error) => (this.#emitCommandFailure(error, context), handleError(response, error)));
@@ -101,18 +126,43 @@ export class CommandStore extends Store<Command, 'commands'> {
 		const context = { command, interaction, response };
 		const options = transformAutocompleteInteraction(interaction.data.resolved ?? {}, interaction.data.options);
 
+		const checked = await Result.fromAsync(async () => {
+			const autocompleteInteraction = makeInteraction(response, interaction);
+			const preconditions = await runPreconditions(command, 'autocomplete', autocompleteInteraction);
+			if (preconditions.isErr()) throw preconditions.unwrapErr();
+
+			return autocompleteInteraction;
+		});
+
+		if (checked.isErr()) {
+			this.#emitAutocompleteFailure(checked.unwrapErr(), context, response);
+			container.client.emit(Events.AutocompleteFinish, context);
+			return response;
+		}
+
+		container.client.emit(Events.AutocompleteAccepted, context);
 		container.client.emit(Events.AutocompleteRun, context);
-		const result = await Result.fromAsync(() => command.autocompleteRun(makeInteraction(response, interaction), options));
+		const result = await Result.fromAsync(() => command.autocompleteRun(checked.unwrap(), options));
 		result
 			.inspect((value) => container.client.emit(Events.AutocompleteSuccess, context, value))
-			.inspectErr((error) => {
-				if (isUserError(error)) container.client.emit(Events.AutocompleteDenied, error, context);
-				else container.client.emit(Events.AutocompleteError, error, context);
-				handleError(response, error);
-			});
+			.inspectErr((error) => this.#emitAutocompleteFailure(error, context, response));
 
 		container.client.emit(Events.AutocompleteFinish, context);
 		return response;
+	}
+
+	/**
+	 * Emits `autocompleteDenied` for a {@link UserError} and `autocompleteError` otherwise, then replies as for any
+	 * other thrown error.
+	 *
+	 * @param error - The value that was thrown.
+	 * @param context - The context of the run.
+	 * @param response - The server response object.
+	 */
+	#emitAutocompleteFailure(error: unknown, context: ClientEventAutocompleteContext, response: ServerResponse): void {
+		if (isUserError(error)) container.client.emit(Events.AutocompleteDenied, error, context);
+		else container.client.emit(Events.AutocompleteError, error, context);
+		handleError(response, error);
 	}
 
 	/**
