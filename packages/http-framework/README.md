@@ -663,6 +663,8 @@ const config = await loadStarsConfig({ cwd: process.cwd() });
 console.log(config.entry, config.build.output);
 ```
 
+`loadStarsConfig` only validates what the schema owns. A top-level key that is not built in is kept as `config.moduleOptions` (it may be the options of a module, `meta.configKey`), not rejected, so a misspelled key is reported by the `stars` commands once the modules are set up, not by `loadStarsConfig`. A tool that loads the configuration on its own and wants that check calls `assertModuleOptionsClaimed(config, claimedKeys)` from `@wolfstar/schema` (also exported by `@wolfstar/http-framework/config`) with the `meta.configKey`s of the modules it installed, or `[]` when it installs none.
+
 Invalid options raise a `ConfigError` with a stable `code`, the offending option `path`, the `file` it came from, and
 an actionable `hint`. See the [`@wolfstar/cli` README](../cli#configuration) for the full option reference and how the
 `stars` commands (`dev`, `build`, `info`, `codegen`, `prepare`, `commands`) use it.
