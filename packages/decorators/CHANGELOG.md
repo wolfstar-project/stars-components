@@ -1,5 +1,11 @@
 # @wolfstar/decorators
 
+## 0.1.2
+
+### Patch Changes
+
+- [#298](https://github.com/wolfstar-project/stars-components/pull/298) [`4391191`](https://github.com/wolfstar-project/stars-components/commit/4391191deaf0d35ef729f6df3b6a1f954d3d2700) - Document that the `PreconditionError` thrown by `RequiresUserPermissions` and `RequiresClientPermissions` is emitted as `chatInputCommandDenied`, `contextMenuCommandDenied`, or `interactionHandlerDenied` with `@wolfstar/http-framework` 6.3.0, instead of `commandError`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.1.1
 
 ### Patch Changes

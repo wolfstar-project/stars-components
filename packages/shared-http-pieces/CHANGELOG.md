@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.11
+
+### Patch Changes
+
+- [#298](https://github.com/wolfstar-project/stars-components/pull/298) [`4391191`](https://github.com/wolfstar-project/stars-components/commit/4391191deaf0d35ef729f6df3b6a1f954d3d2700) - Stop reporting a `UserError` to Sentry from the `error` listener. With `@wolfstar/http-framework` 6.3.0 a `UserError` is also emitted as a `*Denied` event, and the `commandError`, `autocompleteError`, and `interactionHandlerError` listeners no longer receive it. Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`d09da7d`](https://github.com/wolfstar-project/stars-components/commit/d09da7d89aecbd263ac9d678adbf9adeac5dbf16), [`4391191`](https://github.com/wolfstar-project/stars-components/commit/4391191deaf0d35ef729f6df3b6a1f954d3d2700)]:
+    - @wolfstar/http-framework@6.3.0
+
 ## 2.0.10
 
 ### Patch Changes

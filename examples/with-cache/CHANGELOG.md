@@ -1,5 +1,12 @@
 # with-cache
 
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies [[`d09da7d`](https://github.com/wolfstar-project/stars-components/commit/d09da7d89aecbd263ac9d678adbf9adeac5dbf16), [`4391191`](https://github.com/wolfstar-project/stars-components/commit/4391191deaf0d35ef729f6df3b6a1f954d3d2700)]:
+    - @wolfstar/http-framework@6.3.0
+
 ## 0.0.9
 
 ### Patch Changes

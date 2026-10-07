@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/decorators",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Useful TypeScript decorators for @wolfstar/http-framework",
 	"keywords": [
 		"decorators",
