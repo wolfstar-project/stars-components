@@ -264,12 +264,15 @@ describe('Precondition', () => {
 			const precondition = vi.fn(deny('Owner'));
 			addPiece('Global', { position: 1, chatInputRun: vi.fn(() => err(new PreconditionError({ precondition: 'Global' }))) });
 			const { store, command } = makeStore([precondition]);
-			(command as unknown as { autocompleteRun: () => void }).autocompleteRun = vi.fn();
+			const autocompleteRun = vi.fn();
+			(command as unknown as { autocompleteRun: () => void }).autocompleteRun = autocompleteRun;
 			vi.spyOn(store.router, 'getChatInput').mockReturnValue(command);
 			const spies = listen(client, ['autocompleteDenied', 'autocompleteError']);
 
 			await store.runApplicationCommandAutocomplete(makeResponse(), ApplicationCommandAutocompleteInteractionData);
 
+			// Without this the test would also pass if the run failed before reaching the autocomplete.
+			expect(autocompleteRun).toHaveBeenCalledOnce();
 			expect(precondition).not.toHaveBeenCalled();
 			expect(spies.autocompleteDenied).not.toHaveBeenCalled();
 			expect(spies.autocompleteError).not.toHaveBeenCalled();
