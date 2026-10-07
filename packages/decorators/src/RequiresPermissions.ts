@@ -26,8 +26,9 @@ function getUserPermissions(interaction: BaseInteraction): bigint | null {
  * the interaction was sent from, as reported by the interaction's `app_permissions` field.
  *
  * @remarks When the fallback is omitted, a {@linkcode PreconditionError} identified by
- * {@linkcode Identifiers.PreconditionClientPermissions} is thrown, which the client emits as `commandError` (or
- * `interactionHandlerError`) for a `Listener` to turn into a user-facing reply.
+ * {@linkcode Identifiers.PreconditionClientPermissions} is thrown, which the client emits as `chatInputCommandDenied` or
+ * `contextMenuCommandDenied` (or `interactionHandlerDenied`), not as `commandError`, for a `Listener` to turn into a
+ * user-facing reply.
  * @param permissions The permissions the application must have.
  * @returns A method decorator.
  * @example
@@ -73,8 +74,9 @@ export function RequiresClientPermissions(...permissions: PermissionResolvable[]
  * @remarks Interactions received outside of a guild carry no member permissions, so the check passes for them. Pair
  * this decorator with {@linkcode RequiresGuildContext} when the method must also be guild-only.
  * @remarks When the fallback is omitted, a {@linkcode PreconditionError} identified by
- * {@linkcode Identifiers.PreconditionUserPermissions} is thrown, which the client emits as `commandError` (or
- * `interactionHandlerError`) for a `Listener` to turn into a user-facing reply.
+ * {@linkcode Identifiers.PreconditionUserPermissions} is thrown, which the client emits as `chatInputCommandDenied` or
+ * `contextMenuCommandDenied` (or `interactionHandlerDenied`), not as `commandError`, for a `Listener` to turn into a
+ * user-facing reply.
  * @param permissions The permissions the invoking user must have.
  * @returns A method decorator.
  * @example

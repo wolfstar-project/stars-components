@@ -9,8 +9,9 @@ import {
 	type APIPrimaryEntryPointCommandInteraction
 } from 'discord-api-types/v10';
 import type { ServerResponse } from 'node:http';
-import { Events } from '../ClientEvents.js';
+import { Events, type ClientEventCommandContext } from '../ClientEvents.js';
 import { HttpCodes } from '../api/HttpCodes.js';
+import { isUserError } from '../errors/UserError.js';
 import {
 	transformAutocompleteInteraction,
 	transformInteraction,
@@ -66,7 +67,7 @@ export class CommandStore extends Store<Command, 'commands'> {
 		const result = await Result.fromAsync(() => this.#runCommandMethod(command, method, makeInteraction(response, interaction)));
 		result
 			.inspect((value) => container.client.emit(Events.CommandSuccess, context, value))
-			.inspectErr((error) => (container.client.emit(Events.CommandError, error, context), handleError(response, error)));
+			.inspectErr((error) => (this.#emitCommandFailure(error, context), handleError(response, error)));
 
 		container.client.emit(Events.CommandFinish, context);
 		return response;
@@ -104,10 +105,30 @@ export class CommandStore extends Store<Command, 'commands'> {
 		const result = await Result.fromAsync(() => command.autocompleteRun(makeInteraction(response, interaction), options));
 		result
 			.inspect((value) => container.client.emit(Events.AutocompleteSuccess, context, value))
-			.inspectErr((error) => (container.client.emit(Events.AutocompleteError, error, context), handleError(response, error)));
+			.inspectErr((error) => {
+				if (isUserError(error)) container.client.emit(Events.AutocompleteDenied, error, context);
+				else container.client.emit(Events.AutocompleteError, error, context);
+				handleError(response, error);
+			});
 
 		container.client.emit(Events.AutocompleteFinish, context);
 		return response;
+	}
+
+	/**
+	 * Emits the event matching a failed command run: a `*Denied` one for a {@link UserError}, `commandError` otherwise.
+	 *
+	 * @param error - The value the command threw.
+	 * @param context - The context of the run.
+	 */
+	#emitCommandFailure(error: unknown, context: ClientEventCommandContext): void {
+		if (!isUserError(error)) {
+			container.client.emit(Events.CommandError, error, context);
+		} else if (context.interaction.data.type === ApplicationCommandType.ChatInput) {
+			container.client.emit(Events.ChatInputCommandDenied, error, context);
+		} else {
+			container.client.emit(Events.ContextMenuCommandDenied, error, context);
+		}
 	}
 
 	/**
