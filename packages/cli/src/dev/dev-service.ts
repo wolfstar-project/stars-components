@@ -123,6 +123,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	#deployed: CommandSnapshot | null = null;
 	/** A refresh of the commands asked for while the bot was not listening; sent once it is. */
 	#refreshPending = false;
+	/** Restarts waiting for the running build to end, see {@link DevService.#buildSettled}. */
+	#buildWaiters: Array<() => void> = [];
 
 	public constructor(
 		public readonly config: ResolvedStarsConfig,
@@ -140,6 +142,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
+			// A restart armed by the previous build must not fire while this one rewrites the output.
+			this.#clearRestartTimer();
 			this.#setBuild('building');
 			void this.#startHook('build:before', this.config);
 		});
@@ -242,6 +246,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			if (this.#stopped) return;
 			await this.#queueHook('dev:restart', reason, this.config);
 			if (this.#stopped) return;
+			if (!(await this.#buildSettled(reason))) return;
 			if (reason === 'manual' || reason === 'crash') {
 				this.#progress = { fraction: 0, message: 'restarting the bot', startedAt: Date.now(), readyMs: null };
 			}
@@ -254,7 +259,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 				this.log('stars', 'info', `Starting (${describeReason(reason)})`);
 			}
 
-			if (this.#stopped) return;
+			// Stopping the bot takes a while, and a build may have begun meanwhile.
+			if (this.#stopped || !(await this.#buildSettled(reason))) return;
 			this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 			this.#health = 'unknown';
 			this.#paused = false;
@@ -282,14 +288,52 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public answerPrompt(accept: boolean): void {
 		const prompt = this.#prompt;
 		if (prompt === null) return;
+		// The question stays open: the answer is not given up, only the redeploy is not safe yet.
+		if (accept && this.#refreshBlocked()) return;
 		this.#prompt = null;
 		if (accept) this.refreshCommands();
 		else this.log('stars', 'info', 'Kept the deployed commands as they are', { channel: 'commands' });
 		this.#emitStatus();
 	}
 
+	/**
+	 * Whether a refresh has to wait, saying why. While a build rewrites the output a bot that starts loads a part of the
+	 * commands, and registering that would unregister the rest from Discord.
+	 */
+	#refreshBlocked(): boolean {
+		if (this.#build !== 'building') return false;
+		this.log('stars', 'warn', 'A build is running, the commands of the bot may be incomplete: answer again once it has finished', {
+			channel: 'commands'
+		});
+		return true;
+	}
+
+	/**
+	 * Resolves once no build is running, `false` when the restart is not worth doing any more: the session stopped, or
+	 * an automatic restart (`build`, `initial`) had to wait for a build, whose own end already decides what happens next
+	 * (a restart if it succeeded, nothing if it failed: the output would be the previous, possibly half written one).
+	 * A manual restart or one after a crash is still what was asked for.
+	 */
+	async #buildSettled(reason: RestartReason): Promise<boolean> {
+		const automatic = reason === 'build' || reason === 'initial';
+		let waited = false;
+		while (this.#build === 'building' && !this.#stopped) {
+			waited = true;
+			await new Promise<void>((resolve) => this.#buildWaiters.push(resolve));
+		}
+
+		return !this.#stopped && !(waited && automatic);
+	}
+
+	#releaseBuildWaiters(): void {
+		const waiters = this.#buildWaiters;
+		this.#buildWaiters = [];
+		for (const resolve of waiters) resolve();
+	}
+
 	/** Asks the bot to register its commands with Discord again. The bot answers on the `commands` channel. */
 	public refreshCommands(): void {
+		if (this.#refreshBlocked()) return;
 		// A bot that is stopped or restarting has no client to register anything with: the refresh waits for it to listen.
 		if (!this.#ready) {
 			this.#refreshPending = true;
@@ -323,6 +367,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public async stop(): Promise<void> {
 		this.#stopped = true;
 		this.#clearRestartTimer();
+		// A restart waiting for a build must not hold the queue that closes the session.
+		this.#releaseBuildWaiters();
 		if (this.#healthTimer) clearInterval(this.#healthTimer);
 		this.#healthTimer = null;
 		await this.#enqueue(async () => {
@@ -342,6 +388,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	public kill(): void {
 		this.#stopped = true;
 		this.#clearRestartTimer();
+		this.#releaseBuildWaiters();
 		this.supervisor.kill();
 		void this.typechecker.close();
 		void this.tunnel.close();
@@ -455,6 +502,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	#setBuild(state: BuildState): void {
 		if (this.#build === state) return;
 		this.#build = state;
+		if (state !== 'building') this.#releaseBuildWaiters();
 		this.#emitStatus();
 	}
 
@@ -584,8 +632,10 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	}
 
 	/**
-	 * Compares the commands the bot registers with the ones it reported before. The first report of a session is the
-	 * baseline; a later one that differs is acted on as `dev.commands.refresh` says.
+	 * Compares the commands the bot registers with the ones Discord is assumed to have. The first report of a session is
+	 * the baseline; a later one that differs from the report before is acted on as `dev.commands.refresh` says, with
+	 * what differs from the deployed commands rather than from that report: a restart that caught the build half written
+	 * reports a part of the commands, and the next one reports them all again, which is no change at all.
 	 */
 	#onCommands(snapshot: CommandSnapshot): void {
 		const previous = this.#commands;
@@ -600,8 +650,19 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			return;
 		}
 
-		const changes = diffSnapshots(previous, snapshot);
-		if (changes.length === 0) return;
+		// The same report again (a restart for a file that is not a command) has nothing new to say.
+		if (diffSnapshots(previous, snapshot).length === 0) return;
+
+		const changes = diffSnapshots(this.#deployed ?? previous, snapshot);
+		if (changes.length === 0) {
+			if (this.#prompt !== null) {
+				this.#prompt = null;
+				this.log('stars', 'info', 'The commands match the deployed ones again', { channel: 'commands' });
+				this.#emitStatus();
+			}
+
+			return;
+		}
 
 		const detail = changes.map((change) => `${change.kind} ${describeCommand(change)}`);
 		const mode = this.config.dev.commands?.refresh ?? 'prompt';
@@ -619,8 +680,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			return;
 		}
 
-		// A second change before the first was answered asks once, about all of it.
-		this.#prompt = { kind: 'commands', changes: mergeChanges(this.#prompt?.changes ?? [], changes) };
+		// A second change before the first was answered asks once, about all of it: `changes` already holds both.
+		this.#prompt = { kind: 'commands', changes };
 		this.log('stars', 'info', 'Commands updated', { channel: 'commands', detail });
 		this.#emitStatus();
 	}
@@ -704,14 +765,6 @@ const BRIDGE_LEVELS = new Set<string>(['trace', 'debug', 'info', 'success', 'war
 
 function toLogLevel(level: string): LogLevel {
 	return BRIDGE_LEVELS.has(level) ? (level as LogLevel) : 'info';
-}
-
-/** The latest change of each command wins: `added` then `changed` is still one line of the prompt. */
-function mergeChanges(previous: readonly CommandChange[], next: readonly CommandChange[]): CommandChange[] {
-	const key = (change: CommandChange) => `${change.guild ?? ''}:${change.type}:${change.name}`;
-	const merged = new Map(previous.map((change) => [key(change), change]));
-	for (const change of next) merged.set(key(change), change);
-	return [...merged.values()];
 }
 
 export function describeReason(reason: RestartReason): string {
