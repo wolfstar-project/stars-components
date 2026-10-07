@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType } from 'discord-api-types/v10';
-import { ArgumentError, Identifiers, PreconditionError, UserError } from '../../../src/index.js';
+import { ArgumentError, Identifiers, PreconditionError, UserError, isUserError } from '../../../src/index.js';
 
 describe('UserError', () => {
 	test('GIVEN identifier only THEN sets defaults', () => {
@@ -72,5 +72,32 @@ describe('PreconditionError', () => {
 		expect(error.identifier).toBe(Identifiers.PreconditionGuildIds);
 		expect(error.message).toBe('Not available here');
 		expect(error.context).toEqual({ guildIds: ['737141877803057244'] });
+	});
+});
+
+describe('isUserError', () => {
+	test('GIVEN a UserError or one of its subclasses THEN returns true', () => {
+		expect(isUserError(new UserError({ identifier: Identifiers.ArgumentMissing }))).toBe(true);
+		expect(isUserError(new ArgumentError({ argument: 'amount', parameter: 0 }))).toBe(true);
+		expect(isUserError(new PreconditionError({ precondition: 'GuildIds' }))).toBe(true);
+	});
+
+	test('GIVEN an Error from another copy of the package THEN it is recognised by its shape', () => {
+		class ForeignUserError extends Error {
+			public readonly identifier = 'foreign';
+			public readonly context = null;
+		}
+
+		expect(new ForeignUserError()).not.toBeInstanceOf(UserError);
+		expect(isUserError(new ForeignUserError())).toBe(true);
+	});
+
+	test('GIVEN anything else THEN returns false', () => {
+		expect(isUserError(new Error('boom'))).toBe(false);
+		expect(isUserError(new TypeError('boom'))).toBe(false);
+		expect(isUserError(Object.assign(new Error('boom'), { identifier: 1, context: null }))).toBe(false);
+		expect(isUserError({ identifier: 'foo', context: null })).toBe(false);
+		expect(isUserError('UserError')).toBe(false);
+		expect(isUserError(null)).toBe(false);
 	});
 });

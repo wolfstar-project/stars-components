@@ -1,5 +1,5 @@
 import { captureException } from '@sentry/node';
-import { Listener, container, type ClientEvents } from '@wolfstar/http-framework';
+import { Listener, container, isUserError, type ClientEvents } from '@wolfstar/http-framework';
 import { isSentryInitialized } from '../lib/sentry.js';
 
 export class SharedListener extends Listener {
@@ -8,6 +8,9 @@ export class SharedListener extends Listener {
 	}
 
 	public run(error: unknown) {
+		// A `UserError` is an expected failure that is emitted as a `*Denied` event too, not a bug to report.
+		if (isUserError(error)) return;
+
 		captureException(error, (scope) => scope.setLevel('error').setTag('event', this.name));
 	}
 }

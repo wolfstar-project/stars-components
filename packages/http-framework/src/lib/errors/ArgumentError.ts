@@ -4,6 +4,10 @@ import { UserError } from './UserError.js';
 /**
  * Errors thrown while resolving the options (arguments) of an interaction.
  *
+ * @remarks The framework never throws this error by itself: Discord validates the type and the bounds of the options
+ * before sending the interaction. It is meant to be thrown from a command that rejects a value, and, being a
+ * {@link UserError}, it is emitted as a `*Denied` event.
+ *
  * @property name This will be `'ArgumentError'` and can be used to distinguish the type of error when any error gets thrown.
  * @since 3.2.0
  * @example

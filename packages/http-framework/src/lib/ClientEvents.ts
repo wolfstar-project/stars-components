@@ -6,6 +6,7 @@ import type {
 	APIModalSubmitInteraction
 } from 'discord-api-types/v10';
 import type { ServerResponse } from 'node:http';
+import type { UserError } from './errors/UserError.js';
 import type { Command } from './structures/Command.js';
 import type { InteractionHandler } from './structures/InteractionHandler.js';
 import type { PluginHook } from './types/Enums.js';
@@ -51,16 +52,20 @@ export enum Events {
 	CommandRun = 'commandRun',
 	CommandSuccess = 'commandSuccess',
 	CommandError = 'commandError',
+	ChatInputCommandDenied = 'chatInputCommandDenied',
+	ContextMenuCommandDenied = 'contextMenuCommandDenied',
 	CommandFinish = 'commandFinish',
 	AutocompleteRun = 'autocompleteRun',
 	AutocompleteSuccess = 'autocompleteSuccess',
 	AutocompleteError = 'autocompleteError',
+	AutocompleteDenied = 'autocompleteDenied',
 	AutocompleteFinish = 'autocompleteFinish',
 	InteractionHandlerNameInvalid = 'interactionHandlerNameInvalid',
 	InteractionHandlerNameUnknown = 'interactionHandlerNameUnknown',
 	InteractionHandlerRun = 'interactionHandlerRun',
 	InteractionHandlerSuccess = 'interactionHandlerSuccess',
 	InteractionHandlerError = 'interactionHandlerError',
+	InteractionHandlerDenied = 'interactionHandlerDenied',
 	InteractionHandlerFinish = 'interactionHandlerFinish',
 	HmrStart = 'hmrStart',
 	HmrStop = 'hmrStop',
@@ -90,17 +95,52 @@ export interface ClientEvents {
 	commandMethodUnknown: [context: ClientEventCommandContext];
 	commandRun: [context: ClientEventCommandContext];
 	commandSuccess: [context: ClientEventCommandContext, value: unknown];
+	/**
+	 * Emitted when a command throws something that is not a {@link UserError}. A {@link UserError} is emitted as
+	 * {@link ClientEvents.chatInputCommandDenied} or {@link ClientEvents.contextMenuCommandDenied} instead.
+	 *
+	 * @remarks Since 6.3.0 a thrown {@link UserError} (such as the `PreconditionError` of `@wolfstar/decorators`) no
+	 * longer reaches this event.
+	 */
 	commandError: [error: unknown, context: ClientEventCommandContext];
+	/**
+	 * Emitted when a chat input command throws a {@link UserError}, an expected failure that is meant to be shown to the
+	 * user. The `error` event is still emitted, and the HTTP response is produced as for any other thrown error
+	 * (`httpReplyOnError`).
+	 *
+	 * @since 6.3.0
+	 */
+	chatInputCommandDenied: [error: UserError, context: ClientEventCommandContext];
+	/**
+	 * Emitted when a user or message context menu command throws a {@link UserError}. See
+	 * {@link ClientEvents.chatInputCommandDenied}.
+	 *
+	 * @since 6.3.0
+	 */
+	contextMenuCommandDenied: [error: UserError, context: ClientEventCommandContext];
 	commandFinish: [context: ClientEventCommandContext];
 	autocompleteRun: [context: ClientEventAutocompleteContext];
 	autocompleteSuccess: [context: ClientEventAutocompleteContext, value: unknown];
 	autocompleteError: [error: unknown, context: ClientEventAutocompleteContext];
+	/**
+	 * Emitted when an autocomplete handler throws a {@link UserError}, instead of {@link ClientEvents.autocompleteError}.
+	 *
+	 * @since 6.3.0
+	 */
+	autocompleteDenied: [error: UserError, context: ClientEventAutocompleteContext];
 	autocompleteFinish: [context: ClientEventAutocompleteContext];
 	interactionHandlerNameInvalid: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: ServerResponse];
 	interactionHandlerNameUnknown: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: ServerResponse];
 	interactionHandlerRun: [context: ClientEventInteractionHandlerContext];
 	interactionHandlerSuccess: [context: ClientEventInteractionHandlerContext, value: unknown];
 	interactionHandlerError: [error: unknown, context: ClientEventInteractionHandlerContext];
+	/**
+	 * Emitted when an interaction handler throws a {@link UserError}, instead of
+	 * {@link ClientEvents.interactionHandlerError}.
+	 *
+	 * @since 6.3.0
+	 */
+	interactionHandlerDenied: [error: UserError, context: ClientEventInteractionHandlerContext];
 	interactionHandlerFinish: [context: ClientEventInteractionHandlerContext];
 	/**
 	 * Emitted when the Hot Module Reloader starts watching, with the list of watched store paths.

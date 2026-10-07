@@ -103,16 +103,17 @@ export class UserCommand extends Command {
 
 When the check fails, a `PreconditionError` is thrown, identified by `Identifiers.PreconditionUserPermissions` or
 `Identifiers.PreconditionClientPermissions`, with `context: { missing, missingNames }` describing the missing
-permissions. Errors thrown from a command are emitted as `commandError` (and as `interactionHandlerError` for
-interaction handlers), which is the idiomatic place to turn them into a user-facing reply:
+permissions. A `PreconditionError` is a `UserError`, so the client emits it as `chatInputCommandDenied` or
+`contextMenuCommandDenied` (and as `interactionHandlerDenied` for interaction handlers) instead of `commandError`, which
+is the idiomatic place to turn it into a user-facing reply. `commandError` only receives unexpected errors:
 
 ```typescript
 import { ApplyOptions } from '@wolfstar/decorators';
-import { Identifiers, Listener, PreconditionError, type ClientEventCommandContext } from '@wolfstar/http-framework';
+import { Identifiers, Listener, PreconditionError, type ClientEventCommandContext, type UserError } from '@wolfstar/http-framework';
 
-@ApplyOptions<Listener.Options>({ emitter: 'client', event: 'commandError' })
+@ApplyOptions<Listener.Options>({ emitter: 'client', event: 'chatInputCommandDenied' })
 export class UserListener extends Listener {
-	public run(error: unknown, context: ClientEventCommandContext) {
+	public run(error: UserError, context: ClientEventCommandContext) {
 		if (
 			error instanceof PreconditionError &&
 			(error.identifier === Identifiers.PreconditionUserPermissions || error.identifier === Identifiers.PreconditionClientPermissions)
@@ -126,6 +127,8 @@ export class UserListener extends Listener {
 
 Notes on the semantics:
 
+- Before `@wolfstar/http-framework` 6.3.0 this error reached `commandError`. A listener on that event that handles
+  `PreconditionError` must move to the `*Denied` events (see the framework's README).
 - Members with `Administrator` implicitly satisfy every check.
 - `RequiresUserPermissions` passes for interactions received outside of a guild, since there are no guild permissions to
   check. Combine it with `RequiresGuildContext` when the method must be guild-only.

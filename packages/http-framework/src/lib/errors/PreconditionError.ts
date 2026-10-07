@@ -5,6 +5,10 @@ import { UserError } from './UserError.js';
  * handler is executed, such as the guild restrictions applied by
  * {@link RestrictGuildIds}.
  *
+ * @remarks Being a {@link UserError}, it is emitted as a `*Denied` event when thrown from a command, an autocomplete
+ * handler, or an interaction handler, and not as `commandError`. The framework has no precondition store: the
+ * decorators of `@wolfstar/decorators` are what throws it.
+ *
  * @property name This will be `'PreconditionError'` and can be used to distinguish the type of error when any error gets thrown.
  * @since 3.2.0
  * @example

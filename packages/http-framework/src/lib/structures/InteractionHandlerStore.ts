@@ -4,6 +4,7 @@ import type { APIMessageComponentInteraction, APIModalSubmitInteraction } from '
 import type { ServerResponse } from 'node:http';
 import { Events } from '../ClientEvents.js';
 import { HttpCodes } from '../api/HttpCodes.js';
+import { isUserError } from '../errors/UserError.js';
 import { handleError, makeInteraction } from '../interactions/utils/util.js';
 import { ErrorMessages } from '../utils/constants.js';
 import { InteractionHandler } from './InteractionHandler.js';
@@ -36,7 +37,11 @@ export class InteractionHandlerStore extends Store<InteractionHandler, 'interact
 		const result = await Result.fromAsync(() => handler.run(makeInteraction(response, interaction), parsed.content));
 		result
 			.inspect((value) => container.client.emit(Events.InteractionHandlerSuccess, context, value))
-			.inspectErr((error) => (container.client.emit(Events.InteractionHandlerError, error, context), handleError(response, error)));
+			.inspectErr((error) => {
+				if (isUserError(error)) container.client.emit(Events.InteractionHandlerDenied, error, context);
+				else container.client.emit(Events.InteractionHandlerError, error, context);
+				handleError(response, error);
+			});
 
 		container.client.emit(Events.InteractionHandlerFinish, context);
 		return response;

@@ -273,19 +273,54 @@ client.on(Events.CommandError, (error, context) => {
 | `Events.CommandRun`                    | `commandRun`                    | `context`                                     |
 | `Events.CommandSuccess`                | `commandSuccess`                | `context, value: unknown`                     |
 | `Events.CommandError`                  | `commandError`                  | `error: unknown, context`                     |
+| `Events.ChatInputCommandDenied`        | `chatInputCommandDenied`        | `error: UserError, context`                   |
+| `Events.ContextMenuCommandDenied`      | `contextMenuCommandDenied`      | `error: UserError, context`                   |
 | `Events.CommandFinish`                 | `commandFinish`                 | `context`                                     |
 | `Events.AutocompleteRun`               | `autocompleteRun`               | `context`                                     |
 | `Events.AutocompleteSuccess`           | `autocompleteSuccess`           | `context, value: unknown`                     |
 | `Events.AutocompleteError`             | `autocompleteError`             | `error: unknown, context`                     |
+| `Events.AutocompleteDenied`            | `autocompleteDenied`            | `error: UserError, context`                   |
 | `Events.AutocompleteFinish`            | `autocompleteFinish`            | `context`                                     |
 | `Events.InteractionHandlerNameInvalid` | `interactionHandlerNameInvalid` | `interaction, response`                       |
 | `Events.InteractionHandlerNameUnknown` | `interactionHandlerNameUnknown` | `interaction, response`                       |
 | `Events.InteractionHandlerRun`         | `interactionHandlerRun`         | `context`                                     |
 | `Events.InteractionHandlerSuccess`     | `interactionHandlerSuccess`     | `context, value: unknown`                     |
 | `Events.InteractionHandlerError`       | `interactionHandlerError`       | `error: unknown, context`                     |
+| `Events.InteractionHandlerDenied`      | `interactionHandlerDenied`      | `error: UserError, context`                   |
 | `Events.InteractionHandlerFinish`      | `interactionHandlerFinish`      | `context`                                     |
 
 The Hot Module Reloading events are listed in [their own section](#hot-module-reloading).
+
+#### Expected errors: `*Denied` events
+
+When a command, an autocomplete handler, or an interaction handler throws a `UserError` (or a subclass such as
+`PreconditionError` and `ArgumentError`), the failure is an expected one, meant to be shown to the user. The client emits
+it as `chatInputCommandDenied` or `contextMenuCommandDenied` (commands, by the type of the command), `autocompleteDenied`,
+or `interactionHandlerDenied` instead of `commandError`, `autocompleteError`, or `interactionHandlerError`. Anything that
+is not a `UserError` keeps going to the `*Error` events, so a listener that reports bugs, such as the Sentry one of
+`@wolfstar/shared-http-pieces`, no longer sees the expected ones.
+
+```typescript
+import { Events, Listener, type ClientEventCommandContext, type UserError } from '@wolfstar/http-framework';
+
+export class UserListener extends Listener {
+	public constructor(context: Listener.LoaderContext) {
+		super(context, { event: Events.ChatInputCommandDenied });
+	}
+
+	public run(error: UserError, context: ClientEventCommandContext) {
+		this.container.logger.info(`${context.command.name} denied: ${error.identifier}`);
+	}
+}
+```
+
+The check is `isUserError(error)`, exported for the same use: it accepts `instanceof UserError`, and also an `Error` with a
+string `identifier` and a `context` property, since a bundle that inlines the framework has its own `UserError` class.
+The `error` event and the HTTP response are not affected: both behave as for any other thrown error.
+
+> [!WARNING]
+> Before 6.3.0 a thrown `UserError` was emitted as `commandError` (or `autocompleteError` / `interactionHandlerError`).
+> A listener on those events that handles `UserError` or `PreconditionError` has to move to the `*Denied` events.
 
 Listeners declared as pieces can use the enum too:
 
