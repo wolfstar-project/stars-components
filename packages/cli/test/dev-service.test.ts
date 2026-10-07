@@ -266,6 +266,56 @@ describe('DevService', () => {
 		builder.emit('start');
 		expect(service.status.progress).toMatchObject({ fraction: 0, readyMs: null });
 	});
+	describe('restarts during a build', () => {
+		const outcome: BuildOutcome = { ok: true, durationMs: 1, message: null };
+		const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+		test('never start the bot while the build is still writing its output', async () => {
+			await setup(KEEPALIVE_SCRIPT);
+			const start = vi.spyOn(service.supervisor, 'start').mockImplementation(() => {});
+			await service.start();
+
+			// A restart armed by one build must not fire in the middle of the next one.
+			builder.succeed();
+			builder.emit('start');
+			await pause(60);
+			expect(start).not.toHaveBeenCalled();
+
+			// Nor does one that is asked for: it waits for the build to finish.
+			const manual = service.restart('manual');
+			await pause(30);
+			expect(start).not.toHaveBeenCalled();
+			builder.emit('success', outcome);
+			await manual;
+			expect(start).toHaveBeenCalled();
+		});
+
+		test('drop a restart the build it waited for failed to make worth doing', async () => {
+			await setup(KEEPALIVE_SCRIPT);
+			const start = vi.spyOn(service.supervisor, 'start').mockImplementation(() => {});
+			await service.start();
+
+			builder.emit('start');
+			const pending = service.restart('build');
+			await pause(30);
+			builder.emit('failure', { ok: false, durationMs: 1, message: 'boom' });
+			await pending;
+			await pause(60);
+			expect(start).not.toHaveBeenCalled();
+		});
+
+		test('stopping does not wait for a build that never ends', async () => {
+			await setup(KEEPALIVE_SCRIPT);
+			vi.spyOn(service.supervisor, 'start').mockImplementation(() => {});
+			await service.start();
+			builder.emit('start');
+			const pending = service.restart('manual');
+			await service.stop();
+			await pending;
+			expect(builder.closed).toBe(true);
+		});
+	});
+
 	describe('bridge', () => {
 		/** As `stars dev` prints it: relative to the project, with the separators of the platform. */
 		const PING = join('src', 'commands', 'ping.js');
@@ -345,11 +395,12 @@ describe('DevService', () => {
 			expect(service.status.prompt).toBeNull();
 			expect(last('commands')).toMatchObject({ level: 'warn', detail: expect.arrayContaining(['changed ping']) });
 
+			// What counts is the difference with what Discord has, not with the report before.
 			service.promptable = true;
-			commands('Ping');
+			commands('Pang');
 			expect(service.status.prompt).toEqual({ kind: 'commands', changes: [{ kind: 'changed', name: 'ping', type: 1, guild: null }] });
 			// A second change before the answer is one question about both.
-			commands('Ping', [{ name: 'echo' }]);
+			commands('Pang', [{ name: 'echo' }]);
 			expect(service.status.prompt?.changes.map((change) => `${change.kind} ${change.name}`)).toEqual(['changed ping', 'added echo']);
 
 			service.answerPrompt(false);
@@ -363,6 +414,48 @@ describe('DevService', () => {
 			expect(last('commands')).toMatchObject({ level: 'success', text: 'Deployed 1 global command' });
 			bridge({ type: 'refreshed', ok: false, message: 'Missing Access', stack: [] });
 			expect(last('commands')).toMatchObject({ level: 'error', text: 'Could not refresh the commands: Missing Access' });
+		});
+
+		test('a partial report followed by the full one leaves nothing to ask about', async () => {
+			await setupWith('');
+			service.promptable = true;
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			const report = (names: string[]) => bridge({ type: 'commands', global: names.map((name) => ({ name })), guilds: {} });
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			report(['ping', 'echo', 'kick']);
+
+			// A restart that caught the output half written: everything looks removed...
+			report(['ping']);
+			expect(service.status.prompt?.changes.map((change) => `${change.kind} ${change.name}`)).toEqual(['removed echo', 'removed kick']);
+
+			// ...and the next complete start is the same as what Discord has, so the question goes away instead of asking again.
+			report(['ping', 'echo', 'kick']);
+			expect(service.status.prompt).toBeNull();
+			expect(last('commands')).toMatchObject({ text: 'The commands match the deployed ones again' });
+			service.answerPrompt(true);
+			expect(send).not.toHaveBeenCalled();
+		});
+
+		test('does not redeploy while a build is rewriting the output, and asks again afterwards', async () => {
+			await setupWith('');
+			service.promptable = true;
+			const send = vi.spyOn(service.supervisor, 'send').mockReturnValue(true);
+			bridge({ type: 'ready', clientId: '1', port: 3000 });
+			commands('Ping');
+			commands('Pong');
+
+			builder.emit('start');
+			service.answerPrompt(true);
+			expect(send).not.toHaveBeenCalled();
+			expect(last('commands')).toMatchObject({
+				level: 'warn',
+				text: 'A build is running, the commands of the bot may be incomplete: answer again once it has finished'
+			});
+			expect(service.status.prompt).not.toBeNull();
+
+			builder.emit('success', { ok: true, durationMs: 1, message: null });
+			service.answerPrompt(true);
+			expect(send).toHaveBeenCalledWith({ source: 'stars:cli', type: 'commands:refresh', clearGuilds: [] });
 		});
 
 		test("dev.commands.refresh 'auto' redeploys right away and 'off' never does", async () => {
@@ -480,6 +573,26 @@ describe('DevService', () => {
 			await waitFor(() => service.status.pid !== null && service.status.pid !== hotPid && service.status.process === 'running');
 			// The new process has not reported hot reload yet.
 			expect(service.status.hmr).toBe(false);
+		});
+
+		test('a restart one build needs is not lost when the next build only changes a piece', async () => {
+			await setupWith('');
+			await fixture.write('src/commands/_shared.js', '// 1');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const pid = service.status.pid;
+			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			bridge({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping', path: join(fixture.root, PING) }] });
+
+			// The first build changes a helper, which needs a restart; the second starts before it happened and only changes a piece.
+			await fixture.write('src/commands/_shared.js', '// 2');
+			builder.succeed();
+			builder.emit('start');
+			await fixture.write('src/commands/ping.js', '// 2');
+			builder.emit('success', { ok: true, durationMs: 1, message: null });
+
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
 		});
 
 		test('a helper next to the pieces is not a piece: changing it restarts the bot', async () => {
