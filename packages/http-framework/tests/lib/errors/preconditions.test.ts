@@ -15,6 +15,7 @@ import {
 	InteractionHandlerStore,
 	Precondition,
 	PreconditionError,
+	PreconditionRunMode,
 	PreconditionStore,
 	UserError,
 	type ClientEvents,
@@ -122,12 +123,17 @@ describe('Precondition', () => {
 
 		test('GIVEN a class loaded with loadPiece THEN it is a global precondition by its position', async () => {
 			const chatInputRun = vi.fn(() => ok());
+			// `loadPiece` keeps the class queued in the registry for good, and the tests share it (`isolate: false`), so any
+			// later `loadAll` would add this global piece to the other files. It therefore passes for every kind of command.
 			class Loaded extends Precondition {
 				public constructor(context: Precondition.LoaderContext) {
 					super(context, { position: 5 });
 				}
 
 				public override chatInputRun = chatInputRun;
+				public override contextMenuRun = () => this.ok();
+				public override autocompleteRun = () => this.ok();
+				public override interactionHandlerRun = () => this.ok();
 			}
 
 			// `loadPiece` only queues the piece until the stores load, which `Client#load` does.
@@ -137,6 +143,7 @@ describe('Precondition', () => {
 			await store.runApplicationCommand(makeResponse(), ChatInputApplicationCommandInteractionData);
 
 			expect(container.stores.get('preconditions').get('Loaded')).toBeInstanceOf(Loaded);
+			expect(container.stores.get('preconditions').get('Loaded')?.position).toBe(5);
 			expect(chatInputRun).toHaveBeenCalledOnce();
 		});
 
@@ -709,6 +716,228 @@ describe('Precondition', () => {
 			expect(spies.interactionHandlerError).toHaveBeenCalledExactlyOnceWith(boom, expect.anything());
 			expect(spies.interactionHandlerDenied).not.toHaveBeenCalled();
 			expect(handlerRun).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('arrays', () => {
+		/** A function that records its name in `calls`, then passes or denies with a PreconditionError for that name. */
+		const pass = (name: string, calls: string[]): PreconditionFunction => {
+			return () => (calls.push(name), ok());
+		};
+		const fail = (name: string, calls: string[]): PreconditionFunction => {
+			return () => (calls.push(name), err(new PreconditionError({ precondition: name })));
+		};
+
+		async function runWith(preconditions: PreconditionResolvable[] | { entries: PreconditionResolvable[]; mode: PreconditionRunMode }) {
+			const { store, run } = makeStore(preconditions as never);
+			const spies = listen(client, ['chatInputCommandDenied', 'commandError']);
+			await store.runApplicationCommand(makeResponse(), ChatInputApplicationCommandInteractionData);
+			return { run, spies, denied: spies.chatInputCommandDenied.mock.calls[0]?.[0] as PreconditionError | undefined };
+		}
+
+		test('GIVEN an empty list or an empty nested array THEN the command runs', async () => {
+			expect((await runWith([])).run).toHaveBeenCalledOnce();
+			expect((await runWith([[]] as never)).run).toHaveBeenCalledOnce();
+		});
+
+		test('GIVEN a nested array THEN it is an OR: the first one that passes is enough', async () => {
+			const calls: string[] = [];
+			const { run, spies } = await runWith([[fail('A', calls), pass('B', calls), fail('C', calls)]] as never);
+
+			expect(run).toHaveBeenCalledOnce();
+			expect(spies.chatInputCommandDenied).not.toHaveBeenCalled();
+			expect(calls).toEqual(['A', 'B']);
+		});
+
+		test('GIVEN a nested array where none passes THEN the last error is the denial', async () => {
+			const calls: string[] = [];
+			const { run, denied } = await runWith([[fail('A', calls), fail('B', calls)]] as never);
+
+			expect(run).not.toHaveBeenCalled();
+			expect(denied).toMatchObject({ precondition: 'B' });
+			expect(calls).toEqual(['A', 'B']);
+		});
+
+		test('GIVEN an OR that passes next to an entry that denies THEN the command is denied by the AND', async () => {
+			const calls: string[] = [];
+			const { run, denied } = await runWith([fail('Top', calls), [pass('A', calls)]] as never);
+
+			expect(run).not.toHaveBeenCalled();
+			expect(denied).toMatchObject({ precondition: 'Top' });
+			expect(calls).toEqual(['Top']);
+		});
+
+		test.each([
+			['Moderator passes', { Moderator: true, DJ: false, SongAuthor: false }, true],
+			['DJ and SongAuthor pass', { Moderator: false, DJ: true, SongAuthor: true }, true],
+			['only DJ passes', { Moderator: false, DJ: true, SongAuthor: false }, false],
+			['none passes', { Moderator: false, DJ: false, SongAuthor: false }, false]
+		] as const)(
+			"GIVEN ['Connect', ['Moderator', ['DJ', 'SongAuthor']]] with Connect passing and %s THEN the command runs: %s",
+			async (_name, results, allowed) => {
+				const calls: string[] = [];
+				const check = (name: keyof typeof results) => (results[name] ? pass(name, calls) : fail(name, calls));
+
+				const { run, denied } = await runWith([pass('Connect', calls), [check('Moderator'), [check('DJ'), check('SongAuthor')]]] as never);
+
+				expect(run.mock.calls.length > 0).toBe(allowed);
+				if (!allowed) expect(denied).toBeInstanceOf(PreconditionError);
+			}
+		);
+
+		test('GIVEN the three levels with nothing passing below Connect THEN the denial is the last error, SongAuthor', async () => {
+			const calls: string[] = [];
+			const { denied } = await runWith([
+				pass('Connect', calls),
+				[fail('Moderator', calls), [pass('DJ', calls), fail('SongAuthor', calls)]]
+			] as never);
+
+			expect(denied).toMatchObject({ precondition: 'SongAuthor' });
+			expect(calls).toEqual(['Connect', 'Moderator', 'DJ', 'SongAuthor']);
+		});
+
+		test('GIVEN names with a context inside a nested array THEN the pieces receive the context', async () => {
+			const first = vi.fn(() => err(new PreconditionError({ precondition: 'First' })));
+			const second = vi.fn(() => ok());
+			addPiece('First', { chatInputRun: first });
+			addPiece('Second', { chatInputRun: second });
+
+			const { run } = await runWith([
+				[
+					{ name: 'First', context: { n: 1 } },
+					{ name: 'Second', context: { n: 2 } }
+				]
+			] as never);
+
+			expect(first).toHaveBeenCalledWith(expect.anything(), expect.anything(), { n: 1 });
+			expect(second).toHaveBeenCalledWith(expect.anything(), expect.anything(), { n: 2 });
+			expect(run).toHaveBeenCalledOnce();
+		});
+
+		test('GIVEN the sequential mode, the default THEN the entries after the one that settles the result are not run', async () => {
+			const calls: string[] = [];
+			await runWith([fail('A', calls), pass('B', calls)]);
+			expect(calls).toEqual(['A']);
+		});
+
+		test('GIVEN the parallel mode THEN every entry is run, and the denial is the first error in order', async () => {
+			const calls: string[] = [];
+			const { run, denied } = await runWith({
+				entries: [pass('A', calls), fail('B', calls), fail('C', calls), pass('D', calls)],
+				mode: PreconditionRunMode.Parallel
+			});
+
+			expect(calls).toEqual(['A', 'B', 'C', 'D']);
+			expect(denied).toMatchObject({ precondition: 'B' });
+			expect(run).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN the parallel mode THEN all the entries start before any of them settles', async () => {
+			const events: string[] = [];
+			const slow =
+				(name: string): PreconditionFunction =>
+				async () => {
+					events.push(`${name}:start`);
+					await Promise.resolve();
+					events.push(`${name}:end`);
+					return ok();
+				};
+
+			await runWith({ entries: [slow('A'), slow('B')], mode: PreconditionRunMode.Parallel });
+			expect(events).toEqual(['A:start', 'B:start', 'A:end', 'B:end']);
+
+			events.length = 0;
+			await runWith([slow('A'), slow('B')]);
+			expect(events).toEqual(['A:start', 'A:end', 'B:start', 'B:end']);
+		});
+
+		test('GIVEN the parallel mode THEN the arrays nested in it inherit it', async () => {
+			const calls: string[] = [];
+			const { run } = await runWith({ entries: [[pass('A', calls), pass('B', calls)]], mode: PreconditionRunMode.Parallel } as never);
+
+			// In sequential mode the OR would stop at A.
+			expect(calls).toEqual(['A', 'B']);
+			expect(run).toHaveBeenCalledOnce();
+		});
+
+		test('GIVEN a nested array in the parallel mode that has no Ok THEN the last error is the denial', async () => {
+			const calls: string[] = [];
+			const { denied } = await runWith({ entries: [[fail('A', calls), fail('B', calls)]], mode: PreconditionRunMode.Parallel } as never);
+
+			expect(denied).toMatchObject({ precondition: 'B' });
+		});
+
+		test('GIVEN a context menu command THEN the arrays are evaluated with contextMenuRun', async () => {
+			const chatInputRun = vi.fn(() => err(new PreconditionError({ precondition: 'A' })));
+			const contextMenuRun = vi.fn(() => ok());
+			addPiece('A', { chatInputRun, contextMenuRun });
+			const { store, run } = makeStore([['A']] as never);
+
+			await store.runApplicationCommand(makeResponse(), UserApplicationCommandInteractionData);
+
+			expect(contextMenuRun).toHaveBeenCalledOnce();
+			expect(chatInputRun).not.toHaveBeenCalled();
+			expect(run).toHaveBeenCalledOnce();
+		});
+
+		describe('entries that do not apply', () => {
+			function makeAutocomplete(preconditions: unknown) {
+				const store = new CommandStore();
+				const autocompleteRun = vi.fn();
+				const command = { name: 'foo', options: { preconditions }, autocompleteRun } as unknown as Command;
+				vi.spyOn(store.router, 'getChatInput').mockReturnValue(command);
+				return { store, autocompleteRun };
+			}
+
+			const runAutocomplete = (store: CommandStore) =>
+				store.runApplicationCommandAutocomplete(makeResponse(), ApplicationCommandAutocompleteInteractionData);
+
+			test('GIVEN an OR of a piece that denies and a piece with no autocompleteRun THEN the autocomplete is denied', async () => {
+				addPiece('Deny', { autocompleteRun: () => err(new PreconditionError({ precondition: 'Deny' })) });
+				addPiece('NoMethod');
+				const { store, autocompleteRun } = makeAutocomplete([['Deny', 'NoMethod']]);
+				const spies = listen(client, ['autocompleteDenied']);
+
+				await runAutocomplete(store);
+
+				expect(spies.autocompleteDenied.mock.calls[0][0]).toMatchObject({ precondition: 'Deny' });
+				expect(autocompleteRun).not.toHaveBeenCalled();
+			});
+
+			test('GIVEN an OR where nothing applies THEN it is left out and the autocomplete runs', async () => {
+				addPiece('NoMethod');
+				const { store, autocompleteRun } = makeAutocomplete([[() => err(new PreconditionError({ precondition: 'Fn' })), 'NoMethod']]);
+				const spies = listen(client, ['autocompleteDenied']);
+
+				await runAutocomplete(store);
+
+				expect(spies.autocompleteDenied).not.toHaveBeenCalled();
+				expect(autocompleteRun).toHaveBeenCalledOnce();
+			});
+
+			test('GIVEN an OR with a piece that passes and a function THEN the function does not hide a denial of the AND', async () => {
+				addPiece('Pass', { autocompleteRun: () => ok() });
+				addPiece('Deny', { autocompleteRun: () => err(new PreconditionError({ precondition: 'Deny' })) });
+				const { store, autocompleteRun } = makeAutocomplete(['Deny', ['Pass', () => ok()]]);
+				const spies = listen(client, ['autocompleteDenied']);
+
+				await runAutocomplete(store);
+
+				expect(spies.autocompleteDenied.mock.calls[0][0]).toMatchObject({ precondition: 'Deny' });
+				expect(autocompleteRun).not.toHaveBeenCalled();
+			});
+		});
+
+		test('GIVEN an interaction handler with a nested array THEN it is an OR as well', async () => {
+			addPiece('No', { interactionHandlerRun: () => err(new PreconditionError({ precondition: 'No' })) });
+			addPiece('Yes', { interactionHandlerRun: () => ok() });
+			const { store, run } = makeHandlerStore([['No', 'Yes']] as never);
+			const spies = listen(client, ['interactionHandlerDenied']);
+
+			await store.runHandler(makeResponse(), MessageComponentButtonInteractionData);
+
+			expect(run).toHaveBeenCalledOnce();
+			expect(spies.interactionHandlerDenied).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -372,6 +372,18 @@ export class UserCommand extends Command {
 }
 ```
 
+An entry can also be an array. The list of a command is an `AND`: every entry has to pass. An array nested in it is an
+`OR`: one entry has to pass, and when none does, the last error is the denial. An array nested in that is an `AND` again,
+and so on, so the following is `Connect && (Moderator || (DJ && SongAuthor))`:
+
+```typescript
+super(context, { ...options, preconditions: ['Connect', ['Moderator', ['DJ', 'SongAuthor']]] });
+```
+
+The entries run one after the other and stop as soon as the result is known. To start all of them at once, write the list
+as `{ entries, mode: PreconditionRunMode.Parallel }`; the arrays nested in it inherit the mode, every entry is run, and
+the denial is the first error in order for an `AND` and the last one for an `OR`.
+
 A precondition with a `position` is global: it runs for every command, in ascending order of `position`, before the ones
 of the command. A piece can also implement `autocompleteRun` and `interactionHandlerRun`, and an interaction handler has
 the same `preconditions` option as a command.
@@ -388,17 +400,21 @@ export class UserPrecondition extends Precondition {
 }
 ```
 
+An entry that does not apply to an autocomplete or an interaction handler is left out of the result of its array, so it
+cannot make an `OR` pass.
+
 A piece that has no method for the chat input or context menu command it is asked to check denies it with
 `Identifiers.PreconditionMissingChatInputHandler` or `Identifiers.PreconditionMissingContextMenuHandler`. For an
 autocomplete or an interaction handler a piece with no `autocompleteRun` or `interactionHandlerRun` is skipped instead,
 global ones included, so a check written for the commands does not deny their autocomplete or the buttons of the bot, and
 the functions of a command are not run for its autocomplete. A name that is not in the store denies with
-`Identifiers.PreconditionUnavailable`. A precondition that throws is handled like a command that
-throws: a `UserError` goes to the `*Denied` events, anything else to `commandError`.
+`Identifiers.PreconditionUnavailable`. A precondition that throws is handled like a command that throws: a `UserError`
+goes to the `*Denied` events, anything else to `commandError`.
 
-This follows the preconditions of `@sapphire/framework`, with what it does not have left out: no message flow, no
-built-in checks (`Cooldown`, `NSFW`, `GuildOnly`, ...), no nested `AND`/`OR` arrays and no typed registry of precondition
-names. The checks for autocomplete and interaction handlers, and their `Accepted` events, are not in Sapphire. The permission decorators of `@wolfstar/decorators` keep working as before.
+This follows the preconditions of `@sapphire/framework`, except for the message flow, which has no use over HTTP, the
+built-in checks (`Cooldown`, `NSFW`, `GuildOnly`, ...), and the typed registry of precondition names. The checks for
+autocomplete and interaction handlers, and their `Accepted` events, are not in Sapphire. The permission decorators of
+`@wolfstar/decorators` keep working as before.
 
 Listeners declared as pieces can use the enum too:
 
