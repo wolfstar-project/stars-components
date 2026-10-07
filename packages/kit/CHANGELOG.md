@@ -1,5 +1,16 @@
 # @wolfstar/kit
 
+## 0.2.0
+
+### Minor Changes
+
+- [#294](https://github.com/wolfstar-project/stars-components/pull/294) [`6797590`](https://github.com/wolfstar-project/stars-components/commit/6797590781bf2609f37cb233b49ef14bfea7c23d) - Make `meta.configKey` work. `setupModules` merges the options a module's `setup` receives as `defaults`, then `config.moduleOptions[configKey]`, then the options given inline (the `[name, options]` tuple, or `ctx.installModule`). A `configKey` that is empty, a built-in `stars.config` key, claimed by another installed module, or holding something other than a plain object fails with `MODULE_INVALID`. The claimed keys are returned as `ModulesRuntime.configKeys`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`d782e5d`](https://github.com/wolfstar-project/stars-components/commit/d782e5d94498f6b2b7216f0533895dd07a3ebf48), [`a5e09ae`](https://github.com/wolfstar-project/stars-components/commit/a5e09aec61803ed9defcfd0078217a30411e6c24)]:
+    - @wolfstar/schema@0.9.0
+
 ## 0.1.3
 
 ### Patch Changes

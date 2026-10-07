@@ -1,5 +1,23 @@
 # @wolfstar/cli
 
+## 2.6.0
+
+### Minor Changes
+
+- [#295](https://github.com/wolfstar-project/stars-components/pull/295) [`d9066cc`](https://github.com/wolfstar-project/stars-components/commit/d9066cc73035e1675fc7855a04aeb08216fcb482) - Read a module's options from a top-level `stars.config` key (`meta.configKey`). Once the modules are set up, a key that is not built in and that no installed module claimed is reported as `UNKNOWN_OPTION`, with the claimed keys in the fix, so a misspelled key is still an error; the check also runs when `modules` is empty. A `meta.configKey` that is empty, built in, claimed twice or holding a non-object fails with `MODULE_FAILED`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#291](https://github.com/wolfstar-project/stars-components/pull/291) [`d782e5d`](https://github.com/wolfstar-project/stars-components/commit/d782e5d94498f6b2b7216f0533895dd07a3ebf48) - Make the dashboard of `stars dev` clickable. A click on a channel or a level of the sidebar shows or hides it like `Space`, a second click or an `Alt`/`Ctrl` click solos it like `s`, a click on a group header folds the group, a click on a key of the list runs that key, and the wheel scrolls the logs. The new `dev.mouse` option (default `true`) and `stars dev --no-mouse` leave the mouse to the terminal. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#290](https://github.com/wolfstar-project/stars-components/pull/290) [`50a69f7`](https://github.com/wolfstar-project/stars-components/commit/50a69f7da4f8db5bbc8746a6696f6abe29cb9bdb) - Add `stars dev --tunnel` to open the public tunnel at start whatever `dev.tunnel` says (a `cloudflared` quick tunnel when it is off), and `--no-tunnel` to keep it closed at start even when `dev.tunnel` enables it. It works with `--no-tui`, where there is no `t` key: the URL is printed on the `tunnel` channel. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`d782e5d`](https://github.com/wolfstar-project/stars-components/commit/d782e5d94498f6b2b7216f0533895dd07a3ebf48), [`6797590`](https://github.com/wolfstar-project/stars-components/commit/6797590781bf2609f37cb233b49ef14bfea7c23d), [`a5e09ae`](https://github.com/wolfstar-project/stars-components/commit/a5e09aec61803ed9defcfd0078217a30411e6c24)]:
+    - @wolfstar/schema@0.9.0
+    - @wolfstar/kit@0.2.0
+    - @wolfstar/nitro-server@0.2.9
+    - @wolfstar/vite-server@0.4.4
+
 ## 2.5.0
 
 ### Minor Changes
