@@ -44,6 +44,8 @@ export enum Identifiers {
 	PreconditionClientPermissionsNoPermissions = 'preconditionClientPermissionsNoPermissions',
 	PreconditionCooldown = 'preconditionCooldown',
 	PreconditionGuildIds = 'preconditionGuildIds',
+	PreconditionMissingChatInputHandler = 'preconditionMissingChatInputHandler',
+	PreconditionMissingContextMenuHandler = 'preconditionMissingContextMenuHandler',
 	PreconditionNSFW = 'preconditionNsfw',
 	PreconditionRunIn = 'preconditionRunIn',
 	PreconditionUnavailable = 'preconditionUnavailable',

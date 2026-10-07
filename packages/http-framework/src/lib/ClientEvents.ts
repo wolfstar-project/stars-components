@@ -49,12 +49,17 @@ export enum Events {
 	CommandNameMissing = 'commandNameMissing',
 	CommandNameUnknown = 'commandNameUnknown',
 	CommandMethodUnknown = 'commandMethodUnknown',
+	PreChatInputCommandRun = 'preChatInputCommandRun',
+	PreContextMenuCommandRun = 'preContextMenuCommandRun',
+	ChatInputCommandAccepted = 'chatInputCommandAccepted',
+	ContextMenuCommandAccepted = 'contextMenuCommandAccepted',
 	CommandRun = 'commandRun',
 	CommandSuccess = 'commandSuccess',
 	CommandError = 'commandError',
 	ChatInputCommandDenied = 'chatInputCommandDenied',
 	ContextMenuCommandDenied = 'contextMenuCommandDenied',
 	CommandFinish = 'commandFinish',
+	AutocompleteAccepted = 'autocompleteAccepted',
 	AutocompleteRun = 'autocompleteRun',
 	AutocompleteSuccess = 'autocompleteSuccess',
 	AutocompleteError = 'autocompleteError',
@@ -62,6 +67,7 @@ export enum Events {
 	AutocompleteFinish = 'autocompleteFinish',
 	InteractionHandlerNameInvalid = 'interactionHandlerNameInvalid',
 	InteractionHandlerNameUnknown = 'interactionHandlerNameUnknown',
+	InteractionHandlerAccepted = 'interactionHandlerAccepted',
 	InteractionHandlerRun = 'interactionHandlerRun',
 	InteractionHandlerSuccess = 'interactionHandlerSuccess',
 	InteractionHandlerError = 'interactionHandlerError',
@@ -93,6 +99,36 @@ export interface ClientEvents {
 	commandNameMissing: [interaction: APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
 	commandNameUnknown: [interaction: APIApplicationCommandInteraction | APIApplicationCommandAutocompleteInteraction, response: ServerResponse];
 	commandMethodUnknown: [context: ClientEventCommandContext];
+	/**
+	 * Emitted for a chat input command before its preconditions run, then followed by either
+	 * {@link ClientEvents.chatInputCommandDenied} or {@link ClientEvents.chatInputCommandAccepted}.
+	 *
+	 * @since 6.3.0
+	 */
+	preChatInputCommandRun: [context: ClientEventCommandContext];
+	/**
+	 * Emitted for a user or message context menu command before its preconditions run, then followed by either
+	 * {@link ClientEvents.contextMenuCommandDenied} or {@link ClientEvents.contextMenuCommandAccepted}.
+	 *
+	 * @since 6.3.0
+	 */
+	preContextMenuCommandRun: [context: ClientEventCommandContext];
+	/**
+	 * Emitted when a chat input command passes every precondition, right before {@link ClientEvents.commandRun}.
+	 *
+	 * @since 6.3.0
+	 */
+	chatInputCommandAccepted: [context: ClientEventCommandContext];
+	/**
+	 * Emitted when a context menu command passes every precondition, right before {@link ClientEvents.commandRun}.
+	 *
+	 * @since 6.3.0
+	 */
+	contextMenuCommandAccepted: [context: ClientEventCommandContext];
+	/**
+	 * Emitted right before the method of a command runs. Since 6.3.0 that is after its preconditions passed, so a
+	 * denied command does not emit it.
+	 */
 	commandRun: [context: ClientEventCommandContext];
 	commandSuccess: [context: ClientEventCommandContext, value: unknown];
 	/**
@@ -119,6 +155,13 @@ export interface ClientEvents {
 	 */
 	contextMenuCommandDenied: [error: UserError, context: ClientEventCommandContext];
 	commandFinish: [context: ClientEventCommandContext];
+	/**
+	 * Emitted when an autocomplete interaction passes every precondition, right before
+	 * {@link ClientEvents.autocompleteRun}.
+	 *
+	 * @since 6.3.0
+	 */
+	autocompleteAccepted: [context: ClientEventAutocompleteContext];
 	autocompleteRun: [context: ClientEventAutocompleteContext];
 	autocompleteSuccess: [context: ClientEventAutocompleteContext, value: unknown];
 	autocompleteError: [error: unknown, context: ClientEventAutocompleteContext];
@@ -131,6 +174,13 @@ export interface ClientEvents {
 	autocompleteFinish: [context: ClientEventAutocompleteContext];
 	interactionHandlerNameInvalid: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: ServerResponse];
 	interactionHandlerNameUnknown: [interaction: APIMessageComponentInteraction | APIModalSubmitInteraction, response: ServerResponse];
+	/**
+	 * Emitted when an interaction handler passes every precondition, right before
+	 * {@link ClientEvents.interactionHandlerRun}.
+	 *
+	 * @since 6.3.0
+	 */
+	interactionHandlerAccepted: [context: ClientEventInteractionHandlerContext];
 	interactionHandlerRun: [context: ClientEventInteractionHandlerContext];
 	interactionHandlerSuccess: [context: ClientEventInteractionHandlerContext, value: unknown];
 	interactionHandlerError: [error: unknown, context: ClientEventInteractionHandlerContext];

@@ -25,6 +25,7 @@ function makeInteraction(memberPermissions: bigint, appPermissions: bigint): API
 
 class UserCommand {
 	public readonly name = 'foo';
+	public readonly options = {};
 	public readonly router = { routeChatInputInteraction: () => 'chatInputRun' };
 
 	@RequiresUserPermissions('BanMembers')
