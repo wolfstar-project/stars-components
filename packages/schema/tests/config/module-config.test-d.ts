@@ -1,4 +1,4 @@
-import { defineConfig, type StarsConfig } from '@wolfstar/schema';
+import { BUILT_IN_CONFIG_KEYS, defineConfig, type StarsConfig } from '@wolfstar/schema';
 
 // What a module's types declare, the way a Nuxt module augments `NuxtConfig`.
 declare module '@wolfstar/schema' {
@@ -26,5 +26,10 @@ describe('module options in StarsConfig', () => {
 	test('a key no module declared is still an error', () => {
 		// @ts-expect-error `scheduledTask` is not declared by any module
 		defineConfig({ scheduledTask: {} });
+	});
+
+	test('BUILT_IN_CONFIG_KEYS lists every key of StarsConfig, and only those', () => {
+		// `scheduledTasks` is the module's augmentation above: the only key that is not built in.
+		expectTypeOf<Exclude<keyof StarsConfig, 'scheduledTasks'>>().toEqualTypeOf<(typeof BUILT_IN_CONFIG_KEYS)[number]>();
 	});
 });

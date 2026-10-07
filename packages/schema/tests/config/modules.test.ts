@@ -1,4 +1,5 @@
 import { Diagnostic } from 'nostics';
+import { pickModuleOptions } from '../../src/config/module-options.js';
 import { BUILT_IN_CONFIG_KEYS, EMPTY_MODULES_RUNTIME, assertModuleOptionsClaimed, loadStarsConfig } from '../../src/index.js';
 import { createFixture, type Fixture } from './helpers.js';
 
@@ -73,9 +74,27 @@ describe('stars.config modules', () => {
 			expect((await loadConfig('{ scheduledTasks: undefined }')).moduleOptions).toEqual({});
 		});
 
-		test('GIVEN a built-in key THEN it is never part of moduleOptions, and its own validation still applies', async () => {
-			const config = await loadConfig('{ dev: { debounce: 10 } }');
-			for (const key of BUILT_IN_CONFIG_KEYS) expect(config.moduleOptions).not.toHaveProperty(key);
+		test('GIVEN every built-in key THEN none of them is part of moduleOptions', () => {
+			const config = Object.fromEntries([...BUILT_IN_CONFIG_KEYS, 'scheduledTasks'].map((key) => [key, {}]));
+			expect(pickModuleOptions(config)).toEqual({ scheduledTasks: {} });
+			expect([...BUILT_IN_CONFIG_KEYS]).toEqual([
+				'root',
+				'entry',
+				'build',
+				'dev',
+				'codegen',
+				'imports',
+				'env',
+				'hooks',
+				'modules',
+				'experimental',
+				'future',
+				'vite',
+				'tsdown'
+			]);
+		});
+
+		test('GIVEN an invalid value under a built-in key THEN its own validation still applies', async () => {
 			await expect(loadConfig("{ dev: { debounce: 'fast' } }")).rejects.toMatchObject({ code: 'INVALID_TYPE' });
 		});
 

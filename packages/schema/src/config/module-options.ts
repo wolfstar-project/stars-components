@@ -5,7 +5,8 @@ import { Validator } from './validator.js';
 
 /**
  * The top-level keys of `stars.config` the schema owns. Any other key is kept aside as a module's options (see
- * `ResolvedStarsConfig.moduleOptions`), so a module cannot claim one of these as its `meta.configKey`.
+ * `ResolvedStarsConfig.moduleOptions`), so a module cannot claim one of these as its `meta.configKey`. Keep it equal
+ * to the keys of `StarsConfig`: `module-config.test-d.ts` fails when they drift.
  */
 export const BUILT_IN_CONFIG_KEYS = [
 	'root',
