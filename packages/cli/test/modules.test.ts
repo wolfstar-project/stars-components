@@ -95,6 +95,109 @@ describe('stars modules', () => {
 		expect(next.imports.presets).toContain('fake-module');
 	});
 
+	describe('meta.configKey', () => {
+		const KEYED_PACKAGE = {
+			'node_modules/keyed-module/package.json': JSON.stringify({
+				name: 'keyed-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/keyed-module/index.js': `export default {
+	meta: { name: 'keyed-module', configKey: 'keyed' },
+	defaults: { ttl: 1, mode: 'default' },
+	setup(options, ctx) {
+		ctx.addPlugin({ from: 'keyed-module/plugin', options });
+	}
+};`
+		};
+
+		async function loadError(files: Record<string, string>): Promise<Diagnostic> {
+			fixture = await createFixture({ 'src/main.ts': '', ...files });
+			const error = await loadProject({ cwd: fixture.root, env: {} }).catch((error: unknown) => error);
+			expect(error).toBeInstanceOf(Diagnostic);
+			return error as Diagnostic;
+		}
+
+		test('reads the options of a module from its key, under the inline options and over its defaults', async () => {
+			fixture = await createFixture({
+				...KEYED_PACKAGE,
+				'src/main.ts': '',
+				'stars.config.mjs': "export default { modules: [['keyed-module', { mode: 'inline' }]], keyed: { ttl: 5, mode: 'key' } };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			expect(config.runtime.configKeys).toEqual(['keyed']);
+			expect(config.runtime.plugins).toEqual([
+				{ module: 'keyed-module', from: 'keyed-module/plugin', export: 'default', options: { ttl: 5, mode: 'inline' } }
+			]);
+			expect(config.moduleOptions).toEqual({ keyed: { ttl: 5, mode: 'key' } });
+		});
+
+		test('a claimed key and the options it holds survive the re-resolve of env:options', async () => {
+			fixture = await createFixture({
+				...KEYED_PACKAGE,
+				'src/main.ts': '',
+				'package.json': WITH_ENV_UTILITIES,
+				'.env': 'HTTP_PORT=4000',
+				'config/.env': 'HTTP_PORT=4100',
+				'stars.config.mjs':
+					"export default { modules: ['keyed-module'], keyed: { ttl: 5 }, hooks: { 'env:options'(options) { options.path = 'config/.env'; } } };"
+			});
+			const { config, hooks } = await loadProject({ cwd: fixture.root, env: {} });
+			const next = await applyEnvOptions(config, hooks);
+
+			expect(next).not.toBe(config);
+			expect(next.moduleOptions).toEqual({ keyed: { ttl: 5 } });
+			expect(next.runtime.configKeys).toEqual(['keyed']);
+		});
+
+		test('a key no installed module claimed is an UNKNOWN_OPTION error listing the claimed ones', async () => {
+			const error = await loadError({
+				...KEYED_PACKAGE,
+				'stars.config.mjs': "export default { modules: ['keyed-module'], keyd: { ttl: 5 } };"
+			});
+
+			expect(error).toMatchObject({ code: 'UNKNOWN_OPTION' });
+			expect(error.message).toContain('keyd');
+			expect(error.fix).toContain('keyed');
+			expect(error.fix).toContain('listed in `modules`');
+		});
+
+		test('without modules every extra key is unknown', async () => {
+			const error = await loadError({ 'stars.config.mjs': 'export default { keyed: { ttl: 5 } };' });
+			expect(error).toMatchObject({ code: 'UNKNOWN_OPTION' });
+			expect(error.message).toContain('keyed');
+		});
+
+		test('a key whose module is not listed is reported, since the module is not installed', async () => {
+			const error = await loadError({ ...KEYED_PACKAGE, 'stars.config.mjs': 'export default { modules: [], keyed: { ttl: 5 } };' });
+			expect(error).toMatchObject({ code: 'UNKNOWN_OPTION' });
+		});
+
+		test('two modules claiming one key fail with MODULE_FAILED naming both', async () => {
+			const error = await loadError({
+				...KEYED_PACKAGE,
+				'node_modules/rival-module/package.json': JSON.stringify({
+					name: 'rival-module',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/rival-module/index.js': "export default { meta: { name: 'rival-module', configKey: 'keyed' } };",
+				'stars.config.mjs': "export default { modules: ['keyed-module', 'rival-module'] };"
+			});
+
+			expect(error).toMatchObject({ code: 'MODULE_FAILED' });
+			expect(error.message).toContain('"keyed-module" and "rival-module"');
+		});
+
+		test('a value that is not an object fails with MODULE_FAILED', async () => {
+			const error = await loadError({ ...KEYED_PACKAGE, 'stars.config.mjs': "export default { modules: ['keyed-module'], keyed: 'redis' };" });
+
+			expect(error).toMatchObject({ code: 'MODULE_FAILED' });
+			expect(error.message).toContain('must be an object');
+		});
+	});
+
 	test('a module that is not installed fails with a MODULE_FAILED diagnostic', async () => {
 		fixture = await createFixture({ 'src/main.ts': '', 'stars.config.mjs': "export default { modules: ['not-installed'] };" });
 		const error = await loadProject({ cwd: fixture.root, env: {} }).catch((error: unknown) => error);

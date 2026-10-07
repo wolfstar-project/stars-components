@@ -103,7 +103,7 @@ export const cliDiagnostics = defineDiagnostics({
 					case 'MODULE_INCOMPATIBLE':
 						return 'Update the module or @wolfstar/http-framework so their versions match.';
 					case 'MODULE_INVALID':
-						return 'Export the module with `defineModule` from @wolfstar/kit as the default export.';
+						return 'Export the module with `defineModule` from @wolfstar/kit as the default export, and give its `meta` a `name` and, if it has a `configKey`, one that is not a built-in key of stars.config or used by another module.';
 					case 'MODULE_PLUGIN_INVALID':
 						return 'Pass `ctx.addPlugin` a package specifier, an absolute path or a `file:` URL, and JSON-serialisable options.';
 					default:
