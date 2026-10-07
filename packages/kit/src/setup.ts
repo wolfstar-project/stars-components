@@ -94,7 +94,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 
 	for (const entry of config.modules) await install(entry.specifier, entry.options as Record<string, unknown>);
 
-	return { modules, plugins, imports: [...imports] };
+	return { modules, plugins, imports: [...imports], configKeys: [] };
 }
 
 const KNOWN_HOOKS: ReadonlySet<string> = new Set(STARS_HOOK_NAMES);

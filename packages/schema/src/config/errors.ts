@@ -87,8 +87,9 @@ export const configDiagnostics = defineDiagnostics({
 				`Move the options of your tsdown.config.* into \`tsdown\` in stars.config, delete that file, then set \`future.compatibilityVersion\` to ${p.latestVersion} (or remove it).`
 		},
 		UNKNOWN_OPTION: {
-			why: (p: { path: string; parent: string; known: string }) => `Unknown option \`${p.path}\``,
-			fix: (p: { path: string; parent: string; known: string }) => `Known options${p.parent ? ` of \`${p.parent}\`` : ''}: ${p.known}.`
+			why: (p: { path: string; parent: string; known: string; hint?: string }) => `Unknown option \`${p.path}\``,
+			fix: (p: { path: string; parent: string; known: string; hint?: string }) =>
+				`Known options${p.parent ? ` of \`${p.parent}\`` : ''}: ${p.known}.${p.hint ? ` ${p.hint}` : ''}`
 		},
 		UNKNOWN_HOOK: {
 			why: (p: { name: string; known: string }) => `Unknown hook \`${p.name}\``,

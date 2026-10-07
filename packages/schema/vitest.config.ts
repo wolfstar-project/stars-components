@@ -1,4 +1,11 @@
 import { defineProject, mergeConfig } from 'vitest/config';
 import configShared from '../../vitest.shared.js';
 
-export default mergeConfig(configShared, defineProject({}));
+export default mergeConfig(
+	configShared,
+	defineProject({
+		// `tests/**/*.test-d.ts` are type-level tests (see `module-config.test-d.ts`): the root `tsconfig.json` leaves
+		// `tests/` out of `pnpm typecheck`, so vitest checks them instead.
+		test: { typecheck: { enabled: true, include: ['tests/**/*.test-d.ts'], tsconfig: './tests/tsconfig.typecheck.json' } }
+	})
+);

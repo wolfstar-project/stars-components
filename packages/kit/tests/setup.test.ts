@@ -53,7 +53,7 @@ describe('mergeOptions', () => {
 
 describe('setupModules', () => {
 	test('GIVEN no modules THEN the runtime is empty', async () => {
-		expect(await run([], []).result).toEqual({ modules: [], plugins: [], imports: [] });
+		expect(await run([], []).result).toEqual({ modules: [], plugins: [], imports: [], configKeys: [] });
 	});
 
 	test('GIVEN defaults and user options THEN setup receives them merged', async () => {
@@ -89,7 +89,8 @@ describe('setupModules', () => {
 				{ module: 'cache', from: 'cache/plugin', export: 'default' },
 				{ module: 'cache', from: '/pkg/runtime.js', export: 'plugin', options: { ttl: 5 } }
 			],
-			imports: ['cache', 'other']
+			imports: ['cache', 'other'],
+			configKeys: []
 		});
 	});
 
