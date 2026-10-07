@@ -17,6 +17,7 @@ import type { PluginOption } from './plugins/definePlugin.js';
 import { CommandStore } from './structures/CommandStore.js';
 import { InteractionHandlerStore } from './structures/InteractionHandlerStore.js';
 import { ListenerStore } from './structures/ListenerStore.js';
+import { PreconditionStore } from './structures/PreconditionStore.js';
 import { PluginHook } from './types/Enums.js';
 import { ErrorMessages, Payloads } from './utils/constants.js';
 import { FetchServerResponse, toIncomingMessage } from './utils/fetch-bridge.js';
@@ -28,6 +29,7 @@ import { getSafeTextBody } from './utils/streams.js';
 container.stores.register(new CommandStore());
 container.stores.register(new InteractionHandlerStore());
 container.stores.register(new ListenerStore());
+container.stores.register(new PreconditionStore());
 container.logger ??= new Logger();
 
 export class Client extends AsyncEventEmitter<MappedClientEvents> {
@@ -425,6 +427,7 @@ declare module '@sapphire/pieces' {
 		commands: CommandStore;
 		'interaction-handlers': InteractionHandlerStore;
 		listeners: ListenerStore;
+		preconditions: PreconditionStore;
 	}
 
 	export interface Container {

@@ -67,7 +67,8 @@ export class CommandStore extends Store<Command, 'commands'> {
 		container.client.emit(Events.CommandRun, context);
 		const result = await Result.fromAsync(async () => {
 			const commandInteraction = makeInteraction(response, interaction);
-			const preconditions = await runPreconditions(command.options.preconditions ?? [], commandInteraction, command);
+			const kind = interaction.data.type === ApplicationCommandType.ChatInput ? 'chatInput' : 'contextMenu';
+			const preconditions = await runPreconditions(command, kind, commandInteraction);
 			// Rethrown so that a denial takes the same route as a `UserError` thrown by the command itself.
 			if (preconditions.isErr()) throw preconditions.unwrapErr();
 

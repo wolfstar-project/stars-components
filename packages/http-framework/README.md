@@ -324,32 +324,64 @@ The `error` event and the HTTP response are not affected: both behave as for any
 
 #### Preconditions
 
-A command can list checks that run before its method does, in the `preconditions` option. A precondition is a function
-that receives the interaction and the command and returns a `Result`: `ok()` lets the command run, `err(userError)`
-denies it. They run in order and the first denial stops the rest. The command method is not run, and the error is
-emitted as `chatInputCommandDenied` or `contextMenuCommandDenied`, the same events as a `UserError` the command throws.
-Autocomplete is not checked.
+A precondition is a check that runs before a chat input or context menu command does. When it denies the command, the
+command method is not run and the error is emitted as `chatInputCommandDenied` or `contextMenuCommandDenied`, the same
+events as a `UserError` the command throws. Autocomplete is not checked.
+
+A precondition is a piece: a class that extends `Precondition`, in the `preconditions` directory, loaded into the
+`preconditions` store. It implements `chatInputRun` and/or `contextMenuRun`, and answers with `this.ok()` or
+`this.error(...)`, which builds a `PreconditionError` for the piece.
 
 ```typescript
-import { err, ok } from '@sapphire/result';
-import { Command, PreconditionError, type Precondition } from '@wolfstar/http-framework';
+import { Precondition } from '@wolfstar/http-framework';
 
-const OwnerOnly: Precondition = (interaction) =>
-	interaction.user.id === process.env.OWNER_ID
-		? ok()
-		: err(new PreconditionError({ precondition: 'OwnerOnly', message: 'Only the owner can use this command.' }));
-
-export class UserCommand extends Command {
-	public constructor(context: Command.LoaderContext, options: Command.Options) {
-		super(context, { ...options, preconditions: [OwnerOnly] });
+export class UserPrecondition extends Precondition {
+	public override chatInputRun(interaction: Precondition.ChatInputInteraction) {
+		return interaction.user.id === process.env.OWNER_ID ? this.ok() : this.error({ message: 'Only the owner can use this command.' });
 	}
 }
 ```
 
-This is a reduced version of the `@sapphire/framework` preconditions: there is no precondition store, no global
-preconditions, no `Accepted` event, and no cooldown or built-in checks. A precondition that throws is handled like a
-command that throws: a `UserError` goes to the `*Denied` events, anything else to `commandError`. The permission
-decorators of `@wolfstar/decorators` keep working as before.
+A command lists the preconditions it needs by name, in the `preconditions` option. An entry is the name, the name with a
+`context` that the piece receives as its last argument, or a function for a check that does not need a piece of its own.
+They run in the order listed and the first denial stops the rest.
+
+```typescript
+import { err, ok } from '@sapphire/result';
+import { Command, PreconditionError, type PreconditionFunction } from '@wolfstar/http-framework';
+
+const NotOnMonday: PreconditionFunction = () => (new Date().getDay() === 1 ? err(new PreconditionError({ precondition: 'NotOnMonday' })) : ok());
+
+export class UserCommand extends Command {
+	public constructor(context: Command.LoaderContext, options: Command.Options) {
+		super(context, { ...options, preconditions: ['UserPrecondition', { name: 'Role', context: { roleId: '737141877803057244' } }, NotOnMonday] });
+	}
+}
+```
+
+A precondition with a `position` is global: it runs for every command, in ascending order of `position`, before the ones
+of the command.
+
+```typescript
+import { Precondition } from '@wolfstar/http-framework';
+
+export class UserPrecondition extends Precondition {
+	public constructor(context: Precondition.LoaderContext) {
+		super(context, { position: 10 });
+	}
+
+	// ...
+}
+```
+
+A piece that has no method for the kind of command it is asked to check denies it with
+`Identifiers.PreconditionMissingChatInputHandler` or `Identifiers.PreconditionMissingContextMenuHandler`, and a name that
+is not in the store with `Identifiers.PreconditionUnavailable`. A precondition that throws is handled like a command that
+throws: a `UserError` goes to the `*Denied` events, anything else to `commandError`.
+
+This follows the preconditions of `@sapphire/framework`, with what it does not have left out: no message flow, no
+built-in checks (`Cooldown`, `NSFW`, `GuildOnly`, ...), no nested `AND`/`OR` arrays, no typed registry of precondition
+names, and no `Accepted` event. The permission decorators of `@wolfstar/decorators` keep working as before.
 
 Listeners declared as pieces can use the enum too:
 

@@ -3,7 +3,7 @@ import type { Awaitable, NonNullObject } from '@sapphire/utilities';
 import type { AutocompleteInteractionArguments, Interactions } from '../interactions/index.js';
 import { CommandRouter } from '../interactions/router/CommandRouter.js';
 import { CommandRegistry } from '../interactions/shared/CommandRegistry.js';
-import type { Precondition } from '../utils/preconditions.js';
+import type { PreconditionResolvable } from '../utils/preconditions.js';
 
 /**
  * The options a command receives, by the full path of the command (`'ping'`, `'stickyroles add'`,
@@ -146,13 +146,14 @@ export namespace Command {
 	export type LocationJSON = Piece.LocationJSON;
 	export interface Options extends Piece.Options {
 		/**
-		 * The checks to run, in order, before a chat input or context menu method of the command. The first one that
-		 * returns an `Err` denies the command: the method is not run and the error is emitted as
+		 * The checks to run, in order, before a chat input or context menu method of the command, after the global
+		 * preconditions. An entry is the name of a `Precondition` piece, that name with a `context`, or a function. The
+		 * first one that returns an `Err` denies the command: the method is not run and the error is emitted as
 		 * `chatInputCommandDenied` or `contextMenuCommandDenied`. Autocomplete is not checked.
 		 *
 		 * @since 6.3.0
 		 * @default []
 		 */
-		preconditions?: readonly Precondition[];
+		preconditions?: readonly PreconditionResolvable[];
 	}
 }
