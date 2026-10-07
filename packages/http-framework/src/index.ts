@@ -37,3 +37,4 @@ export * from './lib/structures/ListenerStore.js';
 export * from './lib/types/Enums.js';
 export * from './lib/utils/logger/index.js';
 export * from './lib/utils/permissions.js';
+export * from './lib/utils/preconditions.js';

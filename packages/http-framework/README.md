@@ -322,6 +322,35 @@ The `error` event and the HTTP response are not affected: both behave as for any
 > Before 6.3.0 a thrown `UserError` was emitted as `commandError` (or `autocompleteError` / `interactionHandlerError`).
 > A listener on those events that handles `UserError` or `PreconditionError` has to move to the `*Denied` events.
 
+#### Preconditions
+
+A command can list checks that run before its method does, in the `preconditions` option. A precondition is a function
+that receives the interaction and the command and returns a `Result`: `ok()` lets the command run, `err(userError)`
+denies it. They run in order and the first denial stops the rest. The command method is not run, and the error is
+emitted as `chatInputCommandDenied` or `contextMenuCommandDenied`, the same events as a `UserError` the command throws.
+Autocomplete is not checked.
+
+```typescript
+import { err, ok } from '@sapphire/result';
+import { Command, PreconditionError, type Precondition } from '@wolfstar/http-framework';
+
+const OwnerOnly: Precondition = (interaction) =>
+	interaction.user.id === process.env.OWNER_ID
+		? ok()
+		: err(new PreconditionError({ precondition: 'OwnerOnly', message: 'Only the owner can use this command.' }));
+
+export class UserCommand extends Command {
+	public constructor(context: Command.LoaderContext, options: Command.Options) {
+		super(context, { ...options, preconditions: [OwnerOnly] });
+	}
+}
+```
+
+This is a reduced version of the `@sapphire/framework` preconditions: there is no precondition store, no global
+preconditions, no `Accepted` event, and no cooldown or built-in checks. A precondition that throws is handled like a
+command that throws: a `UserError` goes to the `*Denied` events, anything else to `commandError`. The permission
+decorators of `@wolfstar/decorators` keep working as before.
+
 Listeners declared as pieces can use the enum too:
 
 ```typescript

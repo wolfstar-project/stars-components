@@ -39,6 +39,7 @@ function makeCommandStore(run: () => unknown) {
 	const store = new CommandStore();
 	const command = {
 		name: 'foo',
+		options: {},
 		router: { routeChatInputInteraction: () => 'run', routeContextMenuInteraction: () => 'run' },
 		run,
 		autocompleteRun: run

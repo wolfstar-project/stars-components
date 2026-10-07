@@ -20,6 +20,7 @@ import {
 } from '../interactions/index.js';
 import { handleError, makeInteraction } from '../interactions/utils/util.js';
 import { ErrorMessages } from '../utils/constants.js';
+import { runPreconditions } from '../utils/preconditions.js';
 import { Command } from './Command.js';
 import { CommandLoaderStrategy } from './CommandLoaderStrategy.js';
 import { CommandStoreRouter } from './CommandStoreRouter.js';
@@ -64,7 +65,14 @@ export class CommandStore extends Store<Command, 'commands'> {
 		}
 
 		container.client.emit(Events.CommandRun, context);
-		const result = await Result.fromAsync(() => this.#runCommandMethod(command, method, makeInteraction(response, interaction)));
+		const result = await Result.fromAsync(async () => {
+			const commandInteraction = makeInteraction(response, interaction);
+			const preconditions = await runPreconditions(command.options.preconditions ?? [], commandInteraction, command);
+			// Rethrown so that a denial takes the same route as a `UserError` thrown by the command itself.
+			if (preconditions.isErr()) throw preconditions.unwrapErr();
+
+			return this.#runCommandMethod(command, method, commandInteraction);
+		});
 		result
 			.inspect((value) => container.client.emit(Events.CommandSuccess, context, value))
 			.inspectErr((error) => (this.#emitCommandFailure(error, context), handleError(response, error)));
