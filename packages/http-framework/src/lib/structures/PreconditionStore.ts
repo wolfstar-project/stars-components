@@ -1,8 +1,13 @@
 import { Store } from '@sapphire/pieces';
 import { Result } from '@sapphire/result';
 import type { UserError } from '../errors/UserError.js';
-import { runPrecondition, type PreconditionContext, type PreconditionKind } from '../utils/preconditions.js';
-import type { Command } from './Command.js';
+import {
+	runPrecondition,
+	type PreconditionContext,
+	type PreconditionInteraction,
+	type PreconditionKind,
+	type PreconditionTarget
+} from '../utils/preconditions.js';
 import { Precondition } from './Precondition.js';
 
 export class PreconditionStore extends Store<Precondition, 'preconditions'> {
@@ -14,23 +19,23 @@ export class PreconditionStore extends Store<Precondition, 'preconditions'> {
 
 	/**
 	 * Runs the global preconditions, the ones with a `position`, in ascending order of it, stopping at the first one
-	 * that denies the command.
+	 * that denies the interaction.
 	 *
 	 * @since 6.3.0
-	 * @param kind The kind of command being run.
-	 * @param interaction The interaction of the command.
-	 * @param command The command being run.
+	 * @param kind What is being run.
+	 * @param interaction The interaction being handled.
+	 * @param target The command or interaction handler being run.
 	 * @param context The context of the checks.
 	 * @returns The first `Err`, or `Result.ok()` when every global precondition lets the command run.
 	 */
 	public async run(
 		kind: PreconditionKind,
-		interaction: Command.ApplicationCommandInteraction,
-		command: Command,
+		interaction: PreconditionInteraction,
+		target: PreconditionTarget,
 		context: PreconditionContext = {}
 	): Promise<Result<unknown, UserError>> {
 		for (const precondition of this.#globalPreconditions) {
-			const result = await runPrecondition(precondition, kind, interaction, command, context);
+			const result = await runPrecondition(precondition, kind, interaction, target, context);
 			if (result.isErr()) return result;
 		}
 

@@ -3,13 +3,15 @@ import { Result } from '@sapphire/result';
 import { PreconditionError } from '../errors/PreconditionError.js';
 import type { PreconditionContext, PreconditionResult } from '../utils/preconditions.js';
 import type { Command } from './Command.js';
+import type { InteractionHandler } from './InteractionHandler.js';
 
 /**
  * A check that runs before a command method does, loaded from the `preconditions` directory into the
  * `preconditions` store.
  *
  * @remarks A precondition with a `position` is global: it runs, in ascending order of `position`, before the
- * preconditions of every chat input and context menu command. Any other one runs only for the commands that list its
+ * preconditions of every chat input and context menu command, and of every autocomplete and interaction handler that
+ * it has a method for. Any other one runs only for the commands that list its
  * name in the `preconditions` option. The method it needs depends on the command, and a precondition that is asked to
  * run for a kind of command it has no method for denies the command with
  * {@linkcode Identifiers.PreconditionMissingChatInputHandler} or
@@ -55,6 +57,32 @@ export class Precondition<Options extends Precondition.Options = Precondition.Op
 	 * @param context The context of the check: the `context` given in the `preconditions` option of the command.
 	 */
 	public contextMenuRun?(interaction: Precondition.ContextMenuInteraction, command: Command, context: Precondition.Context): Precondition.Result;
+
+	/**
+	 * Checks the autocomplete of a command. Unlike `chatInputRun` and `contextMenuRun`, a precondition without this
+	 * method is skipped, not denied, so a check written for the commands does not break their autocomplete.
+	 *
+	 * @param interaction The autocomplete interaction.
+	 * @param command The command whose autocomplete is about to run.
+	 * @param context The context of the check: the `context` given in the `preconditions` option of the command.
+	 * @since 6.3.0
+	 */
+	public autocompleteRun?(interaction: Precondition.AutocompleteInteraction, command: Command, context: Precondition.Context): Precondition.Result;
+
+	/**
+	 * Checks an interaction handler (a button, a select menu, or a modal). A precondition without this method is
+	 * skipped, not denied.
+	 *
+	 * @param interaction The interaction of the component or modal.
+	 * @param handler The interaction handler that is about to run.
+	 * @param context The context of the check: the `context` given in the `preconditions` option of the handler.
+	 * @since 6.3.0
+	 */
+	public interactionHandlerRun?(
+		interaction: Precondition.InteractionHandlerInteraction,
+		handler: InteractionHandler,
+		context: Precondition.Context
+	): Precondition.Result;
 
 	/**
 	 * Lets the command run.
@@ -111,6 +139,8 @@ export namespace Precondition {
 	export type Result = PreconditionResult;
 	export type ChatInputInteraction = Command.ChatInputInteraction;
 	export type ContextMenuInteraction = Command.ContextMenuInteraction;
+	export type AutocompleteInteraction = Command.AutocompleteInteraction;
+	export type InteractionHandlerInteraction = InteractionHandler.Interaction;
 }
 
 export namespace AllFlowsPrecondition {

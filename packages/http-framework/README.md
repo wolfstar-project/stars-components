@@ -270,12 +270,17 @@ client.on(Events.CommandError, (error, context) => {
 | `Events.CommandNameMissing`            | `commandNameMissing`            | `interaction, response`                       |
 | `Events.CommandNameUnknown`            | `commandNameUnknown`            | `interaction, response`                       |
 | `Events.CommandMethodUnknown`          | `commandMethodUnknown`          | `context`                                     |
+| `Events.PreChatInputCommandRun`        | `preChatInputCommandRun`        | `context`                                     |
+| `Events.PreContextMenuCommandRun`      | `preContextMenuCommandRun`      | `context`                                     |
+| `Events.ChatInputCommandAccepted`      | `chatInputCommandAccepted`      | `context`                                     |
+| `Events.ContextMenuCommandAccepted`    | `contextMenuCommandAccepted`    | `context`                                     |
 | `Events.CommandRun`                    | `commandRun`                    | `context`                                     |
 | `Events.CommandSuccess`                | `commandSuccess`                | `context, value: unknown`                     |
 | `Events.CommandError`                  | `commandError`                  | `error: unknown, context`                     |
 | `Events.ChatInputCommandDenied`        | `chatInputCommandDenied`        | `error: UserError, context`                   |
 | `Events.ContextMenuCommandDenied`      | `contextMenuCommandDenied`      | `error: UserError, context`                   |
 | `Events.CommandFinish`                 | `commandFinish`                 | `context`                                     |
+| `Events.AutocompleteAccepted`          | `autocompleteAccepted`          | `context`                                     |
 | `Events.AutocompleteRun`               | `autocompleteRun`               | `context`                                     |
 | `Events.AutocompleteSuccess`           | `autocompleteSuccess`           | `context, value: unknown`                     |
 | `Events.AutocompleteError`             | `autocompleteError`             | `error: unknown, context`                     |
@@ -283,6 +288,7 @@ client.on(Events.CommandError, (error, context) => {
 | `Events.AutocompleteFinish`            | `autocompleteFinish`            | `context`                                     |
 | `Events.InteractionHandlerNameInvalid` | `interactionHandlerNameInvalid` | `interaction, response`                       |
 | `Events.InteractionHandlerNameUnknown` | `interactionHandlerNameUnknown` | `interaction, response`                       |
+| `Events.InteractionHandlerAccepted`    | `interactionHandlerAccepted`    | `context`                                     |
 | `Events.InteractionHandlerRun`         | `interactionHandlerRun`         | `context`                                     |
 | `Events.InteractionHandlerSuccess`     | `interactionHandlerSuccess`     | `context, value: unknown`                     |
 | `Events.InteractionHandlerError`       | `interactionHandlerError`       | `error: unknown, context`                     |
@@ -324,9 +330,16 @@ The `error` event and the HTTP response are not affected: both behave as for any
 
 #### Preconditions
 
-A precondition is a check that runs before a chat input or context menu command does. When it denies the command, the
-command method is not run and the error is emitted as `chatInputCommandDenied` or `contextMenuCommandDenied`, the same
-events as a `UserError` the command throws. Autocomplete is not checked.
+A precondition is a check that runs before a chat input or context menu command does, before the autocomplete of a
+command, and before an interaction handler. When it denies the interaction, the method is not run and the error is
+emitted as `chatInputCommandDenied`, `contextMenuCommandDenied`, `autocompleteDenied` or `interactionHandlerDenied`, the
+same events as a `UserError` the command throws.
+
+The events of a command are, in order: `preChatInputCommandRun` (or `preContextMenuCommandRun`), the preconditions, then
+`chatInputCommandAccepted` (or `contextMenuCommandAccepted`) and `commandRun`, or the `*Denied` event, then
+`commandSuccess` or `commandError`, and `commandFinish`. An autocomplete and an interaction handler emit
+`autocompleteAccepted` and `interactionHandlerAccepted` right before `autocompleteRun` and `interactionHandlerRun`.
+`commandRun` is no longer emitted for a command that was denied.
 
 A precondition is a piece: a class that extends `Precondition`, in the `preconditions` directory, loaded into the
 `preconditions` store. It implements `chatInputRun` and/or `contextMenuRun`, and answers with `this.ok()` or
@@ -360,7 +373,8 @@ export class UserCommand extends Command {
 ```
 
 A precondition with a `position` is global: it runs for every command, in ascending order of `position`, before the ones
-of the command.
+of the command. A piece can also implement `autocompleteRun` and `interactionHandlerRun`, and an interaction handler has
+the same `preconditions` option as a command.
 
 ```typescript
 import { Precondition } from '@wolfstar/http-framework';
@@ -374,14 +388,17 @@ export class UserPrecondition extends Precondition {
 }
 ```
 
-A piece that has no method for the kind of command it is asked to check denies it with
-`Identifiers.PreconditionMissingChatInputHandler` or `Identifiers.PreconditionMissingContextMenuHandler`, and a name that
-is not in the store with `Identifiers.PreconditionUnavailable`. A precondition that throws is handled like a command that
+A piece that has no method for the chat input or context menu command it is asked to check denies it with
+`Identifiers.PreconditionMissingChatInputHandler` or `Identifiers.PreconditionMissingContextMenuHandler`. For an
+autocomplete or an interaction handler a piece with no `autocompleteRun` or `interactionHandlerRun` is skipped instead,
+global ones included, so a check written for the commands does not deny their autocomplete or the buttons of the bot, and
+the functions of a command are not run for its autocomplete. A name that is not in the store denies with
+`Identifiers.PreconditionUnavailable`. A precondition that throws is handled like a command that
 throws: a `UserError` goes to the `*Denied` events, anything else to `commandError`.
 
 This follows the preconditions of `@sapphire/framework`, with what it does not have left out: no message flow, no
-built-in checks (`Cooldown`, `NSFW`, `GuildOnly`, ...), no nested `AND`/`OR` arrays, no typed registry of precondition
-names, and no `Accepted` event. The permission decorators of `@wolfstar/decorators` keep working as before.
+built-in checks (`Cooldown`, `NSFW`, `GuildOnly`, ...), no nested `AND`/`OR` arrays and no typed registry of precondition
+names. The checks for autocomplete and interaction handlers, and their `Accepted` events, are not in Sapphire. The permission decorators of `@wolfstar/decorators` keep working as before.
 
 Listeners declared as pieces can use the enum too:
 

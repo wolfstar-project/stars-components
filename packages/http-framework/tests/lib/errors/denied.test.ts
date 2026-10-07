@@ -51,7 +51,7 @@ function makeCommandStore(run: () => unknown) {
 
 function makeHandlerStore(run: () => unknown) {
 	const store = new InteractionHandlerStore();
-	const handler = { name: 'button', run } as unknown as InteractionHandler;
+	const handler = { name: 'button', options: {}, run } as unknown as InteractionHandler;
 	vi.spyOn(store, 'get').mockReturnValue(handler);
 	return { store, handler };
 }

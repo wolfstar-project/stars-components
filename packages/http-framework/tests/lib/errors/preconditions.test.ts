@@ -4,6 +4,7 @@ import {
 	ApplicationCommandAutocompleteInteractionData,
 	ChatInputApplicationCommandInteractionData,
 	MessageApplicationCommandInteractionData,
+	MessageComponentButtonInteractionData,
 	TestableClient,
 	UserApplicationCommandInteractionData,
 	makeResponse
@@ -11,12 +12,14 @@ import {
 import {
 	CommandStore,
 	Identifiers,
+	InteractionHandlerStore,
 	Precondition,
 	PreconditionError,
 	PreconditionStore,
 	UserError,
 	type ClientEvents,
 	type Command,
+	type InteractionHandler,
 	type PreconditionFunction,
 	type PreconditionResolvable
 } from '../../../src/index.js';
@@ -39,6 +42,13 @@ function makeStore(preconditions: readonly PreconditionResolvable[] | undefined,
 	return { store, command, run };
 }
 
+function makeHandlerStore(preconditions: readonly PreconditionResolvable[] | undefined, run = vi.fn(() => 'ran')) {
+	const store = new InteractionHandlerStore();
+	const handler = { name: 'button', options: { preconditions }, run } as unknown as InteractionHandler;
+	vi.spyOn(store, 'get').mockReturnValue(handler);
+	return { store, handler, run };
+}
+
 const deny =
 	(name: string): PreconditionFunction =>
 	() =>
@@ -48,13 +58,17 @@ interface PieceOptions {
 	position?: number | null;
 	chatInputRun?: Precondition['chatInputRun'];
 	contextMenuRun?: Precondition['contextMenuRun'];
+	autocompleteRun?: Precondition['autocompleteRun'];
+	interactionHandlerRun?: Precondition['interactionHandlerRun'];
 }
 
 /** Loads a precondition piece with the given name and handlers into the store of the client. */
-function addPiece(name: string, { position = null, chatInputRun, contextMenuRun }: PieceOptions = {}) {
+function addPiece(name: string, { position = null, chatInputRun, contextMenuRun, autocompleteRun, interactionHandlerRun }: PieceOptions = {}) {
 	class TestPrecondition extends Precondition {
 		public override readonly chatInputRun = chatInputRun;
 		public override readonly contextMenuRun = contextMenuRun;
+		public override readonly autocompleteRun = autocompleteRun;
+		public override readonly interactionHandlerRun = interactionHandlerRun;
 	}
 
 	const piece = new TestPrecondition(
@@ -239,7 +253,7 @@ describe('Precondition', () => {
 			expect(response.statusCode).toBe(500);
 		});
 
-		test('GIVEN an autocomplete interaction THEN the preconditions are not run', async () => {
+		test('GIVEN an autocomplete interaction THEN the functions and the pieces with no autocompleteRun are skipped', async () => {
 			const precondition = vi.fn(deny('Owner'));
 			addPiece('Global', { position: 1, chatInputRun: vi.fn(() => err(new PreconditionError({ precondition: 'Global' }))) });
 			const { store, command } = makeStore([precondition]);
@@ -421,6 +435,280 @@ describe('Precondition', () => {
 			await store.runApplicationCommand(makeResponse(), ChatInputApplicationCommandInteractionData);
 
 			expect(chatInputRun).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('events', () => {
+		const COMMAND_EVENTS = [
+			'preChatInputCommandRun',
+			'preContextMenuCommandRun',
+			'chatInputCommandAccepted',
+			'contextMenuCommandAccepted',
+			'chatInputCommandDenied',
+			'contextMenuCommandDenied',
+			'commandRun',
+			'commandSuccess',
+			'commandFinish'
+		] as const;
+
+		function record(events: readonly (keyof ClientEvents)[]) {
+			const order: string[] = [];
+			for (const event of events) client.on(event, (() => order.push(event)) as never);
+			return order;
+		}
+
+		test('GIVEN a chat input command that passes THEN the events are preRun, accepted, run, success, finish', async () => {
+			const order = record(COMMAND_EVENTS);
+			const { store } = makeStore(undefined);
+
+			await store.runApplicationCommand(makeResponse(), ChatInputApplicationCommandInteractionData);
+
+			expect(order).toEqual(['preChatInputCommandRun', 'chatInputCommandAccepted', 'commandRun', 'commandSuccess', 'commandFinish']);
+		});
+
+		test('GIVEN a context menu command that passes THEN the context menu events are used', async () => {
+			const order = record(COMMAND_EVENTS);
+			const { store } = makeStore(undefined);
+
+			await store.runApplicationCommand(makeResponse(), MessageApplicationCommandInteractionData);
+
+			expect(order).toEqual(['preContextMenuCommandRun', 'contextMenuCommandAccepted', 'commandRun', 'commandSuccess', 'commandFinish']);
+		});
+
+		test('GIVEN a command that is denied THEN there is no accepted event and the command does not emit commandRun', async () => {
+			const order = record(COMMAND_EVENTS);
+			const { store } = makeStore([deny('Owner')]);
+
+			await store.runApplicationCommand(makeResponse(), ChatInputApplicationCommandInteractionData);
+
+			expect(order).toEqual(['preChatInputCommandRun', 'chatInputCommandDenied', 'commandFinish']);
+		});
+
+		test('GIVEN the accepted event THEN it carries the context of the command', async () => {
+			const { store, command } = makeStore(undefined);
+			const spies = listen(client, ['chatInputCommandAccepted', 'preChatInputCommandRun']);
+			const response = makeResponse();
+
+			await store.runApplicationCommand(response, ChatInputApplicationCommandInteractionData);
+
+			const context = { command, interaction: ChatInputApplicationCommandInteractionData, response };
+			expect(spies.preChatInputCommandRun).toHaveBeenCalledExactlyOnceWith(context);
+			expect(spies.chatInputCommandAccepted).toHaveBeenCalledExactlyOnceWith(context);
+		});
+	});
+
+	describe('autocomplete', () => {
+		function makeAutocomplete(preconditions: readonly PreconditionResolvable[] | undefined, autocompleteRun = vi.fn()) {
+			const store = new CommandStore();
+			const command = { name: 'foo', options: { preconditions }, autocompleteRun } as unknown as Command;
+			vi.spyOn(store.router, 'getChatInput').mockReturnValue(command);
+			return { store, command, autocompleteRun };
+		}
+
+		const run = (store: CommandStore) => store.runApplicationCommandAutocomplete(makeResponse(), ApplicationCommandAutocompleteInteractionData);
+
+		test('GIVEN a named piece with autocompleteRun that denies THEN autocompleteDenied is emitted and the autocomplete does not run', async () => {
+			const piece = addPiece('Owner', { autocompleteRun: () => err(new PreconditionError({ precondition: 'Owner' })) });
+			const { store, command, autocompleteRun } = makeAutocomplete(['Owner']);
+			const spies = listen(client, [
+				'autocompleteDenied',
+				'autocompleteError',
+				'autocompleteAccepted',
+				'autocompleteRun',
+				'autocompleteFinish'
+			]);
+
+			await run(store);
+
+			expect(piece.name).toBe('Owner');
+			expect(spies.autocompleteDenied).toHaveBeenCalledExactlyOnceWith(expect.any(PreconditionError), expect.objectContaining({ command }));
+			expect(spies.autocompleteError).not.toHaveBeenCalled();
+			expect(spies.autocompleteAccepted).not.toHaveBeenCalled();
+			expect(spies.autocompleteRun).not.toHaveBeenCalled();
+			expect(spies.autocompleteFinish).toHaveBeenCalledOnce();
+			expect(autocompleteRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a named piece that passes THEN the interaction, the command and the context are given and the autocomplete runs', async () => {
+			const check = vi.fn(() => ok());
+			addPiece('Role', { autocompleteRun: check });
+			const { store, command, autocompleteRun } = makeAutocomplete([{ name: 'Role', context: { roleId: '1' } }]);
+			const order: string[] = [];
+			for (const event of ['autocompleteAccepted', 'autocompleteRun', 'autocompleteSuccess', 'autocompleteFinish'] as const) {
+				client.on(event, (() => order.push(event)) as never);
+			}
+
+			await run(store);
+
+			expect(check).toHaveBeenCalledExactlyOnceWith(
+				expect.objectContaining({ id: ApplicationCommandAutocompleteInteractionData.id }),
+				command,
+				{ roleId: '1' }
+			);
+			expect(autocompleteRun).toHaveBeenCalledOnce();
+			expect(order).toEqual(['autocompleteAccepted', 'autocompleteRun', 'autocompleteSuccess', 'autocompleteFinish']);
+		});
+
+		test('GIVEN a named piece with no autocompleteRun THEN it is skipped and the autocomplete runs', async () => {
+			addPiece('ChatOnly', { chatInputRun: () => err(new PreconditionError({ precondition: 'ChatOnly' })) });
+			const { store, autocompleteRun } = makeAutocomplete(['ChatOnly']);
+			const spies = listen(client, ['autocompleteDenied']);
+
+			await run(store);
+
+			expect(autocompleteRun).toHaveBeenCalledOnce();
+			expect(spies.autocompleteDenied).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a global piece with autocompleteRun that denies THEN every autocomplete is denied', async () => {
+			addPiece('Global', { position: 1, autocompleteRun: () => err(new PreconditionError({ precondition: 'Global' })) });
+			const { store, autocompleteRun } = makeAutocomplete(undefined);
+			const spies = listen(client, ['autocompleteDenied']);
+
+			await run(store);
+
+			expect(spies.autocompleteDenied.mock.calls[0][0]).toMatchObject({ precondition: 'Global' });
+			expect(autocompleteRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a name that is not in the store THEN the autocomplete is denied as unavailable', async () => {
+			const { store, autocompleteRun } = makeAutocomplete(['Missing']);
+			const spies = listen(client, ['autocompleteDenied']);
+
+			await run(store);
+
+			expect(spies.autocompleteDenied.mock.calls[0][0]).toMatchObject({ identifier: Identifiers.PreconditionUnavailable });
+			expect(autocompleteRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a piece that throws a generic Error THEN autocompleteError is emitted', async () => {
+			const boom = new Error('boom');
+			addPiece('Boom', {
+				autocompleteRun: () => {
+					throw boom;
+				}
+			});
+			const { store, autocompleteRun } = makeAutocomplete(['Boom']);
+			const spies = listen(client, ['autocompleteDenied', 'autocompleteError']);
+
+			await run(store);
+
+			expect(spies.autocompleteError).toHaveBeenCalledExactlyOnceWith(boom, expect.anything());
+			expect(spies.autocompleteDenied).not.toHaveBeenCalled();
+			expect(autocompleteRun).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('interaction handlers', () => {
+		const run = (store: InteractionHandlerStore) => store.runHandler(makeResponse(), MessageComponentButtonInteractionData);
+
+		test('GIVEN a named piece with interactionHandlerRun that denies THEN interactionHandlerDenied is emitted and the handler does not run', async () => {
+			addPiece('Owner', { interactionHandlerRun: () => err(new PreconditionError({ precondition: 'Owner' })) });
+			const { store, handler, run: handlerRun } = makeHandlerStore(['Owner']);
+			const spies = listen(client, [
+				'interactionHandlerDenied',
+				'interactionHandlerError',
+				'interactionHandlerAccepted',
+				'interactionHandlerRun',
+				'interactionHandlerFinish'
+			]);
+
+			await run(store);
+
+			expect(spies.interactionHandlerDenied).toHaveBeenCalledExactlyOnceWith(
+				expect.any(PreconditionError),
+				expect.objectContaining({ handler })
+			);
+			expect(spies.interactionHandlerError).not.toHaveBeenCalled();
+			expect(spies.interactionHandlerAccepted).not.toHaveBeenCalled();
+			expect(spies.interactionHandlerRun).not.toHaveBeenCalled();
+			expect(spies.interactionHandlerFinish).toHaveBeenCalledOnce();
+			expect(handlerRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a piece and a function that pass THEN they get the interaction and the handler and the handler runs after accepted', async () => {
+			const check = vi.fn(() => ok());
+			const fn = vi.fn(() => ok());
+			addPiece('Role', { interactionHandlerRun: check });
+			const { store, handler, run: handlerRun } = makeHandlerStore([{ name: 'Role', context: { roleId: '1' } }, fn]);
+			const order: string[] = [];
+			for (const event of [
+				'interactionHandlerAccepted',
+				'interactionHandlerRun',
+				'interactionHandlerSuccess',
+				'interactionHandlerFinish'
+			] as const) {
+				client.on(event, (() => order.push(event)) as never);
+			}
+
+			await run(store);
+
+			expect(check).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: MessageComponentButtonInteractionData.id }), handler, {
+				roleId: '1'
+			});
+			expect(fn).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: MessageComponentButtonInteractionData.id }), handler);
+			expect(handlerRun).toHaveBeenCalledOnce();
+			expect(order).toEqual(['interactionHandlerAccepted', 'interactionHandlerRun', 'interactionHandlerSuccess', 'interactionHandlerFinish']);
+		});
+
+		test('GIVEN a function that denies THEN interactionHandlerDenied is emitted', async () => {
+			const { store, run: handlerRun } = makeHandlerStore([deny('Owner')]);
+			const spies = listen(client, ['interactionHandlerDenied', 'interactionHandlerError']);
+
+			await run(store);
+
+			expect(spies.interactionHandlerDenied.mock.calls[0][0]).toMatchObject({ precondition: 'Owner' });
+			expect(spies.interactionHandlerError).not.toHaveBeenCalled();
+			expect(handlerRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a piece with no interactionHandlerRun, even a global one for the commands, THEN it is skipped', async () => {
+			addPiece('ChatOnly', { position: 1, chatInputRun: () => err(new PreconditionError({ precondition: 'ChatOnly' })) });
+			addPiece('Named', { chatInputRun: () => err(new PreconditionError({ precondition: 'Named' })) });
+			const { store, run: handlerRun } = makeHandlerStore(['Named']);
+			const spies = listen(client, ['interactionHandlerDenied']);
+
+			await run(store);
+
+			expect(handlerRun).toHaveBeenCalledOnce();
+			expect(spies.interactionHandlerDenied).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a global piece with interactionHandlerRun that denies THEN every handler is denied', async () => {
+			addPiece('Global', { position: 1, interactionHandlerRun: () => err(new PreconditionError({ precondition: 'Global' })) });
+			const { store, run: handlerRun } = makeHandlerStore(undefined);
+			const spies = listen(client, ['interactionHandlerDenied']);
+
+			await run(store);
+
+			expect(spies.interactionHandlerDenied.mock.calls[0][0]).toMatchObject({ precondition: 'Global' });
+			expect(handlerRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a name that is not in the store THEN the handler is denied as unavailable', async () => {
+			const { store, run: handlerRun } = makeHandlerStore(['Missing']);
+			const spies = listen(client, ['interactionHandlerDenied']);
+
+			await run(store);
+
+			expect(spies.interactionHandlerDenied.mock.calls[0][0]).toMatchObject({ identifier: Identifiers.PreconditionUnavailable });
+			expect(handlerRun).not.toHaveBeenCalled();
+		});
+
+		test('GIVEN a function that throws a generic Error THEN interactionHandlerError is emitted', async () => {
+			const boom = new Error('boom');
+			const { store, run: handlerRun } = makeHandlerStore([
+				() => {
+					throw boom;
+				}
+			]);
+			const spies = listen(client, ['interactionHandlerDenied', 'interactionHandlerError']);
+
+			await run(store);
+
+			expect(spies.interactionHandlerError).toHaveBeenCalledExactlyOnceWith(boom, expect.anything());
+			expect(spies.interactionHandlerDenied).not.toHaveBeenCalled();
+			expect(handlerRun).not.toHaveBeenCalled();
 		});
 	});
 });

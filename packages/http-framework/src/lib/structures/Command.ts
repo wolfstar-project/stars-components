@@ -149,7 +149,8 @@ export namespace Command {
 		 * The checks to run, in order, before a chat input or context menu method of the command, after the global
 		 * preconditions. An entry is the name of a `Precondition` piece, that name with a `context`, or a function. The
 		 * first one that returns an `Err` denies the command: the method is not run and the error is emitted as
-		 * `chatInputCommandDenied` or `contextMenuCommandDenied`. Autocomplete is not checked.
+		 * `chatInputCommandDenied` or `contextMenuCommandDenied`. The autocomplete of the command only runs the pieces
+		 * named here that have an `autocompleteRun` method, not the functions.
 		 *
 		 * @since 6.3.0
 		 * @default []
