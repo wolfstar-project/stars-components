@@ -1,5 +1,13 @@
 # @wolfstar/schema
 
+## 0.9.0
+
+### Minor Changes
+
+- [#291](https://github.com/wolfstar-project/stars-components/pull/291) [`d782e5d`](https://github.com/wolfstar-project/stars-components/commit/d782e5d94498f6b2b7216f0533895dd07a3ebf48) - Make the dashboard of `stars dev` clickable. A click on a channel or a level of the sidebar shows or hides it like `Space`, a second click or an `Alt`/`Ctrl` click solos it like `s`, a click on a group header folds the group, a click on a key of the list runs that key, and the wheel scrolls the logs. The new `dev.mouse` option (default `true`) and `stars dev --no-mouse` leave the mouse to the terminal. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#293](https://github.com/wolfstar-project/stars-components/pull/293) [`a5e09ae`](https://github.com/wolfstar-project/stars-components/commit/a5e09aec61803ed9defcfd0078217a30411e6c24) - Keep the top-level `stars.config` keys that are not built in as `ResolvedStarsConfig.moduleOptions` instead of rejecting them, so a module can read its options from a key of its own (`meta.configKey`). `BUILT_IN_CONFIG_KEYS` lists the keys the schema owns, `assertModuleOptionsClaimed` reports the first key that no installed module claimed as `UNKNOWN_OPTION` (the host calls it once the modules are set up), and `ModulesRuntime.configKeys` carries the keys the modules claimed. `StarsConfig` is the interface a module augments to type its key. `ModulesRuntime.configKeys` is a required field, so code that builds a `ModulesRuntime` literal needs to add it (`EMPTY_MODULES_RUNTIME` has it). Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.8.0
 
 ### Minor Changes

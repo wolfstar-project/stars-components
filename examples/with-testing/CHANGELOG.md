@@ -1,5 +1,12 @@
 # with-testing
 
+## 0.0.25
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/http-framework@6.2.2
+
 ## 0.0.24
 
 ### Patch Changes
