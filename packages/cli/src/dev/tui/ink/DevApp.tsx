@@ -11,6 +11,7 @@ import { useLogCounters } from './hooks/useLogCounters.js';
 import { useBuildClock } from './hooks/useBuildClock.js';
 import { describeBadge, isBusy } from '../panel-logic.js';
 import { initialLogView, type LogViewFilter } from '../log-view.js';
+import type { MouseInput } from '../mouse.js';
 import { openDevUrl } from '../../open-url.js';
 import { ThemeProvider } from './theme.js';
 import { ThemeOverlay } from './components/ThemeOverlay.js';
@@ -35,6 +36,10 @@ export interface DevAppProps {
 	onCopy: (text: string) => void;
 	/** Called when the user keeps a theme in the picker, so the CLI can remember it. */
 	onThemeSave: (setting: ThemeSetting) => void;
+	/** The mouse of the terminal, when `dev.mouse` is on: the dashboard listens to it. */
+	mouse?: Pick<MouseInput, 'subscribe'>;
+	/** Called with whether the dashboard, the only view that takes the mouse, is the one on screen. */
+	onMouseChange?: (wanted: boolean) => void;
 }
 
 type Overlay = 'logs' | 'errors' | 'help' | 'info' | 'theme';
@@ -59,7 +64,8 @@ export function resolveLayout(layout: DevLayout | 'auto', columns: number, rows:
  * the bottom of the normal buffer with the logs folded away, and is what a small terminal gets. The browsable
  * overlays use the alternate buffer from either, preserving the terminal's history and the panel when they close.
  */
-export function DevApp({ service, color, theme, reducedMotion, layout = 'auto', filter, onQuit, onViewChange, onCopy, onThemeSave }: DevAppProps) {
+export function DevApp(props: DevAppProps) {
+	const { service, color, theme, reducedMotion, layout = 'auto', filter, onQuit, onViewChange, onCopy, onThemeSave, mouse, onMouseChange } = props;
 	const { columns, rows } = useWindowSize();
 	const [overlay, setOverlay] = useState<Overlay | null>(null);
 	const [chosen, setChosen] = useState(layout);
@@ -99,20 +105,16 @@ export function DevApp({ service, color, theme, reducedMotion, layout = 'auto', 
 		repaint((count) => count + 1);
 	}, [fullScreen, onViewChange]);
 
+	// The overlays and the panel keep the terminal's own wheel and text selection.
+	const takesMouse = base === 'dashboard' && overlay === null;
+	useEffect(() => {
+		onMouseChange?.(takesMouse);
+	}, [takesMouse, onMouseChange]);
+
 	const onCapture = useCallback((capturing: boolean) => setCaptured(capturing), []);
 
-	useInput((input, key) => {
-		if (key.ctrl && input === 'c') return onQuit();
-		if (key.ctrl && input === 'l') return service.clearLogs();
-		if (overlay !== null || captured) return;
-		if (confirmQuit) {
-			if (input === 'y') return onQuit();
-			return setConfirmQuit(false);
-		}
-		if (key.ctrl && input === 'r') return void service.restart('manual');
-		if (key.ctrl && input === 'd') return busy ? setConfirmQuit(true) : onQuit();
-		if (status.prompt && (input === 'y' || input === 'n')) return service.answerPrompt(input === 'y');
-
+	/** The keys that act on the session or change the view; also what a click on their hint in the sidebar runs. */
+	const runKey = (input: string) => {
 		switch (input) {
 			case 'q':
 				return busy ? setConfirmQuit(true) : onQuit();
@@ -143,6 +145,21 @@ export function DevApp({ service, color, theme, reducedMotion, layout = 'auto', 
 			default:
 				break;
 		}
+	};
+
+	useInput((input, key) => {
+		if (key.ctrl && input === 'c') return onQuit();
+		if (key.ctrl && input === 'l') return service.clearLogs();
+		if (overlay !== null || captured) return;
+		if (confirmQuit) {
+			if (input === 'y') return onQuit();
+			return setConfirmQuit(false);
+		}
+		if (key.ctrl && input === 'r') return void service.restart('manual');
+		if (key.ctrl && input === 'd') return busy ? setConfirmQuit(true) : onQuit();
+		if (status.prompt && (input === 'y' || input === 'n')) return service.answerPrompt(input === 'y');
+
+		runKey(input);
 	});
 
 	return (
@@ -192,6 +209,8 @@ export function DevApp({ service, color, theme, reducedMotion, layout = 'auto', 
 							initialFilter={initialFilter}
 							active={overlay === null}
 							onCapture={onCapture}
+							mouse={mouse}
+							onKey={runKey}
 						/>
 					</Box>
 				)}

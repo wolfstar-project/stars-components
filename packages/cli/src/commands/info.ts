@@ -142,6 +142,7 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			row('log file', info.dev.logFile ? show(info.dev.logFile) : colors.dim('disabled')),
 			row('log dir', info.dev.logs.dir ? `${show(info.dev.logs.dir)} (keeps ${info.dev.logs.keep})` : colors.dim('disabled')),
 			row('layout', info.dev.layout),
+			row('mouse', info.dev.mouse ? 'clickable dashboard' : colors.dim('left to the terminal')),
 			row('channels', info.dev.logs.channels?.join(', ') ?? colors.dim('all')),
 			row('levels', info.dev.logs.levels.join(', ')),
 			row('commands', `refresh: ${info.dev.commands.refresh}`),

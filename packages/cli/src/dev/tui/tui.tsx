@@ -2,6 +2,7 @@ import { render } from 'ink';
 import type { DevService } from '../dev-service.js';
 import { DevApp, resolveLayout, type DevLayout } from './ink/DevApp.js';
 import type { LogViewFilter } from './log-view.js';
+import { createMouseInput, DISABLE_MOUSE, ENABLE_MOUSE } from './mouse.js';
 import type { Renderer } from './plain.js';
 import { captureOutput } from './capture-output.js';
 import { isErrorDetail } from '../../utils/log-buffer.js';
@@ -23,6 +24,8 @@ export interface TuiRendererOptions {
 	layout?: DevLayout | 'auto';
 	/** The log filter the dashboard starts with; defaults to `dev.logs`. */
 	filter?: LogViewFilter;
+	/** `--no-mouse`; defaults to `dev.mouse`. */
+	mouse?: boolean;
 }
 
 /**
@@ -49,6 +52,15 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 	const layout = options.layout ?? service.config.dev.layout ?? 'auto';
 	// The dashboard is painted from the first frame, so its buffer is entered before Ink writes anything.
 	let alternate = resolveLayout(layout, stdout.columns ?? 80, stdout.rows ?? 24) === 'dashboard';
+	const mouse = (options.mouse ?? service.config.dev.mouse) ? createMouseInput(stdin) : null;
+	// The mouse is only reported while the dashboard is on screen: the panel and the overlays leave the terminal its
+	// own wheel and text selection.
+	let reporting = false;
+	const reportMouse = (wanted: boolean) => {
+		if (!mouse || wanted === reporting) return;
+		reporting = wanted;
+		write(wanted ? ENABLE_MOUSE : DISABLE_MOUSE);
+	};
 	if (alternate) write('\u001B[?1049h\u001B[H');
 	let stopped = false;
 	const switchView = (fullScreen: boolean) => {
@@ -77,10 +89,14 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 			onQuit={quit}
 			onViewChange={switchView}
 			onCopy={(text) => write(`\u001B]52;c;${Buffer.from(text.slice(0, 65536)).toString('base64')}\u0007`)}
+			mouse={mouse ?? undefined}
+			onMouseChange={(wanted) => {
+				if (!stopped) reportMouse(wanted);
+			}}
 		/>,
 		{
 			stdout: sink,
-			stdin,
+			stdin: mouse?.stdin ?? stdin,
 			// `stars dev` owns the shutdown: it stops the bot, then exits with the right code.
 			exitOnCtrlC: false,
 			patchConsole: false,
@@ -104,7 +120,9 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 			service.promptable = false;
 			if (alternate) instance.clear();
 			instance.unmount();
+			reportMouse(false);
 			if (alternate) write('\u001B[?1049l');
+			mouse?.dispose();
 			write('\u001B[?25h');
 			for (const restore of restoreOutput) restore();
 			// A fatal startup must not leave the user with only a folded error and no way to read it.

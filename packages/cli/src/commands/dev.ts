@@ -25,6 +25,8 @@ export interface DevTaskOptions extends ProjectArgs {
 	level?: string;
 	/** `--tunnel` opens the tunnel at start whatever `dev.tunnel` says, `--no-tunnel` keeps it closed. */
 	tunnel?: boolean;
+	/** `--no-mouse` leaves the mouse to the terminal whatever `dev.mouse` says. */
+	mouse?: boolean;
 }
 
 const LAYOUTS = ['auto', 'dashboard', 'panel'] as const;
@@ -72,6 +74,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 					theme,
 					layout,
 					filter,
+					mouse: options.mouse,
 					reducedMotion: prefersReducedMotion(),
 					onThemeSave: (setting) => {
 						if (!saveTheme(setting)) service.log('stars', 'warn', 'Could not save the theme preference.');
@@ -169,6 +172,12 @@ export default defineCommand({
 			type: 'boolean',
 			description: 'Open the public tunnel at start, whatever dev.tunnel says',
 			negativeDescription: 'Keep the public tunnel closed at start even when dev.tunnel enables it'
+		},
+		// No default: left out, `dev.mouse` decides.
+		mouse: {
+			type: 'boolean',
+			description: 'Clickable dashboard and wheel scrolling (defaults to dev.mouse)',
+			negativeDescription: 'Leave the mouse to the terminal even when dev.mouse is on'
 		}
 	},
 	async run({ args, rawArgs }) {
@@ -181,7 +190,8 @@ export default defineCommand({
 			layout: args.layout,
 			channel: channel.length > 0 ? channel : undefined,
 			level: args.level,
-			tunnel: args.tunnel
+			tunnel: args.tunnel,
+			mouse: args.mouse
 		});
 	}
 });

@@ -629,5 +629,169 @@ describe('renderers', () => {
 			renderer!.stop();
 			await waitFor(() => stdout.terminal.buffer.active.type === 'normal');
 		});
+
+		describe('mouse', () => {
+			/** Where a text is on screen, as the 1-based cell an SGR mouse report carries. */
+			const cell = (text: string) => {
+				const rows = stdout.screen().split('\n');
+				const row = rows.findIndex((line) => line.includes(text));
+				if (row < 0) throw new Error(`"${text}" is not on screen`);
+				return { column: rows[row]!.indexOf(text) + 1, row: row + 1 };
+			};
+			const click = (text: string, modifiers = 0) => {
+				const { column, row } = cell(text);
+				stdin.press(`\u001B[<${modifiers};${column};${row}M\u001B[<${modifiers};${column};${row}m`);
+			};
+			const wheel = (direction: 'up' | 'down', column: number) => stdin.press(`\u001B[<${direction === 'up' ? 64 : 65};${column};5M`);
+
+			test('asks the terminal for the mouse in the dashboard and gives it back on stop', async () => {
+				await dashboard();
+				expect(stdout.output).toContain('\u001B[?1000h\u001B[?1006h');
+				renderer!.stop();
+				expect(stdout.output).toContain('\u001B[?1006l\u001B[?1000l');
+			});
+
+			test('gives the mouse back while an overlay is open', async () => {
+				await dashboard();
+				const reports = () => stdout.output.split('\u001B[?1000h').length - 1;
+				const releases = () => stdout.output.split('\u001B[?1000l').length - 1;
+				expect([reports(), releases()]).toEqual([1, 0]);
+
+				stdin.press('?');
+				await waitFor(() => releases() === 1);
+				stdin.press('\u001B');
+				await waitFor(() => reports() === 2);
+			});
+
+			test('leaves the mouse to the terminal with dev.mouse off, and in the panel', async () => {
+				await dashboard({ mouse: false });
+				expect(stdout.output).not.toContain('\u001B[?1000h');
+				renderer!.stop();
+				renderer = undefined;
+
+				stdout = new FakeStdout(120, 30);
+				stdin = createFakeStdin();
+				renderer = createTuiRenderer(service, {
+					stdout: stdout as never,
+					stdin: stdin as never,
+					color: false,
+					reducedMotion: true,
+					layout: 'panel'
+				});
+				void renderer.start();
+				await waitFor(() => stdout.screen().includes('Stars'));
+				expect(stdout.output).not.toContain('\u001B[?1000h');
+			});
+
+			test('a click on a channel filters it like space, a second click or an alt click solos it like s', async () => {
+				await dashboard();
+				service.log('app', 'info', 'from the bot');
+				service.log('build', 'warn', 'from the build');
+				await waitFor(() => stdout.screen().includes('from the build'));
+				// The channels are on one indented line: `bot` starts two cells in, `build` six.
+				const { column, row } = cell('  bot build');
+				const press = (offset: number, modifiers = 0) => stdin.press(`\u001B[<${modifiers};${column + offset};${row}M`);
+
+				press(2);
+				await waitFor(() => !stdout.screen().includes('from the bot'));
+				expect(stdout.screen()).toContain('from the build');
+				// Past the double click delay, so this is a plain click again: it shows the channel back.
+				await wait(450);
+				press(2);
+				await waitFor(() => stdout.screen().includes('from the bot'));
+
+				// alt + click on `build`.
+				press(6, 8);
+				await waitFor(() => !stdout.screen().includes('from the bot'));
+				expect(stdout.screen()).toContain('from the build');
+
+				// A double click on `bot`: it solos `bot`, as `s` does.
+				await wait(450);
+				press(2);
+				await wait(30);
+				press(2);
+				await waitFor(() => stdout.screen().includes('from the bot') && !stdout.screen().includes('from the build'));
+
+				// Another double click on it, now that it is alone, shows every channel again, as `s` does.
+				await wait(450);
+				press(2);
+				await wait(30);
+				press(2);
+				await waitFor(() => stdout.screen().includes('from the bot') && stdout.screen().includes('from the build'));
+
+				// The indentation in front of the labels is not a channel.
+				await wait(450);
+				press(0);
+				await wait(60);
+				expect(stdout.screen()).toContain('from the bot');
+			});
+
+			test('a click on a level filters it, and a click on a group header folds the group', async () => {
+				await dashboard();
+				service.log('stars', 'trace', 'a traced request', { channel: 'http' });
+				service.log('app', 'info', 'from the bot');
+				await waitFor(() => stdout.screen().includes('from the bot'));
+				expect(stdout.screen()).not.toContain('a traced request');
+
+				const { column, row } = cell('error warn info debug trace');
+				stdin.press(`\u001B[<0;${column + 'error warn info debug '.length};${row}M`);
+				await waitFor(() => stdout.screen().includes('a traced request'));
+
+				click('▾ levels');
+				await waitFor(() => stdout.screen().includes('▸ levels'));
+				expect(stdout.screen()).not.toContain('error warn info debug trace');
+				click('▸ levels');
+				await waitFor(() => stdout.screen().includes('▾ levels'));
+			});
+
+			test('a click on a key of the sidebar does what the key does', async () => {
+				await dashboard();
+				service.log('app', 'info', 'before the clear');
+				await waitFor(() => stdout.screen().includes('before the clear'));
+
+				click('c clear');
+				await waitFor(() => !stdout.screen().includes('before the clear'));
+
+				click('? help');
+				await waitFor(() => !stdout.screen().includes('▾ channels'));
+			});
+
+			test('the wheel scrolls the log pane and does nothing over the sidebar', async () => {
+				await dashboard();
+				for (let i = 0; i < 80; i++) service.log('app', 'info', `line ${i}`);
+				await waitFor(() => stdout.screen().includes('line 79'));
+
+				wheel('up', 5);
+				await wait(60);
+				expect(stdout.screen()).toContain('line 79');
+				expect(stdout.screen()).toContain('● live');
+
+				wheel('up', 60);
+				await waitFor(() => !stdout.screen().includes('line 79'));
+				expect(stdout.screen()).toContain('● paused');
+				for (let i = 0; i < 5; i++) wheel('down', 60);
+				await waitFor(() => stdout.screen().includes('line 79'));
+			});
+
+			test('a click while searching is not typed into the query', async () => {
+				await dashboard();
+				stdin.press('/');
+				await waitFor(() => stdout.screen().includes(' / '));
+				stdin.press('ab');
+				await waitFor(() => stdout.screen().includes(' / ab'));
+
+				click('▾ levels');
+				await waitFor(() => stdout.screen().includes('▸ levels'));
+				expect(stdout.screen()).toContain(' / ab▏');
+				expect(stdout.screen()).not.toContain('[<');
+
+				// Nor is a click on a key of the list: `space` would type a space, `q` would quit.
+				click('space filter');
+				click('q quit');
+				await wait(80);
+				expect(stdout.screen()).toContain(' / ab▏');
+				expect(stdout.screen()).toContain('▾ channels');
+			});
+		});
 	});
 });
