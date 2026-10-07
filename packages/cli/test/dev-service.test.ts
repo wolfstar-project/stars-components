@@ -575,6 +575,26 @@ describe('DevService', () => {
 			expect(service.status.hmr).toBe(false);
 		});
 
+		test('a restart one build needs is not lost when the next build only changes a piece', async () => {
+			await setupWith('');
+			await fixture.write('src/commands/_shared.js', '// 1');
+			await service.start();
+			builder.succeed();
+			await waitFor(() => service.status.process === 'running');
+			const pid = service.status.pid;
+			bridge({ type: 'hmr', event: 'start', paths: [join(fixture.root, 'src/commands')] });
+			bridge({ type: 'pieces', store: 'commands', pieces: [{ name: 'ping', path: join(fixture.root, PING) }] });
+
+			// The first build changes a helper, which needs a restart; the second starts before it happened and only changes a piece.
+			await fixture.write('src/commands/_shared.js', '// 2');
+			builder.succeed();
+			builder.emit('start');
+			await fixture.write('src/commands/ping.js', '// 2');
+			builder.emit('success', { ok: true, durationMs: 1, message: null });
+
+			await waitFor(() => service.status.pid !== null && service.status.pid !== pid && service.status.process === 'running');
+		});
+
 		test('a helper next to the pieces is not a piece: changing it restarts the bot', async () => {
 			await setupWith('');
 			await fixture.write('src/commands/_shared.js', '// 1');

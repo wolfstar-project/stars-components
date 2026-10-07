@@ -102,6 +102,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	#lastExit: ProcessExit | null = null;
 	#restartTimer: NodeJS.Timeout | null = null;
 	#healthTimer: NodeJS.Timeout | null = null;
+	/** The restart a build asked for that has not happened yet: it outlives the timer, which the next build start clears. */
 	#pendingReason: RestartReason | null = null;
 	#stopped = false;
 	#queue: Promise<void> = Promise.resolve();
@@ -142,7 +143,7 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 		this.builder.on('start', () => {
 			this.#progress = { fraction: 0, message: 'preparing build', startedAt: Date.now(), readyMs: null };
-			// A restart armed by the previous build must not fire while this one rewrites the output.
+			// A restart armed by the previous build must not fire while this one rewrites the output; it stays owed.
 			this.#clearRestartTimer();
 			this.#setBuild('building');
 			void this.#startHook('build:before', this.config);
@@ -261,6 +262,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 
 			// Stopping the bot takes a while, and a build may have begun meanwhile.
 			if (this.#stopped || !(await this.#buildSettled(reason))) return;
+			// The bot that starts now runs the latest output, so no restart is owed any more.
+			this.#pendingReason = null;
 			this.#progress = { ...this.#progress, fraction: 0.75, message: 'starting the bot' };
 			this.#health = 'unknown';
 			this.#paused = false;
@@ -312,6 +315,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 	 * Resolves once no build is running, `false` when the restart is not worth doing any more: the session stopped, or
 	 * an automatic restart (`build`, `initial`) had to wait for a build, whose own end already decides what happens next
 	 * (a restart if it succeeded, nothing if it failed: the output would be the previous, possibly half written one).
+	 * The dropped restart stays owed in {@link DevService.#pendingReason}, so that build's end restarts the bot even when
+	 * it could be hot reloaded: the change the dropped restart was for is not part of what that build rewrote.
 	 * A manual restart or one after a crash is still what was asked for.
 	 */
 	async #buildSettled(reason: RestartReason): Promise<boolean> {
@@ -322,7 +327,13 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 			await new Promise<void>((resolve) => this.#buildWaiters.push(resolve));
 		}
 
-		return !this.#stopped && !(waited && automatic);
+		if (this.#stopped) return false;
+		if (waited && automatic) {
+			this.#pendingReason ??= reason;
+			return false;
+		}
+
+		return true;
 	}
 
 	#releaseBuildWaiters(): void {
@@ -421,7 +432,8 @@ export class DevService extends EventEmitter<DevServiceEvents> {
 		this.typechecker.check();
 		this.log('stars', 'success', this.builder.tool === 'none' ? 'Sources changed' : `Build succeeded in ${outcome.durationMs}ms`);
 		if (this.#paused) return;
-		if (hot !== null) {
+		// A restart an earlier build asked for (and a build start cleared) is still owed: its change is not in `hot`.
+		if (hot !== null && this.#pendingReason === null) {
 			for (const file of hot) this.log('stars', 'trace', `UPDATE ${displayPath(this.config.root, file)}`, { channel: 'hmr' });
 			this.#settleProgress();
 			this.#emitStatus();
