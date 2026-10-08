@@ -1,5 +1,22 @@
 # Changelog
 
+## 6.3.0
+
+### Minor Changes
+
+- [#300](https://github.com/wolfstar-project/stars-components/pull/300) [`d09da7d`](https://github.com/wolfstar-project/stars-components/commit/d09da7d89aecbd263ac9d678adbf9adeac5dbf16) - Add preconditions, the checks that run before a command, its autocomplete, or an interaction handler, following `@sapphire/framework`. A `Precondition` piece in the new `preconditions` store implements `chatInputRun`, `contextMenuRun`, `autocompleteRun` and/or `interactionHandlerRun` and answers with `ok()` or `error()` (a `PreconditionError` for the piece); a piece with a `position` is global and runs in ascending order of it. The new `preconditions` option of `Command.Options` and `InteractionHandler.Options` lists the ones to run, by name, by name with a `context`, or as a `PreconditionFunction`, and an entry can be an array: the list is an `AND`, an array nested in it an `OR`, one nested in that an `AND` again, like `['Connect', ['Moderator', ['DJ', 'SongAuthor']]]`. The list can be `{ entries, mode: PreconditionRunMode.Parallel }` to start every entry at once. The first denial skips the method and is emitted as `chatInputCommandDenied`, `contextMenuCommandDenied`, `autocompleteDenied` or `interactionHandlerDenied`. A piece with no method for a chat input or context menu command denies it; for an autocomplete or an interaction handler it is skipped.
+
+    New events: `preChatInputCommandRun`, `preContextMenuCommandRun`, `chatInputCommandAccepted`, `contextMenuCommandAccepted`, `autocompleteAccepted` and `interactionHandlerAccepted`. `commandRun`, `autocompleteRun` and `interactionHandlerRun` are now emitted after the preconditions pass, so a denied interaction does not emit them; without preconditions nothing changes. `AllFlowsPrecondition`, `PreconditionStore`, `runPreconditions` and the related types are exported, and `Identifiers` gets `PreconditionMissingChatInputHandler` and `PreconditionMissingContextMenuHandler`. `PreconditionRunMode`, `PreconditionRunCondition` and the array types are exported. There are no built-in preconditions. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#298](https://github.com/wolfstar-project/stars-components/pull/298) [`4391191`](https://github.com/wolfstar-project/stars-components/commit/4391191deaf0d35ef729f6df3b6a1f954d3d2700) - Route the `UserError` a command, an autocomplete handler, or an interaction handler throws to new `*Denied` events instead of the `*Error` ones. `chatInputCommandDenied` and `contextMenuCommandDenied` (also `Events.ChatInputCommandDenied` and `Events.ContextMenuCommandDenied`) replace `commandError` for commands, `autocompleteDenied` replaces `autocompleteError`, and `interactionHandlerDenied` replaces `interactionHandlerError`; all of them carry `(error: UserError, context)`. Anything that is not a `UserError` still goes to the `*Error` events, and the `error` event and the HTTP response are unchanged. The new `isUserError` helper does the check, falling back to the shape of the error for a `UserError` from another copy of the package.
+
+    This changes what a listener on `commandError`, `autocompleteError`, or `interactionHandlerError` receives: a `UserError` (including the `PreconditionError` of `@wolfstar/decorators`) no longer reaches it, so a listener that replies to the user with one has to move to the matching `*Denied` event. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`677dc1f`](https://github.com/wolfstar-project/stars-components/commit/677dc1f07486fd157ec2c59d821ab3b4f7c77809)]:
+    - @wolfstar/cli@2.6.1
+
 ## 6.2.2
 
 ### Patch Changes
