@@ -175,7 +175,7 @@ export class NgrokProvider implements TunnelProvider {
 
 	public async open(target: string, { config, tunnel }: TunnelOpenContext): Promise<TunnelHandle> {
 		const ngrok = await this.#load(config.root);
-		const authtoken = readProjectVariable(config, process.env, NGROK_AUTHTOKEN_VARIABLE);
+		const authtoken = readProjectVariable(config, process.env, [NGROK_AUTHTOKEN_VARIABLE], { fresh: true });
 		if (!authtoken) throw cliDiagnostics.NGROK_AUTHTOKEN_MISSING({});
 
 		const listener = await ngrok.forward({ addr: ngrokAddress(target), authtoken, ...(tunnel.domain ? { domain: tunnel.domain } : {}) });

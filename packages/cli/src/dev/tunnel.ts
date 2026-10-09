@@ -211,12 +211,12 @@ export interface DiscordCredentials {
  * way the bot itself does once it starts.
  */
 export function readDiscordCredentials(config: ResolvedStarsConfig, env: NodeJS.ProcessEnv = process.env): DiscordCredentials | null {
-	const token = readProjectVariable(config, env, 'DISCORD_TOKEN', 'TOKEN');
+	const token = readProjectVariable(config, env, ['DISCORD_TOKEN', 'TOKEN']);
 	if (!token) return null;
 
 	return {
 		token,
-		applicationId: readProjectVariable(config, env, 'DISCORD_APPLICATION_ID', 'APPLICATION_ID', 'DISCORD_CLIENT_ID', 'CLIENT_ID')
+		applicationId: readProjectVariable(config, env, ['DISCORD_APPLICATION_ID', 'APPLICATION_ID', 'DISCORD_CLIENT_ID', 'CLIENT_ID'])
 	};
 }
 

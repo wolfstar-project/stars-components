@@ -398,6 +398,22 @@ describe('Tunnel with ngrok', () => {
 		expect(tunnel.state).toBe('off');
 	});
 
+	test('picks up an authtoken added to .env after a failed start, without restarting', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', undefined);
+		const { forward, loadNgrok } = fakeNgrok();
+		const { tunnel } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok });
+
+		await tunnel.start();
+		expect(tunnel.state).toBe('failed');
+
+		await fixture.write('.env', 'NGROK_AUTHTOKEN=added-later\n');
+		await tunnel.start();
+
+		expect(forward).toHaveBeenCalledWith(expect.objectContaining({ authtoken: 'added-later' }));
+		expect(tunnel.state).toBe('up');
+		await tunnel.close();
+	});
+
 	test('leaves the domain out when none is configured and appends the interactions path', async () => {
 		vi.stubEnv('NGROK_AUTHTOKEN', 'from-env');
 		const { forward, loadNgrok } = fakeNgrok();

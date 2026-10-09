@@ -1048,7 +1048,7 @@ importers:
         version: link:../http-framework-test-utils
       '@wolfstar/plugin-gateway':
         specifier: ^0.11.0
-        version: 0.11.0(@wolfstar/http-framework@packages+http-framework)
+        version: 0.11.0(@wolfstar/http-framework@packages+http-framework)(@wolfstar/kit@packages+kit)
       discord-api-types:
         specifier: ^0.38.30
         version: 0.38.56
@@ -7623,9 +7623,11 @@ snapshots:
     dependencies:
       discord-api-types: 0.38.56
 
-  '@wolfstar/plugin-cache@0.6.0':
+  '@wolfstar/plugin-cache@0.6.0(@wolfstar/kit@packages+kit)':
     dependencies:
       discord-api-types: 0.38.56
+    optionalDependencies:
+      '@wolfstar/kit': link:packages/kit
 
   '@wolfstar/plugin-gateway@0.0.0(@wolfstar/http-framework@packages+http-framework)':
     dependencies:
@@ -7640,7 +7642,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@wolfstar/plugin-gateway@0.11.0(@wolfstar/http-framework@packages+http-framework)':
+  '@wolfstar/plugin-gateway@0.11.0(@wolfstar/http-framework@packages+http-framework)(@wolfstar/kit@packages+kit)':
     dependencies:
       '@discordjs/collection': 2.1.1
       '@discordjs/core': 2.6.0
@@ -7649,8 +7651,10 @@ snapshots:
       '@discordjs/ws': 2.0.4
       '@sapphire/pieces': 4.4.1
       '@wolfstar/http-framework': link:packages/http-framework
-      '@wolfstar/plugin-cache': 0.6.0
+      '@wolfstar/plugin-cache': 0.6.0(@wolfstar/kit@packages+kit)
       discord-api-types: 0.38.56
+    optionalDependencies:
+      '@wolfstar/kit': link:packages/kit
     transitivePeerDependencies:
       - bufferutil
       - msgpackr
