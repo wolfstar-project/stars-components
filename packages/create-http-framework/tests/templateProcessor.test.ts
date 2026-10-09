@@ -19,7 +19,8 @@ vi.mock('node:url', async (importOriginal) => {
 		...actual,
 		fileURLToPath: (url: string | URL) => {
 			const real = actual.fileURLToPath(url);
-			return real.endsWith('/src/tools/templateProcessor.ts') ? real.replace('/src/tools/templateProcessor.ts', '/dist/index.js') : real;
+			// Either separator, so the mock also applies where paths use backslashes.
+			return real.replace(/([\\/])src[\\/]tools[\\/]templateProcessor\.ts$/, '$1dist$1index.js');
 		}
 	};
 });

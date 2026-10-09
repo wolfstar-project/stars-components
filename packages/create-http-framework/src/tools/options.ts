@@ -60,3 +60,7 @@ export type Formatter = (typeof FORMATTERS)[number];
  * package only has dev builds).
  */
 export const TYPESCRIPT_RC_VERSION = '7.0.1-rc';
+
+/** The environment loaders `--env` can scaffold. `varlock` adds a starter `.env.schema` and derives `Env` from it. */
+export const ENV_LOADERS = ['varlock'] as const;
+export type EnvLoader = (typeof ENV_LOADERS)[number];

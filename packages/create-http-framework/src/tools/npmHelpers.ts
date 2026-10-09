@@ -21,6 +21,8 @@ export interface VersionSelections {
 	cache: boolean;
 	redis: boolean;
 	sharder: boolean;
+	/** Optional: the project depends on `varlock`. */
+	varlock?: boolean;
 	language: Language;
 	buildTool: BuildTool;
 	linter: Linter;
@@ -50,6 +52,7 @@ export async function fetchDependencyVersions(selections: VersionSelections): Pr
 	if (selections.cache) names.add('@wolfstar/plugin-cache');
 	if (selections.redis) names.add('ioredis');
 	if (selections.sharder) names.add('@wolfstar/plugin-sharder');
+	if (selections.varlock) names.add('varlock');
 
 	// TypeScript toolchain (skipped entirely for plain JavaScript projects).
 	if (selections.language === 'ts') {

@@ -18,6 +18,14 @@ export interface ProjectContext {
 	sharder: boolean;
 	/** Whether `stars dev` opens a cloudflared quick tunnel for the interactions endpoint. */
 	tunnel?: boolean;
+	/** Whether the project depends on `varlock`: scaffolded with `--env varlock`, or already there in the target directory. */
+	varlock?: boolean;
+	/**
+	 * Whether `stars.config` sets `env: { loader: 'varlock' }`: the project has a varlock schema, scaffolded or already
+	 * there. Only written where `stars` registers `env` itself (see {@link registersEnvFromConfig}); elsewhere the runtime
+	 * picks varlock on its own, from the same schema.
+	 */
+	varlockLoader?: boolean;
 	/**
 	 * The `future.compatibilityVersion` the project is generated for. From 6 the root `tsconfig.json` of a `tsdown` or
 	 * Vite project only references the `.stars/` configs `stars prepare` writes. Defaults to {@link GENERATED_COMPATIBILITY_VERSION}.
@@ -115,6 +123,8 @@ export function buildDependencies(ctx: ProjectContext): Record<string, string> {
 	if (ctx.cache) dependencies['@wolfstar/plugin-cache'] = caret(v['@wolfstar/plugin-cache']!);
 	if (ctx.redis) dependencies['ioredis'] = caret(v['ioredis']!);
 	if (ctx.sharder) dependencies['@wolfstar/plugin-sharder'] = caret(v['@wolfstar/plugin-sharder']!);
+	// Optional peer of `@wolfstar/env-utilities`: the project installs it itself.
+	if (ctx.varlock) dependencies['varlock'] = caret(v['varlock']!);
 	return sortKeys(dependencies);
 }
 
@@ -305,10 +315,19 @@ function writeTsconfig(targetDir: string, ctx: ProjectContext): string[] {
  * entry transform that registers it, so `src/lib/setup` loads the environment itself (see `registersEnv` in the
  * template processor).
  */
+/**
+ * Whether `stars` loads `env` from `stars.config`: the entry of a `tsdown` or Vite build passes through its transform. A
+ * `tsc` or JavaScript project loads the environment itself (`env: false`), and Nitro leaves `env` off by default.
+ */
+function registersEnvFromConfig(ctx: ProjectContext): boolean {
+	return ctx.language === 'ts' && (ctx.buildTool === 'tsdown' || ctx.buildTool === 'vite');
+}
+
 function writeStarsConfig(targetDir: string, ctx: ProjectContext): void {
 	const isJs = ctx.language === 'js';
 	const usesTsc = !isJs && (ctx.buildTool === 'tsc6' || ctx.buildTool === 'tsc7');
 	const parts = usesTsc ? ["build: { tool: 'tsc' }", 'env: false'] : isJs ? ['env: false'] : [];
+	if (ctx.varlockLoader && registersEnvFromConfig(ctx)) parts.push("env: { loader: 'varlock' }");
 	if (!isJs && isViteBuild(ctx.buildTool)) {
 		// Nitro v3 is itself a Vite plugin, so `enableNitro` also needs `enableVite`.
 		const nitro = isNitroBuild(ctx.buildTool) ? ", enableNitro: true, nitro: { preset: 'node-server' }" : '';

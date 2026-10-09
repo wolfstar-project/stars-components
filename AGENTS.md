@@ -157,6 +157,13 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   manifest records `compatibilityVersion`; templates read it through `typecheckScript`, so a manifest without it renders as
   before. `GENERATED_COMPATIBILITY_VERSION` and `SPLIT_TSCONFIG_VERSION` mirror `@wolfstar/schema`'s (pinned by
   `tests/schema-mirror.test.ts`). The `tsc` branch keeps its composite `src/tsconfig.json`.
+- `@wolfstar/create-http-framework` scaffolds varlock with `--env varlock` (`template/features/varlock`: a root `.env.schema` with
+  `@generateTsTypes(path=src/@types/env.d.ts)` that overrides `src/lib/types/augments.ts` to derive `Env` with `EnvFromVarlock`; `varlock` joins
+  the dependencies, and `stars.config` gets `env: { loader: 'varlock' }` only where `stars` registers `env` itself, i.e. `tsdown` and `vite` —
+  `tsc`, JavaScript and Nitro projects get the schema and the dependency, the runtime picks varlock on its own). `detectExistingVarlock`
+  (`src/tools/varlock.ts`, mirrors `detectVarlock` of `@wolfstar/schema`, pinned by `tests/varlock.test.ts`) makes a rerun against a directory
+  with a `.env.schema` or a `varlock` dependency keep varlock; `.env.schema` is one of the `USER_OWNED_FILES` (with `AGENTS.md`/`llms.txt`) a
+  rerun only replaces when the generator wrote it and nobody edited it.
 - `@wolfstar/create-http-framework`'s `--build` also accepts the experimental, TypeScript-only `vite` and
   `vite-nitro` tools (`experimental.enableVite`/`enableNitro` in the generated `stars.config.ts`), and scaffolds the
   external gateway plugins via `--gateway`/`--cache`/`--redis`/`--sharder` (`@wolfstar/plugin-gateway`/`-cache`/

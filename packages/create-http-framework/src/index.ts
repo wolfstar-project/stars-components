@@ -6,6 +6,7 @@ import { directoryExists, emptyDir, isEmpty } from './tools/fileSystem.js';
 import { fetchDependencyVersions } from './tools/npmHelpers.js';
 import {
 	BUILD_TOOLS,
+	ENV_LOADERS,
 	FORMATTERS,
 	isNitroBuild,
 	LANGUAGES,
@@ -28,6 +29,7 @@ import {
 } from './tools/packageManager.js';
 import { GENERATED_COMPATIBILITY_VERSION, writeProjectFiles } from './tools/projectFiles.js';
 import { processTemplate } from './tools/templateProcessor.js';
+import { detectExistingVarlock } from './tools/varlock.js';
 
 function isValidPackageName(name: string): boolean {
 	return /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/.test(name);
@@ -65,6 +67,7 @@ Options:
   --redis / --no-redis         Store the cache in Redis instead of memory (default: off; enables --cache)
   --sharder / --no-sharder     Toggle @wolfstar/plugin-sharder, gateway shards across cluster workers (default: off; enables --gateway)
   --tunnel / --no-tunnel       Open a cloudflared quick tunnel in \`stars dev\`, so Discord reaches the bot (default: off)
+  --env <loader>               varlock — scaffold a .env.schema and derive Env from it (an existing .env.schema or varlock dependency is detected without it)
   --install / --no-install     Toggle dependency installation (default: on)
   --ignore                     Write into an existing, non-empty directory without clearing it
   --help, -h                   Print this message and exit
@@ -85,7 +88,7 @@ function parseEnum<T extends string>(value: string | undefined, allowed: readonl
 async function main(): Promise<void> {
 	const argv = mri(process.argv.slice(2), {
 		boolean: ['overwrite', 'ignore', 'help'],
-		string: ['package-manager', 'language', 'build', 'lint', 'format', 'port'],
+		string: ['package-manager', 'language', 'build', 'lint', 'format', 'port', 'env'],
 		alias: { h: 'help', i: 'interactive' },
 		default: { install: true }
 	});
@@ -115,6 +118,7 @@ async function main(): Promise<void> {
 	const cliRedis = argv['redis'] as boolean | undefined;
 	const cliSharder = argv['sharder'] as boolean | undefined;
 	const cliTunnel = argv['tunnel'] as boolean | undefined;
+	const cliEnv = parseEnum(argv['env'] as string | undefined, ENV_LOADERS, '--env');
 	const cliInstall = argv['install'] as boolean;
 
 	// Detect whether a known AI agent is driving this session
@@ -347,6 +351,7 @@ async function main(): Promise<void> {
 	let wantsRedis: boolean;
 	let wantsSharder: boolean;
 	let wantsTunnel: boolean;
+	let wantsVarlock: boolean;
 
 	// Nitro forwards requests to a default-exported client, which the sharder's manager process never has.
 	const nitro = language === 'ts' && isNitroBuild(buildTool);
@@ -361,6 +366,7 @@ async function main(): Promise<void> {
 		wantsRedis = cliRedis ?? false;
 		wantsSharder = cliSharder ?? false;
 		wantsTunnel = cliTunnel ?? false;
+		wantsVarlock = cliEnv === 'varlock';
 	} else {
 		const featuresResult = await multiselect({
 			message: 'Which optional features would you like to add?',
@@ -372,10 +378,11 @@ async function main(): Promise<void> {
 				{ value: 'gateway', label: 'Gateway events (@wolfstar/plugin-gateway)' },
 				{ value: 'cache', label: 'Gateway entity cache (@wolfstar/plugin-cache)' },
 				...(nitro ? [] : [{ value: 'sharder', label: 'Gateway sharding across cluster workers (@wolfstar/plugin-sharder)' }]),
-				{ value: 'tunnel', label: 'Dev tunnel (a cloudflared quick tunnel, so Discord reaches the bot while developing)' }
+				{ value: 'tunnel', label: 'Dev tunnel (a cloudflared quick tunnel, so Discord reaches the bot while developing)' },
+				{ value: 'varlock', label: 'Environment schema (varlock: a validated, typed .env.schema)' }
 			],
-			// `--tunnel` already answers this one.
-			initialValues: cliTunnel ? ['tunnel'] : [],
+			// `--tunnel` and `--env` already answer these.
+			initialValues: [...(cliTunnel ? ['tunnel'] : []), ...(cliEnv === 'varlock' ? ['varlock'] : [])],
 			required: false
 		});
 		if (isCancel(featuresResult)) {
@@ -391,6 +398,7 @@ async function main(): Promise<void> {
 		wantsCache = features.has('cache');
 		wantsSharder = features.has('sharder');
 		wantsTunnel = features.has('tunnel');
+		wantsVarlock = features.has('varlock');
 		wantsRedis = cliRedis ?? false;
 
 		// `--redis` already answers whether to use Redis, only ask when the flag was left out.
@@ -423,6 +431,16 @@ async function main(): Promise<void> {
 	}
 	({ gateway: wantsGateway, cache: wantsCache, redis: wantsRedis, sharder: wantsSharder } = gatewayFeatures.features);
 
+	// What the target directory already has (`--ignore`): a varlock project keeps varlock and says so in `stars.config`.
+	const existingVarlock = detectExistingVarlock(targetDir);
+	const usesVarlock = wantsVarlock || existingVarlock.schema || existingVarlock.dependency;
+	const varlockLoader = wantsVarlock || existingVarlock.schema;
+	if (!wantsVarlock && usesVarlock) {
+		log.info(
+			`Found varlock in "${projectName}": ${existingVarlock.schema ? 'its .env.schema is kept and stars.config sets env.loader to varlock' : 'it stays a dependency'}.`
+		);
+	}
+
 	// ── Install ───────────────────────────────────────────────────────────────
 	let wantsInstall: boolean;
 
@@ -453,6 +471,7 @@ async function main(): Promise<void> {
 		cache: wantsCache,
 		redis: wantsRedis,
 		sharder: wantsSharder,
+		varlock: usesVarlock,
 		language,
 		buildTool,
 		linter,
@@ -477,6 +496,7 @@ async function main(): Promise<void> {
 			cache: wantsCache,
 			redis: wantsRedis,
 			sharder: wantsSharder,
+			varlock: wantsVarlock,
 			buildTool,
 			tunnel: wantsTunnel,
 			autoEnv: true,
@@ -496,6 +516,8 @@ async function main(): Promise<void> {
 		redis: wantsRedis,
 		sharder: wantsSharder,
 		tunnel: wantsTunnel,
+		varlock: usesVarlock,
+		varlockLoader,
 		compatibilityVersion: GENERATED_COMPATIBILITY_VERSION,
 		packageManager,
 		language,
@@ -551,6 +573,7 @@ async function main(): Promise<void> {
 	if (wantsI18n) extraNotes.push(`  After editing locale files, regenerate i18next types with: ${getRunScript(packageManager, 'generate:i18n')}`);
 	if (wantsRedis) extraNotes.push('  Start a local Redis server with: docker compose up -d');
 	if (wantsTesting) extraNotes.push(`  Run the test suite with: ${getRunScript(packageManager, 'test')}`);
+	if (wantsVarlock) extraNotes.push('  The environment is described in .env.schema (varlock); the values stay in .env');
 
 	outro(
 		`Done! To get started:\n\n  cd ${projectName}\n${wantsInstall ? '' : `  ${getInstallScript(packageManager)}\n`}  ${getRunScript(packageManager, 'dev')}${extraNotes.length ? `\n\n${extraNotes.join('\n')}` : ''}`

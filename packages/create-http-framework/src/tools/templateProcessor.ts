@@ -48,11 +48,11 @@ function removeI18nDeclaration(outputDir: string): void {
 }
 
 /**
- * The files that describe a project to coding agents. A project often has its own already, and unlike the sources
- * they are prose a rerun cannot merge: an existing one is only replaced when this generator wrote it and nobody
- * edited it since.
+ * The files that describe a project to coding agents, and the varlock schema. A project often has its own already, and
+ * unlike the sources they are not something a rerun can merge: an existing one is only replaced when this generator
+ * wrote it and nobody edited it since.
  */
-const AGENT_DOCS = new Set(['AGENTS.md', 'llms.txt']);
+const USER_OWNED_FILES = new Set(['AGENTS.md', 'llms.txt', '.env.schema']);
 
 /** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
 export interface TemplateContext {
@@ -67,6 +67,8 @@ export interface TemplateContext {
 	cache: boolean;
 	redis: boolean;
 	sharder: boolean;
+	/** Whether to scaffold a varlock `.env.schema` (`--env varlock`) and derive `Env` from it. Optional: older manifests lack it. */
+	varlock?: boolean;
 	/** Only meaningful when `language === 'ts'`. */
 	buildTool: BuildTool;
 	/** Whether `stars dev` opens a public tunnel (`dev.tunnel` in `stars.config`). Optional: older manifests lack it. */
@@ -146,7 +148,7 @@ function walkDir(dir: string): string[] {
  */
 export function resolveFeatureDirs(
 	ctx: Pick<TemplateContext, 'i18n' | 'subcommands' | 'subcommandsAdvanced' | 'testing'> &
-		Partial<Pick<TemplateContext, 'gateway' | 'cache' | 'redis' | 'sharder'>>
+		Partial<Pick<TemplateContext, 'gateway' | 'cache' | 'redis' | 'sharder' | 'varlock'>>
 ): string[] {
 	const dirs: string[] = [];
 	if (ctx.i18n) dirs.push('i18n');
@@ -155,6 +157,8 @@ export function resolveFeatureDirs(
 	if (ctx.cache) dirs.push('cache');
 	if (ctx.redis) dirs.push('redis');
 	if (ctx.sharder) dirs.push('sharder');
+	// Replaces `src/lib/types/augments.ts`: `Env` comes from the schema instead of being declared by hand.
+	if (ctx.varlock) dirs.push('varlock');
 	if (ctx.subcommandsAdvanced) {
 		dirs.push(ctx.i18n ? 'subcommands-advanced-i18n' : 'subcommands-advanced');
 	} else if (ctx.subcommands) {
@@ -309,6 +313,8 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
 	const preserved: string[] = [];
 	for (const [path, sources] of candidates) {
 		if (keepPaths.has(path)) continue;
+		// A `.env.schema` this generator never wrote is the project's own, not a leftover of a disabled feature.
+		if (path === '.env.schema' && !manifestContext?.varlock) continue;
 
 		const target = join(outputDir, path);
 		if (!existsSync(target)) continue;
@@ -355,7 +361,7 @@ function processDir(root: string, outputDir: string, context: TemplateContext, k
  * {@link resolveFeatureDirs} on top, in order — feature files overwrite base files at the same
  * output-relative path (e.g. `features/i18n/src/main.ts.hbs` overwrites `base/src/main.ts.hbs`).
  *
- * @param onKept Called with each of `AGENTS.md`/`llms.txt` that was left as it is, because it exists and is not this
+ * @param onKept Called with each of `AGENTS.md`/`llms.txt`/`.env.schema` that was left as it is, because it exists and is not this
  * generator's own unedited output.
  * @returns Output-relative paths that looked stale (belong to a disabled feature or the other
  * language) but were left in place because they'd been hand-edited since the last run.
@@ -366,20 +372,24 @@ export async function processTemplate(outputDir: string, context: TemplateContex
 	const preserved = removeStaleGeneratedFiles(outputDir, context);
 	if (!context.i18n) removeI18nDeclaration(outputDir);
 
-	processDir(baseDir, outputDir, context, (outputRelative, content) => {
-		if (!AGENT_DOCS.has(outputRelative)) return false;
+	const keepEdited = (root: string) => (outputRelative: string, content: string) => {
+		if (!USER_OWNED_FILES.has(outputRelative)) return false;
 		const target = join(outputDir, outputRelative);
 		if (!existsSync(target)) return false;
 
 		const actual = readFileSync(target, 'utf-8');
-		const source = join(baseDir, `${outputRelative}.hbs`);
-		const pristine = actual === content || (manifestContext !== undefined && renderSource(source, manifestContext) === actual);
+		const source = join(root, `${outputRelative}.hbs`);
+		const pristine =
+			actual === content || (manifestContext !== undefined && existsSync(source) && renderSource(source, manifestContext) === actual);
 		if (!pristine) onKept?.(outputRelative);
 		return !pristine;
-	});
+	};
+
+	processDir(baseDir, outputDir, context, keepEdited(baseDir));
 
 	for (const feature of resolveFeatureDirs(context)) {
-		processDir(join(featuresDir, feature), outputDir, context);
+		const root = join(featuresDir, feature);
+		processDir(root, outputDir, context, keepEdited(root));
 	}
 
 	writeManifest(outputDir, context);

@@ -47,6 +47,9 @@ The project is bundled into one file, so there is no `commands` directory at run
 ## Rules
 
 - Secrets live in `.env` (`DISCORD_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_CLIENT_ID`). Never print or commit them.
+{{#if varlock}}
+- The environment is described in `.env.schema` ([varlock](https://varlock.dev)); the values stay in `.env`. To add a variable, declare it there with its `@type`, then run `stars dev` (or `npx varlock load`) to regenerate `src/@types/env.d.ts`, which types `Env`.
+{{/if}}
 - Call Discord through `container.rest`, not `fetch`: it handles rate limits and authentication.
 - An interaction must be answered within 3 seconds: `reply()`, or `defer()` first and `edit()` later. `edit()` before
   either one fails.
