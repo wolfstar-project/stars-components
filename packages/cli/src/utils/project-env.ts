@@ -1,4 +1,5 @@
-import { readProjectEnvFiles, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { detectVarlock, readProjectEnvFiles, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { resolveBinary } from './project.js';
 
@@ -19,14 +20,20 @@ export function readProjectEnv(config: ResolvedStarsConfig): Record<string, stri
 	try {
 		// The way the bot loads it: `@wolfstar/env-utilities` runs `varlock/auto-load` with no `--env` (it ignores
 		// `env.env` with varlock), in the environment `stars dev` gives the bot.
-		const output = execFileSync(process.execPath, [binary, 'load', '--format', 'json'], {
-			cwd: config.root,
-			// Same order as `createSupervisor`: `NODE_ENV` is forced to development after `dev.env`, so it can't differ.
-			env: { ...process.env, ...config.dev.env, NODE_ENV: 'development' },
-			encoding: 'utf8',
-			stdio: ['ignore', 'pipe', 'ignore'],
-			timeout: 30_000
-		});
+		// `--path` the way the bot passes it: `env.path`, else the directory of a `src/.env.schema`.
+		const schemaPath = path ?? detectVarlock(config.root).schema?.path;
+		const output = execFileSync(
+			process.execPath,
+			[binary, 'load', '--format', 'json', ...(schemaPath === undefined ? [] : ['--path', resolve(config.root, schemaPath)])],
+			{
+				cwd: config.root,
+				// Same order as `createSupervisor`: `NODE_ENV` is forced to development after `dev.env`, so it can't differ.
+				env: { ...process.env, ...config.dev.env, NODE_ENV: 'development' },
+				encoding: 'utf8',
+				stdio: ['ignore', 'pipe', 'ignore'],
+				timeout: 30_000
+			}
+		);
 		const values = JSON.parse(output) as Record<string, unknown>;
 		return Object.fromEntries(
 			Object.entries(values)

@@ -79,7 +79,7 @@ stars codegen [--check] [--json] [--config <file>] [--cwd <dir>]
 stars prepare [--check] [--json] [--config <file>] [--cwd <dir>]
 stars typecheck [--config <file>] [--cwd <dir>]
 stars commands [list|clean|diff|deploy] [--guild <id>] [--name <name>] [--check] [--yes] [--json]
-stars doctor [--online] [--json] [--config <file>] [--cwd <dir>]
+stars doctor [--online] [--fix] [--yes] [--json] [--config <file>] [--cwd <dir>]
 stars completions <bash|zsh|fish>
 stars --help | --version
 ```
@@ -359,9 +359,19 @@ stars doctor v2.3.0
 
 It covers the Node.js version (and the project's `engines.node`), the configuration and its warnings, the framework
 (and whether it is recent enough for the dev bridge), the entry and the build output, `DISCORD_TOKEN`,
-`DISCORD_PUBLIC_KEY` and the application id, whether the dev port is free, the tunnel, and whether `.stars/` is stale.
+`DISCORD_PUBLIC_KEY` and the application id, whether the dev port is free, the tunnel, whether `.stars/` is stale, and
+whether a [varlock](https://varlock.dev) `.env.schema` and `env.loader` agree (a schema with another loader, or
+`loader: 'varlock'` without the package installed).
 `--online` also asks Discord whether the token works and where the application sends its interactions. Nothing is
-changed. `--json` prints `{ ok, checks }`; the exit code is `1` when a check fails.
+changed unless you pass `--fix`. `--json` prints `{ ok, checks }`; the exit code is `1` when a check fails.
+
+`--fix` fixes what it can. Today that is a project where varlock loads the environment (`@wolfstar/env-utilities` picks it
+when it finds a `.env.schema` and `varlock` is installed) but `stars.config` does not say so: it adds
+`env: { loader: 'varlock' }`, creating `stars.config.ts` the way `@wolfstar/create-http-framework` scaffolds it, or editing a
+literal `defineConfig({ ... })` or exported object. A configuration it cannot edit safely (a spread, a function, an
+`env` that is not a literal) is left alone, and the line to add is printed. It asks first (`--yes` answers for scripts),
+and never writes in CI or without a terminal to ask in. `stars prepare`, `build`, `dev` and `info` only report it
+(`VARLOCK_LOADER_IMPLICIT`).
 
 ### `stars completions`
 

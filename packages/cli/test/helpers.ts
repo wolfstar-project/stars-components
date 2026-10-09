@@ -1,3 +1,4 @@
+import { Module } from 'node:module';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -40,4 +41,21 @@ export async function waitFor(predicate: () => boolean | Promise<boolean>, timeo
 		if (Date.now() > deadline) throw new Error('Timed out waiting for condition');
 		await wait(20);
 	}
+}
+
+/**
+ * `pnpm` points `NODE_PATH` at its hoisted store, where `varlock` is: a fixture would find it wherever it lives. Dropping
+ * it makes "not installed" mean the fixture's own `node_modules`.
+ */
+export function ignoreNodePath(): void {
+	const nodePath = process.env.NODE_PATH;
+	const initPaths = () => (Module as unknown as { _initPaths(): void })._initPaths();
+	beforeEach(() => {
+		delete process.env.NODE_PATH;
+		initPaths();
+	});
+	afterEach(() => {
+		if (nodePath !== undefined) process.env.NODE_PATH = nodePath;
+		initPaths();
+	});
 }

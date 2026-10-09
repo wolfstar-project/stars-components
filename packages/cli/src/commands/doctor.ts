@@ -11,10 +11,13 @@ import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { loadProject, withProjectEnv, applyEnvOptions, type StarsHookable } from '../utils/hooks.js';
 import { modulesPreloadWarning } from '../utils/modules.js';
-import { shouldUseColor } from '../utils/output-mode.js';
+import { isCIEnvironment, shouldUseColor } from '../utils/output-mode.js';
+import { createClackPrompt } from '../utils/prompts.js';
 import { findLegacyRootTsconfig } from '../utils/tsconfig.js';
 import { readProjectEnv } from '../utils/project-env.js';
 import { findInstalledVersion } from '../utils/project.js';
+import { applyVarlockConfig, planVarlockConfig, VARLOCK_SNIPPET } from '../utils/varlock-config.js';
+import { inspectVarlock } from '../utils/varlock.js';
 import { readOwnPackageJson } from '../utils/version.js';
 import { prepareProject } from './_shared.js';
 
@@ -32,12 +35,19 @@ export interface DoctorOptions extends ProjectArgs {
 	json?: boolean;
 	/** Also asks Discord whether the token works and where the application's interactions go. */
 	online?: boolean;
+	/** Makes the fixes doctor knows (`env.loader` in `stars.config` when varlock is used), after asking. */
+	fix?: boolean;
+	/** Answers the question `fix` asks without asking it. */
+	yes?: boolean;
 	stdout?: NodeJS.WritableStream;
 	/** Overrides for tests. */
 	env?: NodeJS.ProcessEnv;
 	nodeVersion?: string;
 	fetch?: typeof fetch;
 	isPortFree?: (port: number, host: string) => Promise<boolean>;
+	/** Whether the run is interactive, and how it asks. */
+	stdin?: { isTTY?: boolean };
+	confirm?: (message: string) => Promise<boolean>;
 }
 
 /** The Node.js versions `@wolfstar/cli` runs on (`engines.node` of its `package.json`). */
@@ -94,6 +104,8 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 			fix: `Update to ${BRIDGE_FRAMEWORK_VERSION} or later for the hmr, commands, interactions and http channels.`
 		});
 	}
+
+	checks.push(...checkVarlock(config));
 
 	checks.push({ name: 'entry', status: 'ok', message: `${show(config.entry)} (${config.build.tool})` });
 	if (config.build.tool !== 'none' && !existsSync(config.build.output)) {
@@ -203,6 +215,101 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 
 	if (options.online && credentials) checks.push(await checkApplication(credentials.token, config, options.fetch ?? fetch));
 	return checks;
+}
+
+/** Whether varlock and `env.loader` agree: the loader decides how `stars dev` and the bot read their variables. */
+function checkVarlock(config: ResolvedStarsConfig): Check[] {
+	const finding = inspectVarlock(config);
+	if (finding === null) {
+		return config.env.loader === 'varlock' ? [{ name: 'varlock', status: 'ok', message: 'The environment is loaded through varlock' }] : [];
+	}
+
+	switch (finding.kind) {
+		case 'implicit':
+			return [
+				{
+					name: 'varlock',
+					status: 'warn',
+					message: 'A varlock schema is found, but stars.config does not set env.loader',
+					fix: `Run \`stars doctor --fix\` to add \`${VARLOCK_SNIPPET}\`.`
+				}
+			];
+		case 'not-installed':
+			return [
+				{
+					name: 'varlock',
+					status: 'warn',
+					message: 'A varlock schema is found, but varlock is not installed: the bot loads the dotenv files',
+					fix: 'Install varlock (for example `pnpm add varlock`), or remove the .env.schema.'
+				}
+			];
+		case 'mismatch':
+			return [
+				{
+					name: 'varlock',
+					status: 'warn',
+					message: `A varlock schema is found, but env.loader is '${finding.loader}': the schema is not used`,
+					fix: "Set `env.loader` to 'varlock', or remove the .env.schema."
+				}
+			];
+		case 'missing-package':
+			return [
+				{
+					name: 'varlock',
+					status: 'error',
+					message: "env.loader is 'varlock', but varlock is not installed",
+					fix: 'Install varlock (for example `pnpm add varlock`).'
+				}
+			];
+	}
+}
+
+/**
+ * `stars doctor --fix`: puts `env: { loader: 'varlock' }` in `stars.config` when varlock loads the environment without
+ * it saying so. It asks first (`--yes` answers), never writes in CI, and leaves a configuration it cannot edit safely
+ * alone, printing the line to add.
+ */
+async function fixVarlock(config: ResolvedStarsConfig, options: DoctorOptions): Promise<Check> {
+	const show = (path: string) => displayPath(config.root, path);
+	const pending: Check = { name: 'varlock', status: 'warn', message: 'stars.config does not set env.loader' };
+	if (isCIEnvironment(options.env ?? process.env)) {
+		return { ...pending, message: 'Not writing stars.config in CI', fix: `Add \`${VARLOCK_SNIPPET}\` to stars.config.` };
+	}
+
+	const plan = await planVarlockConfig(config);
+	if (plan.action === 'manual') {
+		return { ...pending, message: `${show(plan.file)} was not changed: ${plan.reason}`, fix: `Add \`${VARLOCK_SNIPPET}\` to it.` };
+	}
+
+	if (!options.yes) {
+		// A prompt would print ahead of the JSON, and a script has nobody to answer it.
+		if (!options.confirm && (options.json || !(options.stdin ?? process.stdin).isTTY)) {
+			const reason = options.json ? 'the question is not asked with --json' : 'there is no terminal to ask in';
+			return {
+				...pending,
+				message: `${show(plan.file)} was not changed: ${reason}`,
+				fix: 'Pass --yes to write it from a script.'
+			};
+		}
+
+		const question =
+			plan.action === 'create' ? `Create ${show(plan.file)} with \`${VARLOCK_SNIPPET}\`?` : `Add \`${VARLOCK_SNIPPET}\` to ${show(plan.file)}?`;
+		if (!(await (options.confirm ?? createClackPrompt().confirm)(question))) {
+			return { ...pending, message: `${show(plan.file)} was not changed` };
+		}
+	}
+
+	try {
+		await applyVarlockConfig(plan);
+	} catch (error) {
+		return {
+			...pending,
+			message: `${show(plan.file)} was not changed: ${error instanceof Error ? error.message : String(error)}`,
+			fix: 'Run `stars doctor --fix` again.'
+		};
+	}
+
+	return { name: 'varlock', status: 'ok', message: `${plan.action === 'create' ? 'Created' : 'Updated'} ${show(plan.file)}: ${VARLOCK_SNIPPET}` };
 }
 
 /** Asks Discord who the token belongs to and where it sends interactions: the one thing only Discord knows. */
@@ -317,6 +424,14 @@ export async function runDoctor(options: DoctorOptions): Promise<void> {
 	// What `stars dev` would run with: `env:options` and varlock may change the port and the credentials.
 	const config = withProjectEnv(await applyEnvOptions(project.config, project.hooks));
 	const checks = await collectChecks(config, project.hooks, options);
+	if (options.fix && inspectVarlock(config)?.kind === 'implicit') {
+		checks.splice(
+			checks.findIndex((check) => check.name === 'varlock'),
+			1,
+			await fixVarlock(config, options)
+		);
+	}
+
 	const errors = checks.filter((check) => check.status === 'error').length;
 
 	stdout.write(`${options.json ? JSON.stringify({ ok: errors === 0, checks }, null, 2) : formatChecks(checks, shouldUseColor())}\n`);
@@ -339,9 +454,20 @@ export default defineCommand({
 			type: 'boolean',
 			description: 'Also ask Discord whether the token works and where the application sends interactions',
 			default: false
+		},
+		fix: {
+			type: 'boolean',
+			description: 'Fix what can be fixed: set env.loader in stars.config when varlock is used, asking first (never in CI)',
+			default: false
+		},
+		yes: {
+			type: 'boolean',
+			alias: 'y',
+			description: 'Answer the questions --fix asks without asking them',
+			default: false
 		}
 	},
 	async run({ args }) {
-		await runDoctor({ config: args.config, cwd: args.cwd, json: args.json, online: args.online });
+		await runDoctor({ config: args.config, cwd: args.cwd, json: args.json, online: args.online, fix: args.fix, yes: args.yes });
 	}
 });

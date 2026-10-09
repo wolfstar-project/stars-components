@@ -713,6 +713,9 @@ importers:
       ink:
         specifier: ^7.1.1
         version: 7.1.1(@types/react@19.3.0)(react@19.3.0)
+      magicast:
+        specifier: ^0.5.5
+        version: 0.5.5
       mlly:
         specifier: ^1.8.2
         version: 1.8.2
