@@ -1,5 +1,12 @@
 # with-nitro
 
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/http-framework@6.3.1
+
 ## 0.0.10
 
 ### Patch Changes

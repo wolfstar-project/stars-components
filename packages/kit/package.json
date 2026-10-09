@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/kit",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "defineModule and the module setup runtime for installable Stars modules, the @nuxt/kit counterpart",
 	"keywords": [
 		"api",
