@@ -150,11 +150,27 @@ export interface StarsTypecheckConfig {
 	checker?: StarsTypechecker | 'auto';
 }
 
+/** The services `dev.tunnel` can open a public tunnel through. */
+export type StarsTunnelProvider = 'cloudflared' | 'ngrok';
+
 export interface StarsTunnelConfig {
 	/**
-	 * An https URL you already serve; when unset a `cloudflared` quick tunnel is opened instead.
+	 * An https URL you already serve; when unset a quick tunnel is opened instead (see {@link StarsTunnelConfig.provider}).
+	 * Cannot be combined with `provider` or `domain`: a URL you already serve has no provider.
 	 */
 	url?: string;
+	/**
+	 * The service that opens the tunnel. `cloudflared` needs no account (its hostname changes on every run); `ngrok` needs
+	 * an authtoken (`NGROK_AUTHTOKEN` in the environment or the project's `.env`) and the `@ngrok/ngrok` package installed
+	 * in the project.
+	 * @default 'cloudflared'
+	 */
+	provider?: StarsTunnelProvider;
+	/**
+	 * A domain reserved in your ngrok account (for example `bot.ngrok.app`), so the tunnel keeps one hostname across runs.
+	 * Only for the `ngrok` provider.
+	 */
+	domain?: string;
 	/**
 	 * Writes the tunnel's URL to the Discord application's `interactions_endpoint_url` when it changes.
 	 *
@@ -304,7 +320,8 @@ export interface StarsDevConfig {
 	/**
 	 * Exposes the bot's HTTP interactions endpoint publicly while `stars dev` runs, so Discord can reach it.
 	 *
-	 * `true` opens a `cloudflared` quick tunnel (its hostname changes on every run), a string is an https URL you
+	 * `true` opens a `cloudflared` quick tunnel (its hostname changes on every run; `{ provider: 'ngrok' }` uses ngrok
+	 * instead), a string is an https URL you
 	 * already serve yourself (named tunnel, reverse proxy, …) that the CLI only checks for reachability.
 	 * @default false
 	 */

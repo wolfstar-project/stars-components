@@ -172,7 +172,7 @@ stars dev --level trace                           # this level and every more se
 | `r` / `Ctrl+R`     | restart the bot                                                  |
 | `d`                | disconnect: stop the bot until the next `r`, builds keep running |
 | `o`                | open the local URL in a browser                                  |
-| `t`                | toggle a public `cloudflared` tunnel                             |
+| `t`                | toggle a public tunnel (`cloudflared`, or the `dev.tunnel` one)  |
 | `i`                | show project, versions, URLs, health, types and session info     |
 | `T`                | pick a colour theme (see **Themes** below)                       |
 | `l`                | browse the logs full width: select a line, copy it               |
@@ -384,10 +384,14 @@ Three `dev` options round out the dev loop (all documented in
   `dev.typecheck.checker` picks which one: `tsc` (the project's TypeScript, watch mode), `golar` (`golar tsc`, watch
   mode), `tsz` (the tsc-compatible checker, re-run after every build since it has no watch mode), or `auto` — the
   default, which uses `golar` when the project depends on it and `tsc` otherwise.
-- Pressing `t` opens and closes a `cloudflared` quick tunnel without configuration. `dev.tunnel: true` opens it at startup so Discord can reach the bot's interactions endpoint from the
+- Pressing `t` opens and closes a quick tunnel without configuration (`cloudflared`, or the `dev.tunnel.provider` you set). `dev.tunnel: true` opens it at startup so Discord can reach the bot's interactions endpoint from the
   internet, and so does `stars dev --tunnel` for one session, whatever `dev.tunnel` says (`--no-tunnel` keeps it closed at
   start; `t` still opens it). With `--no-tui` the URL is printed on the `tunnel` channel; a string is an https URL you already serve, which the CLI only probes. `dev.tunnel.updateEndpoint` writes
   the URL to the Discord application, and is opt-in because it edits a live application.
+  `dev.tunnel: { provider: 'ngrok' }` opens the tunnel through ngrok instead of `cloudflared`, with
+  `dev.tunnel.domain` to bind a domain reserved in your ngrok account. It needs the official SDK in the project
+  (`pnpm add -D @ngrok/ngrok`, an optional peer of the CLI, loaded only then) and `NGROK_AUTHTOKEN` in the environment
+  or the project's `.env`; `stars doctor` checks both. `provider` and `domain` cannot be combined with a `url` you serve.
 - `dev.logFile` (default `.stars/dev.log`) mirrors the session's logs to disk, so a run can be read back after the
   terminal UI is gone. Set it to `false` to disable it. It is truncated on every run; `dev.logs.dir` (for example
   `'logs'`) adds one file per run, `dev-<timestamp>.log`, and `dev.logs.keep` (default `10`) says how many stay. Each

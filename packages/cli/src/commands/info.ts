@@ -3,6 +3,7 @@ import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { arch, platform } from 'node:os';
 import { relative } from 'node:path';
+import { describeQuickTunnel } from '../dev/tunnel.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { applyEnvOptions, loadProject } from '../utils/hooks.js';
 import { modulesPreloadWarning } from '../utils/modules.js';
@@ -194,7 +195,7 @@ function flag(enabled: boolean, colors: ReturnType<typeof createColors>): string
 function describeTunnel(tunnel: ResolvedStarsConfig['dev']['tunnel'], colors: ReturnType<typeof createColors>): string {
 	switch (tunnel.mode) {
 		case 'quick':
-			return 'cloudflared quick tunnel';
+			return describeQuickTunnel(tunnel);
 		case 'url':
 			return tunnel.url;
 		default:

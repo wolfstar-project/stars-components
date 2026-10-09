@@ -41,6 +41,11 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (_p: {}) => 'The Discord application id is not set',
 			fix: (_p: {}) => 'Set DISCORD_APPLICATION_ID (or APPLICATION_ID) in the environment or in the project .env file.'
 		},
+		NGROK_AUTHTOKEN_MISSING: {
+			why: (_p: {}) => 'NGROK_AUTHTOKEN is not set',
+			fix: (_p: {}) =>
+				'Set NGROK_AUTHTOKEN in the environment or in the project .env file (get one at https://dashboard.ngrok.com/get-started/your-authtoken).'
+		},
 		DISCORD_REQUEST_FAILED: {
 			why: (p: { status: number; detail: string }) => `Discord answered ${p.status}${p.detail ? `: ${p.detail}` : ''}`,
 			fix: (p: { status: number; detail: string }) =>

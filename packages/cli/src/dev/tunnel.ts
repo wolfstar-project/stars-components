@@ -1,16 +1,19 @@
-import type { ResolvedStarsConfig, ResolvedTunnelConfig } from '@wolfstar/schema';
-import { readProjectEnv } from '../utils/project-env.js';
+import { DEFAULT_TUNNEL_PROVIDER, type ResolvedStarsConfig, type ResolvedTunnelConfig, type StarsTunnelProvider } from '@wolfstar/schema';
 import { EventEmitter } from 'node:events';
-import { startTunnel, type Tunnel as UntunTunnel } from 'untun';
+import { Diagnostic } from 'nostics';
+import type { startTunnel } from 'untun';
 import type { LogLevel } from '../utils/log-buffer.js';
+import { readProjectVariable } from '../utils/project-env.js';
+import {
+	CloudflaredProvider,
+	NgrokProvider,
+	type NgrokLoader,
+	type QuickTunnelConfig,
+	type TunnelHandle,
+	type TunnelProvider
+} from './tunnel-providers.js';
 
 export type TunnelState = 'off' | 'starting' | 'up' | 'failed';
-
-const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const;
-
-function isCloudflaredExit(reason: unknown): reason is Error {
-	return reason instanceof Error && reason.message.startsWith('cloudflared exited (');
-}
 
 export interface TunnelEvents {
 	log: [level: LogLevel, text: string];
@@ -18,31 +21,32 @@ export interface TunnelEvents {
 }
 
 export interface TunnelOptions {
-	/** Override for tests. */
+	/** Override for tests: how the `cloudflared` provider opens its tunnel. */
 	startTunnel?: typeof startTunnel;
+	/** Override for tests: how the `ngrok` provider loads `@ngrok/ngrok`. */
+	loadNgrok?: NgrokLoader;
 }
 
 /**
  * Exposes the bot's interactions endpoint publicly while `stars dev` runs.
  *
- * `dev.tunnel: true` opens a `cloudflared` quick tunnel via `untun` (it changes on every run); a configured https
- * URL is only probed, since the user already serves it. Writing the URL to the Discord application is opt-in
- * through `dev.tunnel.updateEndpoint`, because it edits a live application.
+ * `dev.tunnel: true` opens a quick tunnel through the configured provider: `cloudflared` via `untun` by default (it
+ * changes on every run), or `ngrok`. A configured https URL is only probed, since the user already serves it. Writing
+ * the URL to the Discord application is opt-in through `dev.tunnel.updateEndpoint`, because it edits a live application.
  */
 export class Tunnel extends EventEmitter<TunnelEvents> {
-	#startTunnel: typeof startTunnel;
-	#tunnel: UntunTunnel | null = null;
+	#providers: Record<StarsTunnelProvider, TunnelProvider>;
+	#tunnel: TunnelHandle | null = null;
 	#state: TunnelState = 'off';
 	#url: string | null = null;
 	#wanted = false;
-	#rejectionGuard: ((reason: unknown) => void) | null = null;
 
 	public constructor(
 		private readonly config: ResolvedStarsConfig,
 		options: TunnelOptions = {}
 	) {
 		super();
-		this.#startTunnel = options.startTunnel ?? startTunnel;
+		this.#providers = { cloudflared: new CloudflaredProvider(options.startTunnel), ngrok: new NgrokProvider(options.loadNgrok) };
 	}
 
 	public get state(): TunnelState {
@@ -58,12 +62,14 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		if (this.#state === 'starting' || this.#state === 'up') return;
 		const configured = this.config.dev.tunnel;
 		const tunnel: ResolvedTunnelConfig =
-			forceQuick && configured.mode === 'off' ? { mode: 'quick', path: '/', updateEndpoint: false } : configured;
+			forceQuick && configured.mode === 'off'
+				? { mode: 'quick', provider: DEFAULT_TUNNEL_PROVIDER, domain: null, path: '/', updateEndpoint: false }
+				: configured;
 		if (tunnel.mode === 'off') return;
 
 		this.#wanted = true;
 		this.#setState('starting', null);
-		const url = tunnel.mode === 'url' ? await this.#useConfiguredUrl(tunnel) : await this.#openQuickTunnel();
+		const url = tunnel.mode === 'url' ? await this.#useConfiguredUrl(tunnel) : await this.#openQuickTunnel(tunnel);
 		if (!url || !this.#wanted) return;
 
 		this.#setState('up', endpointUrl(url, tunnel.path));
@@ -81,13 +87,8 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		const tunnel = this.#tunnel;
 		this.#tunnel = null;
 		this.#setState('off', null);
-		// Without a tunnel, `#openQuickTunnel` is still waiting for one and closes it (then releases the guard) when it arrives.
-		if (!tunnel) return;
-		try {
-			await tunnel.close();
-		} finally {
-			this.#releaseRejectionGuard();
-		}
+		// Without a tunnel, `#openQuickTunnel` is still waiting for one and closes it when it arrives.
+		await tunnel?.close();
 	}
 
 	async #useConfiguredUrl(tunnel: Extract<ResolvedTunnelConfig, { mode: 'url' }>): Promise<string | null> {
@@ -99,7 +100,7 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		return tunnel.url;
 	}
 
-	async #openQuickTunnel(): Promise<string | null> {
+	async #openQuickTunnel(tunnel: QuickTunnelConfig): Promise<string | null> {
 		const target = this.config.dev.url;
 		if (!target) {
 			this.emit('log', 'error', 'A quick tunnel needs `dev.url` to know what to forward to');
@@ -107,84 +108,43 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 			return null;
 		}
 
-		this.emit('log', 'info', 'Opening a cloudflared quick tunnel…');
-		this.#installRejectionGuard();
+		const provider = this.#providers[tunnel.provider];
+		this.emit('log', 'info', `Opening a ${provider.name} quick tunnel…`);
 
 		try {
-			const tunnel = await this.#startWithoutSignalHandlers(target);
+			const handle = await provider.open(target, {
+				config: this.config,
+				tunnel,
+				onStopped: (error) => this.#stoppedUnexpectedly(provider.name, error)
+			});
 			if (!this.#wanted) {
-				await tunnel?.close();
-				this.#releaseRejectionGuard();
+				await handle?.close();
 				return null;
 			}
-			if (!tunnel) {
-				this.emit('log', 'error', 'cloudflared setup was cancelled');
+			if (!handle) {
+				this.emit('log', 'error', `${provider.name} setup was cancelled`);
 				this.#setState('failed', null);
-				this.#releaseRejectionGuard();
 				return null;
 			}
 
-			this.#tunnel = tunnel;
-			return await tunnel.getURL();
+			this.#tunnel = handle;
+			return await handle.getURL();
 		} catch (error) {
-			this.#releaseRejectionGuard();
-			// Closing the tunnel makes cloudflared exit, which `untun` reports as a failure: that is not one.
+			// Closing a tunnel can make its process exit, which a provider may report as a failure: that is not one.
 			if (!this.#wanted) return null;
-			this.emit('log', 'error', `cloudflared failed: ${error instanceof Error ? error.message : String(error)}`);
+			this.emit('log', 'error', `${provider.name} failed: ${describeError(error)}`);
 			this.#setState('failed', null);
 			return null;
 		}
 	}
 
-	/**
-	 * `untun` adds its own `SIGINT`/`SIGTERM`/`SIGHUP` listeners that call `process.exit()` once cloudflared is closed,
-	 * which races `stars dev`'s graceful shutdown (it closes the tunnel through {@link close} anyway), so they are removed.
-	 */
-	async #startWithoutSignalHandlers(target: string): Promise<UntunTunnel | undefined> {
-		const before = SIGNALS.map((signal) => new Set(process.listeners(signal)));
-		try {
-			return await this.#startTunnel({ url: target, acceptCloudflareNotice: true });
-		} finally {
-			SIGNALS.forEach((signal, index) => {
-				for (const listener of process.listeners(signal)) {
-					if (!before[index]!.has(listener)) process.off(signal, listener);
-				}
-			});
-		}
-	}
-
-	/**
-	 * `untun` rejects a promise per connection when cloudflared exits and never handles it (and its location pattern
-	 * does not match lowercase codes such as `mxp03`, so that promise is never settled before), which Node reports as an
-	 * unhandled rejection that ends the process, whenever the tunnel closes. The guard swallows that one error for as
-	 * long as this tunnel exists; anything else it sees is thrown again, as if it was not installed.
-	 */
-	#installRejectionGuard(): void {
-		if (this.#rejectionGuard) return;
-
-		const guard = (reason: unknown): void => {
-			if (!isCloudflaredExit(reason)) {
-				// The guard is the only listener, so without this the rejection would be ignored instead of ending the process.
-				if (process.listeners('unhandledRejection').length === 1) throw reason;
-				return;
-			}
-
-			if (this.#state !== 'up' || !this.#wanted) return;
-			this.#tunnel = null;
-			this.emit('log', 'error', `cloudflared stopped unexpectedly: ${reason.message}`);
-			this.#setState('failed', null);
-			this.#releaseRejectionGuard();
-		};
-
-		this.#rejectionGuard = guard;
-		process.on('unhandledRejection', guard);
-	}
-
-	/** Node reports an unhandled rejection after the microtasks that follow it, so the guard has to outlive them. */
-	#releaseRejectionGuard(): void {
-		const guard = this.#rejectionGuard;
-		this.#rejectionGuard = null;
-		if (guard) setImmediate(() => process.off('unhandledRejection', guard));
+	/** Whether the report was about the tunnel in use: one that is up and still wanted. */
+	#stoppedUnexpectedly(provider: StarsTunnelProvider, error: Error): boolean {
+		if (this.#state !== 'up' || !this.#wanted) return false;
+		this.#tunnel = null;
+		this.emit('log', 'error', `${provider} stopped unexpectedly: ${error.message}`);
+		this.#setState('failed', null);
+		return true;
 	}
 
 	/**
@@ -251,26 +211,22 @@ export interface DiscordCredentials {
  * way the bot itself does once it starts.
  */
 export function readDiscordCredentials(config: ResolvedStarsConfig, env: NodeJS.ProcessEnv = process.env): DiscordCredentials | null {
-	const fromFiles = readProjectEnvFilesCached(config);
-	const read = (...keys: string[]): string | null => {
-		for (const key of keys) {
-			const value = config.dev.env[key] ?? env[key] ?? fromFiles[key];
-			if (value) return value;
-		}
-		return null;
-	};
-
-	const token = read('DISCORD_TOKEN', 'TOKEN');
+	const token = readProjectVariable(config, env, 'DISCORD_TOKEN', 'TOKEN');
 	if (!token) return null;
 
-	return { token, applicationId: read('DISCORD_APPLICATION_ID', 'APPLICATION_ID', 'DISCORD_CLIENT_ID', 'CLIENT_ID') };
+	return {
+		token,
+		applicationId: readProjectVariable(config, env, 'DISCORD_APPLICATION_ID', 'APPLICATION_ID', 'DISCORD_CLIENT_ID', 'CLIENT_ID')
+	};
 }
 
-let envFileCache: { key: string; values: Record<string, string> } | null = null;
+/** How a quick tunnel is described to the user, for `stars info` and `stars doctor`. */
+export function describeQuickTunnel(tunnel: QuickTunnelConfig): string {
+	return `${tunnel.provider} quick tunnel${tunnel.domain ? ` on ${tunnel.domain}` : ''}`;
+}
 
-/** The variables the bot loads (see {@link readProjectEnv}), once per project and `env` options. */
-function readProjectEnvFilesCached(config: ResolvedStarsConfig): Record<string, string> {
-	const key = JSON.stringify([config.root, config.env.options]);
-	if (envFileCache?.key !== key) envFileCache = { key, values: readProjectEnv(config) };
-	return envFileCache.values;
+/** A diagnostic's own advice is part of the message, since the dev log has no place to show it separately. */
+function describeError(error: unknown): string {
+	if (error instanceof Diagnostic) return error.fix ? `${error.message}. ${error.fix}` : error.message;
+	return error instanceof Error ? error.message : String(error);
 }

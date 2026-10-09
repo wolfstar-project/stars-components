@@ -5,7 +5,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { delimiter, join } from 'node:path';
 import { BRIDGE_FRAMEWORK_VERSION, isAtLeast } from '../dev/bridge.js';
-import { endpointUrl, readDiscordCredentials } from '../dev/tunnel.js';
+import { endpointUrl, describeQuickTunnel, readDiscordCredentials } from '../dev/tunnel.js';
+import { NGROK_AUTHTOKEN_VARIABLE, NGROK_INSTALL_HINT, NGROK_PACKAGE } from '../dev/tunnel-providers.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { loadProject, withProjectEnv, applyEnvOptions, type StarsHookable } from '../utils/hooks.js';
@@ -157,12 +158,25 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 			name: 'tunnel',
 			status: 'info',
 			message: 'No tunnel: Discord cannot reach a bot on localhost',
-			fix: 'Set `dev.tunnel: true` for a cloudflared quick tunnel, or press t in `stars dev`.'
+			fix: "Set `dev.tunnel: true` for a cloudflared quick tunnel (`{ provider: 'ngrok' }` for ngrok), or press t in `stars dev`."
 		});
+	} else if (tunnel.mode === 'quick' && tunnel.provider === 'ngrok') {
+		if (findInstalledVersion(config.root, NGROK_PACKAGE) === null) {
+			checks.push({ name: 'tunnel', status: 'warn', message: `${NGROK_PACKAGE} is not installed`, fix: NGROK_INSTALL_HINT });
+		} else if (!values[NGROK_AUTHTOKEN_VARIABLE]) {
+			checks.push({
+				name: 'tunnel',
+				status: 'warn',
+				message: `${NGROK_AUTHTOKEN_VARIABLE} is not set`,
+				fix: `Set ${NGROK_AUTHTOKEN_VARIABLE} in the environment or in the project .env file.`
+			});
+		} else {
+			checks.push({ name: 'tunnel', status: 'ok', message: describeQuickTunnel(tunnel) });
+		}
 	} else if (tunnel.mode === 'quick') {
 		checks.push(
 			findOnPath('cloudflared', env)
-				? { name: 'tunnel', status: 'ok', message: 'cloudflared quick tunnel' }
+				? { name: 'tunnel', status: 'ok', message: describeQuickTunnel(tunnel) }
 				: { name: 'tunnel', status: 'info', message: 'cloudflared is not on the PATH: it is downloaded the first time the tunnel opens' }
 		);
 	} else {

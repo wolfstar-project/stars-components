@@ -4,6 +4,7 @@ import { collectChecks, formatChecks, runDoctor, type Check } from '../src/comma
 import { loadProject } from '../src/utils/hooks.js';
 import { createFixture, type Fixture } from './helpers.js';
 
+const NGROK_PACKAGE = '{"name":"@ngrok/ngrok","version":"1.7.0"}';
 const FRAMEWORK = (version: string) => JSON.stringify({ name: '@wolfstar/http-framework', version, type: 'module', exports: './index.js' });
 
 describe('stars doctor', () => {
@@ -95,6 +96,26 @@ describe('stars doctor', () => {
 		expect(checks.framework).toMatchObject({ status: 'warn', fix: expect.stringContaining('6.1.0') });
 		expect(checks.application).toMatchObject({ status: 'warn' });
 		expect(checks.tunnel).toMatchObject({ status: 'info', message: expect.stringContaining('downloaded') });
+	});
+
+	test.each([
+		['the package is missing', {}, {}, 'warn', '@ngrok/ngrok is not installed'],
+		['the authtoken is missing', { 'node_modules/@ngrok/ngrok/package.json': NGROK_PACKAGE }, {}, 'warn', 'NGROK_AUTHTOKEN is not set'],
+		[
+			'it is ready',
+			{ 'node_modules/@ngrok/ngrok/package.json': NGROK_PACKAGE },
+			{ NGROK_AUTHTOKEN: 'abc' },
+			'ok',
+			'ngrok quick tunnel on bot.ngrok.app'
+		]
+	])('checks the prerequisites of the ngrok tunnel: %s', async (_name, files, env, status, message) => {
+		const checks = await check(
+			{ ...files, 'stars.config.mjs': "export default { dev: { tunnel: { provider: 'ngrok', domain: 'bot.ngrok.app' } } };" },
+			{ env }
+		);
+
+		expect(checks.tunnel).toMatchObject({ status, message: expect.stringContaining(message) });
+		if (status === 'warn') expect(checks.tunnel!.fix).toBeDefined();
 	});
 
 	test('--online asks Discord where the application sends interactions', async () => {
