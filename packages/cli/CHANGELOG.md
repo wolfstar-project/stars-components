@@ -1,5 +1,11 @@
 # @wolfstar/cli
 
+## 2.8.0
+
+### Minor Changes
+
+- [#309](https://github.com/wolfstar-project/stars-components/pull/309) [`f1c43e0`](https://github.com/wolfstar-project/stars-components/commit/f1c43e090bbfe7a8a69801a9264b4e7593ad1544) - Make varlock visible in `stars.config`. When a project has a `.env.schema` and `varlock` but `stars.config` does not set `env.loader`, `stars prepare`, `build`, `dev` and `info` now report it (`VARLOCK_LOADER_IMPLICIT`, or `VARLOCK_NOT_INSTALLED` when the schema has no varlock to load it), and `stars doctor` checks that the schema and `env.loader` agree (a schema with another loader, or `loader: 'varlock'` without the package). `stars doctor --fix` writes `env: { loader: 'varlock' }` for you: it creates `stars.config.ts` the way `@wolfstar/create-http-framework` scaffolds it, or edits a literal `defineConfig({ ... })` or exported object, and prints the line to add when the configuration is too dynamic to edit. It asks first (`--yes` answers), and never writes in CI or without a terminal to ask in. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.7.0
 
 ### Minor Changes
