@@ -59,7 +59,7 @@
 		"@discordjs/builders": "^1.14.1",
 		"@discordjs/collection": "^2.1.1",
 		"@sapphire/pieces": "^4.4.1",
-		"@sentry/node": "^10.75.3",
+		"@sentry/node": "^11.4.0",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/http-framework": "workspace:^",
 		"@wolfstar/plugin-i18next": "2.1.1",
