@@ -67,6 +67,7 @@ The CLI will guide you through the following prompts:
 | `--redis` / `--no-redis`             |       | Cache in Redis instead of memory (turns `--cache` on)                       |
 | `--sharder` / `--no-sharder`         |       | Enable or disable `@wolfstar/plugin-sharder` (turns `--gateway` on)         |
 | `--tunnel` / `--no-tunnel`           |       | Open a cloudflared quick tunnel in `stars dev` (`dev.tunnel` in the config) |
+| `--env <loader>`                     |       | `varlock`: scaffold a `.env.schema` and derive `Env` from it                |
 | `--install` / `--no-install`         |       | Enable or disable dependency installation                                   |
 | `--help`                             | `-h`  | Print usage and exit                                                        |
 
@@ -124,6 +125,16 @@ my-discord-bot/
 - `AGENTS.md` and `llms.txt` are always generated and only describe the features the project was created with. When one already exists and is not this generator's own unedited output (you wrote it, or edited it), a rerun leaves it as it is and says so.
 - With a linter, the generated configuration (`.oxlintrc.json` or `eslint.config.mjs`) enables the rules of [`@wolfstar/eslint-plugin-http-framework`](../eslint-plugin-http-framework): decorator order, raw Discord fetches, dynamic translation keys and the other mistakes TypeScript cannot catch.
 - `--tunnel` (or the **Dev tunnel** feature in the prompt) writes `dev: { tunnel: true }` to `stars.config`, so `stars dev` opens a cloudflared quick tunnel and Discord reaches the bot on your machine. Without it, press `t` in `stars dev` to open one on demand.
+
+### varlock
+
+`--env varlock` (or the **Environment schema** feature in the prompt) sets the project up with [varlock](https://varlock.dev), which validates the environment and types it:
+
+- `.env.schema` declares `DISCORD_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_CLIENT_ID`, the HTTP port and whatever the other features need (`REDIS_URL`, `SHARDER_CLUSTERS`). The values stay in `.env`.
+- `varlock` is added as a dependency, and `@wolfstar/env-utilities` loads the schema by itself (it picks varlock when a `.env.schema` and `varlock` are there).
+- `src/lib/types/augments.ts` derives `Env` from `src/@types/env.d.ts` with `EnvFromVarlock` (from `@wolfstar/env-utilities/varlock`) instead of declaring each variable by hand. The scaffold ships a stand-in for that file so the project type-checks right away; `@generateTsTypes` makes varlock replace it, with the same shape, whenever it loads the schema (`npm run dev`, or `npx varlock load`).
+- For `tsdown` and `vite` projects `stars.config.ts` also gets `env: { loader: 'varlock' }`, so `stars dev` and `stars doctor` read the variables the way the bot does. `tsc`, JavaScript and Nitro projects load the environment themselves, so they get the schema and the dependency but no `env` entry.
+- Running it against a directory that already has a varlock `.env.schema` (`--ignore`) needs no flag: the schema is kept as it is, `varlock` stays a dependency, and `stars.config.ts` sets `env.loader`. An existing `.env.schema` the generator did not write is never replaced, with or without `--env varlock`; with the flag it is kept and reported, and `Env` stays hand-written because that schema may not generate types. A `varlock.loadPath` in `package.json` is kept. Rerunning without the flag over a project this generator scaffolded with varlock keeps it on; delete `.env.schema` to turn it off.
 
 ### Vite and Nitro
 

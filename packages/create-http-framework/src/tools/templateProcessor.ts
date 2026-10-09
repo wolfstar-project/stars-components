@@ -1,6 +1,6 @@
 import Handlebars from 'handlebars';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFile } from './fileSystem.js';
 import { isNitroBuild, isViteBuild, type BuildTool, type Language } from './options.js';
@@ -48,11 +48,17 @@ function removeI18nDeclaration(outputDir: string): void {
 }
 
 /**
- * The files that describe a project to coding agents. A project often has its own already, and unlike the sources
- * they are prose a rerun cannot merge: an existing one is only replaced when this generator wrote it and nobody
- * edited it since.
+ * The files that describe a project to coding agents, the varlock schema and the types varlock generates from it. A project often has its own already, and
+ * unlike the sources they are not something a rerun can merge: an existing one is only replaced when this generator
+ * wrote it and nobody edited it since.
  */
-const AGENT_DOCS = new Set(['AGENTS.md', 'llms.txt']);
+const USER_OWNED_FILES = new Set(['AGENTS.md', 'llms.txt', '.env.schema', 'src/@types/env.d.ts']);
+
+/**
+ * Owned by a tool, not by the user: varlock overwrites it whenever it loads the schema. It is kept as it is, without the
+ * "delete it and run again" report, which would only bring back the stand-in.
+ */
+const TOOL_GENERATED_FILES = new Set(['src/@types/env.d.ts']);
 
 /** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
 export interface TemplateContext {
@@ -67,6 +73,8 @@ export interface TemplateContext {
 	cache: boolean;
 	redis: boolean;
 	sharder: boolean;
+	/** Whether to scaffold a varlock `.env.schema` (`--env varlock`) and derive `Env` from it. Optional: older manifests lack it. */
+	varlock?: boolean;
 	/** Only meaningful when `language === 'ts'`. */
 	buildTool: BuildTool;
 	/** Whether `stars dev` opens a public tunnel (`dev.tunnel` in `stars.config`). Optional: older manifests lack it. */
@@ -146,7 +154,7 @@ function walkDir(dir: string): string[] {
  */
 export function resolveFeatureDirs(
 	ctx: Pick<TemplateContext, 'i18n' | 'subcommands' | 'subcommandsAdvanced' | 'testing'> &
-		Partial<Pick<TemplateContext, 'gateway' | 'cache' | 'redis' | 'sharder'>>
+		Partial<Pick<TemplateContext, 'gateway' | 'cache' | 'redis' | 'sharder' | 'varlock'>>
 ): string[] {
 	const dirs: string[] = [];
 	if (ctx.i18n) dirs.push('i18n');
@@ -155,6 +163,8 @@ export function resolveFeatureDirs(
 	if (ctx.cache) dirs.push('cache');
 	if (ctx.redis) dirs.push('redis');
 	if (ctx.sharder) dirs.push('sharder');
+	// Replaces `src/lib/types/augments.ts`: `Env` comes from the schema instead of being declared by hand.
+	if (ctx.varlock) dirs.push('varlock');
 	if (ctx.subcommandsAdvanced) {
 		dirs.push(ctx.i18n ? 'subcommands-advanced-i18n' : 'subcommands-advanced');
 	} else if (ctx.subcommands) {
@@ -309,6 +319,8 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
 	const preserved: string[] = [];
 	for (const [path, sources] of candidates) {
 		if (keepPaths.has(path)) continue;
+		// Whether varlock is on follows the schema on disk (see `processTemplate`), so it is never a leftover to clean up.
+		if (path === '.env.schema') continue;
 
 		const target = join(outputDir, path);
 		if (!existsSync(target)) continue;
@@ -321,7 +333,7 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
 					return (matcher ? [matcher] : buildLegacyVariantMatchers(source, context)).some((candidate) => candidate.test(actual));
 				});
 		if (isUnmodifiedGeneratorOutput) rmSync(target);
-		else preserved.push(path);
+		else if (!TOOL_GENERATED_FILES.has(path.split(sep).join('/'))) preserved.push(path);
 	}
 
 	return preserved;
@@ -351,35 +363,63 @@ function processDir(root: string, outputDir: string, context: TemplateContext, k
 }
 
 /**
+ * Settles whether the varlock scaffold applies, from the schema that is on disk rather than from the flag alone:
+ * - a schema this generator wrote earlier (the manifest says so) keeps varlock on without the flag, so a rerun does not
+ *   take `Env` away from a schema that is still there, and deleting the schema is how to turn it off;
+ * - a schema somebody else wrote is kept as it is and `Env` stays hand-written, because the types the scaffold derives
+ *   `Env` from are only generated when the schema asks for them.
+ */
+function resolveVarlock(
+	outputDir: string,
+	context: TemplateContext,
+	manifestContext: TemplateContext | undefined,
+	onKept: ((path: string) => void) | undefined
+): TemplateContext {
+	if (!existsSync(join(outputDir, '.env.schema'))) return context;
+	if (manifestContext?.varlock) return { ...context, varlock: true };
+	if (!context.varlock) return context;
+
+	onKept?.('.env.schema');
+	return { ...context, varlock: false };
+}
+
+/**
  * Renders `template/base/` into `outputDir`, then layers the feature directories resolved by
  * {@link resolveFeatureDirs} on top, in order — feature files overwrite base files at the same
  * output-relative path (e.g. `features/i18n/src/main.ts.hbs` overwrites `base/src/main.ts.hbs`).
  *
- * @param onKept Called with each of `AGENTS.md`/`llms.txt` that was left as it is, because it exists and is not this
+ * @param onKept Called with each of `AGENTS.md`/`llms.txt`/`.env.schema` that was left as it is, because it exists and is not this
  * generator's own unedited output.
  * @returns Output-relative paths that looked stale (belong to a disabled feature or the other
  * language) but were left in place because they'd been hand-edited since the last run.
  */
-export async function processTemplate(outputDir: string, context: TemplateContext, onKept?: (path: string) => void): Promise<string[]> {
+export async function processTemplate(outputDir: string, requested: TemplateContext, onKept?: (path: string) => void): Promise<string[]> {
 	// Read before anything is written: it is what tells a file this generator wrote from one somebody wrote.
 	const manifestContext = readManifest(outputDir);
+	const context = resolveVarlock(outputDir, requested, manifestContext, onKept);
 	const preserved = removeStaleGeneratedFiles(outputDir, context);
 	if (!context.i18n) removeI18nDeclaration(outputDir);
 
-	processDir(baseDir, outputDir, context, (outputRelative, content) => {
-		if (!AGENT_DOCS.has(outputRelative)) return false;
+	const keepEdited = (root: string) => (outputRelative: string, content: string) => {
+		// `relative` yields backslashes on Windows; the set is written with forward slashes.
+		const key = outputRelative.split(sep).join('/');
+		if (!USER_OWNED_FILES.has(key)) return false;
 		const target = join(outputDir, outputRelative);
 		if (!existsSync(target)) return false;
 
 		const actual = readFileSync(target, 'utf-8');
-		const source = join(baseDir, `${outputRelative}.hbs`);
-		const pristine = actual === content || (manifestContext !== undefined && renderSource(source, manifestContext) === actual);
-		if (!pristine) onKept?.(outputRelative);
+		const source = join(root, `${outputRelative}.hbs`);
+		const pristine =
+			actual === content || (manifestContext !== undefined && existsSync(source) && renderSource(source, manifestContext) === actual);
+		if (!pristine && !TOOL_GENERATED_FILES.has(key)) onKept?.(key);
 		return !pristine;
-	});
+	};
+
+	processDir(baseDir, outputDir, context, keepEdited(baseDir));
 
 	for (const feature of resolveFeatureDirs(context)) {
-		processDir(join(featuresDir, feature), outputDir, context);
+		const root = join(featuresDir, feature);
+		processDir(root, outputDir, context, keepEdited(root));
 	}
 
 	writeManifest(outputDir, context);

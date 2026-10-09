@@ -157,6 +157,16 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   manifest records `compatibilityVersion`; templates read it through `typecheckScript`, so a manifest without it renders as
   before. `GENERATED_COMPATIBILITY_VERSION` and `SPLIT_TSCONFIG_VERSION` mirror `@wolfstar/schema`'s (pinned by
   `tests/schema-mirror.test.ts`). The `tsc` branch keeps its composite `src/tsconfig.json`.
+- `@wolfstar/create-http-framework` scaffolds varlock with `--env varlock` (`template/features/varlock`: a root `.env.schema` with
+  `@generateTsTypes(path=src/@types/env.d.ts)`, a stand-in `src/@types/env.d.ts` that varlock overwrites, and a `src/lib/types/augments.ts` override that
+  derives `Env` with `EnvFromVarlock` from `@wolfstar/env-utilities/varlock` (the root entry shares a declaration chunk with `Env`); `varlock` joins
+  the dependencies, and `stars.config` gets `env: { loader: 'varlock' }` only where `stars` registers `env` itself, i.e. `tsdown` and `vite` —
+  `tsc`, JavaScript and Nitro projects get the schema and the dependency, the runtime picks varlock on its own). `detectExistingVarlock`
+  (`src/tools/varlock.ts`, mirrors `detectVarlock` of `@wolfstar/schema`, pinned by `tests/varlock.test.ts`) makes a rerun against a directory
+  with a `.env.schema` or a `varlock` dependency keep varlock (including its `varlock.loadPath`). `.env.schema` and `src/@types/env.d.ts` are
+  `USER_OWNED_FILES` (with `AGENTS.md`/`llms.txt`) a rerun only replaces when the generator wrote them and nobody edited them, and
+  `resolveVarlock` in `templateProcessor.ts` decides from the schema on disk whether the scaffold applies: a schema the manifest says the
+  generator wrote keeps it on without the flag (deleting the schema turns it off), one somebody else wrote is kept and `Env` stays hand-written.
 - `@wolfstar/create-http-framework`'s `--build` also accepts the experimental, TypeScript-only `vite` and
   `vite-nitro` tools (`experimental.enableVite`/`enableNitro` in the generated `stars.config.ts`), and scaffolds the
   external gateway plugins via `--gateway`/`--cache`/`--redis`/`--sharder` (`@wolfstar/plugin-gateway`/`-cache`/

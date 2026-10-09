@@ -1,0 +1,9 @@
+// The `/varlock` entry is the one meant for this augmentation: the root entry shares a declaration chunk with `Env`.
+import type { EnvFromVarlock } from '@wolfstar/env-utilities/varlock';
+// Varlock regenerates this file from `.env.schema` (`@generateTsTypes`) whenever it loads it (`stars dev`, or `npx varlock load`).
+import type { CoercedEnvSchema } from '../../@types/env.js';
+
+declare module '@wolfstar/env-utilities' {
+	// `.env.schema` is the only place a variable is declared.
+	interface Env extends EnvFromVarlock<CoercedEnvSchema> {}
+}
