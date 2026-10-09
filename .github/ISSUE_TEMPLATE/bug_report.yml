@@ -1,7 +1,9 @@
 name: Bug Report
 description: File a bug report here
 title: 'bug: '
-labels: ['Bug: Unverified']
+type: Bug
+labels: ['bug:unverified']
+projects: ['wolfstar-project/17']
 body:
     - type: markdown
       attributes:
