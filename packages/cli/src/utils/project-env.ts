@@ -9,7 +9,8 @@ import { resolveBinary } from './project.js';
  * when varlock cannot be run, rather than values the bot never sees.
  */
 export function readProjectEnv(config: ResolvedStarsConfig): Record<string, string> {
-	const { path, env = 'development', loader } = config.env.options;
+	const { path, env = 'development' } = config.env.options;
+	const { loader } = config.env;
 	if (loader !== 'varlock') return readProjectEnvFiles(config.root, env, { path });
 
 	const binary = resolveBinary(config.root, 'varlock', 'varlock');

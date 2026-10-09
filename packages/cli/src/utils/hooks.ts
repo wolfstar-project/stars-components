@@ -69,7 +69,7 @@ export async function applyEnvOptions(config: ResolvedStarsConfig, hooks: StarsH
  */
 export function withProjectEnv(config: ResolvedStarsConfig): ResolvedStarsConfig {
 	const source = sources.get(config);
-	if (source === undefined || !config.env.enabled || config.env.options.loader !== 'varlock') return config;
+	if (source === undefined || !config.env.enabled || config.env.loader !== 'varlock') return config;
 	return reresolve(config, source, { projectEnv: readProjectEnv(config) });
 }
 
