@@ -518,6 +518,7 @@ async function main(): Promise<void> {
 		tunnel: wantsTunnel,
 		varlock: usesVarlock,
 		varlockLoader,
+		varlockLoadPath: existingVarlock.loadPath,
 		compatibilityVersion: GENERATED_COMPATIBILITY_VERSION,
 		packageManager,
 		language,

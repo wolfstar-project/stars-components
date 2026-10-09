@@ -132,9 +132,9 @@ my-discord-bot/
 
 - `.env.schema` declares `DISCORD_TOKEN`, `DISCORD_PUBLIC_KEY`, `DISCORD_CLIENT_ID`, the HTTP port and whatever the other features need (`REDIS_URL`, `SHARDER_CLUSTERS`). The values stay in `.env`.
 - `varlock` is added as a dependency, and `@wolfstar/env-utilities` loads the schema by itself (it picks varlock when a `.env.schema` and `varlock` are there).
-- `@generateTsTypes` makes varlock write `src/@types/env.d.ts` the first time it loads the schema (`npm run dev`, or `npx varlock load`), and `src/lib/types/augments.ts` derives `Env` from it with `EnvFromVarlock` instead of declaring each variable by hand.
+- `src/lib/types/augments.ts` derives `Env` from `src/@types/env.d.ts` with `EnvFromVarlock` (from `@wolfstar/env-utilities/varlock`) instead of declaring each variable by hand. The scaffold ships a stand-in for that file so the project type-checks right away; `@generateTsTypes` makes varlock replace it, with the same shape, whenever it loads the schema (`npm run dev`, or `npx varlock load`).
 - For `tsdown` and `vite` projects `stars.config.ts` also gets `env: { loader: 'varlock' }`, so `stars dev` and `stars doctor` read the variables the way the bot does. `tsc`, JavaScript and Nitro projects load the environment themselves, so they get the schema and the dependency but no `env` entry.
-- Running it against a directory that already has a varlock `.env.schema` (`--ignore`) needs no flag: the schema is kept as it is, `varlock` stays a dependency, and `stars.config.ts` sets `env.loader`. Without `--env varlock` an existing `.env.schema` is never replaced; with it, one the generator did not write is kept and reported.
+- Running it against a directory that already has a varlock `.env.schema` (`--ignore`) needs no flag: the schema is kept as it is, `varlock` stays a dependency, and `stars.config.ts` sets `env.loader`. An existing `.env.schema` the generator did not write is never replaced, with or without `--env varlock`; with the flag it is kept and reported, and `Env` stays hand-written because that schema may not generate types. A `varlock.loadPath` in `package.json` is kept. Rerunning without the flag over a project this generator scaffolded with varlock keeps it on; delete `.env.schema` to turn it off.
 
 ### Vite and Nitro
 

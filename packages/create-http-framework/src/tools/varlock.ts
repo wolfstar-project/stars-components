@@ -6,6 +6,8 @@ export interface ExistingVarlock {
 	schema: boolean;
 	/** `varlock` is in the `dependencies` or `devDependencies` of the `package.json`. */
 	dependency: boolean;
+	/** The `varlock.loadPath` of the `package.json`, which a regenerated `package.json` has to keep. */
+	loadPath?: string;
 }
 
 interface PackageJsonLike {
@@ -32,7 +34,9 @@ function readPackageJson(directory: string): PackageJsonLike {
  */
 export function detectExistingVarlock(directory: string): ExistingVarlock {
 	const packageJson = readPackageJson(directory);
+	const loadPath = packageJson.varlock?.loadPath;
 	return {
+		...(typeof loadPath === 'string' && loadPath !== '' ? { loadPath } : {}),
 		schema:
 			existsSync(join(directory, 'src', '.env.schema')) || existsSync(join(directory, '.env.schema')) || Boolean(packageJson.varlock?.loadPath),
 		dependency: Boolean(packageJson.dependencies?.varlock ?? packageJson.devDependencies?.varlock)

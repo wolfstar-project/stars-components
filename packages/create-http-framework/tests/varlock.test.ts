@@ -79,6 +79,11 @@ describe('--env varlock', () => {
 			expect(detectExistingVarlock(directory).schema).toBe(true);
 		});
 
+		test('reports the varlock.loadPath, so a regenerated package.json can keep it', async () => {
+			await write('package.json', JSON.stringify({ varlock: { loadPath: 'config' } }));
+			expect(detectExistingVarlock(directory)).toStrictEqual({ schema: true, dependency: false, loadPath: 'config' });
+		});
+
 		test('copes with a package.json that is not JSON', async () => {
 			await write('package.json', '{');
 			expect(detectExistingVarlock(directory)).toStrictEqual({ schema: false, dependency: false });
@@ -178,6 +183,14 @@ describe('--env varlock', () => {
 			expect(JSON.parse(await read('package.json')).dependencies).toHaveProperty('varlock');
 		});
 
+		test('keeps the varlock.loadPath of the project it regenerates the package.json of', async () => {
+			writeProjectFiles(directory, context({ varlock: true, varlockLoader: true, varlockLoadPath: 'config' }));
+			expect(JSON.parse(await read('package.json'))).toMatchObject({ varlock: { loadPath: 'config' } });
+
+			writeProjectFiles(directory, context());
+			expect(JSON.parse(await read('package.json'))).not.toHaveProperty('varlock');
+		});
+
 		test('combines with the tunnel', async () => {
 			writeProjectFiles(directory, context({ varlock: true, varlockLoader: true, tunnel: true }));
 			expect(await read('stars.config.ts')).toContain("defineConfig({ env: { loader: 'varlock' }, dev: { tunnel: true } })");
@@ -220,7 +233,7 @@ describe('--env varlock', () => {
 			expect(schema).not.toContain('{{');
 
 			const augments = await read('src/lib/types/augments.ts');
-			expect(augments).toContain("import type { EnvFromVarlock } from '@wolfstar/env-utilities';");
+			expect(augments).toContain("import type { EnvFromVarlock } from '@wolfstar/env-utilities/varlock';");
 			expect(augments).toContain("import type { CoercedEnvSchema } from '../../@types/env.js';");
 			expect(augments).toContain('interface Env extends EnvFromVarlock<CoercedEnvSchema> {}');
 			// The values are still the dotenv file's.
@@ -259,7 +272,18 @@ describe('--env varlock', () => {
 			expect(await read('src/lib/types/augments.ts')).toContain('DISCORD_TOKEN: string;');
 		});
 
-		test('keeps a .env.schema somebody else wrote, and says so', async () => {
+		test('ships a stand-in for the generated types, so Env type-checks before varlock has run', async () => {
+			await processTemplate(directory, templateContext({ varlock: true, redis: true, sharder: true, gateway: true, cache: true }));
+
+			const types = await read('src/@types/env.d.ts');
+			expect(types).toContain('export type CoercedEnvSchema = {');
+			expect(types).toContain('HTTP_PORT: number;');
+			expect(types).toContain('REDIS_URL: string;');
+			expect(types).toContain('SHARDER_CLUSTERS: number;');
+			expect(types).not.toContain('{{');
+		});
+
+		test('keeps a .env.schema somebody else wrote and leaves Env hand-written, and says so', async () => {
 			await write('.env.schema', SCHEMA);
 			const kept: string[] = [];
 
@@ -267,39 +291,56 @@ describe('--env varlock', () => {
 
 			expect(kept).toStrictEqual(['.env.schema']);
 			expect(await read('.env.schema')).toBe(SCHEMA);
+			// The types would only exist if that schema asked varlock to generate them.
+			expect(existsSync(join(directory, 'src/@types/env.d.ts'))).toBe(false);
+			expect(await read('src/lib/types/augments.ts')).toContain('DISCORD_TOKEN: string;');
 		});
 
-		test('leaves a project schema alone when a run does not ask for varlock, without warning about a disabled feature', async () => {
+		test('leaves a project schema alone when a run does not ask for varlock', async () => {
 			await write('.env.schema', SCHEMA);
 
 			const preserved = await processTemplate(directory, templateContext());
 
 			expect(preserved).toStrictEqual([]);
 			expect(await read('.env.schema')).toBe(SCHEMA);
-		});
-
-		test('regenerates its own unedited schema on a rerun, and drops it when varlock is turned off', async () => {
-			await processTemplate(directory, templateContext({ varlock: true, port: 3000 }));
-			const kept: string[] = [];
-
-			await processTemplate(directory, templateContext({ varlock: true, port: 4200 }), (path) => kept.push(path));
-			expect(kept).toStrictEqual([]);
-			expect(await read('.env.schema')).toContain('HTTP_PORT=4200');
-
-			const preserved = await processTemplate(directory, templateContext());
-			expect(preserved).toStrictEqual([]);
-			expect(existsSync(join(directory, '.env.schema'))).toBe(false);
 			expect(await read('src/lib/types/augments.ts')).toContain('DISCORD_TOKEN: string;');
 		});
 
-		test('keeps an edited generated schema when varlock is turned off, and warns', async () => {
+		test('keeps varlock on in a rerun without the flag, and regenerates its own unedited schema', async () => {
+			await processTemplate(directory, templateContext({ varlock: true, port: 3000 }));
+			const kept: string[] = [];
+
+			await processTemplate(directory, templateContext({ port: 4200 }), (path) => kept.push(path));
+
+			expect(kept).toStrictEqual([]);
+			expect(await read('.env.schema')).toContain('HTTP_PORT=4200');
+			expect(await read('src/lib/types/augments.ts')).toContain('EnvFromVarlock');
+			expect(JSON.parse(await read('.create-http-framework.json'))).toMatchObject({ varlock: true });
+		});
+
+		test('keeps an edited schema, and the types varlock generated, on a rerun', async () => {
 			await processTemplate(directory, templateContext({ varlock: true }));
-			await write('.env.schema', `${await read('.env.schema')}\n# @type=string\nMY_KEY=\n`);
+			await write('.env.schema', `${await read('.env.schema')}# @type=string\nMY_KEY=\n`);
+			await write('src/@types/env.d.ts', 'export type CoercedEnvSchema = { MY_KEY: string };\n');
+			const kept: string[] = [];
+
+			await processTemplate(directory, templateContext(), (path) => kept.push(path));
+
+			expect(kept.sort()).toStrictEqual(['.env.schema', 'src/@types/env.d.ts']);
+			expect(await read('.env.schema')).toContain('MY_KEY=');
+			expect(await read('src/@types/env.d.ts')).toContain('MY_KEY');
+			expect(await read('src/lib/types/augments.ts')).toContain('EnvFromVarlock');
+		});
+
+		test('turns varlock off once its schema is deleted, taking the stand-in types with it', async () => {
+			await processTemplate(directory, templateContext({ varlock: true }));
+			await rm(join(directory, '.env.schema'));
 
 			const preserved = await processTemplate(directory, templateContext());
 
-			expect(preserved).toStrictEqual(['.env.schema']);
-			expect(await read('.env.schema')).toContain('MY_KEY=');
+			expect(preserved).toStrictEqual([]);
+			expect(existsSync(join(directory, 'src/@types/env.d.ts'))).toBe(false);
+			expect(await read('src/lib/types/augments.ts')).toContain('DISCORD_TOKEN: string;');
 		});
 	});
 });

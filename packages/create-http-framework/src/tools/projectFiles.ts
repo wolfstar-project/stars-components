@@ -26,6 +26,8 @@ export interface ProjectContext {
 	 * picks varlock on its own, from the same schema.
 	 */
 	varlockLoader?: boolean;
+	/** The `varlock.loadPath` of the `package.json` being regenerated: where varlock finds a schema outside the usual places. */
+	varlockLoadPath?: string;
 	/**
 	 * The `future.compatibilityVersion` the project is generated for. From 6 the root `tsconfig.json` of a `tsdown` or
 	 * Vite project only references the `.stars/` configs `stars prepare` writes. Defaults to {@link GENERATED_COMPATIBILITY_VERSION}.
@@ -196,6 +198,7 @@ export function packageJson(ctx: ProjectContext): string {
 		main,
 		scripts: buildScripts(ctx),
 		dependencies: buildDependencies(ctx),
+		...(ctx.varlockLoadPath ? { varlock: { loadPath: ctx.varlockLoadPath } } : {}),
 		...(Object.keys(devDependencies).length > 0 ? { devDependencies } : {}),
 		// `@wolfstar/plugin-gateway` requires it.
 		engines: { node: ctx.gateway ? '>=24.17.0' : '>=20' }
