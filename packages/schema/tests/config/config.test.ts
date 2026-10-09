@@ -250,8 +250,24 @@ describe('stars.config', () => {
 			projects: [join(fixture.root, '.stars', 'tsconfig.node.json')],
 			checker: 'tsc'
 		});
-		expect(config.dev.tunnel).toEqual({ mode: 'quick', path: '/', updateEndpoint: false });
+		expect(config.dev.tunnel).toEqual({ mode: 'quick', provider: 'cloudflared', domain: null, path: '/', updateEndpoint: false });
 		expect(config.dev.logFile).toBeNull();
+	});
+
+	test('resolves the ngrok tunnel provider and its reserved domain', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'stars.config.mjs': "export default { dev: { tunnel: { provider: 'ngrok', domain: 'bot.ngrok.app', path: '/interactions' } } };"
+		});
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(config.dev.tunnel).toEqual({
+			mode: 'quick',
+			provider: 'ngrok',
+			domain: 'bot.ngrok.app',
+			path: '/interactions',
+			updateEndpoint: false
+		});
 	});
 
 	test('defaults the dev UI options: auto layout, every channel, no trace, prompt before refreshing commands', async () => {
@@ -596,6 +612,31 @@ describe('stars.config', () => {
 		test('rejects a tunnel URL that is not https', async () => {
 			expect((await expectConfigError("export default { dev: { tunnel: 'http://bot.example.com' } };")).code).toBe('TUNNEL_URL_NOT_HTTPS');
 			expect((await expectConfigError("export default { dev: { tunnel: 'nope' } };")).code).toBe('INVALID_URL');
+		});
+
+		test('rejects an unknown tunnel provider', async () => {
+			const error = await expectConfigError("export default { dev: { tunnel: { provider: 'localtunnel' } } };");
+			expect(error.code).toBe('INVALID_CHOICE');
+			expect(error.fix).toContain("'ngrok'");
+		});
+
+		test('rejects tunnel options that do not fit together', async () => {
+			const withUrl = await expectConfigError("export default { dev: { tunnel: { url: 'https://bot.example.com', provider: 'ngrok' } } };");
+			expect(withUrl.code).toBe('TUNNEL_OPTION_CONFLICT');
+			expect(withUrl.message).toContain('dev.tunnel.provider');
+
+			expect(
+				(await expectConfigError("export default { dev: { tunnel: { url: 'https://bot.example.com', domain: 'a.ngrok.app' } } };")).code
+			).toBe('TUNNEL_OPTION_CONFLICT');
+
+			const cloudflared = await expectConfigError("export default { dev: { tunnel: { domain: 'a.ngrok.app' } } };");
+			expect(cloudflared.code).toBe('TUNNEL_OPTION_CONFLICT');
+			expect(cloudflared.fix).toContain("'ngrok'");
+
+			expect((await expectConfigError("export default { dev: { tunnel: { provider: 'cloudflared', domain: 'a.ngrok.app' } } };")).code).toBe(
+				'TUNNEL_OPTION_CONFLICT'
+			);
+			expect((await expectConfigError('export default { dev: { tunnel: { provider: 1 } } };')).code).toBe('INVALID_TYPE');
 		});
 
 		test('rejects `build.tool: vite` without the experiment, and unknown experiments', async () => {

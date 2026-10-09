@@ -119,6 +119,10 @@ export const configDiagnostics = defineDiagnostics({
 			why: (p: { url: string }) => `The tunnel URL must be https, received "${p.url}"`,
 			fix: (_p: { url: string }) => 'Discord only accepts an https interactions endpoint.'
 		},
+		TUNNEL_OPTION_CONFLICT: {
+			why: (p: { option: string; reason: string; fix: string }) => `\`${p.option}\` does not apply here: ${p.reason}`,
+			fix: (p: { option: string; reason: string; fix: string }) => p.fix
+		},
 		INVALID_CHOICE: {
 			why: (p: { path: string; value: string; allowed: string }) => `Unknown value "${p.value}" for \`${p.path}\``,
 			fix: (p: { path: string; value: string; allowed: string }) => `Use one of ${p.allowed}.`

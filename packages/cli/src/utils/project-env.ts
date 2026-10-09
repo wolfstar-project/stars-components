@@ -36,3 +36,34 @@ export function readProjectEnv(config: ResolvedStarsConfig): Record<string, stri
 		return {};
 	}
 }
+
+let envFileCache: { key: string; values: Record<string, string> } | null = null;
+
+/** The variables the bot loads (see {@link readProjectEnv}), once per project and `env` options. */
+function readProjectEnvCached(config: ResolvedStarsConfig, fresh: boolean): Record<string, string> {
+	const key = JSON.stringify([config.root, config.env.options]);
+	if (fresh || envFileCache?.key !== key) envFileCache = { key, values: readProjectEnv(config) };
+	return envFileCache.values;
+}
+
+/**
+ * The first of `keys` that is set, looking at `dev.env`, then the environment, then the project's env files the way the
+ * bot itself does once it starts. `null` when none is.
+ *
+ * The env files are read once per project; `fresh` reads them again, for a lookup that follows the user editing them
+ * (pressing `t` after adding a token), which would otherwise keep failing until `stars dev` restarts.
+ */
+export function readProjectVariable(
+	config: ResolvedStarsConfig,
+	env: NodeJS.ProcessEnv,
+	keys: readonly string[],
+	{ fresh = false }: { fresh?: boolean } = {}
+): string | null {
+	const fromFiles = readProjectEnvCached(config, fresh);
+	for (const key of keys) {
+		const value = config.dev.env[key] ?? env[key] ?? fromFiles[key];
+		if (value) return value;
+	}
+
+	return null;
+}
