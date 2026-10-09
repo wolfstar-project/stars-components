@@ -1,5 +1,20 @@
 # @wolfstar/cli
 
+## 2.7.0
+
+### Minor Changes
+
+- [#305](https://github.com/wolfstar-project/stars-components/pull/305) [`a48c529`](https://github.com/wolfstar-project/stars-components/commit/a48c529cb049169080650d16405c9d639f1cd950) - Add ngrok as a second `dev.tunnel` provider. `dev.tunnel: { provider: 'ngrok' }` opens the tunnel through ngrok's official Node SDK instead of a `cloudflared` quick tunnel, and `dev.tunnel.domain` binds a domain reserved in your ngrok account so the hostname survives restarts. `cloudflared` stays the default, so `tunnel: true` and every existing configuration behave as before. `@ngrok/ngrok` is an optional peer dependency that the CLI loads from the project only when the provider is used; the authtoken is read from `NGROK_AUTHTOKEN` in the environment or the project's `.env`. `provider` and `domain` are rejected next to a `url` you already serve, and `domain` without the `ngrok` provider, with the new `TUNNEL_OPTION_CONFLICT` diagnostic. The `t` key, `--tunnel`, `stars info` and `stars doctor` use and report the configured provider, and `stars doctor` checks that the package and the authtoken are present. `@wolfstar/schema` also exports `TUNNEL_PROVIDERS` and `DEFAULT_TUNNEL_PROVIDER`, and `ResolvedTunnelConfig` quick mode now carries `provider` and `domain`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#308](https://github.com/wolfstar-project/stars-components/pull/308) [`a69125a`](https://github.com/wolfstar-project/stars-components/commit/a69125ad7664462bc648a828f660d7361e95a265) - Make the CLI follow `@wolfstar/env-utilities` when it picks varlock by itself. With `future.compatibilityVersion` 6, a project that depends on `@wolfstar/env-utilities`, has a `.env.schema` (`src/.env.schema`, `.env.schema` or `varlock.loadPath`), has `varlock` installed and sets no `env.path` or `env.loader` now resolves `ResolvedEnvConfig.loader` to `'varlock'`, so `stars dev` and `stars doctor` read the variables through `varlock load` instead of the dotenv files the bot does not load, and `dev.url` no longer takes its port from them. `ResolvedEnvConfig.options` still holds what `stars.config` wrote. `detectVarlock(root)` is exported to inspect a project's schema, installation and dependency. Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`a48c529`](https://github.com/wolfstar-project/stars-components/commit/a48c529cb049169080650d16405c9d639f1cd950), [`a69125a`](https://github.com/wolfstar-project/stars-components/commit/a69125ad7664462bc648a828f660d7361e95a265)]:
+    - @wolfstar/schema@0.10.0
+    - @wolfstar/kit@0.2.1
+    - @wolfstar/nitro-server@0.2.10
+    - @wolfstar/vite-server@0.4.5
+
 ## 2.6.1
 
 ### Patch Changes
