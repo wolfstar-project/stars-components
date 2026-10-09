@@ -326,10 +326,22 @@ describe('--env varlock', () => {
 
 			await processTemplate(directory, templateContext(), (path) => kept.push(path));
 
-			expect(kept.sort()).toStrictEqual(['.env.schema', 'src/@types/env.d.ts']);
+			// The types are varlock's to overwrite: kept, but not reported as a hand-edit.
+			expect(kept).toStrictEqual(['.env.schema']);
 			expect(await read('.env.schema')).toContain('MY_KEY=');
 			expect(await read('src/@types/env.d.ts')).toContain('MY_KEY');
 			expect(await read('src/lib/types/augments.ts')).toContain('EnvFromVarlock');
+		});
+
+		test('leaves the types varlock generated alone, without a report, once the schema is deleted', async () => {
+			await processTemplate(directory, templateContext({ varlock: true }));
+			await write('src/@types/env.d.ts', 'export type CoercedEnvSchema = { MY_KEY: string };\n');
+			await rm(join(directory, '.env.schema'));
+
+			const preserved = await processTemplate(directory, templateContext());
+
+			expect(preserved).toStrictEqual([]);
+			expect(await read('src/@types/env.d.ts')).toContain('MY_KEY');
 		});
 
 		test('turns varlock off once its schema is deleted, taking the stand-in types with it', async () => {

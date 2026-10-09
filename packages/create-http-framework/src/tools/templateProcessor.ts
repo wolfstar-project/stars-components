@@ -54,6 +54,12 @@ function removeI18nDeclaration(outputDir: string): void {
  */
 const USER_OWNED_FILES = new Set(['AGENTS.md', 'llms.txt', '.env.schema', 'src/@types/env.d.ts']);
 
+/**
+ * Owned by a tool, not by the user: varlock overwrites it whenever it loads the schema. It is kept as it is, without the
+ * "delete it and run again" report, which would only bring back the stand-in.
+ */
+const TOOL_GENERATED_FILES = new Set(['src/@types/env.d.ts']);
+
 /** Context for the Handlebars source files. Config files (package.json, tsconfig, …) are generated in projectFiles.ts. */
 export interface TemplateContext {
 	name: string;
@@ -327,7 +333,7 @@ function removeStaleGeneratedFiles(outputDir: string, context: TemplateContext):
 					return (matcher ? [matcher] : buildLegacyVariantMatchers(source, context)).some((candidate) => candidate.test(actual));
 				});
 		if (isUnmodifiedGeneratorOutput) rmSync(target);
-		else preserved.push(path);
+		else if (!TOOL_GENERATED_FILES.has(path.split(sep).join('/'))) preserved.push(path);
 	}
 
 	return preserved;
@@ -405,7 +411,7 @@ export async function processTemplate(outputDir: string, requested: TemplateCont
 		const source = join(root, `${outputRelative}.hbs`);
 		const pristine =
 			actual === content || (manifestContext !== undefined && existsSync(source) && renderSource(source, manifestContext) === actual);
-		if (!pristine) onKept?.(key);
+		if (!pristine && !TOOL_GENERATED_FILES.has(key)) onKept?.(key);
 		return !pristine;
 	};
 
