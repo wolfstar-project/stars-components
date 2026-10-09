@@ -5,7 +5,7 @@
 set -euo pipefail
 repo="${1:?owner/repo}"; num="${2:?issue number}"
 
-gh api "repos/$repo/issues/$num" -q '"# #\(.number) \(.title)\nstate: \(.state)  labels: \([.labels[].name] | join(", "))\nupdated: \(.updated_at)\n\n\(.body // "")"'
+gh api "repos/$repo/issues/$num" -q '"# #\(.number) \(.title)\nstate: \(.state)  type: \(.type.name // "none")  labels: \([.labels[].name] | join(", "))\nupdated: \(.updated_at)\n\n\(.body // "")"'
 echo; echo "================ COMMENTS ================"
 gh api --paginate "repos/$repo/issues/$num/comments" -q '.[] | "\n--- id=\(.id) author=\(.user.login) created=\(.created_at) updated=\(.updated_at)" +
   (if (.user.login | test("pullfrog"; "i")) and (.body | test("(^|\n)#{1,4} +[^\n]*\\bplan"; "i"))
