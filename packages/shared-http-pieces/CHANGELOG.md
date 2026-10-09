@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.12
+
+### Patch Changes
+
+- [#229](https://github.com/wolfstar-project/stars-components/pull/229) [`9d40129`](https://github.com/wolfstar-project/stars-components/commit/9d40129da57632753ba336f076c61dbe4a84131d) - fix(deps): update dependency @sentry/node to v11 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 2.0.11
 
 ### Patch Changes
