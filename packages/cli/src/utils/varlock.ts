@@ -4,9 +4,9 @@ import { cliDiagnostics } from './diagnostics.js';
 
 /** What the project's varlock setup says about `stars.config`, when something is worth saying. */
 export type VarlockFinding =
-	/** A schema and varlock are there and the bot loads through varlock, but `stars.config` does not say so. */
+	/** A schema and an installed varlock are there and the bot loads through varlock, but `stars.config` does not say so. */
 	| { kind: 'implicit'; detection: VarlockDetection }
-	/** A schema is there but varlock is not installed, so the bot silently falls back to the dotenv files. */
+	/** A schema is there but varlock cannot be resolved (not installed, or only listed), so the bot falls back to the dotenv files. */
 	| { kind: 'not-installed'; detection: VarlockDetection }
 	/** A schema is there, but `env.loader` asks for another loader. */
 	| { kind: 'mismatch'; detection: VarlockDetection; loader: 'node' | 'dotenv' }
@@ -27,7 +27,8 @@ export function inspectVarlock(config: ResolvedStarsConfig): VarlockFinding | nu
 	if (loader !== undefined) return { kind: 'mismatch', detection, loader };
 	if (path !== undefined) return null;
 
-	return detection.installed || detection.dependency ? { kind: 'implicit', detection } : { kind: 'not-installed', detection };
+	// A dependency in `package.json` does not make varlock resolvable: the runtime only picks it once it is installed.
+	return detection.installed ? { kind: 'implicit', detection } : { kind: 'not-installed', detection };
 }
 
 /** The non-fatal reports `stars prepare`, `build`, `dev` and `info` print: the ones the user can act on right away. */

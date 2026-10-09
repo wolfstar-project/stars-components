@@ -282,10 +282,12 @@ async function fixVarlock(config: ResolvedStarsConfig, options: DoctorOptions): 
 	}
 
 	if (!options.yes) {
-		if (!options.confirm && !(options.stdin ?? process.stdin).isTTY) {
+		// A prompt would print ahead of the JSON, and a script has nobody to answer it.
+		if (!options.confirm && (options.json || !(options.stdin ?? process.stdin).isTTY)) {
+			const reason = options.json ? 'the question is not asked with --json' : 'there is no terminal to ask in';
 			return {
 				...pending,
-				message: `${show(plan.file)} was not changed: there is no terminal to ask in`,
+				message: `${show(plan.file)} was not changed: ${reason}`,
 				fix: 'Pass --yes to write it from a script.'
 			};
 		}
@@ -297,7 +299,16 @@ async function fixVarlock(config: ResolvedStarsConfig, options: DoctorOptions): 
 		}
 	}
 
-	await applyVarlockConfig(plan);
+	try {
+		await applyVarlockConfig(plan);
+	} catch (error) {
+		return {
+			...pending,
+			message: `${show(plan.file)} was not changed: ${error instanceof Error ? error.message : String(error)}`,
+			fix: 'Run `stars doctor --fix` again.'
+		};
+	}
+
 	return { name: 'varlock', status: 'ok', message: `${plan.action === 'create' ? 'Created' : 'Updated'} ${show(plan.file)}: ${VARLOCK_SNIPPET}` };
 }
 

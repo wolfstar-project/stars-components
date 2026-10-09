@@ -1,9 +1,10 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { reportWarnings } from '../src/commands/_shared.js';
 import { collectChecks, runDoctor, type Check } from '../src/commands/doctor.js';
 import { loadProject } from '../src/utils/hooks.js';
+import { readProjectEnv } from '../src/utils/project-env.js';
 import { applyVarlockConfig, planVarlockConfig } from '../src/utils/varlock-config.js';
 import { inspectVarlock, varlockWarning } from '../src/utils/varlock.js';
 import { createFixture, ignoreNodePath, type Fixture } from './helpers.js';
@@ -51,12 +52,12 @@ describe('varlock and stars.config', () => {
 			expect(varlockWarning(config)?.code).toBe('VARLOCK_LOADER_IMPLICIT');
 		});
 
-		test('a schema and a varlock dependency that is not installed yet is still implicit', async () => {
+		test('a varlock dependency that is not installed does not make the schema implicit: the runtime falls back to dotenv', async () => {
 			const { config } = await project({
 				...SCHEMA,
 				'package.json': JSON.stringify({ name: 'bot', dependencies: { '@wolfstar/env-utilities': '^2.2.1', varlock: '^1.0.0' } })
 			});
-			expect(inspectVarlock(config)).toMatchObject({ kind: 'implicit' });
+			expect(inspectVarlock(config)).toMatchObject({ kind: 'not-installed' });
 		});
 
 		test('a schema without varlock means the bot falls back to dotenv', async () => {
@@ -114,6 +115,16 @@ describe('varlock and stars.config', () => {
 			});
 			await applyVarlockConfig(plan);
 			expect((await loadProject({ cwd: fixture.root, env: {} })).config.env.options).toEqual({ loader: 'varlock' });
+		});
+
+		test('creates a plain object when the framework is not installed, so the file can still be imported', async () => {
+			const { config } = await project({ ...SCHEMA, ...VARLOCK });
+			await rm(join(fixture.root, 'node_modules/@wolfstar'), { recursive: true });
+
+			expect(await planVarlockConfig(config)).toMatchObject({
+				action: 'create',
+				contents: "export default { env: { loader: 'varlock' } };\n"
+			});
 		});
 
 		test('creates a file a JavaScript project can load', async () => {
@@ -175,11 +186,56 @@ describe('varlock and stars.config', () => {
 			expect(await planVarlockConfig(config)).toMatchObject({ action: 'manual' });
 		});
 
+		test('does not overwrite a configuration edited while the question was open', async () => {
+			const { config } = await project({ ...SCHEMA, ...VARLOCK, 'stars.config.ts': CONFIG('{}') });
+			const plan = await planVarlockConfig(config);
+
+			await fixture.write('stars.config.ts', CONFIG('{ dev: { debounce: 10 } }'));
+
+			await expect(applyVarlockConfig(plan)).rejects.toThrow('changed in the meantime');
+			expect(await readFile(join(fixture.root, 'stars.config.ts'), 'utf-8')).toBe(CONFIG('{ dev: { debounce: 10 } }'));
+		});
+
+		test('does not overwrite a configuration created while the question was open', async () => {
+			const { config } = await project({ ...SCHEMA, ...VARLOCK });
+			const plan = await planVarlockConfig(config);
+
+			await fixture.write('stars.config.ts', CONFIG('{ dev: { debounce: 10 } }'));
+
+			await expect(applyVarlockConfig(plan)).rejects.toThrow('created in the meantime');
+			expect(await readFile(join(fixture.root, 'stars.config.ts'), 'utf-8')).toBe(CONFIG('{ dev: { debounce: 10 } }'));
+		});
+
 		test('applying a manual plan writes nothing', async () => {
 			const { config } = await project({ ...SCHEMA, ...VARLOCK });
 			const file = await fixture.write('stars.config.ts', CONFIG('{ env }'));
 			await applyVarlockConfig(await planVarlockConfig({ ...config, configFile: file }));
 			expect(await readFile(file, 'utf-8')).toBe(CONFIG('{ env }'));
+		});
+	});
+
+	describe('readProjectEnv', () => {
+		/** A varlock whose `load` prints the arguments it got, so the test sees where the CLI pointed it. */
+		const FAKE_BIN = {
+			...VARLOCK,
+			'node_modules/varlock/package.json': JSON.stringify({
+				name: 'varlock',
+				version: '0.0.0',
+				bin: { varlock: 'bin.js' },
+				exports: { './exec-sync-varlock': './exec-sync-varlock.cjs' }
+			}),
+			'node_modules/varlock/bin.js': 'console.log(JSON.stringify({ ARGS: process.argv.slice(2).join(" ") }));'
+		};
+
+		test('loads a src/.env.schema through --path, the way the bot does', async () => {
+			const { config } = await project({ 'src/.env.schema': SCHEMA['.env.schema'], ...FAKE_BIN });
+			expect(config.env.loader).toBe('varlock');
+			expect(readProjectEnv(config)).toEqual({ ARGS: `load --format json --path ${join(fixture.root, 'src')}` });
+		});
+
+		test('loads a root schema without --path', async () => {
+			const { config } = await project({ ...SCHEMA, ...FAKE_BIN });
+			expect(readProjectEnv(config)).toEqual({ ARGS: 'load --format json' });
 		});
 	});
 
@@ -256,6 +312,26 @@ describe('varlock and stars.config', () => {
 				const check = await fix({ ...SCHEMA, ...VARLOCK }, { confirm: () => Promise.resolve(false) });
 				expect(check.status).toBe('warn');
 				expect(await read('stars.config.ts')).toBeNull();
+			});
+
+			test('does not ask with --json, which a prompt would corrupt', async () => {
+				const check = await fix({ ...SCHEMA, ...VARLOCK }, { stdin: { isTTY: true } });
+				expect(check).toMatchObject({ status: 'warn', message: expect.stringContaining('--json'), fix: expect.stringContaining('--yes') });
+				expect(await read('stars.config.ts')).toBeNull();
+			});
+
+			test('reports a configuration that changed while it asked, instead of failing', async () => {
+				const check = await fix(
+					{ ...SCHEMA, ...VARLOCK, 'stars.config.ts': CONFIG('{}') },
+					{
+						confirm: async () => {
+							await fixture.write('stars.config.ts', CONFIG('{ dev: { debounce: 10 } }'));
+							return true;
+						}
+					}
+				);
+				expect(check).toMatchObject({ status: 'warn', message: expect.stringContaining('changed in the meantime') });
+				expect(await read('stars.config.ts')).toBe(CONFIG('{ dev: { debounce: 10 } }'));
 			});
 
 			test('writes nothing without a terminal to ask in', async () => {
