@@ -51,7 +51,7 @@ describe('stars.config env', () => {
 
 	test('mirrors every serializable EnvSetupOptions key', async () => {
 		const env = { path: 'config/.env', env: 'staging', prefix: 'BOT_', loader: 'varlock', debug: true, encoding: 'latin1' };
-		expect((await load(`{ env: ${JSON.stringify(env)} }`)).env).toEqual({ enabled: true, options: env });
+		expect((await load(`{ env: ${JSON.stringify(env)} }`)).env).toEqual({ enabled: true, options: env, loader: 'varlock' });
 	});
 
 	test('keeps env.path relative so the build output stays portable', async () => {

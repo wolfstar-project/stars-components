@@ -173,6 +173,11 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   `@wolfstar/env-utilities/varlock` exports `EnvFromVarlock` (derive `Env` from varlock's generated `CoercedEnvSchema`)
   and `env` (varlock's typed `ENV`). This is experimental and independent of the `future.compatibilityVersion` default
   above.
+  The CLI follows that choice (`detectVarlock` in `packages/schema/src/config/varlock.ts`, same lookup as the runtime's
+  `findVarlockSchema` but rooted at the project, pinned by running both over the `env-utilities` varlock fixtures): from
+  `AUTO_VARLOCK_VERSION` (6) `ResolvedEnvConfig.loader` is `'varlock'` for a project with a schema, an installed `varlock`,
+  no `env.path` and no explicit loader, while `ResolvedEnvConfig.options` stays what `stars.config` wrote (it is what the
+  bot receives). Read `config.env.loader`, not `config.env.options.loader`, to know how the variables are loaded.
 - `stars prepare` (and `stars dev`/`stars build`, which call it) generates the `.stars/` tsconfig(s) and `imports.dts`
   (the way `nuxt prepare` generates `.nuxt/`), so projects no longer hand-maintain TypeScript paths/compiler options:
   it materializes Sapphire's base/extra-strict/decorators presets, `@/`, `~/`, `@@/`, `~~/`, and custom filesystem

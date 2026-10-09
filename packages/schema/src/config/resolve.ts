@@ -6,7 +6,6 @@ import type {
 	StarsCodegenConfig,
 	StarsConfig,
 	StarsDevConfig,
-	StarsEnvSetupOptions,
 	StarsExperimentalConfig,
 	StarsLogLevel,
 	StarsTunnelProvider,
@@ -284,8 +283,8 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const build = resolveBuild(root, entry, packageJson, config.build ?? {}, experimental, future, Object.keys(tsdown).length > 0, validator);
 	const hooks = resolveHooks(config.hooks, validator);
 	const modules = resolveModules(config.modules, validator);
-	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator);
-	const dev = resolveDev(root, entry, packageJson, build.tool, future, config.dev ?? {}, env, envConfig.options, options.projectEnv, validator);
+	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator, root);
+	const dev = resolveDev(root, entry, packageJson, build.tool, future, config.dev ?? {}, env, envConfig, options.projectEnv, validator);
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
@@ -564,14 +563,14 @@ export function readProjectEnvFiles(root: string, environment = 'development', o
 function readDevPortFromEnvFile(
 	root: string,
 	environment: string,
-	envOptions: Readonly<StarsEnvSetupOptions>,
+	envConfig: ResolvedEnvConfig,
 	projectEnv: Readonly<Record<string, string>> | undefined
 ): string | null {
 	// Varlock resolves its `.env.schema` on its own terms (and may pull values from elsewhere), so a dotenv file is
 	// not what the bot loads: without the values the host resolved (`projectEnv`), there is nothing to read.
-	if (projectEnv === undefined && envOptions.loader === 'varlock') return null;
+	if (projectEnv === undefined && envConfig.loader === 'varlock') return null;
 
-	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envOptions.path });
+	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envConfig.options.path });
 	for (const key of ENV_PORT_KEYS) {
 		if (values[key]) return values[key];
 	}
@@ -587,7 +586,7 @@ function resolveDev(
 	future: ResolvedFutureConfig,
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
-	envOptions: Readonly<StarsEnvSetupOptions>,
+	envConfig: ResolvedEnvConfig,
 	projectEnv: Readonly<Record<string, string>> | undefined,
 	validator: Validator
 ): ResolvedDevConfig {
@@ -634,7 +633,7 @@ function resolveDev(
 		const port =
 			devEnv.HTTP_PORT ??
 			env.HTTP_PORT ??
-			readDevPortFromEnvFile(root, envOptions.env ?? env.NODE_ENV ?? 'development', envOptions, projectEnv) ??
+			readDevPortFromEnvFile(root, envConfig.options.env ?? env.NODE_ENV ?? 'development', envConfig, projectEnv) ??
 			String(DEFAULT_DEV_PORT);
 		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
 	}

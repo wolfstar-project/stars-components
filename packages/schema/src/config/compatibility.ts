@@ -18,6 +18,11 @@ export const STARS_CONFIG_TSDOWN_VERSION = 4;
 /** From this version on, `env` is registered automatically in the built entry. */
 export const AUTO_ENV_VERSION = 5;
 /**
+ * From this version on the CLI loads the variables through varlock when `@wolfstar/env-utilities` would pick it by
+ * itself (a `.env.schema`, `varlock` installed, no `env.path`), instead of only when `env.loader` says so.
+ */
+export const AUTO_VARLOCK_VERSION = 6;
+/**
  * From this version on `stars prepare` writes `.stars/tsconfig.app.json` and `.stars/tsconfig.node.json` instead of a
  * single `.stars/tsconfig.json`, and the project's own `tsconfig.json` is a solution-style file referencing them.
  */
