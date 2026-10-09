@@ -1,5 +1,7 @@
 import { loadStarsConfig } from '@wolfstar/schema';
 import { Tunnel, endpointUrl, readDiscordCredentials, type TunnelOptions } from '../src/dev/tunnel.js';
+import { loadNgrok, ngrokAddress, NGROK_INSTALL_HINT, NGROK_PACKAGE, type NgrokModule } from '../src/dev/tunnel-providers.js';
+import { cliDiagnostics } from '../src/utils/diagnostics.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 describe('endpointUrl', () => {
@@ -335,5 +337,188 @@ describe('Tunnel', () => {
 		expect(process.listeners('SIGHUP')).toEqual(hangups);
 		await tunnel.close();
 		process.off('SIGHUP', own);
+	});
+});
+
+describe('ngrokAddress', () => {
+	test('forwards an http URL as host:port and passes anything else on', () => {
+		expect(ngrokAddress('http://localhost:3000')).toBe('localhost:3000');
+		expect(ngrokAddress('http://localhost')).toBe('localhost:80');
+		expect(ngrokAddress('https://localhost:3000')).toBe('https://localhost:3000');
+		expect(ngrokAddress('localhost:3000')).toBe('localhost:3000');
+	});
+});
+
+describe('Tunnel with ngrok', () => {
+	let fixture: Fixture;
+
+	afterEach(async () => {
+		vi.unstubAllEnvs();
+		await fixture?.cleanup();
+	});
+
+	const NGROK_CONFIG = "export default { dev: { tunnel: { provider: 'ngrok', domain: 'bot.ngrok.app' } } };";
+
+	function fakeNgrok(url: string | null = 'https://bot.ngrok.app') {
+		const close = vi.fn().mockResolvedValue(undefined);
+		const forward = vi.fn().mockResolvedValue({ url: () => url, close });
+		const loadNgrok = vi.fn().mockResolvedValue({ forward } satisfies NgrokModule);
+		return { close, forward, loadNgrok };
+	}
+
+	async function createTunnel(files: Record<string, string>, options: TunnelOptions) {
+		fixture = await createFixture({ 'src/main.js': '', ...files });
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+		const tunnel = new Tunnel(config, options);
+		const logs: Array<[string, string]> = [];
+		tunnel.on('log', (level, text) => logs.push([level, text]));
+		return { config, tunnel, logs };
+	}
+
+	test('opens the tunnel through the SDK with the authtoken from the project env and the reserved domain', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', undefined);
+		const { close, forward, loadNgrok } = fakeNgrok();
+		const startTunnel = vi.fn();
+		const { config, tunnel, logs } = await createTunnel(
+			{ 'stars.config.mjs': NGROK_CONFIG, '.env': 'NGROK_AUTHTOKEN=from-file\n' },
+			{ loadNgrok, startTunnel }
+		);
+
+		await tunnel.start();
+
+		expect(loadNgrok).toHaveBeenCalledWith(config.root);
+		expect(forward).toHaveBeenCalledWith({ addr: 'localhost:3000', authtoken: 'from-file', domain: 'bot.ngrok.app' });
+		expect(startTunnel).not.toHaveBeenCalled();
+		expect(tunnel.state).toBe('up');
+		expect(tunnel.url).toBe('https://bot.ngrok.app');
+		expect(logs).toContainEqual(['info', 'Opening a ngrok quick tunnel…']);
+
+		await tunnel.close();
+		expect(close).toHaveBeenCalledOnce();
+		expect(tunnel.state).toBe('off');
+	});
+
+	test('picks up an authtoken added to .env after a failed start, without restarting', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', undefined);
+		const { forward, loadNgrok } = fakeNgrok();
+		const { tunnel } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok });
+
+		await tunnel.start();
+		expect(tunnel.state).toBe('failed');
+
+		await fixture.write('.env', 'NGROK_AUTHTOKEN=added-later\n');
+		await tunnel.start();
+
+		expect(forward).toHaveBeenCalledWith(expect.objectContaining({ authtoken: 'added-later' }));
+		expect(tunnel.state).toBe('up');
+		await tunnel.close();
+	});
+
+	test('leaves the domain out when none is configured and appends the interactions path', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', 'from-env');
+		const { forward, loadNgrok } = fakeNgrok();
+		const { tunnel } = await createTunnel(
+			{ 'stars.config.mjs': "export default { dev: { tunnel: { provider: 'ngrok', path: '/interactions' } } };" },
+			{ loadNgrok }
+		);
+
+		await tunnel.start();
+
+		expect(forward).toHaveBeenCalledWith({ addr: 'localhost:3000', authtoken: 'from-env' });
+		expect(tunnel.url).toBe('https://bot.ngrok.app/interactions');
+		await tunnel.close();
+	});
+
+	test('fails with a clear error and never calls ngrok when NGROK_AUTHTOKEN is missing', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', undefined);
+		const { forward, loadNgrok } = fakeNgrok();
+		const { tunnel, logs } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok });
+
+		await tunnel.start();
+
+		expect(forward).not.toHaveBeenCalled();
+		expect(tunnel.state).toBe('failed');
+		expect(logs).toContainEqual(['error', expect.stringContaining('ngrok failed: NGROK_AUTHTOKEN is not set')]);
+	});
+
+	test('fails with the install command when @ngrok/ngrok is not installed in the project', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', 'abc');
+		// `pnpm` puts its hoisted packages on NODE_PATH, so the default loader may find the repository's own copy.
+		const missing = (root: string) => Promise.reject(cliDiagnostics.DEPENDENCY_MISSING({ name: NGROK_PACKAGE, root, hint: NGROK_INSTALL_HINT }));
+		const { tunnel, logs } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok: missing });
+
+		await tunnel.start();
+
+		expect(tunnel.state).toBe('failed');
+		expect(logs).toContainEqual(['error', expect.stringContaining('"@ngrok/ngrok" is not installed')]);
+		expect(logs).toContainEqual(['error', expect.stringContaining('pnpm add -D @ngrok/ngrok')]);
+	});
+
+	test('loads @ngrok/ngrok from the project instead of from the CLI itself', async () => {
+		fixture = await createFixture({
+			'node_modules/@ngrok/ngrok/package.json': JSON.stringify({ name: '@ngrok/ngrok', main: 'index.cjs' }),
+			'node_modules/@ngrok/ngrok/index.cjs': 'exports.forward = () => "forwarded";'
+		});
+
+		const ngrok = await loadNgrok(fixture.root);
+		expect(await ngrok.forward({ addr: 1, authtoken: 'abc' })).toBe('forwarded');
+	});
+
+	test('fails when ngrok does not report a URL, and closes what it opened', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', 'abc');
+		const { close, loadNgrok } = fakeNgrok(null);
+		const { tunnel, logs } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok });
+
+		await tunnel.start();
+
+		expect(tunnel.state).toBe('failed');
+		expect(close).toHaveBeenCalledOnce();
+		expect(logs).toContainEqual(['error', 'ngrok failed: ngrok did not report a URL for the tunnel']);
+	});
+
+	test('closes a tunnel that finishes starting after close() was called', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', 'abc');
+		const close = vi.fn().mockResolvedValue(undefined);
+		let resolveForward!: (listener: { url: () => string; close: () => Promise<void> }) => void;
+		const forward = vi.fn(() => new Promise<{ url: () => string; close: () => Promise<void> }>((resolve) => (resolveForward = resolve)));
+		const { tunnel, logs } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok: () => Promise.resolve({ forward }) });
+
+		const starting = tunnel.start();
+		await vi.waitFor(() => expect(forward).toHaveBeenCalled());
+		await tunnel.close();
+		resolveForward({ url: () => 'https://bot.ngrok.app', close });
+		await starting;
+
+		expect(close).toHaveBeenCalledOnce();
+		expect(tunnel.state).toBe('off');
+		expect(tunnel.url).toBeNull();
+		expect(logs.filter(([level]) => level === 'error')).toEqual([]);
+	});
+
+	test('toggle opens and closes the configured provider', async () => {
+		vi.stubEnv('NGROK_AUTHTOKEN', 'abc');
+		const { close, forward, loadNgrok } = fakeNgrok();
+		const { tunnel } = await createTunnel({ 'stars.config.mjs': NGROK_CONFIG }, { loadNgrok });
+
+		await tunnel.toggle();
+		expect(forward).toHaveBeenCalledOnce();
+		expect(tunnel.state).toBe('up');
+
+		await tunnel.toggle();
+		expect(close).toHaveBeenCalledOnce();
+		expect(tunnel.state).toBe('off');
+	});
+
+	test('keeps cloudflared for `true` and never loads ngrok', async () => {
+		const loadNgrok = vi.fn();
+		const startTunnel = vi.fn().mockResolvedValue({ getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'), close: vi.fn() });
+		const { tunnel, logs } = await createTunnel({ 'stars.config.mjs': 'export default { dev: { tunnel: true } };' }, { loadNgrok, startTunnel });
+
+		await tunnel.start();
+
+		expect(startTunnel).toHaveBeenCalledOnce();
+		expect(loadNgrok).not.toHaveBeenCalled();
+		expect(logs).toContainEqual(['info', 'Opening a cloudflared quick tunnel…']);
+		await tunnel.close();
 	});
 });

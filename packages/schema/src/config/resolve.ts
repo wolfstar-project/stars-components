@@ -8,6 +8,7 @@ import type {
 	StarsDevConfig,
 	StarsExperimentalConfig,
 	StarsLogLevel,
+	StarsTunnelProvider,
 	StarsTypechecker
 } from '../types/config.js';
 import { EMPTY_MODULES_RUNTIME, type ModulesRuntime, type ResolvedModuleEntry } from '../types/modules.js';
@@ -74,8 +75,15 @@ export interface ResolvedTypecheckConfig {
 
 export type ResolvedTunnelConfig =
 	| { readonly mode: 'off' }
-	/** A `cloudflared` quick tunnel, whose hostname is only known once it is up. */
-	| { readonly mode: 'quick'; readonly path: string; readonly updateEndpoint: boolean }
+	/** A tunnel the CLI opens through `provider`, whose hostname is only known once it is up unless `domain` reserves one. */
+	| {
+			readonly mode: 'quick';
+			readonly provider: StarsTunnelProvider;
+			/** The ngrok domain to bind, `null` for the provider's own hostname. */
+			readonly domain: string | null;
+			readonly path: string;
+			readonly updateEndpoint: boolean;
+	  }
 	/** An https URL the user already serves. */
 	| { readonly mode: 'url'; readonly url: string; readonly path: string; readonly updateEndpoint: boolean };
 
@@ -218,6 +226,9 @@ export const DEFAULT_APP_TSCONFIG = '.stars/tsconfig.app.json';
 /** The generated tsconfig of the project root files that run in Node, written from `future.compatibilityVersion` 6 on. */
 export const DEFAULT_NODE_TSCONFIG = '.stars/tsconfig.node.json';
 export const DEFAULT_TUNNEL_PATH = '/';
+/** Every service `dev.tunnel.provider` accepts. */
+export const TUNNEL_PROVIDERS = ['cloudflared', 'ngrok'] as const satisfies readonly StarsTunnelProvider[];
+export const DEFAULT_TUNNEL_PROVIDER = 'cloudflared' satisfies StarsTunnelProvider;
 /** Every level `dev.logs.levels` accepts, from the most verbose to the most severe. */
 export const LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const satisfies readonly StarsLogLevel[];
 /** `trace` is the per-request noise: it starts hidden, and the dev UI turns it on. */
@@ -797,8 +808,8 @@ function detectTypechecker(packageJson: PackageJsonLike | null): StarsTypechecke
 }
 
 /**
- * Resolves `dev.tunnel`: `true` (or `{}`) opens a `cloudflared` quick tunnel, a string (or `{ url }`) is an https
- * URL the user already serves and the CLI only checks.
+ * Resolves `dev.tunnel`: `true` (or `{}`) opens a quick tunnel through `cloudflared` (or `provider`), a string (or
+ * `{ url }`) is an https URL the user already serves and the CLI only checks.
  */
 function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): ResolvedTunnelConfig {
 	if (config === undefined || config === false) return { mode: 'off' };
@@ -806,6 +817,8 @@ function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): 
 	let url: string | undefined;
 	let updateEndpoint = false;
 	let path = DEFAULT_TUNNEL_PATH;
+	let provider: StarsTunnelProvider | undefined;
+	let domain: string | undefined;
 
 	if (typeof config === 'string') {
 		url = config;
@@ -815,17 +828,42 @@ function resolveTunnel(config: StarsDevConfig['tunnel'], validator: Validator): 
 				'dev.tunnel',
 				'a boolean, an https URL or an object',
 				config,
-				'Use `true` for a cloudflared quick tunnel, an https URL you already serve, or `false` to disable it.'
+				'Use `true` for a quick tunnel, an https URL you already serve, or `false` to disable it.'
 			);
 		}
 
-		validator.knownKeys(config, 'dev.tunnel', ['url', 'updateEndpoint', 'path']);
+		validator.knownKeys(config, 'dev.tunnel', ['url', 'provider', 'domain', 'updateEndpoint', 'path']);
 		url = validator.string(config.url, 'dev.tunnel.url');
+		provider = oneOf(validator.string(config.provider, 'dev.tunnel.provider'), 'dev.tunnel.provider', TUNNEL_PROVIDERS, validator);
+		domain = validator.string(config.domain, 'dev.tunnel.domain');
 		updateEndpoint = validator.boolean(config.updateEndpoint, 'dev.tunnel.updateEndpoint') ?? false;
 		path = validator.string(config.path, 'dev.tunnel.path') ?? DEFAULT_TUNNEL_PATH;
 	}
 
-	if (url === undefined) return { mode: 'quick', path, updateEndpoint };
+	if (url === undefined) {
+		if (domain !== undefined && (provider ?? DEFAULT_TUNNEL_PROVIDER) !== 'ngrok') {
+			throw validator.error(configDiagnostics.TUNNEL_OPTION_CONFLICT, {
+				option: 'dev.tunnel.domain',
+				reason: 'only the ngrok provider can bind a reserved domain',
+				fix: "Set `dev.tunnel.provider` to 'ngrok', or remove `domain`."
+			});
+		}
+
+		return { mode: 'quick', provider: provider ?? DEFAULT_TUNNEL_PROVIDER, domain: domain ?? null, path, updateEndpoint };
+	}
+
+	for (const [option, value] of [
+		['dev.tunnel.provider', provider],
+		['dev.tunnel.domain', domain]
+	] as const) {
+		if (value !== undefined) {
+			throw validator.error(configDiagnostics.TUNNEL_OPTION_CONFLICT, {
+				option,
+				reason: 'a URL you already serve has no tunnel provider',
+				fix: `Remove \`${option.slice('dev.tunnel.'.length)}\`, or remove \`url\` to let the CLI open a tunnel.`
+			});
+		}
+	}
 
 	// Discord only accepts an https interactions endpoint.
 	let parsed: URL;

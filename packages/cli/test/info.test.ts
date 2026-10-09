@@ -76,6 +76,8 @@ describe('stars info', () => {
 
 	test.each([
 		['true', 'cloudflared quick tunnel'],
+		["{ provider: 'ngrok' }", 'ngrok quick tunnel'],
+		["{ provider: 'ngrok', domain: 'bot.ngrok.app' }", 'ngrok quick tunnel on bot.ngrok.app'],
 		["'https://bot.example.com'", 'https://bot.example.com']
 	])('describes dev.tunnel %s', async (tunnel, expected) => {
 		fixture = await createFixture({

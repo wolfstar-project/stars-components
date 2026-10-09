@@ -547,6 +547,7 @@ export default defineConfig({
 		// `checker` is 'tsc' | 'golar' | 'tsz' | 'auto' (default: golar when installed, tsc otherwise).
 		typecheck: { checker: 'golar' },
 		// A cloudflared quick tunnel so Discord can reach the interactions endpoint, or an https URL you serve.
+		// `{ provider: 'ngrok', domain: 'bot.ngrok.app' }` uses ngrok instead (needs `@ngrok/ngrok` and NGROK_AUTHTOKEN).
 		tunnel: true,
 		// Where the session's logs are mirrored, so a run can be read after the terminal UI is gone.
 		logFile: '.stars/dev.log',
