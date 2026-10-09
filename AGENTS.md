@@ -178,6 +178,11 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   `AUTO_VARLOCK_VERSION` (6) `ResolvedEnvConfig.loader` is `'varlock'` for a project with a schema, an installed `varlock`,
   no `env.path` and no explicit loader, while `ResolvedEnvConfig.options` stays what `stars.config` wrote (it is what the
   bot receives). Read `config.env.loader`, not `config.env.options.loader`, to know how the variables are loaded.
+  `stars prepare`/`build`/`dev`/`info` report a schema `stars.config` does not mention (`VARLOCK_LOADER_IMPLICIT`/`VARLOCK_NOT_INSTALLED`, `inspectVarlock`
+  in `packages/cli/src/utils/varlock.ts`), `stars doctor` checks the schema against `env.loader`, and `stars doctor --fix` writes `env: { loader: 'varlock' }`
+  (`packages/cli/src/utils/varlock-config.ts`: the `create-http-framework` scaffold when there is no config, a `magicast` edit of a literal
+  `defineConfig({...})`/object, the snippet to add by hand otherwise; it asks first, `--yes` answers, never in CI). Writing is deliberately not in `prepare`,
+  which `dev` and `build` call and which otherwise only generates `.stars/`.
 - `stars prepare` (and `stars dev`/`stars build`, which call it) generates the `.stars/` tsconfig(s) and `imports.dts`
   (the way `nuxt prepare` generates `.nuxt/`), so projects no longer hand-maintain TypeScript paths/compiler options:
   it materializes Sapphire's base/extra-strict/decorators presets, `@/`, `~/`, `@@/`, `~~/`, and custom filesystem

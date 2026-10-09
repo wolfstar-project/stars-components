@@ -7,6 +7,7 @@ import { describeQuickTunnel } from '../dev/tunnel.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { applyEnvOptions, loadProject } from '../utils/hooks.js';
 import { modulesPreloadWarning } from '../utils/modules.js';
+import { varlockWarning } from '../utils/varlock.js';
 import { resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { findInstalledVersion } from '../utils/project.js';
 import { readOwnPackageJson } from '../utils/version.js';
@@ -76,7 +77,7 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 			installed: (config.runtime?.modules ?? []).map((module) => module.name),
 			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`)
 		},
-		warnings: [...config.warnings, modulesPreloadWarning(config)]
+		warnings: [...config.warnings, modulesPreloadWarning(config), varlockWarning(config)]
 			.filter((warning) => warning !== null)
 			.map((warning) => `${warning.code}: ${warning.message}`),
 		options: { tsdown: Object.keys(config.tsdown), vite: Object.keys(config.vite) }

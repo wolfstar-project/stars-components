@@ -122,6 +122,15 @@ export const cliDiagnostics = defineDiagnostics({
 			fix: (_p: { tool: string; plugins: string }) =>
 				'Start the production bot with `node --import ./.stars/modules.mjs <entry>`; `stars prepare` (and `stars build`) writes that file.'
 		},
+		VARLOCK_LOADER_IMPLICIT: {
+			why: (_p: {}) =>
+				'A varlock schema is found, so @wolfstar/env-utilities loads the environment through varlock, but stars.config does not say so',
+			fix: (_p: {}) => "Run `stars doctor --fix` to set `env: { loader: 'varlock' }`, or add it to stars.config by hand."
+		},
+		VARLOCK_NOT_INSTALLED: {
+			why: (_p: {}) => 'A varlock schema is found, but `varlock` is not installed, so the bot loads the dotenv files instead',
+			fix: (_p: {}) => 'Install varlock (for example `pnpm add varlock`), or remove the .env.schema.'
+		},
 		CODEGEN_FAILED: {
 			why: (p: { code: number | null; stderr: string }) => `i18next-type-generator exited with code ${p.code}${p.stderr ? `: ${p.stderr}` : ''}`
 		}

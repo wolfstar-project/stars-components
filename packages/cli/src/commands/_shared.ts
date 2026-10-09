@@ -6,6 +6,7 @@ import { formatError } from '../utils/errors.js';
 import type { StarsHookable } from '../utils/hooks.js';
 import { modulesPreloadWarning, prepareModulesPreload } from '../utils/modules.js';
 import { findLegacyRootTsconfig, prepareTsconfig } from '../utils/tsconfig.js';
+import { varlockWarning } from '../utils/varlock.js';
 
 export type PrepareResult =
 	| { enabled: false; dts: null; status: null }
@@ -60,6 +61,9 @@ export async function reportWarnings(
 
 	const legacyTsconfig = await findLegacyRootTsconfig(config);
 	if (legacyTsconfig) write(await formatError(legacyTsconfig));
+
+	const varlock = varlockWarning(config);
+	if (varlock) write(await formatError(varlock));
 
 	const preload = options.production === false ? null : modulesPreloadWarning(config);
 	if (preload) write(await formatError(preload));
