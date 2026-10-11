@@ -94,14 +94,15 @@ export type TransformRaw<T extends BaseInteractionType> = T extends Autocomplete
 											: never;
 
 /**
- * Handles a received error. This function must only be called if the HTTP
- * interaction was not replied to.
+ * Handles a received error.
  *
  * This function has a special case for string errors, which are translated to a
  * regular message with content as the error.
  *
  * When an error is thrown, the error is emitted in client, and a generic error
- * message is sent back to Discord.
+ * message is sent back to Discord, unless the response was already ended or
+ * closed (the interaction was answered before the error was thrown): writing to
+ * it again would emit an unhandled `ERR_STREAM_WRITE_AFTER_END`.
  * @param response The HTTP request we can response to.
  * @param error The error to handle.
  * @returns The response object.
@@ -109,7 +110,7 @@ export type TransformRaw<T extends BaseInteractionType> = T extends Autocomplete
 export function handleError(response: ServerResponse, error: unknown): ServerResponse {
 	container.client.emit(Events.Error, error);
 
-	if (!container.client.httpReplyOnError || response.closed) return response;
+	if (!container.client.httpReplyOnError || response.writableEnded || response.closed) return response;
 
 	response.statusCode = HttpCodes.InternalServerError;
 	return response.end(ErrorMessages.InternalError);
