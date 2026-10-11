@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.3.2
+
+### Patch Changes
+
+- [#322](https://github.com/wolfstar-project/stars-components/pull/322) [`ec3fa97`](https://github.com/wolfstar-project/stars-components/commit/ec3fa97e8e64403fcc89f7cb0efff4183241697c) - fix(http-framework): skip the error reply when the response already ended
+
+    `handleError` only checked `response.closed`, which turns `true` after the socket flushed. A command, autocomplete or interaction handler that threw right after answering the interaction made it call `end()` on an ended response, and the unhandled `ERR_STREAM_WRITE_AFTER_END` crashed the process. It now also skips the reply when `response.writableEnded` is set; the error is still emitted. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 6.3.1
 
 ### Patch Changes
