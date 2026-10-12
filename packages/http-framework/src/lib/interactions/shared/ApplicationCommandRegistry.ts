@@ -4,6 +4,8 @@ import type { JSONEncodable } from '@discordjs/util';
 import { container } from '@sapphire/pieces';
 import {
 	ApplicationCommandType,
+	type APIApplicationCommand,
+	type RESTGetAPIApplicationCommandsResult,
 	Routes,
 	type RESTPutAPIApplicationCommandsJSONBody,
 	type RESTPutAPIApplicationCommandsResult,
@@ -14,6 +16,7 @@ import {
 import type { Command } from '../../structures/Command.js';
 import { restrictedGuildIdRegistry } from '../decorators/RestrictGuildIds.js';
 import { ApplicationCommandRegistryEntry } from './ApplicationCommandRegistryEntry.js';
+import { commandSyncBody, matchesCommand } from './command-sync.js';
 
 export type RequestAuthPrefix = RequestData['authPrefix'];
 
@@ -28,6 +31,7 @@ export class ApplicationCommandRegistry implements JSONEncodable<ApplicationComm
 	#rest: REST | null = null;
 	#clientId: Snowflake | null = null;
 	#authPrefix: RequestAuthPrefix = 'Bot';
+	#syncPromise: Promise<ApplicationCommandRegistry.SyncResult> | null = null;
 
 	public get store() {
 		return container.stores.get('commands');
@@ -222,14 +226,100 @@ export class ApplicationCommandRegistry implements JSONEncodable<ApplicationComm
 		return Promise.allSettled(promises);
 	}
 
+	/** Fetch deployed commands, including their full localization dictionaries. */
+	public async fetchDeployed(guildId: Snowflake | null = null): Promise<RESTGetAPIApplicationCommandsResult> {
+		if (this.#rest === null) throw new Error('The ApplicationCommandRegistry has not been setup yet.');
+		return (await this.#rest.get(this.#route(guildId), {
+			authPrefix: this.#authPrefix,
+			query: new URLSearchParams({ with_localizations: 'true' })
+		})) as RESTGetAPIApplicationCommandsResult;
+	}
+
+	/**
+	 * Synchronize loaded commands with Discord. Equal commands cause no writes; unknown remote commands are
+	 * preserved unless `removeUnknown` is enabled. Failures reject, so callers can retry or choose their policy.
+	 * Concurrent calls share the current synchronization (and its options). This is not a distributed lock:
+	 * use `when` to select one process in a sharder/broker deployment.
+	 */
+	public sync(options: ApplicationCommandRegistry.SyncOptions = {}): Promise<ApplicationCommandRegistry.SyncResult> {
+		if (this.#syncPromise) return this.#syncPromise;
+		this.#syncPromise = this.#sync(options).finally(() => {
+			this.#syncPromise = null;
+		});
+		return this.#syncPromise;
+	}
+
+	async #sync(options: ApplicationCommandRegistry.SyncOptions): Promise<ApplicationCommandRegistry.SyncResult> {
+		const result: ApplicationCommandRegistry.SyncResult = { created: 0, updated: 0, removed: 0, unchanged: 0 };
+		if (options.onConflict === 'ignore' || (options.when && !(await options.when()))) return result;
+		const global = this.getLoadedGlobalCommands();
+		const guilds = this.getLoadedGuildCommands();
+		const scopes = new Map<Snowflake | null, ApplicationCommandRegistryEntry.Command[]>();
+		if (options.guildIds?.length) {
+			for (const guildId of options.guildIds) scopes.set(guildId, [...global, ...(guilds.get(guildId) ?? [])]);
+		} else {
+			scopes.set(null, global);
+			for (const [guildId, commands] of guilds) scopes.set(guildId, commands);
+		}
+
+		for (const [guildId, commands] of scopes) {
+			const deployed = await this.fetchDeployed(guildId);
+			const remote = new Map(deployed.map((command) => [`${command.type}:${command.name}`, command]));
+			for (const command of commands) {
+				const key = `${command.type ?? 1}:${command.name}`;
+				const old = remote.get(key);
+				remote.delete(key);
+				const body = commandSyncBody(command, guildId);
+				if (old && matchesCommand(body, old as unknown as Record<string, unknown>)) {
+					this.#recordIds([old], guildId);
+					result.unchanged++;
+					continue;
+				}
+				if (options.onConflict !== 'log') {
+					const data = { body, authPrefix: this.#authPrefix };
+					const entry = (
+						old ? await this.#rest!.patch(this.#route(guildId, old.id), data) : await this.#rest!.post(this.#route(guildId), data)
+					) as APIApplicationCommand;
+					this.#recordIds([entry], guildId);
+				}
+				if (old) result.updated++;
+				else result.created++;
+			}
+			if (options.removeUnknown) {
+				for (const command of remote.values()) {
+					if (options.onConflict !== 'log') await this.#rest!.delete(this.#route(guildId, command.id), { authPrefix: this.#authPrefix });
+					result.removed++;
+				}
+			}
+		}
+		const changes = result.created + result.updated + result.removed;
+		if (changes === 0) container.logger.info(`Commands: ${result.unchanged} up to date`);
+		else {
+			const summary = `${result.created} created, ${result.updated} updated, ${result.removed} removed`;
+			if (options.onConflict === 'log') container.logger.warn(`Commands: differences detected (${summary}); no changes written`);
+			else container.logger.info(`Commands: ${summary}`);
+		}
+		return result;
+	}
+
+	#route(guildId: Snowflake | null, commandId?: Snowflake): RouteLike {
+		if (guildId === null) return commandId ? Routes.applicationCommand(this.clientId, commandId) : Routes.applicationCommands(this.clientId);
+		return commandId
+			? Routes.applicationGuildCommand(this.clientId, guildId, commandId)
+			: Routes.applicationGuildCommands(this.clientId, guildId);
+	}
+
 	async #push<GuildId extends Snowflake | null>(route: RouteLike, body: BodyOf<GuildId>, guildId: GuildId): Promise<ResultOf<GuildId>> {
 		if (this.#rest === null) {
 			throw new Error('The ApplicationCommandRegistry has not been setup yet.');
 		}
 
 		const entries = (await this.#rest.put(route, { body, authPrefix: this.#authPrefix })) as ResultOf<GuildId>;
-		if (entries.length === 0) return entries;
+		this.#recordIds(entries, guildId);
+		return entries;
+	}
 
+	#recordIds(entries: readonly APIApplicationCommand[], guildId: Snowflake | null) {
 		const { router } = this.store;
 		for (const entry of entries) {
 			const command = entry.type === ApplicationCommandType.ChatInput ? router.getChatInput(entry.name) : router.getContextMenu(entry.name);
@@ -242,8 +332,6 @@ export class ApplicationCommandRegistry implements JSONEncodable<ApplicationComm
 				registry.setGuildId(guildId, entry.id);
 			}
 		}
-
-		return entries;
 	}
 
 	private get clientId() {
@@ -253,6 +341,25 @@ export class ApplicationCommandRegistry implements JSONEncodable<ApplicationComm
 }
 
 export namespace ApplicationCommandRegistry {
+	export interface SyncOptions {
+		/** Overwrite differences (default), report without writing, or skip silently. */
+		onConflict?: 'overwrite' | 'log' | 'ignore';
+		/** Deploy global commands and each target guild's restricted commands to these guilds only. */
+		guildIds?: readonly Snowflake[];
+		/** Delete unknown commands in the selected scopes. Defaults to false. */
+		removeUnknown?: boolean;
+		/** Select one registering process; no distributed lock is taken. */
+		when?: () => boolean | Promise<boolean>;
+	}
+
+	/** Applied changes, or proposed changes when `onConflict` is `log`. */
+	export interface SyncResult {
+		created: number;
+		updated: number;
+		removed: number;
+		unchanged: number;
+	}
+
 	export interface SetupOptions {
 		rest: REST;
 		clientId: Snowflake;
