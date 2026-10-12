@@ -1,6 +1,6 @@
 {
 	"name": "with-cache",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"private": true,
 	"description": "WolfStar gateway bot example caching Discord entities in Redis with @wolfstar/plugin-cache",
 	"type": "module",

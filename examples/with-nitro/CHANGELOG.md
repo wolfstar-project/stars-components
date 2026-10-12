@@ -1,5 +1,12 @@
 # with-nitro
 
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`c2542d7`](https://github.com/wolfstar-project/stars-components/commit/c2542d72639334a6f68ac733336ee9e95abf4d15)]:
+    - @wolfstar/http-framework@6.4.0
+
 ## 0.0.12
 
 ### Patch Changes
