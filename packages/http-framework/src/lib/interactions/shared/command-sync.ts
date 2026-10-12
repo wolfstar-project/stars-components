@@ -49,12 +49,14 @@ function equal(local: unknown, remote: unknown, key = ''): boolean {
 		if (remote && typeof remote === 'object' && Object.keys(remote).length === 0) remote = null;
 	}
 	if (Array.isArray(local)) {
-		if (!Array.isArray(remote) || local.length !== remote.length) return false;
+		if (!Array.isArray(remote)) return false;
 		// These fields are sets; options and choices retain their meaningful order.
 		if (['contexts', 'integration_types', 'channel_types'].includes(key)) {
-			return local.every((value) => remote.includes(value));
+			const localValues = new Set(local);
+			const remoteValues = new Set(remote);
+			return localValues.size === remoteValues.size && [...localValues].every((value) => remoteValues.has(value));
 		}
-		return local.every((value, index) => equal(value, remote[index]));
+		return local.length === remote.length && local.every((value, index) => equal(value, remote[index]));
 	}
 	if (local !== null && typeof local === 'object') {
 		if (remote === null || typeof remote !== 'object' || Array.isArray(remote)) return false;

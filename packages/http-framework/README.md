@@ -851,7 +851,9 @@ await client.load();
 const result = await client.registry.sync({ onConflict: 'overwrite', when: () => isRegistrar });
 ```
 
-Manual `sync()` rejects on failure so the caller can retry or fail startup. It returns
+Manual `sync()` attempts every scope, logs partial results, then rejects with an `AggregateError` if any scope
+failed, so the caller can retry or fail startup. Each error identifies the scope and retains the original failure
+as its `cause`. It returns
 `{ created, updated, removed, unchanged }`; with `'log'`, change counts describe proposed changes.
 `fetchDeployed(guildId?)` reads deployed commands with full localization dictionaries. The comparison handles
 Discord's response defaults and removal of options, localizations, or member permissions; omitted app-dependent
@@ -860,7 +862,7 @@ Discord's response defaults and removal of options, localizations, or member per
 This option belongs to `Client`, not to `stars.config`; exposing it through a CLI module is a follow-up.
 
 ```typescript
-// Assuming you have the code above, and that you called `client.load()`:
+// For manual bulk registration, after loading commands on a Client with automatic registration off:
 
 // Register all global commands:
 await client.registry.pushGlobalCommands();

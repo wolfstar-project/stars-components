@@ -237,7 +237,8 @@ export class ApplicationCommandRegistry implements JSONEncodable<ApplicationComm
 
 	/**
 	 * Synchronize loaded commands with Discord. Equal commands cause no writes; unknown remote commands are
-	 * preserved unless `removeUnknown` is enabled. Failures reject, so callers can retry or choose their policy.
+	 * preserved unless `removeUnknown` is enabled. Each scope is attempted even if another fails; failures reject
+	 * with an AggregateError after the partial results are logged, so callers can retry or choose their policy.
 	 * Concurrent calls share the current synchronization (and its options). This is not a distributed lock:
 	 * use `when` to select one process in a sharder/broker deployment.
 	 */
@@ -262,43 +263,53 @@ export class ApplicationCommandRegistry implements JSONEncodable<ApplicationComm
 			for (const [guildId, commands] of guilds) scopes.set(guildId, commands);
 		}
 
+		const errors: Error[] = [];
 		for (const [guildId, commands] of scopes) {
-			const deployed = await this.fetchDeployed(guildId);
-			const remote = new Map(deployed.map((command) => [`${command.type}:${command.name}`, command]));
-			for (const command of commands) {
-				const key = `${command.type ?? 1}:${command.name}`;
-				const old = remote.get(key);
-				remote.delete(key);
-				const body = commandSyncBody(command, guildId);
-				if (old && matchesCommand(body, old as unknown as Record<string, unknown>)) {
-					this.#recordIds([old], guildId);
-					result.unchanged++;
-					continue;
+			try {
+				const deployed = await this.fetchDeployed(guildId);
+				const remote = new Map(deployed.map((command) => [`${command.type}:${command.name}`, command]));
+				for (const command of commands) {
+					const key = `${command.type ?? 1}:${command.name}`;
+					const old = remote.get(key);
+					remote.delete(key);
+					const body = commandSyncBody(command, guildId);
+					if (old && matchesCommand(body, old as unknown as Record<string, unknown>)) {
+						this.#recordIds([old], guildId);
+						result.unchanged++;
+						continue;
+					}
+					if (options.onConflict !== 'log') {
+						const data = { body, authPrefix: this.#authPrefix };
+						const entry = (
+							old ? await this.#rest!.patch(this.#route(guildId, old.id), data) : await this.#rest!.post(this.#route(guildId), data)
+						) as APIApplicationCommand;
+						this.#recordIds([entry], guildId);
+					}
+					if (old) result.updated++;
+					else result.created++;
 				}
-				if (options.onConflict !== 'log') {
-					const data = { body, authPrefix: this.#authPrefix };
-					const entry = (
-						old ? await this.#rest!.patch(this.#route(guildId, old.id), data) : await this.#rest!.post(this.#route(guildId), data)
-					) as APIApplicationCommand;
-					this.#recordIds([entry], guildId);
+				if (options.removeUnknown) {
+					for (const command of remote.values()) {
+						if (options.onConflict !== 'log')
+							await this.#rest!.delete(this.#route(guildId, command.id), { authPrefix: this.#authPrefix });
+						result.removed++;
+					}
 				}
-				if (old) result.updated++;
-				else result.created++;
-			}
-			if (options.removeUnknown) {
-				for (const command of remote.values()) {
-					if (options.onConflict !== 'log') await this.#rest!.delete(this.#route(guildId, command.id), { authPrefix: this.#authPrefix });
-					result.removed++;
-				}
+			} catch (cause) {
+				const scope = guildId === null ? 'global scope' : `guild ${guildId}`;
+				errors.push(new Error(`Failed to synchronize commands in ${scope}`, { cause }));
 			}
 		}
 		const changes = result.created + result.updated + result.removed;
-		if (changes === 0) container.logger.info(`Commands: ${result.unchanged} up to date`);
-		else {
-			const summary = `${result.created} created, ${result.updated} updated, ${result.removed} removed`;
-			if (options.onConflict === 'log') container.logger.warn(`Commands: differences detected (${summary}); no changes written`);
-			else container.logger.info(`Commands: ${summary}`);
+		const summary = `${result.created} created, ${result.updated} updated, ${result.removed} removed`;
+		if (errors.length > 0) {
+			const operation = options.onConflict === 'log' ? 'differences detected; no changes written' : 'partial synchronization';
+			container.logger.warn(`Commands: ${operation} (${summary}, ${result.unchanged} unchanged); ${errors.length} scopes failed`);
+			throw new AggregateError(errors, 'Command synchronization failed in one or more scopes');
 		}
+		if (changes === 0) container.logger.info(`Commands: ${result.unchanged} up to date`);
+		else if (options.onConflict === 'log') container.logger.warn(`Commands: differences detected (${summary}); no changes written`);
+		else container.logger.info(`Commands: ${summary}`);
 		return result;
 	}
 

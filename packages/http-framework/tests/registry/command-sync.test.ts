@@ -128,12 +128,69 @@ describe('ApplicationCommandRegistry.sync', () => {
 		expect(post).toHaveBeenCalledOnce();
 	});
 
+	test('attempts later scopes after fetch failures and aggregates each scope with its cause', async () => {
+		const { registry, get, post, info, warn } = fixture();
+		vi.mocked(registry.getLoadedGuildCommands).mockReturnValue(
+			new Collection([
+				['456', [ping]],
+				['789', [ping]]
+			])
+		);
+		const globalFailure = new Error('Discord unavailable');
+		const guildFailure = new Error('Missing access');
+		get.mockRejectedValueOnce(globalFailure).mockRejectedValueOnce(guildFailure);
+		await expect(registry.sync()).rejects.toMatchObject({
+			name: 'AggregateError',
+			errors: [
+				expect.objectContaining({ message: 'Failed to synchronize commands in global scope', cause: globalFailure }),
+				expect.objectContaining({ message: 'Failed to synchronize commands in guild 456', cause: guildFailure })
+			]
+		});
+		expect(get.mock.calls.map(([route]) => route)).toEqual([
+			Routes.applicationCommands('123'),
+			Routes.applicationGuildCommands('123', '456'),
+			Routes.applicationGuildCommands('123', '789')
+		]);
+		expect(post).toHaveBeenCalledExactlyOnceWith(Routes.applicationGuildCommands('123', '789'), expect.anything());
+		expect(warn).toHaveBeenCalledWith('Commands: partial synchronization (1 created, 0 updated, 0 removed, 0 unchanged); 2 scopes failed');
+		expect(info).not.toHaveBeenCalled();
+	});
+
+	test('continues after a write fails and logs successful writes from the partially applied scope', async () => {
+		const { registry, post, warn } = fixture();
+		vi.mocked(registry.getLoadedGlobalCommands).mockReturnValue([ping, { ...ping, name: 'new' }]);
+		vi.mocked(registry.getLoadedGuildCommands).mockReturnValue(new Collection([['456', [ping]]]));
+		const cause = new Error('Rate limit exhausted');
+		post.mockResolvedValueOnce(deployed()).mockRejectedValueOnce(cause);
+		await expect(registry.sync()).rejects.toMatchObject({ name: 'AggregateError', errors: [expect.objectContaining({ cause })] });
+		expect(post.mock.calls.map(([route]) => route)).toEqual([
+			Routes.applicationCommands('123'),
+			Routes.applicationCommands('123'),
+			Routes.applicationGuildCommands('123', '456')
+		]);
+		expect(warn).toHaveBeenCalledWith('Commands: partial synchronization (2 created, 0 updated, 0 removed, 0 unchanged); 1 scopes failed');
+	});
+
+	test('continues dry-run comparisons after a failed scope without writing or reporting applied changes', async () => {
+		const { registry, get, post, patch, remove, warn } = fixture();
+		get.mockRejectedValueOnce(new Error('Missing access'));
+		await expect(registry.sync({ guildIds: ['456', '789'], onConflict: 'log' })).rejects.toBeInstanceOf(AggregateError);
+		expect(get).toHaveBeenCalledTimes(2);
+		expect(warn).toHaveBeenCalledWith(
+			'Commands: differences detected; no changes written (1 created, 0 updated, 0 removed, 0 unchanged); 1 scopes failed'
+		);
+		expect(post).not.toHaveBeenCalled();
+		expect(patch).not.toHaveBeenCalled();
+		expect(remove).not.toHaveBeenCalled();
+	});
+
 	test('shares concurrent synchronization and allows retry after a failure', async () => {
 		const { registry, get } = fixture();
-		get.mockRejectedValueOnce(new Error('Discord unavailable'));
+		const cause = new Error('Discord unavailable');
+		get.mockRejectedValueOnce(cause);
 		const first = registry.sync();
 		expect(registry.sync()).toBe(first);
-		await expect(first).rejects.toThrow('Discord unavailable');
+		await expect(first).rejects.toMatchObject({ name: 'AggregateError', errors: [expect.objectContaining({ cause })] });
 		await registry.sync();
 		expect(get).toHaveBeenCalledTimes(2);
 	});
@@ -146,6 +203,12 @@ describe('command comparison', () => {
 		expect(matchesCommand(body, { ...deployed(), default_member_permissions: '8' })).toBe(false);
 		expect(matchesCommand(body, { ...deployed(), name_localizations: { it: 'prova' } })).toBe(false);
 		expect(body).toMatchObject({ options: [], default_member_permissions: null, name_localizations: null, nsfw: false });
+	});
+
+	test.each(['contexts', 'integration_types', 'channel_types'])('compares unique values for %s', (field) => {
+		expect(matchesCommand({ [field]: [0, 0] }, { [field]: [0, 1] })).toBe(false);
+		expect(matchesCommand({ [field]: [0, 1] }, { [field]: [0, 0] })).toBe(false);
+		expect(matchesCommand({ [field]: [0, 0, 1] }, { [field]: [1, 0] })).toBe(true);
 	});
 
 	test('normalizes Discord defaults and set ordering without losing meaningful order', () => {
