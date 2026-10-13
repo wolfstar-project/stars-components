@@ -13,6 +13,10 @@
 
 </div>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wolfstar-project/stars-components/main/.github/media/create-http-framework.gif" alt="Scaffolding a bot with pnpm create @wolfstar/http-framework" width="720" />
+</p>
+
 ## Description
 
 A CLI scaffolding tool for creating new [WolfStar HTTP Framework](https://github.com/wolfstar-project/stars-components/tree/main/packages/http-framework) bot projects.

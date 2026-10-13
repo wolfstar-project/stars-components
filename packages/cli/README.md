@@ -9,6 +9,10 @@
 
 </div>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wolfstar-project/stars-components/main/.github/media/stars-dev.gif" alt="pnpm dev running stars dev: build, bot start and restart on change in the dashboard" width="720" />
+</p>
+
 ## Description
 
 `stars` is a small, fast CLI that owns the developer workflow of a bot built with `@wolfstar/http-framework`. Like
