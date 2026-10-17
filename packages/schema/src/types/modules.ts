@@ -70,6 +70,19 @@ export interface ClientHookRegistration {
 	readonly export: string;
 }
 
+/**
+ * A directory of locales a module registered with `ctx.addLocales`: `<lng>/<namespace>.json`, the layout
+ * `@wolfstar/plugin-i18next` reads. The namespaces are read from the files when the module is set up.
+ */
+export interface LocalesRegistration {
+	/** The module that registered it. */
+	readonly module: string;
+	/** An absolute path. */
+	readonly path: string;
+	/** Every namespace found below the language folders, e.g. `commands/shared`. */
+	readonly namespaces: readonly string[];
+}
+
 /** A module that was installed. */
 export interface InstalledModule {
 	readonly name: string;
@@ -82,6 +95,8 @@ export interface ModulesRuntime {
 	readonly plugins: readonly RuntimePluginRegistration[];
 	/** Directories of pieces added by `ctx.addPiecesDir`. */
 	readonly piecesDirs: readonly PiecesDirRegistration[];
+	/** Directories of locales added by `ctx.addLocales`. */
+	readonly locales: readonly LocalesRegistration[];
 	/** Runtime hooks added by `hooks['client:*']` and `ctx.addClientHook`. */
 	readonly clientHooks: readonly ClientHookRegistration[];
 	/** Packages added to `imports.presets` by `ctx.addImports`. */
@@ -94,6 +109,7 @@ export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({
 	modules: [],
 	plugins: [],
 	piecesDirs: [],
+	locales: [],
 	clientHooks: [],
 	imports: [],
 	configKeys: []

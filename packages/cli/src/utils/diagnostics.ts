@@ -117,6 +117,8 @@ export const cliDiagnostics = defineDiagnostics({
 						return 'Pass `ctx.addPlugin` a package specifier, an absolute path or a `file:` URL, and JSON-serialisable options.';
 					case 'MODULE_PIECES_INVALID':
 						return "Pass `ctx.addPiecesDir` an absolute path or a `file:` URL, e.g. `new URL('./pieces', import.meta.url)`.";
+					case 'MODULE_LOCALES_INVALID':
+						return "Pass `ctx.addLocales` an absolute path or a `file:` URL to an existing directory laid out as <language>/<namespace>.json, e.g. `new URL('./locales', import.meta.url)`.";
 					case 'MODULE_HOOK_INVALID':
 						return 'Give each `client:*` hook of a module once, by source: a package specifier, an absolute path or a `file:` URL, or `{ from, export }`.';
 					default:

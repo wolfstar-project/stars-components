@@ -86,6 +86,26 @@ describe('stars modules', () => {
 		]);
 	});
 
+	test('addLocales reads the namespaces of the directory into the runtime', async () => {
+		fixture = await createFixture({
+			'node_modules/i18n-module/package.json': JSON.stringify({
+				name: 'i18n-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/i18n-module/index.js':
+				"export default { meta: { name: 'i18n-module' }, setup: (_options, ctx) => ctx.addLocales(new URL('./locales', import.meta.url)) };",
+			'node_modules/i18n-module/locales/en-US/commands/shared.json': '{}',
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['i18n-module'] };"
+		});
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.locales).toEqual([
+			{ module: 'i18n-module', path: join(fixture.root, 'node_modules/i18n-module/locales'), namespaces: ['commands/shared'] }
+		]);
+	});
+
 	test('a relative pieces directory fails the load', async () => {
 		fixture = await createFixture(piecesModule("'./pieces'"));
 

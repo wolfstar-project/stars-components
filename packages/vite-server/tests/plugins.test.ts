@@ -190,6 +190,27 @@ describe('pluginRegistrations modules', () => {
 		]);
 	});
 
+	test('the virtual module merges the locales of modules into the i18n option before the i18n plugin runs', () => {
+		const source = modulesModuleSource([], { locales: [{ module: 'a', path: '/pkg/locales', namespaces: ['commands/shared'] }] });
+		expect(source.split('\n').slice(0, 3)).toEqual([
+			'import { Client, getRootData } from "@wolfstar/http-framework";',
+			'import { join as __stars_join } from "node:path";',
+			REGISTER_PLUGIN_SOURCE
+		]);
+		expect(source).toContain('const __stars_locales = [{"path":"/pkg/locales","namespaces":["commands/shared"]}];');
+		expect(source).toContain('Client.use({ name: "stars:locales", enforce: "pre", preGenericsInitialization(client, options) {');
+	});
+
+	test('imports the modules module for locales alone', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const locales = [{ module: 'a', path: '/pkg/locales', namespaces: [] }];
+		const instance = plugin({
+			runtime: { modules: [], imports: [], plugins: [], piecesDirs: [], clientHooks: [], locales } as unknown as ResolvedStarsConfig['runtime']
+		});
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
+		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { locales }));
+	});
+
 	test('the virtual module puts the runtime hooks of a module on one plugin named after it', () => {
 		const source = modulesModuleSource([], {
 			clientHooks: [

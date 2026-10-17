@@ -70,7 +70,9 @@ export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic |
 		tool: config.build.tool,
 		plugins: [
 			...new Set(
-				[...config.runtime.plugins, ...config.runtime.piecesDirs, ...config.runtime.clientHooks].map((registration) => registration.module)
+				[...config.runtime.plugins, ...config.runtime.piecesDirs, ...config.runtime.locales, ...config.runtime.clientHooks].map(
+					(registration) => registration.module
+				)
 			)
 		].join(', ')
 	});
@@ -80,7 +82,10 @@ export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic |
 function needsPreload(config: ResolvedStarsConfig): boolean {
 	return (
 		UNTRANSFORMED_TOOLS.has(config.build.tool) &&
-		((config.runtime?.plugins.length ?? 0) > 0 || (config.runtime?.piecesDirs.length ?? 0) > 0 || (config.runtime?.clientHooks.length ?? 0) > 0)
+		((config.runtime?.plugins.length ?? 0) > 0 ||
+			(config.runtime?.piecesDirs.length ?? 0) > 0 ||
+			(config.runtime?.locales.length ?? 0) > 0 ||
+			(config.runtime?.clientHooks.length ?? 0) > 0)
 	);
 }
 
@@ -109,6 +114,7 @@ export async function prepareModulesPreload(config: ResolvedStarsConfig, check =
 	// An absolute path is a `file:` URL in the import, like in `moduleImportArgs`: Node rejects a Windows path there.
 	const plugins = modulesModuleSource(config.runtime.plugins, {
 		piecesDirs: config.runtime.piecesDirs,
+		locales: config.runtime.locales,
 		clientHooks: config.runtime.clientHooks,
 		resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from)
 	});
