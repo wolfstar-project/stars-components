@@ -380,7 +380,7 @@ describe('renderers', () => {
 			// The clock and the spinner tick about eight times a second, and each tick used to write the whole screen again.
 			const written = stdout.output.slice(mark);
 			// Ink wraps every frame in synchronized output, which makes the frames countable.
-			const frames = written.split('001B[?2026h').length - 1;
+			const frames = written.split('\u001B[?2026h').length - 1;
 			expect(frames).toBeGreaterThan(2);
 			// A repaint of the whole screen costs at least what the screen holds; a changed clock is a few dozen bytes.
 			expect(written.length / frames).toBeLessThan(stdout.screen().length / 4);
