@@ -35,7 +35,8 @@ export interface TunnelProvider {
 	open(target: string, context: TunnelOpenContext): Promise<TunnelHandle | undefined>;
 	/**
 	 * Called once with the error of a failed attempt. Resolves to a description of what was removed when the failure came
-	 * from something the provider left on disk and opening the tunnel again can succeed, and to `null` otherwise.
+	 * from something the provider left on disk and opening the tunnel again can succeed, and to `null` otherwise. It never
+	 * rejects: a repair that fails is the same as nothing to repair.
 	 */
 	repair?(error: unknown): Promise<string | null>;
 }
@@ -81,7 +82,13 @@ export class CloudflaredProvider implements TunnelProvider {
 		const fromDirectory = relative(this.#binDirectory, resolve(path));
 		if (!fromDirectory || fromDirectory.startsWith('..') || isAbsolute(fromDirectory)) return null;
 
-		await rm(path, { force: true });
+		try {
+			await rm(path, { force: true });
+		} catch {
+			// Not ours to delete after all (a directory, a read-only location): the original error is the one to report.
+			return null;
+		}
+
 		return path;
 	}
 
