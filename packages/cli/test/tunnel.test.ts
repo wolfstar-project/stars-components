@@ -287,23 +287,41 @@ describe('Tunnel', () => {
 			expect(tunnel.state).toBe('failed');
 		});
 
-		test('stays silent when the tunnel is closed while the binary is being repaired', async () => {
+		test('reports the original error when the broken file cannot be deleted', async () => {
+			// A directory where the binary should be: `rm` without `recursive` refuses it.
+			const binary = join(binDirectory, 'cloudflared.1');
+			await mkdir(binary);
+			const startTunnelMock = vi.fn().mockResolvedValue({ getURL: vi.fn().mockRejectedValue(spawnError('EACCES', binary)), close: vi.fn() });
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+
+			expect(startTunnelMock).toHaveBeenCalledOnce();
+			expect(tunnel.state).toBe('failed');
+			expect(logs).toContainEqual(['error', `cloudflared failed: spawn ${binary} EACCES`]);
+		});
+
+		test('closes the reopened tunnel when it was closed in the meantime', async () => {
 			const binary = join(binDirectory, 'cloudflared.1');
 			await writeFile(binary, 'partial');
-			let rejectUrl!: (error: Error) => void;
-			const getURL = vi.fn(() => new Promise<string>((_, reject) => (rejectUrl = reject)));
-			const startTunnelMock = vi.fn().mockResolvedValue({ getURL, close: vi.fn() });
+			const reopened = working();
+			let openReopened!: () => void;
+			const startTunnelMock = vi
+				.fn()
+				.mockResolvedValueOnce({ getURL: vi.fn().mockRejectedValue(spawnError('EACCES', binary)), close: vi.fn() })
+				.mockImplementationOnce(() => new Promise((resolve) => (openReopened = () => resolve(reopened))));
 			const { tunnel, logs } = await createTunnel(startTunnelMock);
 
 			const starting = tunnel.start();
-			await vi.waitFor(() => expect(getURL).toHaveBeenCalledOnce());
+			await vi.waitFor(() => expect(startTunnelMock).toHaveBeenCalledTimes(2));
 			await tunnel.close();
-			rejectUrl(spawnError('EACCES', binary));
+			openReopened();
 			await starting;
 
-			expect(startTunnelMock).toHaveBeenCalledOnce();
+			expect(reopened.close).toHaveBeenCalledOnce();
 			expect(tunnel.state).toBe('off');
-			expect(logs.filter(([level]) => level !== 'info')).toEqual([]);
+			expect(tunnel.url).toBeNull();
+			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
 		});
 	});
 
