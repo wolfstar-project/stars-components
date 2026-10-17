@@ -1,11 +1,10 @@
 import { definePlugin } from '@wolfstar/http-framework';
-import './commands/_load.js';
-import './listeners/_load.js';
-
 // The plugin's own `register` entrypoint is imported here, in the bot, because the package that depends on it is
 // the one that knows it needs it. Locales are not handled here: `ctx.addLocales` in `./module.ts` does that,
-// before the plugin builds its handler.
-await import('@wolfstar/plugin-i18next/register');
+// and the generated `stars:locales` plugin runs first (`enforce: 'pre'`), whatever the import order.
+import '@wolfstar/plugin-i18next/register';
+import './commands/_load.js';
+import './listeners/_load.js';
 
 /**
  * The runtime half of {@link ./module.ts}. Importing this file registers the shared commands and listeners with the

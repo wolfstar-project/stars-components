@@ -10,7 +10,7 @@ import { defineModule } from '@wolfstar/kit';
  * ```
  */
 export default defineModule({
-	meta: { name: '@wolfstar/shared-http-pieces', compatibility: { framework: '>=6.1.0' } },
+	meta: { name: '@wolfstar/shared-http-pieces', compatibility: { framework: '>=6.5.0' } },
 	setup(_options, ctx) {
 		// `src/locales` is published next to `dist`, as `localesPath` in `./register.ts` expects.
 		ctx.addLocales(new URL('../src/locales', import.meta.url));
