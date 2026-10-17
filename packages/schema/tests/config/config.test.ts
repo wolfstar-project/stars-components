@@ -6,6 +6,7 @@ import {
 	CONFIG_FILE_NAMES,
 	DEFAULT_COMPATIBILITY_VERSION,
 	LATEST_COMPATIBILITY_VERSION,
+	MODULES_ONLY_VERSION,
 	SPLIT_TSCONFIG_VERSION,
 	defineConfig,
 	discoverConfigFile,
@@ -110,6 +111,18 @@ describe('stars.config', () => {
 	test('pins the supported compatibility versions and the split tsconfig gate', () => {
 		expect([DEFAULT_COMPATIBILITY_VERSION, LATEST_COMPATIBILITY_VERSION, SPLIT_TSCONFIG_VERSION]).toEqual([6, 6, 6]);
 		expect(AUTO_ENV_VERSION).toBe(5);
+	});
+
+	test('accepts compatibility version 7 as an opt-in that is not the default nor the latest', async () => {
+		expect(MODULES_ONLY_VERSION).toBe(7);
+		fixture = await createFixture({ 'src/main.ts': '', 'stars.config.mjs': 'export default { future: { compatibilityVersion: 7 } };' });
+		const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+
+		expect(config.future.compatibilityVersion).toBe(7);
+		expect(config.warnings).toEqual([]);
+		// Everything the earlier versions gate on stays on.
+		expect(config.build.tool).toBe('tsdown');
+		expect(config.build.tsconfig).toBe(join(fixture.root, '.stars', 'tsconfig.app.json'));
 	});
 
 	test('splits the tsconfig from compatibility version 6, and keeps one file below it', async () => {
@@ -661,9 +674,9 @@ describe('stars.config', () => {
 		});
 
 		test('rejects an unknown compatibility version and unknown `future` options', async () => {
-			const error = await expectConfigError('export default { future: { compatibilityVersion: 7 } };');
+			const error = await expectConfigError('export default { future: { compatibilityVersion: 8 } };');
 			expect(error.code).toBe('INVALID_COMPATIBILITY_VERSION');
-			expect(error.message).toContain('7');
+			expect(error.message).toContain('8');
 			expect(error.fix).toContain('6');
 
 			expect((await expectConfigError("export default { future: { compatibilityVersion: '4' } };")).code).toBe('INVALID_COMPATIBILITY_VERSION');

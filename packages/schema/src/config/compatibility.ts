@@ -28,10 +28,24 @@ export const AUTO_VARLOCK_VERSION = 6;
  */
 export const SPLIT_TSCONFIG_VERSION = 6;
 
-const COMPATIBILITY_VERSIONS = new Set<number>([LEGACY_COMPATIBILITY_VERSION, STARS_CONFIG_TSDOWN_VERSION, AUTO_ENV_VERSION, SPLIT_TSCONFIG_VERSION]);
+/**
+ * From this version on the configuration decides what registers: the `@wolfstar/plugin-*` packages found in
+ * `package.json` are no longer activated by name (`import "<name>/register"` is not injected), only the modules in
+ * `modules` and the ones they install are. It is opt-in and not the default (nor `LATEST_COMPATIBILITY_VERSION`) until
+ * the external plugins ship a module entry.
+ */
+export const MODULES_ONLY_VERSION = 7;
+
+const COMPATIBILITY_VERSIONS = new Set<number>([
+	LEGACY_COMPATIBILITY_VERSION,
+	STARS_CONFIG_TSDOWN_VERSION,
+	AUTO_ENV_VERSION,
+	SPLIT_TSCONFIG_VERSION,
+	MODULES_ONLY_VERSION
+]);
 
 /**
- * Resolves the Nuxt-style compatibility block. Version 6 is the default; versions 5 and 4 remain supported. Version 3 is
+ * Resolves the Nuxt-style compatibility block. Version 6 is the default; versions 5 and 4 remain supported, and 7 is an opt-in preview. Version 3 is
  * end-of-life: it still resolves, with a warning pushed to `warnings`, and is removed in the next major.
  *
  * New behaviour is gated by a named version constant (such as {@link AUTO_ENV_VERSION}), never by

@@ -2,6 +2,7 @@ export { ServerBuilder, type ServerHooks } from './lifecycle.js';
 export { defaultBuilderContext } from './context.js';
 export {
 	envModuleSource,
+	findUnlistedPlugins,
 	modulesModuleSource,
 	pluginRegistrations,
 	REGISTER_PLUGIN_SOURCE,
