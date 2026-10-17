@@ -2,7 +2,8 @@ import { PassThrough } from 'node:stream';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Diagnostic } from 'nostics';
-import { runCodegen } from '../src/commands/codegen.js';
+import { runCommand } from 'citty';
+import codegenCommand, { runCodegen } from '../src/commands/codegen.js';
 import { createFixture, type Fixture } from './helpers.js';
 
 function capture(): { stream: PassThrough; text(): string } {
@@ -214,6 +215,34 @@ describe('runCodegen', () => {
 			const one = capture();
 			await runCodegen({ cwd: fixture.root, stdout: one.stream, only: ['i18n'], json: true });
 			expect(JSON.parse(one.text()).results.map((result: { generator: string }) => result.generator)).toEqual(['i18n']);
+		});
+
+		test('is read from the command line, repeated or comma-separated', async () => {
+			fixture = await createBothProject();
+			const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+			try {
+				// `commands` needs the built bot, which this fixture does not have: the run reaches it only when the
+				// second occurrence of the flag is read as well.
+				await expect(
+					runCommand(codegenCommand, { rawArgs: ['--cwd', fixture.root, '--json', '--only', 'i18n', '--only=commands'] })
+				).rejects.toMatchObject({ code: 'LOCAL_COMMANDS_UNAVAILABLE' });
+				const generators = (call: unknown[]) => JSON.parse(String(call[0])).results.map((result: { generator: string }) => result.generator);
+
+				write.mockClear();
+				await runCommand(codegenCommand, { rawArgs: ['--cwd', fixture.root, '--json', '--only', 'i18n'] });
+				expect(generators(write.mock.calls[0]!)).toEqual(['i18n']);
+			} finally {
+				write.mockRestore();
+			}
+		});
+
+		test('ignores an empty list, which runs every enabled generator', async () => {
+			fixture = await createBothProject('commands: false');
+			const out = capture();
+
+			await runCodegen({ cwd: fixture.root, stdout: out.stream, only: [] });
+
+			expect(out.text()).toContain('i18n: written');
 		});
 
 		test('rejects an unknown generator, before loading the project', async () => {
