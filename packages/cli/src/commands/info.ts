@@ -37,8 +37,8 @@ export interface ProjectInfo {
 	env: ResolvedStarsConfig['env'];
 	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
 	hooks: string[];
-	/** The installed modules, and the runtime plugins they registered (`module → export from package`). */
-	modules: { installed: string[]; plugins: string[]; registeredByName: string[] };
+	/** The installed modules, and the runtime plugins and pieces directories they registered (`module → export from package`). */
+	modules: { installed: string[]; plugins: string[]; piecesDirs: string[]; registeredByName: string[] };
 	/** Non-fatal configuration diagnostics, as `CODE: message`. */
 	warnings: string[];
 	/**
@@ -76,6 +76,7 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		modules: {
 			installed: (config.runtime?.modules ?? []).map((module) => module.name),
 			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`),
+			piecesDirs: (config.runtime?.piecesDirs ?? []).map((dir) => `${dir.module} → ${dir.path}`),
 			registeredByName: registersModulesOnly(config) ? [] : unlistedPlugins(config)
 		},
 		warnings: [...config.warnings, modulesPreloadWarning(config), unregisteredPluginsWarning(config), varlockWarning(config)]
@@ -164,7 +165,8 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Modules', [
 			row('installed', info.modules.installed.join(', ') || colors.dim('none')),
 			...(info.modules.registeredByName.length > 0 ? [row('by name', info.modules.registeredByName.join(', '))] : []),
-			...info.modules.plugins.map((plugin) => row('plugin', plugin))
+			...info.modules.plugins.map((plugin) => row('plugin', plugin)),
+			...info.modules.piecesDirs.map((dir) => row('pieces', dir))
 		]),
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),

@@ -46,6 +46,32 @@ describe('stars modules', () => {
 		]);
 	});
 
+	function piecesModule(call: string) {
+		return {
+			'node_modules/pieces-module/package.json': JSON.stringify({
+				name: 'pieces-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/pieces-module/index.js': `export default { meta: { name: 'pieces-module' }, setup: (_options, ctx) => ctx.addPiecesDir(${call}) };`,
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['pieces-module'] };"
+		};
+	}
+
+	test('addPiecesDir is carried into the runtime', async () => {
+		fixture = await createFixture(piecesModule("new URL('./pieces', import.meta.url)"));
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.piecesDirs).toEqual([{ module: 'pieces-module', path: join(fixture.root, 'node_modules/pieces-module/pieces') }]);
+	});
+
+	test('a relative pieces directory fails the load', async () => {
+		fixture = await createFixture(piecesModule("'./pieces'"));
+
+		await expect(loadProject({ cwd: fixture.root, env: {} })).rejects.toMatchObject({ code: 'MODULE_FAILED' });
+	});
+
 	test('addImports extends imports.presets, and the module hooks run on the shared registry', async () => {
 		fixture = await createFixture({ ...MODULE_PACKAGE, 'src/main.ts': '', 'stars.config.mjs': "export default { modules: ['fake-module'] };" });
 		const { config, hooks } = await loadProject({ cwd: fixture.root, env: {} });
@@ -255,6 +281,26 @@ describe('stars modules', () => {
 			expect(modulesPreloadWarning(config)?.code ?? null).toBe(warns ? 'MODULES_PRELOAD_REQUIRED' : null);
 			// `stars dev` preloads the plugins itself: the warning is about production, so it is not a config warning.
 			expect(config.warnings).toEqual([]);
+		});
+
+		test('the preload warning also names a module that only adds a pieces directory', async () => {
+			fixture = await createFixture({
+				'node_modules/pieces-only/package.json': JSON.stringify({
+					name: 'pieces-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/pieces-only/index.js':
+					"export default { meta: { name: 'pieces-only' }, setup: (_options, ctx) => ctx.addPiecesDir(new URL('./pieces', import.meta.url)) };",
+				'src/main.js': '',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['pieces-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const warning = modulesPreloadWarning(config);
+			expect(warning?.code).toBe('MODULES_PRELOAD_REQUIRED');
+			expect(warning?.message).toContain('plugins and pieces directories');
+			expect(warning?.message).toContain('pieces-only');
 		});
 
 		test('reportWarnings prints the preload warning for build and prepare, not for dev', async () => {

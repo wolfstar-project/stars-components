@@ -69,6 +69,15 @@ export interface ModuleContext {
 	readonly versions: Readonly<ModuleVersions>;
 	/** Registers a runtime plugin. See {@link ModulePluginSource}. */
 	addPlugin(plugin: string | URL | ModulePluginSource): void;
+	/**
+	 * Registers a directory of pieces. It holds one folder per store (`commands`, `listeners`, `interaction-handlers`,
+	 * `preconditions`), like the bot's own `src`, and is loaded next to the bot's pieces. Give an absolute path or a
+	 * `file:` URL (`new URL('./pieces', import.meta.url)`); a relative path is rejected. The pieces are loaded from files
+	 * at runtime, so the directory has to exist in the built bot: a build that bundles everything (Vite, Nitro) has none.
+	 * Only the stores that exist when the modules source runs are covered (the framework's four, and any registered by an
+	 * earlier import): a folder for a store that a plugin registers later is ignored.
+	 */
+	addPiecesDir(directory: string | URL): void;
 	/** Adds a package to the auto imports presets (`imports.presets`): all its exports become auto imports. */
 	addImports(preset: string | { from: string }): void;
 	/** Registers a hook of the `stars` CLI. */
@@ -91,4 +100,10 @@ export interface StarsModule<Options extends ModuleOptions = ModuleOptions> {
 	setup?(options: Options, ctx: ModuleContext): Awaitable<void>;
 }
 
-export type ModuleErrorCode = 'MODULE_LOAD_FAILED' | 'MODULE_INVALID' | 'MODULE_INCOMPATIBLE' | 'MODULE_SETUP_FAILED' | 'MODULE_PLUGIN_INVALID';
+export type ModuleErrorCode =
+	| 'MODULE_LOAD_FAILED'
+	| 'MODULE_INVALID'
+	| 'MODULE_INCOMPATIBLE'
+	| 'MODULE_SETUP_FAILED'
+	| 'MODULE_PLUGIN_INVALID'
+	| 'MODULE_PIECES_INVALID';

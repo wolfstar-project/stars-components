@@ -3,10 +3,12 @@ import {
 	STARS_HOOK_NAMES,
 	type InstalledModule,
 	type ModulesRuntime,
+	type PiecesDirRegistration,
 	type ResolvedStarsConfig,
 	type RuntimePluginRegistration
 } from '@wolfstar/schema';
 import { satisfies } from 'semver';
+import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ModuleError } from './errors.js';
 import { isPlainObject, mergeOptions } from './options.js';
@@ -34,6 +36,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 	const installed = new Set<string>();
 	const modules: InstalledModule[] = [];
 	const plugins: RuntimePluginRegistration[] = [];
+	const piecesDirs: PiecesDirRegistration[] = [];
 	const imports = new Set<string>();
 	/** `meta.configKey` -> the module that claimed it. */
 	const configKeys = new Map<string, string>();
@@ -84,6 +87,10 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 			config,
 			versions,
 			addPlugin: (plugin) => plugins.push(toRegistration(name, plugin)),
+			addPiecesDir: (directory) => {
+				const path = toPiecesDirectory(name, directory);
+				if (!piecesDirs.some((registered) => registered.path === path)) piecesDirs.push({ module: name, path });
+			},
 			addImports: (preset) => void imports.add(typeof preset === 'string' ? preset : preset.from),
 			hook: (hookName, callback) => hooks.hook(hookName, callback),
 			callHook: (hookName, ...args) => hooks.callHook(hookName, ...args),
@@ -102,7 +109,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 
 	for (const entry of config.modules) await install(entry.specifier, entry.options as Record<string, unknown>);
 
-	return { modules, plugins, imports: [...imports], configKeys: [...configKeys.keys()] };
+	return { modules, plugins, piecesDirs, imports: [...imports], configKeys: [...configKeys.keys()] };
 }
 
 const KNOWN_HOOKS: ReadonlySet<string> = new Set(STARS_HOOK_NAMES);
@@ -226,6 +233,20 @@ function toRegistration(moduleName: string, plugin: string | URL | ModulePluginS
 
 	const registration = { module: moduleName, from: from.startsWith('file:') ? fileURLToPath(from) : from, export: source.export ?? 'default' };
 	return source.options === undefined ? registration : { ...registration, options: source.options };
+}
+
+function toPiecesDirectory(moduleName: string, directory: string | URL): string {
+	const value = typeof directory === 'string' ? directory : directory.href;
+	const path = value.startsWith('file:') ? fileURLToPath(value) : value;
+	if (path === '' || !isAbsolute(path)) {
+		throw new ModuleError(
+			'MODULE_PIECES_INVALID',
+			moduleName,
+			`The pieces directory "${value}" added by "${moduleName}" must be an absolute path or a \`file:\` URL, e.g. \`new URL('./pieces', import.meta.url)\`.`
+		);
+	}
+
+	return path;
 }
 
 function isJsonSerialisable(value: unknown): boolean {

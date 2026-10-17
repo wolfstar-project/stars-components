@@ -1,4 +1,6 @@
 import type { ResolvedStarsConfig, StarsHookName } from '@wolfstar/schema';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { ModuleError, defineModule, mergeOptions, setupModules, type ModuleHookHost, type StarsModule } from '../src/index.js';
 
 function host() {
@@ -59,7 +61,7 @@ describe('mergeOptions', () => {
 
 describe('setupModules', () => {
 	test('GIVEN no modules THEN the runtime is empty', async () => {
-		expect(await run([], []).result).toEqual({ modules: [], plugins: [], imports: [], configKeys: [] });
+		expect(await run([], []).result).toEqual({ modules: [], plugins: [], piecesDirs: [], imports: [], configKeys: [] });
 	});
 
 	test('GIVEN defaults and user options THEN setup receives them merged', async () => {
@@ -208,10 +210,41 @@ describe('setupModules', () => {
 				{ module: 'cache', from: 'cache/plugin', export: 'default' },
 				{ module: 'cache', from: '/pkg/runtime.js', export: 'plugin', options: { ttl: 5 } }
 			],
+			piecesDirs: [],
 			imports: ['cache', 'other'],
 			configKeys: []
 		});
 	});
+
+	test('GIVEN addPiecesDir THEN absolute paths and file URLs are collected once, with the module name', async () => {
+		const directory = resolve('pkg', 'pieces');
+		const { result } = run(
+			[
+				defineModule({
+					meta: { name: 'shared' },
+					setup(_options, ctx) {
+						ctx.addPiecesDir(directory);
+						ctx.addPiecesDir(pathToFileURL(directory));
+						ctx.addPiecesDir(pathToFileURL(resolve('pkg', 'more')));
+					}
+				})
+			],
+			[['shared']]
+		);
+
+		expect((await result).piecesDirs).toEqual([
+			{ module: 'shared', path: directory },
+			{ module: 'shared', path: resolve('pkg', 'more') }
+		]);
+	});
+
+	test.each(['./pieces', '../pieces', 'pieces', ''])(
+		'GIVEN the relative pieces directory "%s" THEN it throws MODULE_PIECES_INVALID',
+		async (directory) => {
+			const { result } = run([defineModule({ meta: { name: 'rel' }, setup: (_options, ctx) => ctx.addPiecesDir(directory) })], [['rel']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_PIECES_INVALID', moduleName: 'rel' });
+		}
+	);
 
 	test('GIVEN a plugin with options that are not JSON THEN it throws MODULE_PLUGIN_INVALID', async () => {
 		const { result } = run(

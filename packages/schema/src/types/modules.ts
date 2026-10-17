@@ -30,6 +30,17 @@ export interface RuntimePluginRegistration {
 	readonly options?: unknown;
 }
 
+/**
+ * A directory of pieces a module registered with `ctx.addPiecesDir`. It holds one folder per store (`commands`,
+ * `listeners`, …), like the bot's own `src`, and is handed to `container.stores.registerPath` before the bot loads.
+ */
+export interface PiecesDirRegistration {
+	/** The module that registered it. */
+	readonly module: string;
+	/** An absolute path. */
+	readonly path: string;
+}
+
 /** A module that was installed. */
 export interface InstalledModule {
 	readonly name: string;
@@ -40,10 +51,12 @@ export interface InstalledModule {
 export interface ModulesRuntime {
 	readonly modules: readonly InstalledModule[];
 	readonly plugins: readonly RuntimePluginRegistration[];
+	/** Directories of pieces added by `ctx.addPiecesDir`. */
+	readonly piecesDirs: readonly PiecesDirRegistration[];
 	/** Packages added to `imports.presets` by `ctx.addImports`. */
 	readonly imports: readonly string[];
 	/** The `meta.configKey` of every installed module that declares one: the top-level `stars.config` keys they own. */
 	readonly configKeys: readonly string[];
 }
 
-export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({ modules: [], plugins: [], imports: [], configKeys: [] });
+export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({ modules: [], plugins: [], piecesDirs: [], imports: [], configKeys: [] });

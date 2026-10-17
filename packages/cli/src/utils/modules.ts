@@ -68,7 +68,7 @@ export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic |
 	if (!needsPreload(config)) return null;
 	return cliDiagnostics.MODULES_PRELOAD_REQUIRED({
 		tool: config.build.tool,
-		plugins: [...new Set(config.runtime.plugins.map((plugin) => plugin.module))].join(', ')
+		modules: [...new Set([...config.runtime.plugins, ...config.runtime.piecesDirs].map((registration) => registration.module))].join(', ')
 	});
 }
 
@@ -102,9 +102,9 @@ export function unregisteredPluginsWarning(config: ResolvedStarsConfig): Diagnos
 	return plugins.length === 0 ? null : cliDiagnostics.PLUGINS_NOT_REGISTERED({ plugins: plugins.join(', ') });
 }
 
-/** A build tool the entry transform cannot reach, with runtime plugins to register: they need a `node --import` preload. */
+/** A build tool the entry transform cannot reach, with runtime plugins or pieces to register: they need a `node --import` preload. */
 function needsPreload(config: ResolvedStarsConfig): boolean {
-	return UNTRANSFORMED_TOOLS.has(config.build.tool) && (config.runtime?.plugins.length ?? 0) > 0;
+	return UNTRANSFORMED_TOOLS.has(config.build.tool) && ((config.runtime?.plugins.length ?? 0) > 0 || (config.runtime?.piecesDirs.length ?? 0) > 0);
 }
 
 export interface ModulesPreloadResult {
@@ -130,7 +130,10 @@ export async function prepareModulesPreload(config: ResolvedStarsConfig, check =
 	const path = join(directory, 'modules.mjs');
 	const withEnv = config.env?.enabled === true;
 	// An absolute path is a `file:` URL in the import, like in `moduleImportArgs`: Node rejects a Windows path there.
-	const plugins = modulesModuleSource(config.runtime.plugins, { resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from) });
+	const plugins = modulesModuleSource(config.runtime.plugins, {
+		piecesDirs: config.runtime.piecesDirs,
+		resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from)
+	});
 	const files = [
 		{ path, content: withEnv ? `import "./env.mjs";\n${plugins}` : plugins },
 		...(withEnv ? [{ path: join(directory, 'env.mjs'), content: envModuleSource(config.env.options) }] : [])
