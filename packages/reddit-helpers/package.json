@@ -52,7 +52,7 @@
 		"@sapphire/utilities": "^3.18.2",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/safe-fetch": "workspace:^",
-		"he": "^1.2.0"
+		"he": "^2.0.0"
 	},
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
