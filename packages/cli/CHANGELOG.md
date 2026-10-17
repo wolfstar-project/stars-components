@@ -1,5 +1,15 @@
 # @wolfstar/cli
 
+## 2.9.0
+
+### Minor Changes
+
+- [#329](https://github.com/wolfstar-project/stars-components/pull/329) [`5c5bdec`](https://github.com/wolfstar-project/stars-components/commit/5c5bdeca2b8a2f6d59960aa543da2637cc1151a4) - `stars codegen --only <i18n|commands>` runs a single generator (repeat the flag or comma-separate it for several), so a CI job can check the i18next types, which only read the locale files, without the bot's secrets or a build. Naming a generator that is off in `stars.config` fails with `CODEGEN_GENERATOR_DISABLED` instead of passing without checking anything. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#328](https://github.com/wolfstar-project/stars-components/pull/328) [`6a341a9`](https://github.com/wolfstar-project/stars-components/commit/6a341a9468229c7b6a68a829310fdbc389875be6) - `stars dev --tunnel` no longer fails on every run when the `cloudflared` binary `untun` downloaded is broken (a download that stopped half way, or a file without the execute bit). The CLI now deletes that file from `untun`'s download directory, logs a warning and opens the tunnel again, once per run. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.8.0
 
 ### Minor Changes
