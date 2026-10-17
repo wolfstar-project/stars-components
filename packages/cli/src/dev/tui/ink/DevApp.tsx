@@ -1,4 +1,4 @@
-import { Box, useInput, useWindowSize } from 'ink';
+import { Box, useApp, useInput, useWindowSize } from 'ink';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DevService } from '../../dev-service.js';
 import { Dashboard } from './components/Dashboard.js';
@@ -67,6 +67,7 @@ export function resolveLayout(layout: DevLayout | 'auto', columns: number, rows:
 export function DevApp(props: DevAppProps) {
 	const { service, color, theme, reducedMotion, layout = 'auto', filter, onQuit, onViewChange, onCopy, onThemeSave, mouse, onMouseChange } = props;
 	const { columns, rows } = useWindowSize();
+	const { suspendTerminal } = useApp();
 	const [overlay, setOverlay] = useState<Overlay | null>(null);
 	const [chosen, setChosen] = useState(layout);
 	const [confirmQuit, setConfirmQuit] = useState(false);
@@ -91,19 +92,22 @@ export function DevApp(props: DevAppProps) {
 	// dashboard's threshold is only seen after the fact, so it switches from the effect and paints once more.
 	const fullScreen = overlay !== null || base === 'dashboard';
 	const shown = useRef(fullScreen);
+	// Ink repaints only the lines that changed, so a frame drawn into the other buffer has to start from a full redraw:
+	// suspending erases the old frame, lets the buffer switch happen, then forgets what was on screen.
+	const switchView = useCallback((next: boolean) => void suspendTerminal(() => onViewChange(next)), [suspendTerminal, onViewChange]);
 	const show = (nextOverlay: Overlay | null, nextChosen: DevLayout | 'auto' = chosen) => {
 		const next = nextOverlay !== null || resolveLayout(nextChosen, columns, rows) === 'dashboard';
 		shown.current = next;
-		onViewChange(next);
+		switchView(next);
 		setOverlay(nextOverlay);
 		setChosen(nextChosen);
 	};
 	useEffect(() => {
 		if (shown.current === fullScreen) return;
 		shown.current = fullScreen;
-		onViewChange(fullScreen);
+		switchView(fullScreen);
 		repaint((count) => count + 1);
-	}, [fullScreen, onViewChange]);
+	}, [fullScreen, switchView]);
 
 	// The overlays and the panel keep the terminal's own wheel and text selection.
 	const takesMouse = base === 'dashboard' && overlay === null;

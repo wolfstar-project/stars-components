@@ -367,6 +367,22 @@ describe('renderers', () => {
 			).toBe(true);
 		});
 
+		test('repaints only what changed while a build runs, instead of the whole screen on every tick', async () => {
+			await dashboard({ reducedMotion: false });
+			for (let index = 0; index < 30; index++) service.log('app', 'info', `line ${index} of the log`);
+			await waitFor(() => stdout.screen().includes('line 29 of the log'));
+			await wait(100);
+			// What painting the screen once costs, the first frames included.
+			const fullPaint = stdout.output.length;
+
+			const mark = stdout.output.length;
+			service.builder.emit('start');
+			await wait(700);
+
+			// The clock and the spinner tick about eight times a second, and each tick used to write the screen again.
+			expect(stdout.output.length - mark).toBeLessThan(fullPaint / 2);
+		});
+
 		test('reports the running state and the ready line once the bot is up', async () => {
 			await dashboard();
 			expect(stdout.screen()).toContain('starting');
