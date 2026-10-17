@@ -106,6 +106,24 @@ describe('stars modules', () => {
 		]);
 	});
 
+	test('a relative locales directory fails the load, and the diagnostic says how to fix it', async () => {
+		fixture = await createFixture({
+			'node_modules/bad-locales/package.json': JSON.stringify({
+				name: 'bad-locales',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/bad-locales/index.js':
+				"export default { meta: { name: 'bad-locales' }, setup: (_options, ctx) => ctx.addLocales('./locales') };",
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['bad-locales'] };"
+		});
+
+		const error = (await loadProject({ cwd: fixture.root, env: {} }).catch((error: unknown) => error)) as Diagnostic;
+		expect(error).toMatchObject({ code: 'MODULE_FAILED' });
+		expect(error.fix).toContain('<language>/<namespace>.json');
+	});
+
 	test('a relative pieces directory fails the load', async () => {
 		fixture = await createFixture(piecesModule("'./pieces'"));
 
@@ -364,6 +382,31 @@ describe('stars modules', () => {
 			const content = await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8');
 			expect(content).toContain('import __stars_hook_0 from "hook-only/hooks";');
 			expect(content).toContain('__stars_hooks("hook-only", { "preLoad": __stars_hook_0 });');
+		});
+
+		test('a module that only adds locales needs the preload too, and .stars/modules.mjs registers the locales plugin', async () => {
+			fixture = await createFixture({
+				...NO_BUILD,
+				'node_modules/locales-only/package.json': JSON.stringify({
+					name: 'locales-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/locales-only/index.js':
+					"export default { meta: { name: 'locales-only' }, setup: (_options, ctx) => ctx.addLocales(new URL('./locales', import.meta.url)) };",
+				'node_modules/locales-only/locales/en-US/misc.json': '{}',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['locales-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const warning = modulesPreloadWarning(config);
+			expect(warning?.code).toBe('MODULES_PRELOAD_REQUIRED');
+			expect(warning?.message).toContain('locales-only');
+
+			expect((await prepareProject(config)).modules?.status).toBe('written');
+			const content = await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8');
+			expect(content).toContain('import { Client, getRootData } from');
+			expect(content).toContain('Client.use({ name: "stars:locales", enforce: "pre"');
 		});
 
 		test('reportWarnings prints the preload warning for build and prepare, not for dev', async () => {

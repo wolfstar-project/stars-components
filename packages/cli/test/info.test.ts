@@ -114,14 +114,19 @@ describe('stars info', () => {
 			'node_modules/fake-module/package.json': JSON.stringify({ name: 'fake-module', type: 'module', exports: './index.js' }),
 			'node_modules/fake-module/index.js': [
 				"export default { meta: { name: 'fake-module' }, hooks: { 'client:postListen': { from: 'fake-module/hooks', export: 'listen' } },",
-				"setup: (_options, ctx) => ctx.addPiecesDir(new URL('./pieces', import.meta.url)) };"
+				"setup: (_options, ctx) => { ctx.addPiecesDir(new URL('./pieces', import.meta.url)); ctx.addLocales(new URL('./locales', import.meta.url)); } };"
 			].join(' '),
+			'node_modules/fake-module/locales/en-US/commands/shared.json': '{}',
 			'stars.config.mjs': "export default { modules: ['fake-module'] };"
 		});
 		const output = await capture((stdout) => runInfo({ cwd: fixture.root, json: true, stdout }));
 		const info = JSON.parse(output) as ProjectInfo;
 
 		expect(info.modules.clientHooks).toEqual(['fake-module → client:postListen from fake-module/hooks']);
+		expect(info.modules.locales).toEqual([`fake-module → ${join(fixture.root, 'node_modules/fake-module/locales')} (commands/shared)`]);
+		const text = await capture((stdout) => runInfo({ cwd: fixture.root, stdout }));
+		expect(text).toContain('locales');
+		expect(text).toContain('commands/shared');
 		expect(info.modules.piecesDirs).toEqual([`fake-module → ${join(fixture.root, 'node_modules/fake-module/pieces')}`]);
 	});
 
