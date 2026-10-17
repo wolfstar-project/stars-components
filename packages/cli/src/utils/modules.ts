@@ -68,7 +68,7 @@ export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic |
 	if (!needsPreload(config)) return null;
 	return cliDiagnostics.MODULES_PRELOAD_REQUIRED({
 		tool: config.build.tool,
-		plugins: [...new Set([...config.runtime.plugins, ...config.runtime.piecesDirs].map((registration) => registration.module))].join(', ')
+		modules: [...new Set([...config.runtime.plugins, ...config.runtime.piecesDirs].map((registration) => registration.module))].join(', ')
 	});
 }
 

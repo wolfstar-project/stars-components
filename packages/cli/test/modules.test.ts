@@ -283,6 +283,26 @@ describe('stars modules', () => {
 			expect(config.warnings).toEqual([]);
 		});
 
+		test('the preload warning also names a module that only adds a pieces directory', async () => {
+			fixture = await createFixture({
+				'node_modules/pieces-only/package.json': JSON.stringify({
+					name: 'pieces-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/pieces-only/index.js':
+					"export default { meta: { name: 'pieces-only' }, setup: (_options, ctx) => ctx.addPiecesDir(new URL('./pieces', import.meta.url)) };",
+				'src/main.js': '',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['pieces-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const warning = modulesPreloadWarning(config);
+			expect(warning?.code).toBe('MODULES_PRELOAD_REQUIRED');
+			expect(warning?.message).toContain('plugins and pieces directories');
+			expect(warning?.message).toContain('pieces-only');
+		});
+
 		test('reportWarnings prints the preload warning for build and prepare, not for dev', async () => {
 			fixture = await createFixture(NO_BUILD);
 			const { config } = await loadProject({ cwd: fixture.root, env: {} });

@@ -123,9 +123,9 @@ export const cliDiagnostics = defineDiagnostics({
 			}
 		},
 		MODULES_PRELOAD_REQUIRED: {
-			why: (p: { tool: string; plugins: string }) =>
-				`The runtime plugins added by modules (${p.plugins}) are registered through \`node --import\` with build.tool "${p.tool}", which only \`stars dev\` does for you`,
-			fix: (_p: { tool: string; plugins: string }) =>
+			why: (p: { tool: string; modules: string }) =>
+				`The runtime plugins and pieces directories added by modules (${p.modules}) are registered through \`node --import\` with build.tool "${p.tool}", which only \`stars dev\` does for you`,
+			fix: (_p: { tool: string; modules: string }) =>
 				'Start the production bot with `node --import ./.stars/modules.mjs <entry>`; `stars prepare` (and `stars build`) writes that file.'
 		},
 		VARLOCK_LOADER_IMPLICIT: {
