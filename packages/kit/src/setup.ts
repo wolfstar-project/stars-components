@@ -331,25 +331,24 @@ function toLocales(moduleName: string, directory: string | URL): LocalesRegistra
 		);
 	}
 
-	let languages: string[];
+	const namespaces = new Set<string>();
 	try {
-		languages = readdirSync(path, { withFileTypes: true })
+		const languages = readdirSync(path, { withFileTypes: true })
 			.filter((entry) => entry.isDirectory())
 			.map((entry) => entry.name);
+		for (const language of languages) {
+			for (const file of listJson(join(path, language))) {
+				namespaces.add(relative(join(path, language), file).slice(0, -'.json'.length).split(sep).join('/'));
+			}
+		}
 	} catch (error) {
+		// Any read failure below the directory (an unreadable language folder, a dangling symlink) is reported the same way.
 		throw new ModuleError(
 			'MODULE_LOCALES_INVALID',
 			moduleName,
 			`The locales directory "${path}" added by "${moduleName}" cannot be read: ${message(error)}`,
 			error
 		);
-	}
-
-	const namespaces = new Set<string>();
-	for (const language of languages) {
-		for (const file of listJson(join(path, language))) {
-			namespaces.add(relative(join(path, language), file).slice(0, -'.json'.length).split(sep).join('/'));
-		}
 	}
 
 	return { module: moduleName, path, namespaces: [...namespaces].sort() };

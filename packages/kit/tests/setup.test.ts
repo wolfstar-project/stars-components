@@ -1,5 +1,5 @@
 import type { ResolvedStarsConfig, StarsHookName } from '@wolfstar/schema';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -286,6 +286,18 @@ describe('setupModules', () => {
 			);
 
 			expect((await result).locales).toEqual([{ module: 'i18n', path: directory, namespaces: ['commands/shared', 'extra', 'misc'] }]);
+		});
+
+		test('GIVEN a language folder that cannot be read below the directory THEN it throws MODULE_LOCALES_INVALID', async () => {
+			// A dangling symlink makes `statSync` throw inside the namespace walk. Symlinks need a privilege on some systems.
+			try {
+				await symlink(join(directory, 'missing.json'), join(directory, 'en-US', 'dangling.json'));
+			} catch {
+				return;
+			}
+
+			const { result } = run([defineModule({ meta: { name: 'bad' }, setup: (_options, ctx) => ctx.addLocales(directory) })], [['bad']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_LOCALES_INVALID', moduleName: 'bad' });
 		});
 
 		test.each([
