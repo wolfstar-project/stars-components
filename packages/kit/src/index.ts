@@ -4,6 +4,7 @@ export { mergeOptions } from './options.js';
 export { setupModules } from './setup.js';
 export type { SetupModulesOptions } from './setup.js';
 export type {
+	ModuleClientHookSource,
 	ModuleContext,
 	ModuleErrorCode,
 	ModuleHookHost,
@@ -14,4 +15,4 @@ export type {
 	ModuleVersions,
 	StarsModule
 } from './types.js';
-export type { InstalledModule, ModulesRuntime, PiecesDirRegistration, RuntimePluginRegistration } from '@wolfstar/schema';
+export type { ClientHookRegistration, InstalledModule, ModulesRuntime, PiecesDirRegistration, RuntimePluginRegistration } from '@wolfstar/schema';

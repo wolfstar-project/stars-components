@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import {
 	MODULES_ONLY_VERSION,
+	type ClientHookRegistration,
 	type PiecesDirRegistration,
 	type ResolvedStarsConfig,
 	type RuntimePluginRegistration,
@@ -51,17 +52,20 @@ export interface ModulesModuleSourceOptions {
 	framework?: string;
 	/** The directories of pieces modules added with `ctx.addPiecesDir`, handed to `container.stores.registerPath`. */
 	piecesDirs?: readonly PiecesDirRegistration[];
+	/** The runtime hooks modules declared (`hooks['client:*']`, `ctx.addClientHook`): one plugin per module carries them. */
+	clientHooks?: readonly ClientHookRegistration[];
 	/** Maps a plugin's `from` to what the generated `import` uses. */
 	resolve?: (from: string) => string;
 }
 
 /**
- * The source of the modules module: every pieces directory is registered with the stores, and every runtime plugin is imported from its `from` and handed to `Client.use`. A
- * function export is a factory called with the plugin's options (`definePlugin((options) => ({ … }))`), anything else
+ * The source of the modules module: every pieces directory is registered with the stores, every runtime plugin is
+ * imported from its `from` and handed to `Client.use`, and the runtime hooks of a module go on one plugin named after
+ * it. A function export is a factory called with the plugin's options (`definePlugin((options) => ({ … }))`), anything else
  * is the plugin itself (see {@link REGISTER_PLUGIN_SOURCE}).
  */
 export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[], options: ModulesModuleSourceOptions = {}): string {
-	const { framework = '@wolfstar/http-framework', piecesDirs = [], resolve: resolveFrom = (from: string) => from } = options;
+	const { framework = '@wolfstar/http-framework', piecesDirs = [], clientHooks = [], resolve: resolveFrom = (from: string) => from } = options;
 	const lines = [`import { ${piecesDirs.length > 0 ? 'Client, container' : 'Client'} } from ${JSON.stringify(framework)};`];
 	for (const [index, plugin] of plugins.entries()) {
 		const from = JSON.stringify(resolveFrom(plugin.from));
@@ -71,10 +75,28 @@ export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[
 		);
 	}
 
+	for (const [index, hook] of clientHooks.entries()) {
+		const from = JSON.stringify(resolveFrom(hook.from));
+		const local = `__stars_hook_${index}`;
+		lines.push(
+			hook.export === 'default' ? `import ${local} from ${from};` : `import { ${JSON.stringify(hook.export)} as ${local} } from ${from};`
+		);
+	}
+
 	for (const { path } of piecesDirs) lines.push(`container.stores.registerPath(${JSON.stringify(path)});`);
 	lines.push(REGISTER_PLUGIN_SOURCE);
 	for (const [index, plugin] of plugins.entries()) {
 		lines.push(`__stars_register(__stars_plugin_${index}, ${plugin.options === undefined ? 'undefined' : JSON.stringify(plugin.options)});`);
+	}
+
+	if (clientHooks.length > 0) {
+		lines.push('const __stars_hooks = (name, hooks) => Client.use({ name, ...hooks });');
+		const byModule = new Map<string, string[]>();
+		for (const [index, hook] of clientHooks.entries()) {
+			byModule.set(hook.module, [...(byModule.get(hook.module) ?? []), `${JSON.stringify(hook.hook)}: __stars_hook_${index}`]);
+		}
+
+		for (const [module, entries] of byModule) lines.push(`__stars_hooks(${JSON.stringify(module)}, { ${entries.join(', ')} });`);
 	}
 
 	return `${lines.join('\n')}\n`;
@@ -107,7 +129,8 @@ export function pluginRegistrations(config: ResolvedStarsConfig): object {
 	const env = config.env?.enabled ? config.env.options : null;
 	const runtimePlugins = config.runtime?.plugins ?? [];
 	const piecesDirs = config.runtime?.piecesDirs ?? [];
-	const hasModules = runtimePlugins.length > 0 || piecesDirs.length > 0;
+	const clientHooks = config.runtime?.clientHooks ?? [];
+	const hasModules = runtimePlugins.length > 0 || piecesDirs.length > 0 || clientHooks.length > 0;
 
 	return {
 		name: 'stars:plugin-registrations',
@@ -117,7 +140,7 @@ export function pluginRegistrations(config: ResolvedStarsConfig): object {
 		},
 		load(id: string) {
 			if (env !== null && id === STARS_ENV_MODULE) return envModuleSource(env);
-			return hasModules && id === STARS_MODULES_MODULE ? modulesModuleSource(runtimePlugins, { piecesDirs }) : null;
+			return hasModules && id === STARS_MODULES_MODULE ? modulesModuleSource(runtimePlugins, { piecesDirs, clientHooks }) : null;
 		},
 		transform(code: string, id: string) {
 			if ((plugins.length === 0 && env === null && !hasModules) || cleanId(id) !== entry) return null;
