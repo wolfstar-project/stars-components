@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { loadAutoImportsModule } from '../utils/framework-auto-imports.js';
 import { formatError } from '../utils/errors.js';
 import type { StarsHookable } from '../utils/hooks.js';
-import { modulesPreloadWarning, prepareModulesPreload } from '../utils/modules.js';
+import { modulesPreloadWarning, prepareModulesPreload, unregisteredPluginsWarning } from '../utils/modules.js';
 import { findLegacyRootTsconfig, prepareTsconfig } from '../utils/tsconfig.js';
 import { varlockWarning } from '../utils/varlock.js';
 
@@ -64,6 +64,9 @@ export async function reportWarnings(
 
 	const varlock = varlockWarning(config);
 	if (varlock) write(await formatError(varlock));
+
+	const unregistered = unregisteredPluginsWarning(config);
+	if (unregistered) write(await formatError(unregistered));
 
 	const preload = options.production === false ? null : modulesPreloadWarning(config);
 	if (preload) write(await formatError(preload));

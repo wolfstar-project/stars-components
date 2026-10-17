@@ -1,6 +1,6 @@
 import { ModuleError, setupModules } from '@wolfstar/kit';
-import { assertModuleOptionsClaimed, type ResolvedStarsConfig } from '@wolfstar/schema';
-import { envModuleSource, modulesModuleSource } from '@wolfstar/vite-server/internal';
+import { MODULES_ONLY_VERSION, assertModuleOptionsClaimed, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { envModuleSource, findUnlistedPlugins, modulesModuleSource } from '@wolfstar/vite-server/internal';
 import { resolve as resolveModule } from 'mlly';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { Diagnostic } from 'nostics';
@@ -70,6 +70,36 @@ export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic |
 		tool: config.build.tool,
 		modules: [...new Set([...config.runtime.plugins, ...config.runtime.piecesDirs].map((registration) => registration.module))].join(', ')
 	});
+}
+
+/** Whether only the modules register (`future.compatibilityVersion` 7 on): a plugin is not activated by its name. */
+export function registersModulesOnly(config: ResolvedStarsConfig): boolean {
+	return config.future.compatibilityVersion >= MODULES_ONLY_VERSION;
+}
+
+/**
+ * The installed `@wolfstar/plugin-*` packages that are not modules: activated by their name (`/register`) before
+ * {@link MODULES_ONLY_VERSION}, not at all from it. Only a build whose entry is transformed (`tsdown`, `vite`, Nitro)
+ * gets the `/register` import: `tsc` and `none` never did, so nothing is reported for them. Empty as well when
+ * `package.json` cannot be read.
+ */
+export function unlistedPlugins(config: ResolvedStarsConfig): string[] {
+	if (UNTRANSFORMED_TOOLS.has(config.build.tool)) return [];
+	try {
+		return findUnlistedPlugins(config);
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * The warning for a project on {@link MODULES_ONLY_VERSION} that has plugins installed which are not modules: nothing
+ * registers them any more, so they silently never run. `null` before that version, where they still register by name.
+ */
+export function unregisteredPluginsWarning(config: ResolvedStarsConfig): Diagnostic | null {
+	if (!registersModulesOnly(config)) return null;
+	const plugins = unlistedPlugins(config);
+	return plugins.length === 0 ? null : cliDiagnostics.PLUGINS_NOT_REGISTERED({ plugins: plugins.join(', ') });
 }
 
 /** A build tool the entry transform cannot reach, with runtime plugins or pieces to register: they need a `node --import` preload. */

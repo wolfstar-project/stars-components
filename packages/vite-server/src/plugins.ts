@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { PiecesDirRegistration, ResolvedStarsConfig, RuntimePluginRegistration, StarsEnvSetupOptions } from '@wolfstar/schema';
+import {
+	MODULES_ONLY_VERSION,
+	type PiecesDirRegistration,
+	type ResolvedStarsConfig,
+	type RuntimePluginRegistration,
+	type StarsEnvSetupOptions
+} from '@wolfstar/schema';
 
 interface PackageJson {
 	dependencies?: Record<string, string>;
@@ -75,18 +81,27 @@ export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[
 }
 
 /**
- * Activates installed WolfStar plugins without making applications maintain a list
- * of side-effect-only plugin registration imports in their entry point, and registers the project's environment
- * ahead of them.
+ * The `@wolfstar/plugin-*` dependencies of the project that are not modules, with a `./register` entrypoint (or none
+ * known): the ones activated by their name until {@link MODULES_ONLY_VERSION}. A package that is a module — listed in
+ * `modules`, or installed by one that is — was installed because the project says so, and is left out so its plugins
+ * are not registered twice.
  */
-export function pluginRegistrations(config: ResolvedStarsConfig): object {
-	// A package that is a module — listed in `modules`, or installed by one that is — was installed because the project
-	// says so: it is not also activated by its name, which would register its plugins twice.
+export function findUnlistedPlugins(config: ResolvedStarsConfig): string[] {
 	const listed = new Set([
 		...(config.modules ?? []).map((module) => module.specifier),
 		...(config.runtime?.modules ?? []).map((module) => module.name)
 	]);
-	const plugins = findPluginDependencies(config.root).filter((name) => !listed.has(name));
+	return findPluginDependencies(config.root).filter((name) => !listed.has(name));
+}
+
+/**
+ * Activates installed WolfStar plugins without making applications maintain a list
+ * of side-effect-only plugin registration imports in their entry point, and registers the project's environment
+ * ahead of them. From {@link MODULES_ONLY_VERSION} on only the modules register: a plugin is no longer activated by its name.
+ */
+export function pluginRegistrations(config: ResolvedStarsConfig): object {
+	const modulesOnly = (config.future?.compatibilityVersion ?? 0) >= MODULES_ONLY_VERSION;
+	const plugins = modulesOnly ? [] : findUnlistedPlugins(config);
 	const entry = resolve(config.entry);
 	// Optional: hosts and tests may hand over a configuration resolved before `env` existed.
 	const env = config.env?.enabled ? config.env.options : null;
