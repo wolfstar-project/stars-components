@@ -36,7 +36,11 @@ The ecosystem also includes a project scaffolder, development CLI, interaction t
 ## Quick Start
 
 <p align="center">
-  <img src="./.github/media/scaffolder-demo.gif" alt="Scaffold a Discord application and run it with Stars CLI" width="800" />
+  <img src="./.github/media/create-http-framework.gif" alt="Scaffold a Discord application with pnpm create @wolfstar/http-framework" width="720" />
+</p>
+
+<p align="center">
+  <img src="./.github/media/stars-dev.gif" alt="Run it with pnpm dev: the Stars CLI dashboard rebuilds and restarts the bot on every change" width="720" />
 </p>
 
 ### Prerequisites

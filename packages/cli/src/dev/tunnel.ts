@@ -25,6 +25,8 @@ export interface TunnelOptions {
 	startTunnel?: typeof startTunnel;
 	/** Override for tests: how the `ngrok` provider loads `@ngrok/ngrok`. */
 	loadNgrok?: NgrokLoader;
+	/** Override for tests: the directory `untun` downloads `cloudflared` to, the only place a broken binary is removed from. */
+	binDirectory?: string;
 }
 
 /**
@@ -46,7 +48,10 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		options: TunnelOptions = {}
 	) {
 		super();
-		this.#providers = { cloudflared: new CloudflaredProvider(options.startTunnel), ngrok: new NgrokProvider(options.loadNgrok) };
+		this.#providers = {
+			cloudflared: new CloudflaredProvider(options.startTunnel, options.binDirectory),
+			ngrok: new NgrokProvider(options.loadNgrok)
+		};
 	}
 
 	public get state(): TunnelState {
@@ -100,7 +105,7 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		return tunnel.url;
 	}
 
-	async #openQuickTunnel(tunnel: QuickTunnelConfig): Promise<string | null> {
+	async #openQuickTunnel(tunnel: QuickTunnelConfig, repaired = false): Promise<string | null> {
 		const target = this.config.dev.url;
 		if (!target) {
 			this.emit('log', 'error', 'A quick tunnel needs `dev.url` to know what to forward to');
@@ -132,6 +137,16 @@ export class Tunnel extends EventEmitter<TunnelEvents> {
 		} catch (error) {
 			// Closing a tunnel can make its process exit, which a provider may report as a failure: that is not one.
 			if (!this.#wanted) return null;
+
+			// Once per run, so a machine where the file keeps breaking (a `noexec` temporary directory) does not loop.
+			const removed = repaired ? null : await provider.repair?.(error);
+			if (removed) {
+				this.#tunnel = null;
+				if (!this.#wanted) return null;
+				this.emit('log', 'warn', `The ${provider.name} binary at ${removed} is broken, deleting it and downloading it again`);
+				return this.#openQuickTunnel(tunnel, true);
+			}
+
 			this.emit('log', 'error', `${provider.name} failed: ${describeError(error)}`);
 			this.#setState('failed', null);
 			return null;

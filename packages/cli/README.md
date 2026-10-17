@@ -9,6 +9,10 @@
 
 </div>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wolfstar-project/stars-components/main/.github/media/stars-dev.gif" alt="pnpm dev running stars dev: build, bot start and restart on change in the dashboard" width="720" />
+</p>
+
 ## Description
 
 `stars` is a small, fast CLI that owns the developer workflow of a bot built with `@wolfstar/http-framework`. Like
@@ -75,7 +79,7 @@ console.log(config.entry, config.build.output);
 stars dev [--no-tui] [--tunnel|--no-tunnel] [--no-mouse] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
 stars build [--config <file>] [--cwd <dir>]
 stars info [--json] [--config <file>] [--cwd <dir>]
-stars codegen [--check] [--json] [--config <file>] [--cwd <dir>]
+stars codegen [--only <i18n|commands>] [--check] [--json] [--config <file>] [--cwd <dir>]
 stars prepare [--check] [--json] [--config <file>] [--cwd <dir>]
 stars typecheck [--config <file>] [--cwd <dir>]
 stars commands [list|clean|diff|deploy] [--guild <id>] [--name <name>] [--check] [--yes] [--json]
@@ -296,7 +300,8 @@ run without `--yes` outside a terminal, or with `--json`.
 ### `stars codegen`
 
 Runs the code generators `codegen` in `stars.config` enables, writing their files (`--check` fails with
-`CODEGEN_OUTDATED` instead when one is stale, `--json` prints `{ check, results }`):
+`CODEGEN_OUTDATED` instead when one is stale, `--json` prints `{ check, results }`, `--only i18n` or `--only commands`
+runs just that generator, repeated or comma-separated for both):
 
 - `codegen.i18n` types the i18next resources with `@wolfstar/i18next-type-generator`. It is on by default when
   `src/locales/en-US` exists.
@@ -330,6 +335,17 @@ that loads its pieces, reports its registry and exits before it listens or talks
 ```sh
 DISCORD_CLIENT_ID=1 DISCORD_TOKEN=x DISCORD_PUBLIC_KEY=0 stars codegen --check
 ```
+
+`--only` lets a CI job run the part it can. The i18n types only read the locale files, so they can be checked without the
+bot's secrets or a build, while the commands need the built bot and whatever it reads before `client.load()`:
+
+```sh
+stars codegen --check --only i18n
+stars build && DISCORD_CLIENT_ID=1 DISCORD_TOKEN=x DISCORD_PUBLIC_KEY=0 stars codegen --check --only commands
+```
+
+A generator named in `--only` has to be enabled: `--only commands` with `codegen.commands` off fails with
+`CODEGEN_GENERATOR_DISABLED` instead of passing without checking anything.
 
 It is not part of `stars dev` or `stars prepare` (which has no build to read from yet): run `stars codegen` after
 changing an option, and `stars codegen --check` in CI to keep the file up to date. A path registered more than once
