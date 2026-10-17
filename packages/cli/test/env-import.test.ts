@@ -63,6 +63,7 @@ const FAKE_RUNTIME = {
 	}),
 	'node_modules/@wolfstar/http-framework/index.js':
 		'export const Client = { use(plugin) { (globalThis.__starsPlugins ??= []).push(plugin); } };\n' +
+		'export const getRootData = () => ({ root: "/bot" });\n' +
 		'export const container = { stores: { registerPath(path) { (globalThis.__starsPaths ??= []).push(path); } } };',
 	'node_modules/fake-plugin/package.json': JSON.stringify({
 		name: 'fake-plugin',
@@ -74,8 +75,19 @@ const FAKE_RUNTIME = {
 	'src/paths.js': 'console.log(JSON.stringify(globalThis.__starsPaths));'
 };
 
-function withPlugins(root: string, tool: string, plugins: object[], piecesDirs: object[] = [], clientHooks: object[] = []): ResolvedStarsConfig {
-	return { root, build: { tool }, runtime: { modules: [], imports: [], plugins, piecesDirs, clientHooks } } as unknown as ResolvedStarsConfig;
+function withPlugins(
+	root: string,
+	tool: string,
+	plugins: object[],
+	piecesDirs: object[] = [],
+	clientHooks: object[] = [],
+	locales: object[] = []
+): ResolvedStarsConfig {
+	return {
+		root,
+		build: { tool },
+		runtime: { modules: [], imports: [], plugins, piecesDirs, clientHooks, locales }
+	} as unknown as ResolvedStarsConfig;
 }
 
 describe('moduleImportArgs', () => {
@@ -155,6 +167,36 @@ describe('moduleImportArgs', () => {
 			);
 		});
 		expect(JSON.parse(stdout)).toEqual(['fake', ['name', 'preLoad'], [['client', 'options']]]);
+	});
+
+	test('node merges the locales of a module into the i18n option, keeping the project languages', async () => {
+		await fixture.write(
+			'src/locales.js',
+			[
+				'const [plugin] = globalThis.__starsPlugins;',
+				'const options = { i18n: { backend: { paths: ["/custom/{{lng}}/{{ns}}.json"] }, i18next: (found) => ({ ns: ["configured"], found }) } };',
+				'plugin.preGenericsInitialization({}, options);',
+				'const { i18n } = options;',
+				'console.log(JSON.stringify({ name: plugin.name, enforce: plugin.enforce, paths: i18n.backend.paths, i18next: i18n.i18next(["found"], ["en-US"]) }));'
+			].join('\n')
+		);
+		const locales = [{ module: 'fake', path: join(fixture.root, 'locales'), namespaces: ['commands/shared'] }];
+		const args = moduleImportArgs(withPlugins(fixture.root, 'none', [], [], [], locales));
+
+		const stdout = await new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, [...args, join(fixture.root, 'src/locales.js')], { cwd: fixture.root }, (error, out) =>
+				error ? reject(error) : resolve(out)
+			);
+		});
+		const result = JSON.parse(stdout) as { name: string; enforce: string; paths: string[]; i18next: { ns: string[] } };
+		expect(result.name).toBe('stars:locales');
+		expect(result.enforce).toBe('pre');
+		expect(result.paths.map((path) => path.replaceAll('\\', '/'))).toEqual([
+			'/bot/languages/{{lng}}/{{ns}}.json',
+			'/custom/{{lng}}/{{ns}}.json',
+			`${join(fixture.root, 'locales').replaceAll('\\', '/')}/{{lng}}/{{ns}}.json`
+		]);
+		expect(result.i18next.ns).toEqual(['found', 'configured', 'commands/shared']);
 	});
 
 	test('a plugin that cannot be resolved fails with a DEPENDENCY_MISSING diagnostic', () => {

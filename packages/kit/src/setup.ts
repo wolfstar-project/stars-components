@@ -5,13 +5,15 @@ import {
 	type ClientHookName,
 	type ClientHookRegistration,
 	type InstalledModule,
+	type LocalesRegistration,
 	type ModulesRuntime,
 	type PiecesDirRegistration,
 	type ResolvedStarsConfig,
 	type RuntimePluginRegistration
 } from '@wolfstar/schema';
 import { satisfies } from 'semver';
-import { isAbsolute } from 'node:path';
+import { readdirSync, statSync } from 'node:fs';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ModuleError } from './errors.js';
 import { isPlainObject, mergeOptions } from './options.js';
@@ -50,6 +52,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 	const plugins: RuntimePluginRegistration[] = [];
 	const piecesDirs: PiecesDirRegistration[] = [];
 	const clientHooks: ClientHookRegistration[] = [];
+	const locales: LocalesRegistration[] = [];
 	const imports = new Set<string>();
 	/** `meta.configKey` -> the module that claimed it. */
 	const configKeys = new Map<string, string>();
@@ -126,6 +129,10 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 				const path = toPiecesDirectory(name, directory);
 				if (!piecesDirs.some((registered) => registered.path === path)) piecesDirs.push({ module: name, path });
 			},
+			addLocales: (directory) => {
+				const registration = toLocales(name, directory);
+				if (!locales.some((registered) => registered.path === registration.path)) locales.push(registration);
+			},
 			addClientHook: (hookName, hook) => addClientHook(hookName, hook),
 			addImports: (preset) => void imports.add(typeof preset === 'string' ? preset : preset.from),
 			hook: (hookName, callback) => hooks.hook(hookName, callback),
@@ -145,7 +152,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 
 	for (const entry of config.modules) await install(entry.specifier, entry.options as Record<string, unknown>);
 
-	return { modules, plugins, piecesDirs, clientHooks, imports: [...imports], configKeys: [...configKeys.keys()] };
+	return { modules, plugins, piecesDirs, locales, clientHooks, imports: [...imports], configKeys: [...configKeys.keys()] };
 }
 
 const KNOWN_HOOKS: ReadonlySet<string> = new Set(STARS_HOOK_NAMES);
@@ -311,6 +318,48 @@ function toPiecesDirectory(moduleName: string, directory: string | URL): string 
 	}
 
 	return path;
+}
+
+function toLocales(moduleName: string, directory: string | URL): LocalesRegistration {
+	const value = typeof directory === 'string' ? directory : directory.href;
+	const path = value.startsWith('file:') ? fileURLToPath(value) : value;
+	if (path === '' || !isAbsolute(path)) {
+		throw new ModuleError(
+			'MODULE_LOCALES_INVALID',
+			moduleName,
+			`The locales directory "${value}" added by "${moduleName}" must be an absolute path or a \`file:\` URL, e.g. \`new URL('./locales', import.meta.url)\`.`
+		);
+	}
+
+	const namespaces = new Set<string>();
+	try {
+		const languages = readdirSync(path, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name);
+		for (const language of languages) {
+			for (const file of listJson(join(path, language))) {
+				namespaces.add(relative(join(path, language), file).slice(0, -'.json'.length).split(sep).join('/'));
+			}
+		}
+	} catch (error) {
+		// Any read failure below the directory (an unreadable language folder, a dangling symlink) is reported the same way.
+		throw new ModuleError(
+			'MODULE_LOCALES_INVALID',
+			moduleName,
+			`The locales directory "${path}" added by "${moduleName}" cannot be read: ${message(error)}`,
+			error
+		);
+	}
+
+	return { module: moduleName, path, namespaces: [...namespaces].sort() };
+}
+
+function listJson(directory: string): string[] {
+	return readdirSync(directory).flatMap((name) => {
+		const entry = join(directory, name);
+		if (statSync(entry).isDirectory()) return listJson(entry);
+		return name.endsWith('.json') ? [entry] : [];
+	});
 }
 
 function isJsonSerialisable(value: unknown): boolean {

@@ -38,7 +38,7 @@ export interface ProjectInfo {
 	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
 	hooks: string[];
 	/** The installed modules, and the runtime plugins and pieces directories they registered (`module → export from package`). */
-	modules: { installed: string[]; plugins: string[]; piecesDirs: string[]; clientHooks: string[]; registeredByName: string[] };
+	modules: { installed: string[]; plugins: string[]; piecesDirs: string[]; locales: string[]; clientHooks: string[]; registeredByName: string[] };
 	/** Non-fatal configuration diagnostics, as `CODE: message`. */
 	warnings: string[];
 	/**
@@ -77,6 +77,7 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 			installed: (config.runtime?.modules ?? []).map((module) => module.name),
 			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`),
 			piecesDirs: (config.runtime?.piecesDirs ?? []).map((dir) => `${dir.module} → ${dir.path}`),
+			locales: (config.runtime?.locales ?? []).map((locales) => `${locales.module} → ${locales.path} (${locales.namespaces.join(', ')})`),
 			clientHooks: (config.runtime?.clientHooks ?? []).map((hook) => `${hook.module} → client:${hook.hook} from ${hook.from}`),
 			registeredByName: registersModulesOnly(config) ? [] : unlistedPlugins(config)
 		},
@@ -168,6 +169,7 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 			...(info.modules.registeredByName.length > 0 ? [row('by name', info.modules.registeredByName.join(', '))] : []),
 			...info.modules.plugins.map((plugin) => row('plugin', plugin)),
 			...info.modules.piecesDirs.map((dir) => row('pieces', dir)),
+			...info.modules.locales.map((locales) => row('locales', locales)),
 			...info.modules.clientHooks.map((hook) => row('hook', hook))
 		]),
 		section('Experimental', [

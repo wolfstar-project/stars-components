@@ -91,6 +91,16 @@ export interface ModuleContext {
 	 * earlier import): a folder for a store that a plugin registers later is ignored.
 	 */
 	addPiecesDir(directory: string | URL): void;
+	/**
+	 * Registers a directory of locales, `<lng>/<namespace>.json` (nested folders make namespaces such as
+	 * `commands/shared`), next to the project's own. Give an absolute path or a `file:` URL; the directory has to exist
+	 * when the module is set up, because its namespaces are read then. It is merged into the `i18n` option of the
+	 * client by a runtime plugin that runs before `@wolfstar/plugin-i18next` builds its handler, so the project's
+	 * languages directory is kept. It needs `@wolfstar/plugin-i18next` and a framework that exports `getRootData`. Like
+	 * `addPiecesDir`, the absolute path is written into the generated source and read at runtime, so a build that bundles
+	 * everything (Vite, Nitro) or one moved to another machine will not find the directory.
+	 */
+	addLocales(directory: string | URL): void;
 	/** Adds a package to the auto imports presets (`imports.presets`): all its exports become auto imports. */
 	addImports(preset: string | { from: string }): void;
 	/**
@@ -129,4 +139,5 @@ export type ModuleErrorCode =
 	| 'MODULE_SETUP_FAILED'
 	| 'MODULE_PLUGIN_INVALID'
 	| 'MODULE_PIECES_INVALID'
-	| 'MODULE_HOOK_INVALID';
+	| 'MODULE_HOOK_INVALID'
+	| 'MODULE_LOCALES_INVALID';

@@ -15,4 +15,11 @@ export type {
 	ModuleVersions,
 	StarsModule
 } from './types.js';
-export type { ClientHookRegistration, InstalledModule, ModulesRuntime, PiecesDirRegistration, RuntimePluginRegistration } from '@wolfstar/schema';
+export type {
+	ClientHookRegistration,
+	InstalledModule,
+	LocalesRegistration,
+	ModulesRuntime,
+	PiecesDirRegistration,
+	RuntimePluginRegistration
+} from '@wolfstar/schema';

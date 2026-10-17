@@ -86,6 +86,13 @@ reads its key as well, with the options passed to `installModule` taking the inl
   specifier, an absolute path or a `file:` URL (a relative path is rejected: it would resolve differently in each
   build tool); the `export` (default `'default'`) is the plugin or, when it is a function, a factory called with
   `options`, which must be JSON-serialisable. A legacy `Plugin` class is registered as it is, never called.
+- `ctx.addLocales(directory)` registers a directory of locales laid out as `<language>/<namespace>.json` (nested
+  folders make namespaces such as `commands/shared`). Give an absolute path or a `file:` URL to a directory that exists
+  when the module is set up, because its namespaces are read then. A generated runtime plugin merges it into the
+  client's `i18n` option before `@wolfstar/plugin-i18next` builds its handler, and keeps the project's own languages
+  directory. It needs a framework that exports `getRootData`. Like `addPiecesDir`, the absolute path is written into
+  the generated source and read at runtime, so a build that bundles everything (Vite, Nitro) or one moved to another
+  machine will not find the directory.
 - `ctx.addClientHook(name, source)` (or `hooks: { 'client:preLoad': source }`) runs a function in the bot at a point of
   the client's lifecycle: `client:preGenericsInitialization`, `client:preInitialization`, `client:postInitialization`,
   `client:preLoad` or `client:postListen`. Like a plugin it is given by source (a specifier, an absolute path or a `file:`

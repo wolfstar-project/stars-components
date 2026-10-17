@@ -7,6 +7,7 @@ export {
 	Store,
 	StoreRegistry,
 	container,
+	getRootData,
 	type AliasPieceOptions,
 	type LoaderPieceContext,
 	type PieceContext,

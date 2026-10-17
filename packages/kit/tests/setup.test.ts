@@ -1,5 +1,7 @@
 import type { ResolvedStarsConfig, StarsHookName } from '@wolfstar/schema';
-import { resolve } from 'node:path';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ModuleError, defineModule, mergeOptions, setupModules, type ModuleHookHost, type StarsModule } from '../src/index.js';
 
@@ -61,7 +63,15 @@ describe('mergeOptions', () => {
 
 describe('setupModules', () => {
 	test('GIVEN no modules THEN the runtime is empty', async () => {
-		expect(await run([], []).result).toEqual({ modules: [], plugins: [], piecesDirs: [], clientHooks: [], imports: [], configKeys: [] });
+		expect(await run([], []).result).toEqual({
+			modules: [],
+			plugins: [],
+			piecesDirs: [],
+			locales: [],
+			clientHooks: [],
+			imports: [],
+			configKeys: []
+		});
 	});
 
 	test('GIVEN defaults and user options THEN setup receives them merged', async () => {
@@ -211,6 +221,7 @@ describe('setupModules', () => {
 				{ module: 'cache', from: '/pkg/runtime.js', export: 'plugin', options: { ttl: 5 } }
 			],
 			piecesDirs: [],
+			locales: [],
 			clientHooks: [],
 			imports: ['cache', 'other'],
 			configKeys: []
@@ -237,6 +248,66 @@ describe('setupModules', () => {
 			{ module: 'shared', path: directory },
 			{ module: 'shared', path: resolve('pkg', 'more') }
 		]);
+	});
+
+	describe('addLocales', () => {
+		let directory: string;
+
+		beforeEach(async () => {
+			directory = await mkdtemp(join(tmpdir(), 'kit-locales-'));
+			for (const file of [
+				'en-US/commands/shared.json',
+				'en-US/misc.json',
+				'es-ES/commands/shared.json',
+				'es-ES/extra.json',
+				'en-US/readme.md'
+			]) {
+				await mkdir(dirname(join(directory, file)), { recursive: true });
+				await writeFile(join(directory, file), '{}');
+			}
+		});
+
+		afterEach(async () => {
+			await rm(directory, { recursive: true, force: true });
+		});
+
+		test('GIVEN a locales directory THEN its namespaces are read from every language, once, sorted', async () => {
+			const { result } = run(
+				[
+					defineModule({
+						meta: { name: 'i18n' },
+						setup(_options, ctx) {
+							ctx.addLocales(directory);
+							ctx.addLocales(pathToFileURL(directory));
+						}
+					})
+				],
+				[['i18n']]
+			);
+
+			expect((await result).locales).toEqual([{ module: 'i18n', path: directory, namespaces: ['commands/shared', 'extra', 'misc'] }]);
+		});
+
+		test('GIVEN a language folder that cannot be read below the directory THEN it throws MODULE_LOCALES_INVALID', async () => {
+			// A dangling symlink makes `statSync` throw inside the namespace walk. Symlinks need a privilege on some systems.
+			try {
+				await symlink(join(directory, 'missing.json'), join(directory, 'en-US', 'dangling.json'));
+			} catch {
+				return;
+			}
+
+			const { result } = run([defineModule({ meta: { name: 'bad' }, setup: (_options, ctx) => ctx.addLocales(directory) })], [['bad']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_LOCALES_INVALID', moduleName: 'bad' });
+		});
+
+		test.each([
+			['a relative path', './locales'],
+			['an empty path', ''],
+			['a directory that does not exist', join(tmpdir(), 'kit-locales-missing', 'nope')]
+		])('GIVEN %s THEN it throws MODULE_LOCALES_INVALID', async (_name, value) => {
+			const { result } = run([defineModule({ meta: { name: 'bad' }, setup: (_options, ctx) => ctx.addLocales(value) })], [['bad']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_LOCALES_INVALID', moduleName: 'bad' });
+		});
 	});
 
 	test('GIVEN client hooks in hooks and ctx.addClientHook THEN they are collected by source, once per name', async () => {

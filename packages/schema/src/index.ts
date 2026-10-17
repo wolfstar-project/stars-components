@@ -7,6 +7,7 @@ export type {
 	ClientHookName,
 	ClientHookRegistration,
 	InstalledModule,
+	LocalesRegistration,
 	ModulesRuntime,
 	PiecesDirRegistration,
 	ResolvedModuleEntry,
