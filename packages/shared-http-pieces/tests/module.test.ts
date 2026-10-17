@@ -1,11 +1,12 @@
-import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import { setupModules, type ModuleHookHost } from '@wolfstar/kit';
 import { fileURLToPath } from 'node:url';
 import module from '../src/module.js';
 
+type Config = Parameters<typeof setupModules>[0]['config'];
+
 async function install() {
 	const hooks = { hook: () => undefined, callHook: async () => undefined } as unknown as ModuleHookHost;
-	const config = { root: '/app', moduleOptions: {}, modules: [{ specifier: module.meta.name, options: {} }] } as unknown as ResolvedStarsConfig;
+	const config = { root: '/app', moduleOptions: {}, modules: [{ specifier: module.meta.name, options: {} }] } as unknown as Config;
 	return setupModules({
 		config,
 		hooks,
