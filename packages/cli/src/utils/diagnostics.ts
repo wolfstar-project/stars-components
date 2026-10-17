@@ -132,6 +132,12 @@ export const cliDiagnostics = defineDiagnostics({
 			fix: (_p: { tool: string; modules: string }) =>
 				'Start the production bot with `node --import ./.stars/modules.mjs <entry>`; `stars prepare` (and `stars build`) writes that file.'
 		},
+		PLUGINS_NOT_REGISTERED: {
+			why: (p: { plugins: string }) =>
+				`future.compatibilityVersion 7 registers only the modules in \`modules\`, so the installed plugins ${p.plugins} are not registered by their name any more and will not run`,
+			fix: (_p: { plugins: string }) =>
+				'List the plugin in `modules` once its package exports a module, import it in the bot yourself, or set `future.compatibilityVersion` back to 6.'
+		},
 		VARLOCK_LOADER_IMPLICIT: {
 			why: (_p: {}) =>
 				'A varlock schema is found, so @wolfstar/env-utilities loads the environment through varlock, but stars.config does not say so',

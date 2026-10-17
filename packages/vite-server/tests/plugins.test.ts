@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
 	envModuleSource,
+	findUnlistedPlugins,
 	modulesModuleSource,
 	pluginRegistrations,
 	REGISTER_PLUGIN_SOURCE,
@@ -297,6 +298,25 @@ describe('pluginRegistrations modules', () => {
 			modules: [{ specifier: '@wolfstar/plugin-a', options: {} }]
 		} as unknown as ResolvedStarsConfig) as RegistrationPlugin;
 		expect(instance.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-b/register";']);
+	});
+
+	test('from compatibility version 7 no plugin is activated by its name, listed or not', async () => {
+		await write({
+			'app/package.json': JSON.stringify({ name: 'app', dependencies: { '@wolfstar/plugin-a': '1', '@wolfstar/plugin-b': '1' } })
+		});
+		const config = { root: join(workspace, 'app'), entry: entry(), modules: [{ specifier: '@wolfstar/plugin-a', options: {} }] };
+
+		const before = pluginRegistrations({
+			...config,
+			future: { compatibilityVersion: 6 }
+		} as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+		expect(before.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-b/register";']);
+
+		const after = pluginRegistrations({ ...config, future: { compatibilityVersion: 7 } } as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+		expect(after.transform('', entry())).toBeNull();
+		expect(findUnlistedPlugins({ ...config, future: { compatibilityVersion: 7 } } as unknown as ResolvedStarsConfig)).toEqual([
+			'@wolfstar/plugin-b'
+		]);
 	});
 
 	test('a package installed by another module is not activated through /register either', async () => {
