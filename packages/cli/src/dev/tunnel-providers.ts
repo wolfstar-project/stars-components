@@ -1,4 +1,7 @@
 import type { ResolvedStarsConfig, ResolvedTunnelConfig, StarsTunnelProvider } from '@wolfstar/schema';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { startTunnel, type Tunnel as UntunTunnel } from 'untun';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { readProjectVariable } from '../utils/project-env.js';
@@ -30,9 +33,21 @@ export interface TunnelProvider {
 	 * cannot be opened; either way nothing stays open.
 	 */
 	open(target: string, context: TunnelOpenContext): Promise<TunnelHandle | undefined>;
+	/**
+	 * Called once with the error of a failed attempt. Resolves to a description of what was removed when the failure came
+	 * from something the provider left on disk and opening the tunnel again can succeed, and to `null` otherwise. It never
+	 * rejects: a repair that fails is the same as nothing to repair.
+	 */
+	repair?(error: unknown): Promise<string | null>;
 }
 
 const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const;
+
+/** Where `untun` keeps the `cloudflared` binary it downloads. */
+export const UNTUN_BIN_DIRECTORY = join(tmpdir(), 'node-untun');
+
+/** `spawn` codes for a file that exists but cannot be run: no execute bit, or not an executable at all. */
+const BROKEN_BINARY_CODES: ReadonlySet<unknown> = new Set(['EACCES', 'ENOEXEC']);
 
 function isCloudflaredExit(reason: unknown): reason is Error {
 	return reason instanceof Error && reason.message.startsWith('cloudflared exited (');
@@ -47,10 +62,34 @@ function isCloudflaredExit(reason: unknown): reason is Error {
 export class CloudflaredProvider implements TunnelProvider {
 	public readonly name = 'cloudflared';
 	#startTunnel: typeof startTunnel;
+	#binDirectory: string;
 	#rejectionGuard: ((reason: unknown) => void) | null = null;
 
-	public constructor(start: typeof startTunnel = startTunnel) {
+	public constructor(start: typeof startTunnel = startTunnel, binDirectory: string = UNTUN_BIN_DIRECTORY) {
 		this.#startTunnel = start;
+		this.#binDirectory = resolve(binDirectory);
+	}
+
+	/**
+	 * `untun` takes any file at its binary path for an installed `cloudflared`, so a download that stopped half way (or has
+	 * no execute bit) fails to start on every run until it is deleted. The path comes from the spawn error, since `untun`
+	 * does not export it, and only a file inside the directory `untun` downloads to is removed.
+	 */
+	public async repair(error: unknown): Promise<string | null> {
+		const { code, path } = error as NodeJS.ErrnoException;
+		if (!BROKEN_BINARY_CODES.has(code) || typeof path !== 'string') return null;
+
+		const fromDirectory = relative(this.#binDirectory, resolve(path));
+		if (!fromDirectory || fromDirectory.startsWith('..') || isAbsolute(fromDirectory)) return null;
+
+		try {
+			await rm(path, { force: true });
+		} catch {
+			// Not ours to delete after all (a directory, a read-only location): the original error is the one to report.
+			return null;
+		}
+
+		return path;
 	}
 
 	public async open(target: string, context: TunnelOpenContext): Promise<TunnelHandle | undefined> {

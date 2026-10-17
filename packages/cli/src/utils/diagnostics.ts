@@ -95,6 +95,10 @@ export const cliDiagnostics = defineDiagnostics({
 		CODEGEN_OUTDATED: {
 			why: (_p: {}) => 'Generated files are out of date, run `stars codegen` to update them.'
 		},
+		CODEGEN_GENERATOR_DISABLED: {
+			why: (p: { generator: string }) => `\`--only ${p.generator}\` was given, but \`codegen.${p.generator}\` is off in stars.config`,
+			fix: (p: { generator: string }) => `Turn \`codegen.${p.generator}\` on, or leave ${p.generator} out of \`--only\`.`
+		},
 		DEPENDENCY_MISSING: {
 			why: (p: { name: string; root: string; hint: string }) => `"${p.name}" is not installed in ${p.root}`,
 			fix: (p: { name: string; root: string; hint: string }) => p.hint
