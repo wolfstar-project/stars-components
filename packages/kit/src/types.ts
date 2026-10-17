@@ -87,6 +87,8 @@ export interface ModuleContext {
 	 * `preconditions`), like the bot's own `src`, and is loaded next to the bot's pieces. Give an absolute path or a
 	 * `file:` URL (`new URL('./pieces', import.meta.url)`); a relative path is rejected. The pieces are loaded from files
 	 * at runtime, so the directory has to exist in the built bot: a build that bundles everything (Vite, Nitro) has none.
+	 * Only the stores that exist when the modules source runs are covered (the framework's four, and any registered by an
+	 * earlier import): a folder for a store that a plugin registers later is ignored.
 	 */
 	addPiecesDir(directory: string | URL): void;
 	/**

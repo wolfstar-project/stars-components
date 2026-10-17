@@ -323,6 +323,49 @@ describe('stars modules', () => {
 			expect(config.warnings).toEqual([]);
 		});
 
+		test('the preload warning also names a module that only adds a pieces directory', async () => {
+			fixture = await createFixture({
+				'node_modules/pieces-only/package.json': JSON.stringify({
+					name: 'pieces-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/pieces-only/index.js':
+					"export default { meta: { name: 'pieces-only' }, setup: (_options, ctx) => ctx.addPiecesDir(new URL('./pieces', import.meta.url)) };",
+				'src/main.js': '',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['pieces-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const warning = modulesPreloadWarning(config);
+			expect(warning?.code).toBe('MODULES_PRELOAD_REQUIRED');
+			expect(warning?.message).toContain('plugins and pieces directories');
+			expect(warning?.message).toContain('pieces-only');
+		});
+
+		test('a module that only declares runtime hooks needs the preload too, and .stars/modules.mjs registers them', async () => {
+			fixture = await createFixture({
+				...NO_BUILD,
+				'node_modules/hook-only/package.json': JSON.stringify({
+					name: 'hook-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' }, './hooks': { import: './hooks.js' } }
+				}),
+				'node_modules/hook-only/index.js': "export default { meta: { name: 'hook-only' }, hooks: { 'client:preLoad': 'hook-only/hooks' } };",
+				'node_modules/hook-only/hooks.js': 'export default () => {};',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['hook-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			expect(config.runtime.plugins).toEqual([]);
+			expect(modulesPreloadWarning(config)?.code).toBe('MODULES_PRELOAD_REQUIRED');
+
+			expect((await prepareProject(config)).modules?.status).toBe('written');
+			const content = await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8');
+			expect(content).toContain('import __stars_hook_0 from "hook-only/hooks";');
+			expect(content).toContain('__stars_hooks("hook-only", { "preLoad": __stars_hook_0 });');
+		});
+
 		test('reportWarnings prints the preload warning for build and prepare, not for dev', async () => {
 			fixture = await createFixture(NO_BUILD);
 			const { config } = await loadProject({ cwd: fixture.root, env: {} });

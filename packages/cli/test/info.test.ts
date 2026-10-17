@@ -89,6 +89,23 @@ describe('stars info', () => {
 		expect(output).toContain(expected);
 	});
 
+	test('lists the runtime hooks and pieces directories modules declared', async () => {
+		fixture = await createFixture({
+			'src/main.js': '',
+			'node_modules/fake-module/package.json': JSON.stringify({ name: 'fake-module', type: 'module', exports: './index.js' }),
+			'node_modules/fake-module/index.js': [
+				"export default { meta: { name: 'fake-module' }, hooks: { 'client:postListen': { from: 'fake-module/hooks', export: 'listen' } },",
+				"setup: (_options, ctx) => ctx.addPiecesDir(new URL('./pieces', import.meta.url)) };"
+			].join(' '),
+			'stars.config.mjs': "export default { modules: ['fake-module'] };"
+		});
+		const output = await capture((stdout) => runInfo({ cwd: fixture.root, json: true, stdout }));
+		const info = JSON.parse(output) as ProjectInfo;
+
+		expect(info.modules.clientHooks).toEqual(['fake-module → client:postListen from fake-module/hooks']);
+		expect(info.modules.piecesDirs).toEqual([`fake-module → ${join(fixture.root, 'node_modules/fake-module/pieces')}`]);
+	});
+
 	test('reports the production preload that tsc and none builds need for module plugins', async () => {
 		fixture = await createFixture({
 			'src/main.js': '',
