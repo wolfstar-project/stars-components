@@ -1384,6 +1384,9 @@ importers:
       '@wolfstar/i18next-type-generator':
         specifier: workspace:^
         version: link:../i18next-type-generator
+      '@wolfstar/kit':
+        specifier: workspace:^
+        version: link:../kit
       golar:
         specifier: ^0.1.10
         version: 0.1.10
@@ -1421,6 +1424,9 @@ importers:
       '@influxdata/influxdb-client':
         specifier: ^1.35.0
         version: 1.35.0
+      '@wolfstar/kit':
+        specifier: workspace:^
+        version: link:../kit
       golar:
         specifier: ^0.1.10
         version: 0.1.10

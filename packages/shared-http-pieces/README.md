@@ -29,6 +29,24 @@ The shared commands used for Star Network's HTTP-only bots.
   which the Stars CLI injects on its own — no manual wiring is required. The resolved path
   is also exported as `localesPath`, if you need it directly.
 
+## As a module
+
+Instead of importing `register`, list the package in `modules` in `stars.config` (it needs `@wolfstar/kit`, an
+optional peer dependency):
+
+```ts
+// stars.config.ts
+import { defineConfig } from '@wolfstar/http-framework/config';
+
+export default defineConfig({ modules: ['@wolfstar/shared-http-pieces'] });
+```
+
+The module adds this package's locales with `ctx.addLocales` (the generated `stars:locales` plugin merges them into
+the `i18n` option before `@wolfstar/plugin-i18next` builds its handler, keeping the project's own languages) and
+registers the `@wolfstar/shared-http-pieces/pieces` plugin, which loads the shared commands and listeners and the
+plugin's own `register` entrypoint. Importing `@wolfstar/shared-http-pieces/register` keeps working; use one or the
+other, not both. Sentry and the information variables below are set up the same way either way.
+
 ## Usage
 
 You can either register after setting environment parameters:

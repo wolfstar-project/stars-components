@@ -17,6 +17,22 @@
 
 The shared influx pieces used in Star Network's HTTP-only bots.
 
+## As a module
+
+Instead of importing `register`, list the package in `modules` in `stars.config` (it needs `@wolfstar/kit`, an
+optional peer dependency):
+
+```ts
+// stars.config.ts
+import { defineConfig } from '@wolfstar/http-framework/config';
+
+export default defineConfig({ modules: ['@wolfstar/shared-influx-pieces'] });
+```
+
+The module registers the `@wolfstar/shared-influx-pieces/plugin` plugin, which does what `register` does: it creates
+`container.influx` (and loads the listeners) when `INFLUX_ENABLED` is not `false` and the credentials below are set.
+The environment is loaded before the module's plugins run. Use one of the two, not both.
+
 ## Usage
 
 You can either register after setting the environment parameters:

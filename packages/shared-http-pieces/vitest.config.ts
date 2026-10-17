@@ -10,6 +10,7 @@ export default defineProject(
 			// Tests run before a build in CI, so workspace packages are resolved to their sources.
 			alias: [
 				{ find: '@wolfstar/schema', replacement: fileURLToPath(new URL('../schema/src/index.ts', import.meta.url)) },
+				{ find: '@wolfstar/kit', replacement: fileURLToPath(new URL('../kit/src/index.ts', import.meta.url)) },
 				{ find: '@wolfstar/http-framework', replacement: fileURLToPath(new URL('../http-framework/src/index.ts', import.meta.url)) }
 			]
 		},
