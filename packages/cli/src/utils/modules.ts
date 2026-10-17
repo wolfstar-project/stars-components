@@ -79,9 +79,12 @@ export function registersModulesOnly(config: ResolvedStarsConfig): boolean {
 
 /**
  * The installed `@wolfstar/plugin-*` packages that are not modules: activated by their name (`/register`) before
- * {@link MODULES_ONLY_VERSION}, not at all from it. Empty when `package.json` cannot be read.
+ * {@link MODULES_ONLY_VERSION}, not at all from it. Only a build whose entry is transformed (`tsdown`, `vite`, Nitro)
+ * gets the `/register` import: `tsc` and `none` never did, so nothing is reported for them. Empty as well when
+ * `package.json` cannot be read.
  */
 export function unlistedPlugins(config: ResolvedStarsConfig): string[] {
+	if (UNTRANSFORMED_TOOLS.has(config.build.tool)) return [];
 	try {
 		return findUnlistedPlugins(config);
 	} catch {

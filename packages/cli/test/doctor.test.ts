@@ -62,14 +62,20 @@ describe('stars doctor', () => {
 	});
 
 	test('says which plugins register by name, and from version 7 that they do not', async () => {
-		const files = { 'package.json': JSON.stringify({ name: 'bot', version: '0.1.0', dependencies: { '@wolfstar/plugin-a': '1.0.0' } }) };
+		const files = {
+			'package.json': JSON.stringify({ name: 'bot', version: '0.1.0', dependencies: { '@wolfstar/plugin-a': '1.0.0' } }),
+			'src/main.ts': ''
+		};
 
-		const six = await check(files);
+		const six = await check({ ...files, 'stars.config.mjs': "export default { build: { tool: 'tsdown' }, entry: 'src/main.ts' };" });
 		expect(six.plugins).toMatchObject({ status: 'ok' });
 		expect(six.plugins!.message).toContain('@wolfstar/plugin-a');
 		await fixture.cleanup();
 
-		const seven = await check({ ...files, 'stars.config.mjs': 'export default { future: { compatibilityVersion: 7 } };' });
+		const seven = await check({
+			...files,
+			'stars.config.mjs': "export default { build: { tool: 'tsdown' }, entry: 'src/main.ts', future: { compatibilityVersion: 7 } };"
+		});
 		expect(seven.plugins).toBeUndefined();
 		expect(seven.config).toMatchObject({ status: 'warn' });
 		expect(seven.config!.message).toContain('@wolfstar/plugin-a');
