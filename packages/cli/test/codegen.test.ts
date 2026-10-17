@@ -158,4 +158,82 @@ describe('runCodegen', () => {
 			await expect(runCodegen({ cwd: fixture.root, stdout: capture().stream })).rejects.toMatchObject({ code: 'LOCAL_COMMANDS_UNAVAILABLE' });
 		});
 	});
+
+	describe('--only', () => {
+		const commands = { global: [{ name: 'ping', options: [{ type: 3, name: 'text', required: true }] }], guilds: {} };
+
+		async function createBothProject(config = 'commands: true'): Promise<Fixture> {
+			return createFixture({
+				'package.json': '{"name":"bot","type":"module"}',
+				'src/main.ts': '',
+				'src/locales/en-US/common.json': '{}',
+				'stars.config.mjs': `export default { imports: false, codegen: { i18n: { locales: 'src/locales', output: 'src/i18next.d.ts' }, ${config} } };`,
+				'node_modules/@wolfstar/i18next-type-generator/package.json':
+					'{"name":"@wolfstar/i18next-type-generator","main":"cli.mjs","type":"module"}',
+				'node_modules/@wolfstar/i18next-type-generator/cli.mjs': FAKE_GENERATOR
+			});
+		}
+
+		test('--only i18n skips the commands, so it passes where the bot is not built', async () => {
+			fixture = await createBothProject();
+			const out = capture();
+
+			await runCodegen({ cwd: fixture.root, stdout: out.stream, only: ['i18n'] });
+
+			expect(out.text()).toContain('i18n: written');
+			expect(out.text()).not.toContain('commands');
+		});
+
+		test('--check with --only i18n still fails when the i18n file is stale', async () => {
+			fixture = await createBothProject();
+
+			await expect(runCodegen({ cwd: fixture.root, stdout: capture().stream, only: ['i18n'], check: true })).rejects.toMatchObject({
+				code: 'CODEGEN_OUTDATED'
+			});
+		});
+
+		test('--only commands skips the i18n generator', async () => {
+			fixture = await createBothProject();
+			const out = capture();
+
+			await runCodegen({ cwd: fixture.root, stdout: out.stream, only: ['commands'], commands });
+
+			expect(out.text()).toContain('commands: written');
+			expect(out.text()).not.toContain('i18n');
+			await expect(readFile(join(fixture.root, 'src/i18next.d.ts'), 'utf-8')).rejects.toMatchObject({ code: 'ENOENT' });
+		});
+
+		test('takes a comma-separated list, and lists in --json only the selected generators', async () => {
+			fixture = await createBothProject();
+			const out = capture();
+
+			await runCodegen({ cwd: fixture.root, stdout: out.stream, only: ['commands, i18n'], json: true, commands });
+
+			expect(JSON.parse(out.text()).results.map((result: { generator: string }) => result.generator)).toEqual(['i18n', 'commands']);
+
+			const one = capture();
+			await runCodegen({ cwd: fixture.root, stdout: one.stream, only: ['i18n'], json: true });
+			expect(JSON.parse(one.text()).results.map((result: { generator: string }) => result.generator)).toEqual(['i18n']);
+		});
+
+		test('rejects an unknown generator, before loading the project', async () => {
+			const error = await runCodegen({ cwd: '/nowhere', stdout: capture().stream, only: ['i18n', 'locales'] }).catch(
+				(caught: unknown) => caught
+			);
+
+			expect(error).toMatchObject({ code: 'INVALID_OPTION' });
+			expect(error).toBeInstanceOf(Diagnostic);
+			expect((error as Diagnostic).message).toContain('locales');
+		});
+
+		test('rejects a generator that is off, so a job cannot pass while checking nothing', async () => {
+			fixture = await createBothProject('commands: false');
+
+			await expect(
+				runCodegen({ cwd: fixture.root, stdout: capture().stream, only: ['commands'], check: true, commands })
+			).rejects.toMatchObject({
+				code: 'CODEGEN_GENERATOR_DISABLED'
+			});
+		});
+	});
 });
