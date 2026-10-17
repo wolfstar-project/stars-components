@@ -41,15 +41,15 @@
 		"discord-api-types": "^0.38.56",
 		"golar": "^0.1.10",
 		"husky": "9.1.7",
-		"knip": "6.39.0",
+		"knip": "6.40.0",
 		"nano-staged": "1.0.2",
-		"oxfmt": "0.71.0",
-		"oxlint": "1.86.0",
-		"pkg-pr-new": "^0.0.88",
-		"publint": "^0.3.24",
+		"oxfmt": "0.72.0",
+		"oxlint": "1.87.0",
+		"pkg-pr-new": "^0.0.91",
+		"publint": "^0.3.25",
 		"tinybench": "^5.1.0",
 		"tsdown": "^0.23.0",
-		"turbo": "^2.11.5",
+		"turbo": "^2.11.7",
 		"typedoc": "^0.28.20",
 		"typescript": "~5.8.3",
 		"unrun": "0.3.1",
@@ -72,5 +72,5 @@
 	"engines": {
 		"node": "^22.11 || ^24 || >=26"
 	},
-	"packageManager": "pnpm@12.8.2"
+	"packageManager": "pnpm@12.10.1"
 }
