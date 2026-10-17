@@ -41,6 +41,35 @@ export interface PiecesDirRegistration {
 	readonly path: string;
 }
 
+/** The lifecycle hooks of a runtime plugin, as a module names them in `hooks`: `client:` followed by the plugin hook. */
+export const CLIENT_HOOK_NAMES = [
+	'client:preGenericsInitialization',
+	'client:preInitialization',
+	'client:postInitialization',
+	'client:preLoad',
+	'client:postListen'
+] as const;
+
+export type ClientHookName = (typeof CLIENT_HOOK_NAMES)[number];
+
+type WithoutClientPrefix<Name extends string> = Name extends `client:${infer Hook}` ? Hook : never;
+
+/**
+ * A runtime hook a module declared (`hooks['client:*']` or `ctx.addClientHook`). Like a plugin it crosses into the
+ * bot by source: the entry (or the `node --import` preload) imports the `export` of `from` — a function called with
+ * `(client, clientOptions)` — and registers it on a plugin named after the module.
+ */
+export interface ClientHookRegistration {
+	/** The module that registered it. */
+	readonly module: string;
+	/** The plugin hook it runs at, without the `client:` prefix. */
+	readonly hook: WithoutClientPrefix<ClientHookName>;
+	/** A package specifier or an absolute file path. */
+	readonly from: string;
+	/** @default 'default' */
+	readonly export: string;
+}
+
 /** A module that was installed. */
 export interface InstalledModule {
 	readonly name: string;
@@ -53,10 +82,19 @@ export interface ModulesRuntime {
 	readonly plugins: readonly RuntimePluginRegistration[];
 	/** Directories of pieces added by `ctx.addPiecesDir`. */
 	readonly piecesDirs: readonly PiecesDirRegistration[];
+	/** Runtime hooks added by `hooks['client:*']` and `ctx.addClientHook`. */
+	readonly clientHooks: readonly ClientHookRegistration[];
 	/** Packages added to `imports.presets` by `ctx.addImports`. */
 	readonly imports: readonly string[];
 	/** The `meta.configKey` of every installed module that declares one: the top-level `stars.config` keys they own. */
 	readonly configKeys: readonly string[];
 }
 
-export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({ modules: [], plugins: [], piecesDirs: [], imports: [], configKeys: [] });
+export const EMPTY_MODULES_RUNTIME: ModulesRuntime = Object.freeze({
+	modules: [],
+	plugins: [],
+	piecesDirs: [],
+	clientHooks: [],
+	imports: [],
+	configKeys: []
+});

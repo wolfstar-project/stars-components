@@ -190,6 +190,27 @@ describe('pluginRegistrations modules', () => {
 		]);
 	});
 
+	test('the virtual module puts the runtime hooks of a module on one plugin named after it', () => {
+		const source = modulesModuleSource([], {
+			clientHooks: [
+				{ module: 'a', hook: 'preLoad', from: 'a/hooks', export: 'default' },
+				{ module: 'b', hook: 'postListen', from: '/pkg/b.js', export: 'later' },
+				{ module: 'a', hook: 'postListen', from: 'a/hooks', export: 'listen' }
+			]
+		});
+		expect(source.split('\n')).toEqual([
+			'import { Client } from "@wolfstar/http-framework";',
+			'import __stars_hook_0 from "a/hooks";',
+			'import { "later" as __stars_hook_1 } from "/pkg/b.js";',
+			'import { "listen" as __stars_hook_2 } from "a/hooks";',
+			REGISTER_PLUGIN_SOURCE,
+			'const __stars_hooks = (name, hooks) => Client.use({ name, ...hooks });',
+			'__stars_hooks("a", { "preLoad": __stars_hook_0, "postListen": __stars_hook_2 });',
+			'__stars_hooks("b", { "postListen": __stars_hook_1 });',
+			''
+		]);
+	});
+
 	test('the virtual module can point at resolved files', () => {
 		const source = modulesModuleSource([{ module: 'a', from: 'a/plugin', export: 'default' }], {
 			framework: 'file:///fw/index.js',
@@ -219,6 +240,16 @@ describe('pluginRegistrations modules', () => {
 		const instance = plugin({ runtime: { modules: [], imports: [], plugins: [], piecesDirs } as unknown as ResolvedStarsConfig['runtime'] });
 		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
 		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { piecesDirs }));
+	});
+
+	test('imports the modules module for runtime hooks alone', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const clientHooks = [{ module: 'a', hook: 'preLoad', from: 'a/hooks', export: 'default' }];
+		const instance = plugin({
+			runtime: { modules: [], imports: [], plugins: [], piecesDirs: [], clientHooks } as unknown as ResolvedStarsConfig['runtime']
+		});
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
+		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { clientHooks: clientHooks as never }));
 	});
 
 	test('resolves and loads the virtual module only when there are runtime plugins', async () => {

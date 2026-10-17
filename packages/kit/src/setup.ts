@@ -1,6 +1,9 @@
 import {
 	BUILT_IN_CONFIG_KEYS,
+	CLIENT_HOOK_NAMES,
 	STARS_HOOK_NAMES,
+	type ClientHookName,
+	type ClientHookRegistration,
 	type InstalledModule,
 	type ModulesRuntime,
 	type PiecesDirRegistration,
@@ -12,7 +15,16 @@ import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ModuleError } from './errors.js';
 import { isPlainObject, mergeOptions } from './options.js';
-import type { ModuleContext, ModuleHookHost, ModuleInput, ModuleOptions, ModulePluginSource, ModuleVersions, StarsModule } from './types.js';
+import type {
+	ModuleClientHookSource,
+	ModuleContext,
+	ModuleHookHost,
+	ModuleInput,
+	ModuleOptions,
+	ModulePluginSource,
+	ModuleVersions,
+	StarsModule
+} from './types.js';
 
 export interface SetupModulesOptions {
 	/** The resolved configuration: `root` and `modules` are read from it. */
@@ -37,6 +49,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 	const modules: InstalledModule[] = [];
 	const plugins: RuntimePluginRegistration[] = [];
 	const piecesDirs: PiecesDirRegistration[] = [];
+	const clientHooks: ClientHookRegistration[] = [];
 	const imports = new Set<string>();
 	/** `meta.configKey` -> the module that claimed it. */
 	const configKeys = new Map<string, string>();
@@ -67,7 +80,29 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 		const configOptions = claimConfigKey(module, configKeys, config.moduleOptions);
 		for (const dependency of module.dependencies ?? []) await install(dependency, undefined);
 
+		const addClientHook = (hook: string, source: string | URL | ModuleClientHookSource) => {
+			if (!KNOWN_CLIENT_HOOKS.has(hook)) {
+				throw new ModuleError(
+					'MODULE_HOOK_INVALID',
+					name,
+					`The module "${name}" declares an unknown runtime hook "${hook}". Known runtime hooks: ${CLIENT_HOOK_NAMES.join(', ')}.`
+				);
+			}
+
+			const registration = toClientHook(name, hook as ClientHookName, source);
+			if (clientHooks.some((registered) => registered.module === name && registered.hook === registration.hook)) {
+				throw new ModuleError('MODULE_HOOK_INVALID', name, `The module "${name}" declares the runtime hook "${hook}" twice.`);
+			}
+
+			clientHooks.push(registration);
+		};
+
 		for (const [hook, callback] of Object.entries(module.hooks ?? {})) {
+			if (hook.startsWith('client:')) {
+				addClientHook(hook, callback as string | URL | ModuleClientHookSource);
+				continue;
+			}
+
 			if (!KNOWN_HOOKS.has(hook) || typeof callback !== 'function') {
 				throw new ModuleError(
 					'MODULE_INVALID',
@@ -91,6 +126,7 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 				const path = toPiecesDirectory(name, directory);
 				if (!piecesDirs.some((registered) => registered.path === path)) piecesDirs.push({ module: name, path });
 			},
+			addClientHook: (hookName, hook) => addClientHook(hookName, hook),
 			addImports: (preset) => void imports.add(typeof preset === 'string' ? preset : preset.from),
 			hook: (hookName, callback) => hooks.hook(hookName, callback),
 			callHook: (hookName, ...args) => hooks.callHook(hookName, ...args),
@@ -109,10 +145,11 @@ export async function setupModules(options: SetupModulesOptions): Promise<Module
 
 	for (const entry of config.modules) await install(entry.specifier, entry.options as Record<string, unknown>);
 
-	return { modules, plugins, piecesDirs, imports: [...imports], configKeys: [...configKeys.keys()] };
+	return { modules, plugins, piecesDirs, clientHooks, imports: [...imports], configKeys: [...configKeys.keys()] };
 }
 
 const KNOWN_HOOKS: ReadonlySet<string> = new Set(STARS_HOOK_NAMES);
+const KNOWN_CLIENT_HOOKS: ReadonlySet<string> = new Set(CLIENT_HOOK_NAMES);
 
 function validate(value: unknown, label: string): StarsModule {
 	const module = value as Partial<StarsModule> | null;
@@ -233,6 +270,33 @@ function toRegistration(moduleName: string, plugin: string | URL | ModulePluginS
 
 	const registration = { module: moduleName, from: from.startsWith('file:') ? fileURLToPath(from) : from, export: source.export ?? 'default' };
 	return source.options === undefined ? registration : { ...registration, options: source.options };
+}
+
+function toClientHook(moduleName: string, name: ClientHookName, hook: string | URL | ModuleClientHookSource): ClientHookRegistration {
+	const source: ModuleClientHookSource = typeof hook === 'string' || hook instanceof URL ? { from: hook } : (hook ?? {});
+	const from = typeof source.from === 'string' ? source.from : source.from?.href;
+	if (typeof from !== 'string' || from === '') {
+		throw new ModuleError(
+			'MODULE_HOOK_INVALID',
+			moduleName,
+			`The runtime hook "${name}" of "${moduleName}" is given by source: pass a package specifier, an absolute path or a \`file:\` URL, or \`{ from, export }\`.`
+		);
+	}
+
+	if (RELATIVE_PATH.test(from)) {
+		throw new ModuleError(
+			'MODULE_HOOK_INVALID',
+			moduleName,
+			`The runtime hook "${name}" of "${moduleName}" points at the relative path "${from}", which would resolve differently per build tool. Use a package specifier, an absolute path or a \`file:\` URL, e.g. \`new URL('./hooks.js', import.meta.url)\`.`
+		);
+	}
+
+	return {
+		module: moduleName,
+		hook: name.slice('client:'.length) as ClientHookRegistration['hook'],
+		from: from.startsWith('file:') ? fileURLToPath(from) : from,
+		export: source.export ?? 'default'
+	};
 }
 
 function toPiecesDirectory(moduleName: string, directory: string | URL): string {

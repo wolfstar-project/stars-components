@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig, StarsHookName, StarsHooks } from '@wolfstar/schema';
+import type { ClientHookName, ResolvedStarsConfig, StarsHookName, StarsHooks } from '@wolfstar/schema';
 
 type Awaitable<T> = T | PromiseLike<T>;
 
@@ -58,6 +58,19 @@ export interface ModulePluginSource {
 	options?: unknown;
 }
 
+/**
+ * A runtime hook to run at a point of the client's lifecycle, given by source like a {@link ModulePluginSource}: the hook
+ * lives in the bot's process, the module's `setup` in the CLI's. The `export` of `from` is a function called with
+ * `(client, clientOptions)`, the same arguments a `StarsPlugin` hook gets, and it may return a promise for `client:preLoad`
+ * and `client:postListen` only: the other three run inside the synchronous constructor.
+ */
+export interface ModuleClientHookSource {
+	/** A package specifier, an absolute path or a `file:` URL. A relative path is rejected. */
+	from: string | URL;
+	/** @default 'default' */
+	export?: string;
+}
+
 /** A module to install: its specifier, or its definition, optionally with options. */
 export type ModuleInput<Options extends ModuleOptions = ModuleOptions> = string | StarsModule<Options>;
 
@@ -78,6 +91,11 @@ export interface ModuleContext {
 	addPiecesDir(directory: string | URL): void;
 	/** Adds a package to the auto imports presets (`imports.presets`): all its exports become auto imports. */
 	addImports(preset: string | { from: string }): void;
+	/**
+	 * Registers a function to run in the bot at `name` (`client:preLoad`, …). It goes on a runtime plugin named after
+	 * the module, so a failing hook is reported with the module's name. One hook per name and module.
+	 */
+	addClientHook(name: ClientHookName, hook: string | URL | ModuleClientHookSource): void;
 	/** Registers a hook of the `stars` CLI. */
 	hook: ModuleHookHost['hook'];
 	/** Calls a hook of the `stars` CLI. */
@@ -92,8 +110,12 @@ export interface StarsModule<Options extends ModuleOptions = ModuleOptions> {
 	defaults?: Options;
 	/** Modules installed before this one. */
 	dependencies?: readonly ModuleInput[];
-	/** Hooks of the `stars` CLI, registered before `setup` runs. An unknown hook name or a value that is not a function is rejected. */
-	hooks?: { [Name in StarsHookName]?: StarsHooks[Name] };
+	/**
+	 * Hooks of the `stars` CLI (functions), registered before `setup` runs, and runtime hooks (`client:*`, given by
+	 * source, see {@link ModuleClientHookSource}), the same as `ctx.addClientHook`. An unknown name or a value of the
+	 * wrong kind is rejected.
+	 */
+	hooks?: { [Name in StarsHookName]?: StarsHooks[Name] } & { [Name in ClientHookName]?: string | URL | ModuleClientHookSource };
 	/** Runs in the CLI process, once, while the project loads. */
 	setup?(options: Options, ctx: ModuleContext): Awaitable<void>;
 }
@@ -104,4 +126,5 @@ export type ModuleErrorCode =
 	| 'MODULE_INCOMPATIBLE'
 	| 'MODULE_SETUP_FAILED'
 	| 'MODULE_PLUGIN_INVALID'
-	| 'MODULE_PIECES_INVALID';
+	| 'MODULE_PIECES_INVALID'
+	| 'MODULE_HOOK_INVALID';

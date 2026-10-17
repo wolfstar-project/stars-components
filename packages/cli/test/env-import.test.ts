@@ -74,8 +74,8 @@ const FAKE_RUNTIME = {
 	'src/paths.js': 'console.log(JSON.stringify(globalThis.__starsPaths));'
 };
 
-function withPlugins(root: string, tool: string, plugins: object[], piecesDirs: object[] = []): ResolvedStarsConfig {
-	return { root, build: { tool }, runtime: { modules: [], imports: [], plugins, piecesDirs } } as unknown as ResolvedStarsConfig;
+function withPlugins(root: string, tool: string, plugins: object[], piecesDirs: object[] = [], clientHooks: object[] = []): ResolvedStarsConfig {
+	return { root, build: { tool }, runtime: { modules: [], imports: [], plugins, piecesDirs, clientHooks } } as unknown as ResolvedStarsConfig;
 }
 
 describe('moduleImportArgs', () => {
@@ -131,6 +131,30 @@ describe('moduleImportArgs', () => {
 			);
 		});
 		expect(JSON.parse(stdout)).toEqual([directory]);
+	});
+
+	test('node runs the runtime hooks of a module through a plugin named after it', async () => {
+		await fixture.write(
+			'node_modules/fake-plugin/package.json',
+			JSON.stringify({ name: 'fake-plugin', type: 'module', exports: { './hooks': { import: './hooks.js' } } })
+		);
+		await fixture.write(
+			'node_modules/fake-plugin/hooks.js',
+			'export default (client, options) => (globalThis.__starsHookCalls ??= []).push([client, options]);'
+		);
+		await fixture.write(
+			'src/hooks.js',
+			'const [plugin] = globalThis.__starsPlugins; plugin.preLoad("client", "options"); console.log(JSON.stringify([plugin.name, Object.keys(plugin), globalThis.__starsHookCalls]));'
+		);
+		const hooks = [{ module: 'fake', hook: 'preLoad', from: 'fake-plugin/hooks', export: 'default' }];
+		const args = moduleImportArgs(withPlugins(fixture.root, 'none', [], [], hooks));
+
+		const stdout = await new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, [...args, join(fixture.root, 'src/hooks.js')], { cwd: fixture.root }, (error, out) =>
+				error ? reject(error) : resolve(out)
+			);
+		});
+		expect(JSON.parse(stdout)).toEqual(['fake', ['name', 'preLoad'], [['client', 'options']]]);
 	});
 
 	test('a plugin that cannot be resolved fails with a DEPENDENCY_MISSING diagnostic', () => {

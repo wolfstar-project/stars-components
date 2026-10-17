@@ -66,6 +66,26 @@ describe('stars modules', () => {
 		expect(config.runtime.piecesDirs).toEqual([{ module: 'pieces-module', path: join(fixture.root, 'node_modules/pieces-module/pieces') }]);
 	});
 
+	test('client hooks from hooks and ctx.addClientHook are carried into the runtime', async () => {
+		fixture = await createFixture({
+			'node_modules/hook-module/package.json': JSON.stringify({
+				name: 'hook-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/hook-module/index.js':
+				"export default { meta: { name: 'hook-module' }, hooks: { 'client:preLoad': 'hook-module/hooks' }, setup: (_options, ctx) => ctx.addClientHook('client:postListen', { from: 'hook-module/hooks', export: 'listen' }) };",
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['hook-module'] };"
+		});
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.clientHooks).toEqual([
+			{ module: 'hook-module', hook: 'preLoad', from: 'hook-module/hooks', export: 'default' },
+			{ module: 'hook-module', hook: 'postListen', from: 'hook-module/hooks', export: 'listen' }
+		]);
+	});
+
 	test('a relative pieces directory fails the load', async () => {
 		fixture = await createFixture(piecesModule("'./pieces'"));
 

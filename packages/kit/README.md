@@ -86,6 +86,12 @@ reads its key as well, with the options passed to `installModule` taking the inl
   specifier, an absolute path or a `file:` URL (a relative path is rejected: it would resolve differently in each
   build tool); the `export` (default `'default'`) is the plugin or, when it is a function, a factory called with
   `options`, which must be JSON-serialisable. A legacy `Plugin` class is registered as it is, never called.
+- `ctx.addClientHook(name, source)` (or `hooks: { 'client:preLoad': source }`) runs a function in the bot at a point of
+  the client's lifecycle: `client:preGenericsInitialization`, `client:preInitialization`, `client:postInitialization`,
+  `client:preLoad` or `client:postListen`. Like a plugin it is given by source (a specifier, an absolute path or a `file:`
+  URL, or `{ from, export? }`); the export is called with `(client, clientOptions)`, and may be async only for
+  `preLoad` and `postListen`. A module's hooks share one runtime plugin named after it, so a failure is reported with
+  the module's name. One hook per name and module.
 - `ctx.addPiecesDir(directory)` registers a directory of pieces (a folder per store: `commands`, `listeners`, …) that
   is loaded next to the bot's own. Give an absolute path or a `file:` URL, e.g. `new URL('./pieces', import.meta.url)`;
   a relative path is rejected. The pieces are read from files at runtime, so it does not work in a build that bundles

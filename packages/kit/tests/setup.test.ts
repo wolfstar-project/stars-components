@@ -61,7 +61,7 @@ describe('mergeOptions', () => {
 
 describe('setupModules', () => {
 	test('GIVEN no modules THEN the runtime is empty', async () => {
-		expect(await run([], []).result).toEqual({ modules: [], plugins: [], piecesDirs: [], imports: [], configKeys: [] });
+		expect(await run([], []).result).toEqual({ modules: [], plugins: [], piecesDirs: [], clientHooks: [], imports: [], configKeys: [] });
 	});
 
 	test('GIVEN defaults and user options THEN setup receives them merged', async () => {
@@ -211,6 +211,7 @@ describe('setupModules', () => {
 				{ module: 'cache', from: '/pkg/runtime.js', export: 'plugin', options: { ttl: 5 } }
 			],
 			piecesDirs: [],
+			clientHooks: [],
 			imports: ['cache', 'other'],
 			configKeys: []
 		});
@@ -236,6 +237,54 @@ describe('setupModules', () => {
 			{ module: 'shared', path: directory },
 			{ module: 'shared', path: resolve('pkg', 'more') }
 		]);
+	});
+
+	test('GIVEN client hooks in hooks and ctx.addClientHook THEN they are collected by source, once per name', async () => {
+		const hook = resolve('pkg', 'hooks.js');
+		const { result, registered } = run(
+			[
+				defineModule({
+					meta: { name: 'hooked' },
+					hooks: { 'client:preLoad': pathToFileURL(hook), 'build:done': () => {} },
+					setup(_options, ctx) {
+						ctx.addClientHook('client:postListen', { from: 'hooked/hooks', export: 'postListen' });
+					}
+				})
+			],
+			[['hooked']]
+		);
+
+		expect((await result).clientHooks).toEqual([
+			{ module: 'hooked', hook: 'preLoad', from: hook, export: 'default' },
+			{ module: 'hooked', hook: 'postListen', from: 'hooked/hooks', export: 'postListen' }
+		]);
+		// The CLI hook is still registered on the host; the runtime hook is not.
+		expect(registered.map(([name]) => name)).toEqual(['build:done']);
+	});
+
+	test.each([
+		['an unknown runtime hook', { 'client:nope': 'x/hooks' }],
+		['a relative path', { 'client:preLoad': './hooks.js' }],
+		['a value that is not a source', { 'client:preLoad': () => {} }],
+		['an object without from', { 'client:preLoad': { export: 'a' } }]
+	])('GIVEN %s in hooks THEN it throws MODULE_HOOK_INVALID', async (_name, hooks) => {
+		const { result } = run([{ meta: { name: 'bad' }, hooks } as unknown as StarsModule], [['bad']]);
+		await expect(result).rejects.toMatchObject({ code: 'MODULE_HOOK_INVALID', moduleName: 'bad' });
+	});
+
+	test('GIVEN the same runtime hook twice THEN it throws MODULE_HOOK_INVALID', async () => {
+		const { result } = run(
+			[
+				defineModule({
+					meta: { name: 'twice' },
+					hooks: { 'client:preLoad': 'twice/a' },
+					setup: (_options, ctx) => ctx.addClientHook('client:preLoad', 'twice/b')
+				})
+			],
+			[['twice']]
+		);
+		await expect(result).rejects.toThrow(/twice/);
+		await expect(result).rejects.toMatchObject({ code: 'MODULE_HOOK_INVALID' });
 	});
 
 	test.each(['./pieces', '../pieces', 'pieces', ''])(
