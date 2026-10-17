@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.8
+
+### Patch Changes
+
+- [#319](https://github.com/wolfstar-project/stars-components/pull/319) [`02420ef`](https://github.com/wolfstar-project/stars-components/commit/02420efd82ba42b47ce7b1572266658bfed5e83d) - fix(deps): update dependency he to v2 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 1.2.7
 
 ### Patch Changes
