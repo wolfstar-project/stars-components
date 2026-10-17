@@ -65,7 +65,7 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 	let stopped = false;
 	const switchView = (fullScreen: boolean) => {
 		if (fullScreen === alternate || stopped) return;
-		instance.clear();
+		// The app erases its frame before this runs and redraws all of it afterwards (`suspendTerminal`).
 		write(fullScreen ? '\u001B[?1049h\u001B[H' : '\u001B[?1049l');
 		alternate = fullScreen;
 	};
@@ -106,6 +106,9 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 			// Ink's non-interactive mode (no repaint until unmount) despite the fake stdin/stdout looking like a
 			// real TTY.
 			interactive: true,
+			// Without it Ink erases the whole frame and writes it again on every render, a full screen of output several
+			// times a second while a build runs or logs arrive, which shows as the dashboard blinking.
+			incrementalRendering: true,
 			...(options.fps === undefined ? {} : { maxFps: options.fps })
 		}
 	);
