@@ -89,6 +89,25 @@ describe('stars info', () => {
 		expect(output).toContain(expected);
 	});
 
+	test.each([
+		[6, 'tsdown', ['@wolfstar/plugin-a'], []],
+		[7, 'tsdown', [], [expect.stringMatching(/^PLUGINS_NOT_REGISTERED: /)]],
+		// `none` (and `tsc`) builds never had the `/register` import, so there is nothing to report.
+		[6, 'none', [], []],
+		[7, 'none', [], []]
+	])('on compatibility version %i with %s plugins registered by name are %j, with warnings %j', async (version, tool, byName, warnings) => {
+		fixture = await createFixture({
+			[tool === 'tsdown' ? 'src/main.ts' : 'src/main.js']: '',
+			'package.json': JSON.stringify({ name: 'bot', version: '0.1.0', dependencies: { '@wolfstar/plugin-a': '1.0.0' } }),
+			'stars.config.mjs': `export default { build: { tool: '${tool}' }, future: { compatibilityVersion: ${version} } };`
+		});
+		const output = await capture((stdout) => runInfo({ cwd: fixture.root, json: true, stdout }));
+		const info = JSON.parse(output) as ProjectInfo;
+
+		expect(info.modules.registeredByName).toEqual(byName);
+		expect(info.warnings).toEqual(warnings);
+	});
+
 	test('reports the production preload that tsc and none builds need for module plugins', async () => {
 		fixture = await createFixture({
 			'src/main.js': '',

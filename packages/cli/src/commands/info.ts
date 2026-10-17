@@ -6,7 +6,7 @@ import { relative } from 'node:path';
 import { describeQuickTunnel } from '../dev/tunnel.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { applyEnvOptions, loadProject } from '../utils/hooks.js';
-import { modulesPreloadWarning } from '../utils/modules.js';
+import { modulesPreloadWarning, registersModulesOnly, unlistedPlugins, unregisteredPluginsWarning } from '../utils/modules.js';
 import { varlockWarning } from '../utils/varlock.js';
 import { resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { findInstalledVersion } from '../utils/project.js';
@@ -38,7 +38,7 @@ export interface ProjectInfo {
 	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
 	hooks: string[];
 	/** The installed modules, and the runtime plugins they registered (`module → export from package`). */
-	modules: { installed: string[]; plugins: string[] };
+	modules: { installed: string[]; plugins: string[]; registeredByName: string[] };
 	/** Non-fatal configuration diagnostics, as `CODE: message`. */
 	warnings: string[];
 	/**
@@ -75,9 +75,10 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		hooks: Object.keys(config.hooks),
 		modules: {
 			installed: (config.runtime?.modules ?? []).map((module) => module.name),
-			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`)
+			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`),
+			registeredByName: registersModulesOnly(config) ? [] : unlistedPlugins(config)
 		},
-		warnings: [...config.warnings, modulesPreloadWarning(config), varlockWarning(config)]
+		warnings: [...config.warnings, modulesPreloadWarning(config), unregisteredPluginsWarning(config), varlockWarning(config)]
 			.filter((warning) => warning !== null)
 			.map((warning) => `${warning.code}: ${warning.message}`),
 		options: { tsdown: Object.keys(config.tsdown), vite: Object.keys(config.vite) }
@@ -162,6 +163,7 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Hooks', [row('registered', info.hooks.join(', ') || colors.dim('none'))]),
 		section('Modules', [
 			row('installed', info.modules.installed.join(', ') || colors.dim('none')),
+			...(info.modules.registeredByName.length > 0 ? [row('by name', info.modules.registeredByName.join(', '))] : []),
 			...info.modules.plugins.map((plugin) => row('plugin', plugin))
 		]),
 		section('Experimental', [
