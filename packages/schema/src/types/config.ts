@@ -88,10 +88,11 @@ export interface StarsTsdownConfig {
 }
 
 /**
- * The build-default generation the project runs on. Version 6 is current; versions 5 and 4 remain supported.
+ * The build-default generation the project runs on. Version 6 is current; versions 5 and 4 remain supported, and 7 is
+ * an opt-in preview.
  * Version 3 is end-of-life: it still resolves, with a warning, and is removed in the next major.
  */
-export type StarsCompatibilityVersion = 3 | 4 | 5 | 6;
+export type StarsCompatibilityVersion = 3 | 4 | 5 | 6 | 7;
 
 /**
  * Nuxt-style compatibility block. New projects need not set it; version 4 stays available, and version 3 is kept only
@@ -100,6 +101,11 @@ export type StarsCompatibilityVersion = 3 | 4 | 5 | 6;
 export interface StarsFutureConfig {
 	/**
 	 * The major whose defaults apply.
+	 *
+	 * `7` (opt-in, not the default): everything in `6`, plus the configuration decides what registers. A
+	 * `@wolfstar/plugin-*` dependency is no longer activated by its name (no `import "<name>/register"` is injected into
+	 * the entry): only the packages in `modules`, and the ones they install, are. A plugin that is not a module must be
+	 * imported by the bot itself. `stars info`/`stars doctor` and the build report an installed plugin that is left out.
 	 *
 	 * `6` is the default: everything in `5`, plus the generated TypeScript configuration split in two, the way a Nuxt 4
 	 * project has it. `stars prepare` writes `.stars/tsconfig.app.json` (the bot sources) and

@@ -10,7 +10,7 @@ import { NGROK_AUTHTOKEN_VARIABLE, NGROK_INSTALL_HINT, NGROK_PACKAGE } from '../
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { loadProject, withProjectEnv, applyEnvOptions, type StarsHookable } from '../utils/hooks.js';
-import { modulesPreloadWarning } from '../utils/modules.js';
+import { modulesPreloadWarning, registersModulesOnly, unlistedPlugins, unregisteredPluginsWarning } from '../utils/modules.js';
 import { isCIEnvironment, shouldUseColor } from '../utils/output-mode.js';
 import { createClackPrompt } from '../utils/prompts.js';
 import { findLegacyRootTsconfig } from '../utils/tsconfig.js';
@@ -82,8 +82,17 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 	}
 
 	checks.push({ name: 'config', status: 'ok', message: config.configFile ? show(config.configFile) : 'no stars.config, running on defaults' });
-	for (const warning of [...config.warnings, modulesPreloadWarning(config)]) {
+	for (const warning of [...config.warnings, modulesPreloadWarning(config), unregisteredPluginsWarning(config)]) {
 		if (warning) checks.push({ name: 'config', status: 'warn', message: warning.message, ...(warning.fix ? { fix: warning.fix } : {}) });
+	}
+
+	const byName = registersModulesOnly(config) ? [] : unlistedPlugins(config);
+	if (byName.length > 0) {
+		checks.push({
+			name: 'plugins',
+			status: 'ok',
+			message: `Registered by their name (/register): ${byName.join(', ')}. List a plugin in \`modules\` once it is a module; \`future.compatibilityVersion: 7\` stops registering by name.`
+		});
 	}
 
 	const framework = findInstalledVersion(config.root, '@wolfstar/http-framework');
