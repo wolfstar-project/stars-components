@@ -86,6 +86,10 @@ reads its key as well, with the options passed to `installModule` taking the inl
   specifier, an absolute path or a `file:` URL (a relative path is rejected: it would resolve differently in each
   build tool); the `export` (default `'default'`) is the plugin or, when it is a function, a factory called with
   `options`, which must be JSON-serialisable. A legacy `Plugin` class is registered as it is, never called.
+- `ctx.addPiecesDir(directory)` registers a directory of pieces (a folder per store: `commands`, `listeners`, …) that
+  is loaded next to the bot's own. Give an absolute path or a `file:` URL, e.g. `new URL('./pieces', import.meta.url)`;
+  a relative path is rejected. The pieces are read from files at runtime, so it does not work in a build that bundles
+  everything (Vite, Nitro).
 - `ctx.addImports(preset)` adds a package to the auto imports presets.
 - `ctx.hook(name, callback)` / `ctx.callHook(name, …)` use the CLI's hooks (`StarsHooks`), the same registry as `hooks`
   in `stars.config`. A module's `hooks` are registered before `setup` runs; an unknown hook name or a value that is not

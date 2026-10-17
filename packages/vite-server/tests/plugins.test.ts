@@ -180,6 +180,16 @@ describe('pluginRegistrations modules', () => {
 		);
 	});
 
+	test('the virtual module registers the pieces directories with the stores', () => {
+		const source = modulesModuleSource([], { piecesDirs: [{ module: 'a', path: '/pkg/pieces' }] });
+		expect(source.split('\n')).toEqual([
+			'import { Client, container } from "@wolfstar/http-framework";',
+			'container.stores.registerPath("/pkg/pieces");',
+			REGISTER_PLUGIN_SOURCE,
+			''
+		]);
+	});
+
 	test('the virtual module can point at resolved files', () => {
 		const source = modulesModuleSource([{ module: 'a', from: 'a/plugin', export: 'default' }], {
 			framework: 'file:///fw/index.js',
@@ -201,6 +211,14 @@ describe('pluginRegistrations modules', () => {
 			'import "@wolfstar/plugin-i18next/register";',
 			'x'
 		]);
+	});
+
+	test('imports the modules module for pieces directories alone', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const piecesDirs = [{ module: 'a', path: '/pkg/pieces' }];
+		const instance = plugin({ runtime: { modules: [], imports: [], plugins: [], piecesDirs } as unknown as ResolvedStarsConfig['runtime'] });
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
+		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { piecesDirs }));
 	});
 
 	test('resolves and loads the virtual module only when there are runtime plugins', async () => {

@@ -61,18 +61,21 @@ const FAKE_RUNTIME = {
 		type: 'module',
 		exports: { '.': { import: './index.js' } }
 	}),
-	'node_modules/@wolfstar/http-framework/index.js': 'export const Client = { use(plugin) { (globalThis.__starsPlugins ??= []).push(plugin); } };',
+	'node_modules/@wolfstar/http-framework/index.js':
+		'export const Client = { use(plugin) { (globalThis.__starsPlugins ??= []).push(plugin); } };\n' +
+		'export const container = { stores: { registerPath(path) { (globalThis.__starsPaths ??= []).push(path); } } };',
 	'node_modules/fake-plugin/package.json': JSON.stringify({
 		name: 'fake-plugin',
 		type: 'module',
 		exports: { './plugin': { import: './plugin.js' } }
 	}),
 	'node_modules/fake-plugin/plugin.js': 'export default (options) => ({ name: "fake", options });',
-	'src/main.js': 'console.log(JSON.stringify(globalThis.__starsPlugins));'
+	'src/main.js': 'console.log(JSON.stringify(globalThis.__starsPlugins));',
+	'src/paths.js': 'console.log(JSON.stringify(globalThis.__starsPaths));'
 };
 
-function withPlugins(root: string, tool: string, plugins: object[]): ResolvedStarsConfig {
-	return { root, build: { tool }, runtime: { modules: [], imports: [], plugins } } as unknown as ResolvedStarsConfig;
+function withPlugins(root: string, tool: string, plugins: object[], piecesDirs: object[] = []): ResolvedStarsConfig {
+	return { root, build: { tool }, runtime: { modules: [], imports: [], plugins, piecesDirs } } as unknown as ResolvedStarsConfig;
 }
 
 describe('moduleImportArgs', () => {
@@ -115,6 +118,19 @@ describe('moduleImportArgs', () => {
 			);
 		});
 		expect(JSON.parse(stdout)).toEqual([{ name: 'fake', options: { ttl: 5 } }]);
+	});
+
+	test('node registers the pieces directories of the modules with the stores before the entry runs', async () => {
+		const directory = join(fixture.root, 'pieces');
+		const args = moduleImportArgs(withPlugins(fixture.root, 'none', [], [{ module: 'fake', path: directory }]));
+		expect(args[0]).toBe('--import');
+
+		const stdout = await new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, [...args, join(fixture.root, 'src/paths.js')], { cwd: fixture.root }, (error, out) =>
+				error ? reject(error) : resolve(out)
+			);
+		});
+		expect(JSON.parse(stdout)).toEqual([directory]);
 	});
 
 	test('a plugin that cannot be resolved fails with a DEPENDENCY_MISSING diagnostic', () => {

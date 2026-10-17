@@ -37,8 +37,8 @@ export interface ProjectInfo {
 	env: ResolvedStarsConfig['env'];
 	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
 	hooks: string[];
-	/** The installed modules, and the runtime plugins they registered (`module → export from package`). */
-	modules: { installed: string[]; plugins: string[] };
+	/** The installed modules, and the runtime plugins and pieces directories they registered (`module → export from package`). */
+	modules: { installed: string[]; plugins: string[]; piecesDirs: string[] };
 	/** Non-fatal configuration diagnostics, as `CODE: message`. */
 	warnings: string[];
 	/**
@@ -75,7 +75,8 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		hooks: Object.keys(config.hooks),
 		modules: {
 			installed: (config.runtime?.modules ?? []).map((module) => module.name),
-			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`)
+			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`),
+			piecesDirs: (config.runtime?.piecesDirs ?? []).map((dir) => `${dir.module} → ${dir.path}`)
 		},
 		warnings: [...config.warnings, modulesPreloadWarning(config), varlockWarning(config)]
 			.filter((warning) => warning !== null)
@@ -162,7 +163,8 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Hooks', [row('registered', info.hooks.join(', ') || colors.dim('none'))]),
 		section('Modules', [
 			row('installed', info.modules.installed.join(', ') || colors.dim('none')),
-			...info.modules.plugins.map((plugin) => row('plugin', plugin))
+			...info.modules.plugins.map((plugin) => row('plugin', plugin)),
+			...info.modules.piecesDirs.map((dir) => row('pieces', dir))
 		]),
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),

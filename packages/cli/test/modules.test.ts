@@ -46,6 +46,32 @@ describe('stars modules', () => {
 		]);
 	});
 
+	function piecesModule(call: string) {
+		return {
+			'node_modules/pieces-module/package.json': JSON.stringify({
+				name: 'pieces-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/pieces-module/index.js': `export default { meta: { name: 'pieces-module' }, setup: (_options, ctx) => ctx.addPiecesDir(${call}) };`,
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['pieces-module'] };"
+		};
+	}
+
+	test('addPiecesDir is carried into the runtime', async () => {
+		fixture = await createFixture(piecesModule("new URL('./pieces', import.meta.url)"));
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.piecesDirs).toEqual([{ module: 'pieces-module', path: join(fixture.root, 'node_modules/pieces-module/pieces') }]);
+	});
+
+	test('a relative pieces directory fails the load', async () => {
+		fixture = await createFixture(piecesModule("'./pieces'"));
+
+		await expect(loadProject({ cwd: fixture.root, env: {} })).rejects.toMatchObject({ code: 'MODULE_FAILED' });
+	});
+
 	test('addImports extends imports.presets, and the module hooks run on the shared registry', async () => {
 		fixture = await createFixture({ ...MODULE_PACKAGE, 'src/main.ts': '', 'stars.config.mjs': "export default { modules: ['fake-module'] };" });
 		const { config, hooks } = await loadProject({ cwd: fixture.root, env: {} });
