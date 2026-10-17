@@ -372,15 +372,18 @@ describe('renderers', () => {
 			for (let index = 0; index < 30; index++) service.log('app', 'info', `line ${index} of the log`);
 			await waitFor(() => stdout.screen().includes('line 29 of the log'));
 			await wait(100);
-			// What painting the screen once costs, the first frames included.
-			const fullPaint = stdout.output.length;
 
 			const mark = stdout.output.length;
 			service.builder.emit('start');
 			await wait(700);
 
-			// The clock and the spinner tick about eight times a second, and each tick used to write the screen again.
-			expect(stdout.output.length - mark).toBeLessThan(fullPaint / 2);
+			// The clock and the spinner tick about eight times a second, and each tick used to write the whole screen again.
+			const written = stdout.output.slice(mark);
+			// Ink wraps every frame in synchronized output, which makes the frames countable.
+			const frames = written.split('001B[?2026h').length - 1;
+			expect(frames).toBeGreaterThan(2);
+			// A repaint of the whole screen costs at least what the screen holds; a changed clock is a few dozen bytes.
+			expect(written.length / frames).toBeLessThan(stdout.screen().length / 4);
 		});
 
 		test('reports the running state and the ready line once the bot is up', async () => {
