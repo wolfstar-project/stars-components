@@ -1,5 +1,13 @@
 # with-gateway
 
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689)]:
+    - @wolfstar/http-framework@6.5.0
+    - @wolfstar/env-utilities@2.3.1
+
 ## 0.0.13
 
 ### Patch Changes
