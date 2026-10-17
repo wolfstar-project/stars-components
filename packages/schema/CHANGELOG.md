@@ -1,5 +1,17 @@
 # @wolfstar/schema
 
+## 0.11.0
+
+### Minor Changes
+
+- [#335](https://github.com/wolfstar-project/stars-components/pull/335) [`b98cbef`](https://github.com/wolfstar-project/stars-components/commit/b98cbef7581c69d8e7493e2ad880f6785415b078) - Modules can register a directory of pieces with `ctx.addPiecesDir(directory)`. The directory holds one folder per store (`commands`, `listeners`, …) and is handed to `container.stores.registerPath` before the bot loads, through the `\0stars:modules` virtual module or, for `tsc` and `none` builds, the `node --import` preload and `.stars/modules.mjs`. `ModulesRuntime` gains `piecesDirs`, `stars info` lists them, and a relative path fails with `MODULE_PIECES_INVALID`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#338](https://github.com/wolfstar-project/stars-components/pull/338) [`af4289e`](https://github.com/wolfstar-project/stars-components/commit/af4289eaaef37d8e1879bb1984997bffe74bf42c) - `future.compatibilityVersion: 7` makes `stars.config` decide what registers. It is opt-in and not the default: the `@wolfstar/plugin-*` packages found in `package.json` are no longer activated by their name (no `import "<name>/register"` is added to the entry), only the modules in `modules` and the ones they install are. On that version `stars build`, `prepare`, `dev`, `info` and `doctor` warn (`PLUGINS_NOT_REGISTERED`) about an installed plugin that is left out. On version 6 and below nothing changes; `stars info` and `stars doctor` now list the plugins registered by name. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#337](https://github.com/wolfstar-project/stars-components/pull/337) [`c2b1430`](https://github.com/wolfstar-project/stars-components/commit/c2b14303847ceb920d5bb93be8a6d4dcb1e26fa8) - Modules can run code in the bot at the client's lifecycle points. `hooks` in `defineModule` accepts `client:preGenericsInitialization`, `client:preInitialization`, `client:postInitialization`, `client:preLoad` and `client:postListen`, given by source (`{ from, export }`, a function called with `(client, clientOptions)`), and `ctx.addClientHook(name, source)` does the same from `setup`. The hooks of a module share one runtime plugin named after it. `ModulesRuntime` gains `clientHooks`, `stars info` lists them, and a bad hook fails with `MODULE_HOOK_INVALID`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#339](https://github.com/wolfstar-project/stars-components/pull/339) [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689) - Modules can add a directory of locales with `ctx.addLocales(directory)`. The directory is laid out as `<language>/<namespace>.json`, and its namespaces are read when the module is set up. A runtime plugin generated into the `\0stars:modules` source (and the `node --import` preload) merges it into the client's `i18n` option before `@wolfstar/plugin-i18next` builds its handler, keeping the project's own languages directory. `ModulesRuntime` gains `locales`, `stars info` lists them, and a bad directory fails with `MODULE_LOCALES_INVALID`. `@wolfstar/http-framework` now re-exports `getRootData` from `@sapphire/pieces`, which the generated plugin uses to find the default languages directory. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.10.0
 
 ### Minor Changes

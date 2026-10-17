@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.5.0
+
+### Minor Changes
+
+- [#339](https://github.com/wolfstar-project/stars-components/pull/339) [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689) - Modules can add a directory of locales with `ctx.addLocales(directory)`. The directory is laid out as `<language>/<namespace>.json`, and its namespaces are read when the module is set up. A runtime plugin generated into the `\0stars:modules` source (and the `node --import` preload) merges it into the client's `i18n` option before `@wolfstar/plugin-i18next` builds its handler, keeping the project's own languages directory. `ModulesRuntime` gains `locales`, `stars info` lists them, and a bad directory fails with `MODULE_LOCALES_INVALID`. `@wolfstar/http-framework` now re-exports `getRootData` from `@sapphire/pieces`, which the generated plugin uses to find the default languages directory. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`b98cbef`](https://github.com/wolfstar-project/stars-components/commit/b98cbef7581c69d8e7493e2ad880f6785415b078), [`1871d36`](https://github.com/wolfstar-project/stars-components/commit/1871d36faec909343bbf824306a553a3eb1eb581), [`af4289e`](https://github.com/wolfstar-project/stars-components/commit/af4289eaaef37d8e1879bb1984997bffe74bf42c), [`5727740`](https://github.com/wolfstar-project/stars-components/commit/572774059d8ede5f2fcc0aabe1001aa6bfa86371), [`c2b1430`](https://github.com/wolfstar-project/stars-components/commit/c2b14303847ceb920d5bb93be8a6d4dcb1e26fa8), [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689)]:
+    - @wolfstar/schema@0.11.0
+    - @wolfstar/cli@2.10.0
+
 ## 6.4.0
 
 ### Minor Changes

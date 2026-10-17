@@ -1,5 +1,14 @@
 # with-subcommands
 
+## 0.0.33
+
+### Patch Changes
+
+- Updated dependencies [[`f1969c0`](https://github.com/wolfstar-project/stars-components/commit/f1969c00b773ebc711b0bbaa5321f2cef6dd373f), [`847fba8`](https://github.com/wolfstar-project/stars-components/commit/847fba8205c9622f04552c2e0dcbb5686e9cfd6f), [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689)]:
+    - @wolfstar/shared-http-pieces@2.1.0
+    - @wolfstar/http-framework@6.5.0
+    - @wolfstar/env-utilities@2.3.1
+
 ## 0.0.32
 
 ### Patch Changes
