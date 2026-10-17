@@ -95,7 +95,8 @@ reads its key as well, with the options passed to `installModule` taking the inl
 - `ctx.addPiecesDir(directory)` registers a directory of pieces (a folder per store: `commands`, `listeners`, …) that
   is loaded next to the bot's own. Give an absolute path or a `file:` URL, e.g. `new URL('./pieces', import.meta.url)`;
   a relative path is rejected. The pieces are read from files at runtime, so it does not work in a build that bundles
-  everything (Vite, Nitro).
+  everything (Vite, Nitro). Only the stores that exist when the modules source runs are covered (the framework's four,
+  and any registered by an earlier import); a folder for a store registered later is ignored.
 - `ctx.addImports(preset)` adds a package to the auto imports presets.
 - `ctx.hook(name, callback)` / `ctx.callHook(name, …)` use the CLI's hooks (`StarsHooks`), the same registry as `hooks`
   in `stars.config`. A module's `hooks` are registered before `setup` runs; an unknown hook name or a value that is not
