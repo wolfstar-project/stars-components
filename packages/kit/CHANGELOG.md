@@ -1,5 +1,12 @@
 # @wolfstar/kit
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`1245aad`](https://github.com/wolfstar-project/stars-components/commit/1245aadc8a0e4996154b5dc3d75df51b9a520d86)]:
+    - @wolfstar/schema@0.12.0
+
 ## 0.3.0
 
 ### Minor Changes
