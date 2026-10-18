@@ -3,18 +3,22 @@ import { defineCommand } from 'citty';
 import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
+import { checkDevDirectories, parseDevPort, prepareDevEndpoint, type PortConflictPolicy } from '../dev/preflight.js';
 import { LogFileWriter, runLogFile } from '../dev/log-file.js';
 import { initialLogView, isLogLevel } from '../dev/tui/log-view.js';
 import { collectFlag, projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { ExitCode, renderCrashReport } from '../utils/errors.js';
 import { applyEnvOptions, loadProject, withProjectEnv } from '../utils/hooks.js';
-import { prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
+import { prefersReducedMotion, resolveDevPresentation, shouldUseColor } from '../utils/output-mode.js';
 import { THEME_SETTINGS, isThemeSetting, readSavedTheme, resolveThemeSetting, saveTheme } from '../utils/theme.js';
 import { prepareProject, reportWarnings } from './_shared.js';
 
 export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
+	style?: string;
+	port?: string;
+	portConflict?: string;
 	/** `--theme`. */
 	theme?: string;
 	/** `--layout`. */
@@ -30,11 +34,23 @@ export interface DevTaskOptions extends ProjectArgs {
 }
 
 const LAYOUTS = ['auto', 'dashboard', 'panel'] as const;
+const STYLES = ['nuxt-style', 'dashboard', 'none'] as const;
+const PORT_POLICIES = ['prompt', 'next', 'error', 'continue'] as const;
 const LEVELS = ['trace', 'debug', 'info', 'warn', 'error'] as const;
 
 export async function runDev(options: DevTaskOptions): Promise<void> {
 	if (options.theme !== undefined && !isThemeSetting(options.theme)) {
 		throw cliDiagnostics.INVALID_THEME({ theme: options.theme, themes: THEME_SETTINGS.join(', ') });
+	}
+
+	const port = options.port === undefined ? undefined : parseDevPort(options.port);
+	for (const [option, value, allowed] of [
+		['--style', options.style, STYLES],
+		['--port-conflict', options.portConflict, PORT_POLICIES]
+	] as const) {
+		if (value !== undefined && !(allowed as readonly string[]).includes(value)) {
+			throw cliDiagnostics.INVALID_OPTION({ option, value, allowed: allowed.join(', ') });
+		}
 	}
 
 	const layout = options.layout as (typeof LAYOUTS)[number] | undefined;
@@ -51,8 +67,18 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config, env: { ...process.env, NODE_ENV: 'development' } });
 	const hooks = project.hooks;
 	// `env:options` first: it may pick env files with another `HTTP_PORT`, which `dev.url` is derived from.
-	const config = await resolveDevConfig(withProjectEnv(await applyEnvOptions(project.config, hooks)));
-	const mode = resolveOutputMode({ tui: options.tui });
+	const initialConfig = await resolveDevConfig(withProjectEnv(await applyEnvOptions(project.config, hooks)));
+	const config = await prepareDevEndpoint(initialConfig, { port, policy: options.portConflict as PortConflictPolicy | undefined });
+	if (!config) return;
+	await checkDevDirectories(config);
+	if (config.dev.url !== initialConfig.dev.url) process.stderr.write(`Development endpoint: ${config.dev.url}\n`);
+	const { mode, layout: selectedLayout } = resolveDevPresentation({
+		tui: options.tui,
+		style: options.style as (typeof STYLES)[number] | undefined,
+		layout,
+		configuredStyle: config.dev.style ?? undefined,
+		configuredLayout: config.dev.layout
+	});
 	const color = shouldUseColor();
 	const theme = resolveThemeSetting({ flag: options.theme, saved: readSavedTheme() });
 
@@ -72,7 +98,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 			? (await import('../dev/tui/tui.js')).createTuiRenderer(service, {
 					color,
 					theme,
-					layout,
+					layout: selectedLayout,
 					filter,
 					mouse: options.mouse,
 					reducedMotion: prefersReducedMotion(),
@@ -151,6 +177,18 @@ export default defineCommand({
 			description: 'Interactive terminal UI; use --no-tui (or STARS_TUI=plain) for plain line output',
 			default: true
 		},
+		style: {
+			type: 'string',
+			description: `Terminal presentation: ${STYLES.join(', ')} (overrides --layout and dev.style)`
+		},
+		port: {
+			type: 'string',
+			description: 'Development port (1..65535), forwarded to the application and Nitro'
+		},
+		'port-conflict': {
+			type: 'string',
+			description: `Occupied-port policy: ${PORT_POLICIES.join(', ')} (defaults to dev.portConflict)`
+		},
 		theme: {
 			type: 'string',
 			description: `Colour theme of the interactive UI: ${THEME_SETTINGS.join(', ')} (or STARS_THEME; press T in the UI to pick one)`
@@ -182,10 +220,20 @@ export default defineCommand({
 	},
 	async run({ args, rawArgs }) {
 		const channel = collectFlag(rawArgs, 'channel');
+		const separator = rawArgs.indexOf('--');
+		const flags = separator === -1 ? rawArgs : rawArgs.slice(0, separator);
 		await runDev({
 			config: args.config,
 			cwd: args.cwd,
-			tui: args.tui ? undefined : false,
+			tui:
+				args.tui === false || flags.includes('--no-tui')
+					? false
+					: flags.some((flag) => flag === '--tui' || flag === '--tui=true')
+						? true
+						: undefined,
+			style: args.style,
+			port: args.port,
+			portConflict: args['port-conflict'],
 			theme: args.theme,
 			layout: args.layout,
 			channel: channel.length > 0 ? channel : undefined,

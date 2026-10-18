@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import * as nodeUtil from 'node:util';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { Diagnostic } from 'nostics';
 import type {
@@ -103,6 +104,8 @@ export interface ResolvedDevCommandsConfig {
 export interface ResolvedDevConfig {
 	readonly banner: readonly string[] | false | null;
 	readonly layout: 'auto' | 'dashboard' | 'panel';
+	readonly style: 'nuxt-style' | 'dashboard' | 'none' | null;
+	readonly portConflict: 'prompt' | 'next' | 'error' | 'continue';
 	readonly mouse: boolean;
 	readonly logs: ResolvedDevLogsConfig;
 	readonly commands: ResolvedDevCommandsConfig;
@@ -524,11 +527,14 @@ const ENV_PORT_KEYS = ['HTTP_PORT', 'PORT'] as const;
  * Reads the project's environment layers from `src/.env*` and `.env*` into a plain object, the way `stars dev` and
  * `stars commands` need it:
  * these files are only loaded into `process.env` by the bot itself once it starts (see `@wolfstar/env-utilities`),
- * so by the time the CLI runs they are not there yet. This is a minimal line reader, not a full dotenv
- * implementation — quoting is stripped, but expansion (`dotenv-expand`) is not. Earlier files win, matching
- * dotenv's own precedence.
+ * so by the time the CLI runs they are not there yet. Parsing and expansion stay local to this object: reading
+ * configuration never writes to process.env. Earlier files win, matching the runtime loader's precedence.
  */
-export function readProjectEnvFiles(root: string, environment = 'development', options: { path?: string } = {}): Record<string, string> {
+export function readProjectEnvFiles(
+	root: string,
+	environment = 'development',
+	options: { path?: string; env?: NodeJS.ProcessEnv } = {}
+): Record<string, string> {
 	const result: Record<string, string> = {};
 	const suffixes = [`.${environment}.local`, ...(environment === 'test' ? [] : ['.local']), `.${environment}`, ''];
 	// A custom `env.path` replaces both default locations, the way it does in `@wolfstar/env-utilities`.
@@ -547,32 +553,81 @@ export function readProjectEnvFiles(root: string, environment = 'development', o
 			continue;
 		}
 
-		for (const line of contents.split(/\r?\n/)) {
-			const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-			if (!match) continue;
-
-			const key = match[1]!;
-			if (key in result) continue;
-			result[key] = match[2]!.trim().replace(/^['"]|['"]$/g, '');
+		for (const [key, value] of Object.entries(parseEnvFile(contents))) {
+			if (!(key in result)) result[key] = value;
 		}
 	}
 
+	return expandEnvFile(result, options.env ?? process.env);
+}
+
+/** Node's dotenv parser is available from 20.12; keep configuration loading usable on earlier Node 20 releases. */
+function parseEnvFile(contents: string): Record<string, string> {
+	// Node's parser returns string values; older @types/node declarations describe only the object boundary.
+	if ('parseEnv' in nodeUtil) return nodeUtil.parseEnv(contents) as Record<string, string>;
+	const result: Record<string, string> = {};
+	const assignments = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:"((?:\\.|[^"\\])*)"|'([^']*)'|`([^`]*)`|([^\r\n]*))/gm;
+	for (const match of contents.matchAll(assignments)) {
+		result[match[1]!] =
+			match[2] !== undefined ? match[2].replace(/\\n/g, '\n').replace(/\\r/g, '\r') : (match[3] ?? match[4] ?? match[5]!.split('#')[0]!.trim());
+	}
 	return result;
+}
+
+/** Expand the runtime loader's variable/default/alternate syntax, with cycle detection and no global mutation. */
+function expandEnvFile(parsed: Record<string, string>, env: NodeJS.ProcessEnv): Record<string, string> {
+	const resolved: Record<string, string> = {};
+	const cyclic = new Set<string>();
+	const resolveValue = (key: string, visiting: ReadonlySet<string>): string => {
+		if (env[key]) return env[key]!;
+		if (resolved[key] !== undefined) return resolved[key]!;
+		if (visiting.size >= 100) throw configDiagnostics.ENV_EXPANSION_FAILED({ key });
+		if (visiting.has(key)) {
+			const path = [...visiting];
+			const members = path.slice(path.indexOf(key));
+			// Like the runtime loader, clear every participant in a multi-variable cycle, including its prefixes.
+			// A self-reference keeps the runtime loader's usual fallback handling.
+			if (members.length > 1) for (const member of members) cyclic.add(member);
+			return '';
+		}
+		const next = new Set([...visiting, key]);
+		let value = parsed[key] ?? '';
+		const seen = new Set<string>();
+		const reference = /(?<!\\)\$\{([^{}]+)\}|(?<!\\)\$([A-Za-z_][A-Za-z0-9_]*)/;
+		let match: RegExpExecArray | null;
+		while ((match = reference.exec(value)) !== null) {
+			if (seen.has(value)) return '';
+			seen.add(value);
+			const expression = /^(\w+)(:\+|\+|:-|-)?([\s\S]*)$/.exec((match[1] ?? match[2])!);
+			if (!expression) return value;
+			const [, target, operator, fallback = ''] = expression;
+			const found = resolveValue(target!, next);
+			const replacement = operator === ':+' || operator === '+' ? (found ? fallback : '') : found || fallback;
+			if (value.length + replacement.length > 1_048_576) throw configDiagnostics.ENV_EXPANSION_FAILED({ key });
+			value = value.slice(0, match.index) + replacement + value.slice(match.index + match[0].length);
+		}
+		resolved[key] = cyclic.has(key) ? '' : value;
+		return resolved[key];
+	};
+	for (const key of Object.keys(parsed)) resolved[key] = resolveValue(key, new Set());
+	// Keep memoized values escaped until aliases have finished substituting them.
+	return Object.fromEntries(Object.keys(parsed).map((key) => [key, resolved[key]!.replace(/\\\$/g, '$')]));
 }
 
 function readDevPortFromEnvFile(
 	root: string,
 	environment: string,
 	envConfig: ResolvedEnvConfig,
-	projectEnv: Readonly<Record<string, string>> | undefined
+	projectEnv: Readonly<Record<string, string>> | undefined,
+	env: NodeJS.ProcessEnv
 ): string | null {
 	// Varlock resolves its `.env.schema` on its own terms (and may pull values from elsewhere), so a dotenv file is
 	// not what the bot loads: without the values the host resolved (`projectEnv`), there is nothing to read.
 	if (projectEnv === undefined && envConfig.loader === 'varlock') return null;
 
-	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envConfig.options.path });
+	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envConfig.options.path, env });
 	for (const key of ENV_PORT_KEYS) {
-		if (values[key]) return values[key];
+		if (values[key] !== undefined) return values[key];
 	}
 
 	return null;
@@ -593,6 +648,8 @@ function resolveDev(
 	validator.knownKeys(config, 'dev', [
 		'banner',
 		'layout',
+		'style',
+		'portConflict',
 		'mouse',
 		'logs',
 		'commands',
@@ -623,19 +680,28 @@ function resolveDev(
 	let url = validator.string(config.url, 'dev.url') ?? null;
 	if (url !== null) {
 		try {
-			new URL(url);
+			const parsed = new URL(url);
+			if (!['http:', 'https:'].includes(parsed.protocol) || parsed.port === '0') throw new Error('Expected an HTTP(S) endpoint');
 		} catch {
-			throw validator.error(configDiagnostics.INVALID_URL, { url, fix: 'Use an absolute URL such as http://localhost:3000.' });
+			throw validator.error(configDiagnostics.INVALID_URL, {
+				url,
+				fix: 'Use an absolute http(s) URL with a port from 1 to 65535, such as http://localhost:3000.'
+			});
 		}
 	} else {
 		// Mirrors Vite's and Nuxt's own dev servers: a URL is shown without any configuration. The exact host
 		// (`localhost` vs `127.0.0.1`) is resolved at runtime by `stars dev`, once it knows which one is actually reachable.
 		const port =
 			devEnv.HTTP_PORT ??
+			devEnv.PORT ??
 			env.HTTP_PORT ??
-			readDevPortFromEnvFile(root, envConfig.options.env ?? env.NODE_ENV ?? 'development', envConfig, projectEnv) ??
+			env.PORT ??
+			readDevPortFromEnvFile(root, envConfig.options.env ?? env.NODE_ENV ?? 'development', envConfig, projectEnv, { ...env, ...devEnv }) ??
 			String(DEFAULT_DEV_PORT);
-		url = /^\d+$/.test(port) ? `http://localhost:${port}` : `http://localhost:${DEFAULT_DEV_PORT}`;
+		if (!/^\d+$/.test(port) || !Number.isInteger(Number(port)) || Number(port) < 1 || Number(port) > 65535) {
+			throw validator.error(configDiagnostics.INVALID_PORT, { port });
+		}
+		url = `http://localhost:${Number(port)}`;
 	}
 
 	const typecheck = resolveTypecheck(root, packageJson, buildTool, future, config.typecheck, validator);
@@ -649,6 +715,10 @@ function resolveDev(
 				: (validator.stringArray(config.banner, 'dev.banner') ?? null);
 
 	const layout = oneOf(validator.string(config.layout, 'dev.layout'), 'dev.layout', DEV_LAYOUTS, validator) ?? 'auto';
+	const style = oneOf(validator.string(config.style, 'dev.style'), 'dev.style', ['nuxt-style', 'dashboard', 'none'], validator) ?? null;
+	const portConflict =
+		oneOf(validator.string(config.portConflict, 'dev.portConflict'), 'dev.portConflict', ['prompt', 'next', 'error', 'continue'], validator) ??
+		'prompt';
 	const mouse = validator.boolean(config.mouse, 'dev.mouse') ?? true;
 	const logs = resolveDevLogs(root, config.logs, validator);
 	const commands = resolveDevCommands(config.commands, validator);
@@ -669,6 +739,8 @@ function resolveDev(
 		logFile,
 		banner,
 		layout,
+		style,
+		portConflict,
 		mouse,
 		logs,
 		commands,

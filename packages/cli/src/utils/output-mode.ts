@@ -3,6 +3,8 @@ export type OutputMode = 'tui' | 'plain';
 export interface ResolveOutputModeOptions {
 	/** `--no-tui` (`tui: false`) or `--tui` (`tui: true`) from the command line. */
 	tui?: boolean;
+	/** Configured presentation, unless overridden by a command-line layout. */
+	style?: 'nuxt-style' | 'dashboard' | 'none';
 	env?: NodeJS.ProcessEnv;
 	/** Whether stdout is an interactive terminal. */
 	isTTY?: boolean;
@@ -27,7 +29,7 @@ export function resolveOutputMode(options: ResolveOutputModeOptions = {}): Outpu
 	const isInputTTY = options.isInputTTY ?? options.isTTY ?? Boolean(process.stdin.isTTY);
 	const isCI = options.isCI ?? isCIEnvironment(env);
 
-	if (options.tui === false) return 'plain';
+	if (options.tui === false || (options.style === 'none' && options.tui !== true)) return 'plain';
 
 	const forced = env.STARS_TUI?.trim().toLowerCase();
 	if (forced === 'plain' || forced === '0' || forced === 'false' || forced === 'off') return 'plain';
@@ -37,6 +39,25 @@ export function resolveOutputMode(options: ResolveOutputModeOptions = {}): Outpu
 	if (options.tui === true) return isTTY ? 'tui' : 'plain';
 	if (isCI || (options.columns ?? process.stdout.columns ?? 80) < 40 || (options.rows ?? process.stdout.rows ?? 24) < 10) return 'plain';
 	return 'tui';
+}
+
+export type DevStyle = 'nuxt-style' | 'dashboard' | 'none';
+export type DevLayout = 'auto' | 'dashboard' | 'panel';
+
+export interface DevPresentationOptions extends ResolveOutputModeOptions {
+	layout?: DevLayout;
+	configuredStyle?: DevStyle;
+	configuredLayout?: DevLayout;
+}
+
+/** Explicit style, explicit legacy layout, configured style, configured legacy layout, automatic layout. */
+export function resolveDevPresentation(options: DevPresentationOptions = {}): { mode: OutputMode; layout: DevLayout } {
+	const style = options.style ?? (options.layout === undefined ? options.configuredStyle : undefined);
+	const layout = style === 'nuxt-style' ? 'panel' : style === 'dashboard' ? 'dashboard' : (options.layout ?? options.configuredLayout ?? 'auto');
+	return {
+		layout,
+		mode: resolveOutputMode({ ...options, style, tui: options.style === 'none' ? false : options.tui })
+	};
 }
 
 export function isCIEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {

@@ -247,6 +247,10 @@ export interface StarsDevConfig {
 	 * @default 'auto'
 	 */
 	layout?: 'auto' | 'dashboard' | 'panel';
+	/** Terminal presentation. Omit to keep dev.layout's automatic sizing. */
+	style?: 'nuxt-style' | 'dashboard' | 'none';
+	/** What to do when the local dev port is occupied. Noninteractive prompt mode fails with advice. */
+	portConflict?: 'prompt' | 'next' | 'error' | 'continue';
 	/**
 	 * Whether the dashboard reacts to the mouse: a click on a channel, a level, a group header or a key of the sidebar
 	 * does what its key does, and the wheel scrolls the logs. The terminal reports the mouse to `stars dev` while the
@@ -299,8 +303,8 @@ export interface StarsDevConfig {
 	/**
 	 * The URL the bot listens on, shown in the dev UI's status line and used for {@link StarsDevConfig.health}.
 	 *
-	 * Resolved automatically, the way Vite's and Nuxt's dev servers do, from (in order) `dev.env.HTTP_PORT`, the
-	 * process's `HTTP_PORT`, the project's `src/.env*`/`.env*` (`HTTP_PORT` or `PORT`), or `3000`. `stars dev` also
+	 * Resolved automatically, the way Vite's and Nuxt's dev servers do, from (in order) `dev.env.HTTP_PORT`/`PORT`, the
+	 * process's `HTTP_PORT`/`PORT`, the project's `src/.env*`/`.env*` (`HTTP_PORT` or `PORT`), or `3000`. `stars dev` also
 	 * resolves whether `localhost` should be shown as `127.0.0.1` instead, the same DNS-order check Vite does, so the
 	 * printed URL is always the one that is actually reachable.
 	 * @default `http://localhost:3000` (or whichever port is found)
