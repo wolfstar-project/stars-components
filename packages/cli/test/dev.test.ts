@@ -55,6 +55,27 @@ describe('runDev', () => {
 		}
 	});
 
+	test('reports a fallback listener port when the display URL points at a proxy', async () => {
+		const server = createServer();
+		await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+		const address = server.address();
+		if (!address || typeof address === 'string') throw new Error('Expected TCP address');
+		const write = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+		await fixture.write(
+			'stars.config.mjs',
+			`export default { build: { tool: 'none' }, imports: false, hooks: { 'builder:created': () => { throw new Error('stop after preflight'); } }, dev: { typecheck: false, url: 'https://localhost/proxy', env: { HTTP_PORT: '${address.port}', HTTP_ADDRESS: '127.0.0.1' } } };`
+		);
+		try {
+			await expect(runDev({ cwd: fixture.root, tui: false, portConflict: 'next' })).rejects.toThrow('stop after preflight');
+			const output = write.mock.calls.map(([chunk]) => String(chunk)).join('');
+			const selected = /Development listener port: (\d+)/.exec(output);
+			expect(selected).not.toBeNull();
+			expect(Number(selected![1])).toBeGreaterThan(address.port);
+		} finally {
+			await new Promise<void>((resolve) => server.close(() => resolve()));
+		}
+	});
+
 	test.each([{ port: '0' }, { style: 'panel' }, { portConflict: 'silent' }])(
 		'rejects invalid dev flags before touching the config: %j',
 		async (flags) => {

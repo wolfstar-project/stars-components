@@ -72,6 +72,9 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	if (!config) return;
 	await checkDevDirectories(config);
 	if (config.dev.url !== initialConfig.dev.url) process.stderr.write(`Development endpoint: ${config.dev.url}\n`);
+	else if (config.dev.listener.port !== initialConfig.dev.listener.port) {
+		process.stderr.write(`Development listener port: ${config.dev.listener.port}\n`);
+	}
 	const { mode, layout: selectedLayout } = resolveDevPresentation({
 		tui: options.tui,
 		style: options.style as (typeof STYLES)[number] | undefined,
