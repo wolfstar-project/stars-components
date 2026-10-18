@@ -30,6 +30,7 @@ export interface ProjectInfo {
 	};
 	build: ResolvedStarsConfig['build'];
 	dev: ResolvedStarsConfig['dev'];
+	tui: ResolvedStarsConfig['tui'];
 	codegen: ResolvedStarsConfig['codegen'];
 	imports: ResolvedStarsConfig['imports'];
 	experimental: ResolvedStarsConfig['experimental'];
@@ -67,6 +68,7 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		},
 		build: config.build,
 		dev: config.dev,
+		tui: config.tui,
 		codegen: config.codegen,
 		imports: config.imports,
 		experimental: config.experimental,

@@ -3,7 +3,7 @@ import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { existsSync, readFileSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
-import { checkPortAvailability, devBindHosts, localEndpoint } from '../dev/preflight.js';
+import { checkPortAvailability, devBindHosts } from '../dev/preflight.js';
 import { BRIDGE_FRAMEWORK_VERSION, isAtLeast } from '../dev/bridge.js';
 import { endpointUrl, describeQuickTunnel, readDiscordCredentials } from '../dev/tunnel.js';
 import { NGROK_AUTHTOKEN_VARIABLE, NGROK_INSTALL_HINT, NGROK_PACKAGE } from '../dev/tunnel-providers.js';
@@ -157,37 +157,45 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 		});
 	}
 
-	if (config.dev.url) {
-		const endpoint = localEndpoint(config.dev.url);
-		if (!endpoint) {
-			checks.push({ name: 'port', status: 'info', message: `${config.dev.url} is remote; no local port to check` });
-		} else {
-			try {
-				let free = true;
-				for (const host of devBindHosts(config, endpoint.host)) {
-					free = options.isPortFree
-						? await options.isPortFree(endpoint.port, host)
-						: (await checkPortAvailability(endpoint.port, host)) === 'available';
-					if (!free) break;
-				}
-				checks.push(
-					free
-						? { name: 'port', status: 'ok', message: `${config.dev.url} is free` }
-						: {
-								name: 'port',
-								status: 'warn',
-								message: `Something already listens on ${config.dev.url}`,
-								fix: 'Stop it, use stars dev --port <port>, or set dev.portConflict to next, unless it is this bot running.'
-							}
-				);
-			} catch (error) {
-				checks.push({
-					name: 'port',
-					status: 'error',
-					message: error instanceof Error ? error.message : String(error),
-					fix: 'Check the local address and permission to bind it.'
-				});
+	const listenerPort = Number(config.dev.listener.port);
+	if (!/^\d+$/.test(config.dev.listener.port) || listenerPort < 1 || listenerPort > 65535) {
+		checks.push({
+			name: 'port',
+			status: 'warn',
+			message: `Invalid bot listener port: ${config.dev.listener.port}`,
+			fix: 'Set HTTP_PORT or dev.env to a port from 1 to 65535 before starting stars dev.'
+		});
+	} else {
+		try {
+			const hosts = devBindHosts(config);
+			const endpoint =
+				config.dev.urlSource === 'inferred'
+					? config.dev.url!
+					: `http://${hosts[0]!.includes(':') ? `[${hosts[0]}]` : hosts[0]}:${listenerPort}`;
+			let free = true;
+			for (const host of hosts) {
+				free = options.isPortFree
+					? await options.isPortFree(listenerPort, host)
+					: (await checkPortAvailability(listenerPort, host)) === 'available';
+				if (!free) break;
 			}
+			checks.push(
+				free
+					? { name: 'port', status: 'ok', message: `${endpoint} is free` }
+					: {
+							name: 'port',
+							status: 'warn',
+							message: `Something already listens on ${endpoint}`,
+							fix: 'Stop it, use stars dev --port <port>, or set dev.portConflict to next, unless it is this bot running.'
+						}
+			);
+		} catch (error) {
+			checks.push({
+				name: 'port',
+				status: 'error',
+				message: error instanceof Error ? error.message : String(error),
+				fix: 'Check the local address and permission to bind it.'
+			});
 		}
 	}
 

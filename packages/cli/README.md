@@ -60,7 +60,7 @@ import { defineConfig } from '@wolfstar/http-framework/config';
 export default defineConfig({});
 ```
 
-`stars dev`'s URL needs no configuration either — it is detected from `HTTP_PORT` or `PORT` (env var, `src/.env*`/`.env*`, or `dev.env`) or `3000`, the same way Vite's and Nuxt's dev servers do, and `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` only to override it.
+`stars dev`'s display URL needs no configuration: it follows `dev.env.HTTP_PORT`/`PORT`, process `HTTP_PORT`, project env-file `HTTP_PORT`/`PORT`, or `3000`. An ambient process `PORT` is ignored by the framework mode. `localhost` is resolved at startup when needed. An explicit `dev.url` overrides display and health checks only, so it can point at a local proxy or remote tunnel.
 
 The resolved configuration is also available programmatically, exactly as the commands see it (re-exported from this package for convenience, or import it directly from `@wolfstar/http-framework/config`):
 
@@ -98,36 +98,42 @@ Choose the presentation in `stars.config.ts`:
 
 ```ts
 export default defineConfig({
-	dev: {
-		style: 'nuxt-style', // 'dashboard' for the full-screen view, 'none' for plain logs
-		portConflict: 'prompt'
-	}
+	tui: { style: 'nuxt-style' }, // 'dashboard' for the full-screen view, 'none' for plain logs
+	dev: { portConflict: 'prompt' }
 });
 ```
 
-`--style` overrides `--layout`, then `dev.style`, then `dev.layout`. With no style, the existing automatic
+`--style` overrides `--layout`, then `tui.style`, then `dev.layout`. With no style, the existing automatic
 layout selection stays in effect. `--no-tui` and `STARS_TUI=plain` use plain logs; redirected terminals never use
-raw input. An explicit `--tui` can override `dev.style: 'none'`; an explicit `--style none` always uses plain logs.
+raw input. An explicit `--tui` can override `tui.style: 'none'`; an explicit `--style none` always uses plain logs.
 
-**Startup checks.** Before creating the builder or writing generated files, Stars checks that the output,
-generated-file and log directories can be written, and that the local endpoint's port is available. Invalid
-HTTP(S) URLs and environment ports produce diagnostics with a suggested fix. Remote `dev.url` endpoints are
-never bound locally. Local checks cover the displayed address and the application's `HTTP_ADDRESS` (default
-`0.0.0.0`), or Nitro's `NITRO_HOST`/`HOST`, so a wildcard listener conflict is detected too. Env-file quoting,
-comments and variable expansion are resolved before checking the endpoint. These checks follow the startup approach of
-[Nuxt CLI](https://github.com/nuxt/cli/tree/ad8153ae532df2ed07bf6fd84d8f5ae1e766532f/packages/nuxt-cli).
+**Startup checks.** Before creating the builder or writing generated files, Stars checks that output,
+generated-file and log directories can be written and that the bot's actual listener port is available. HTTP(S)
+URLs are validated by the schema; listener ports are validated only when starting `stars dev`, so an unrelated
+shell value cannot prevent `stars build`, `info` or `doctor` from inspecting the project. These checks follow the
+startup approach of [Nuxt CLI](https://github.com/nuxt/cli/tree/ad8153ae532df2ed07bf6fd84d8f5ae1e766532f/packages/nuxt-cli).
 
-If the port is occupied, an interactive terminal offers three choices: start anyway on that port, cancel startup,
-or use the next available port. Cancellation creates no builder or generated files. This question also works with
-plain logs on a terminal. CI, piped input and `TERM=dumb` never wait for an answer: the default `prompt` policy
-fails with advice instead. `--port-conflict next` (or `dev.portConflict: 'next'`) tries up to 100 higher ports,
-including 65535 when in range; `error` fails immediately, and `continue` skips the port check.
+The framework listener uses `HTTP_ADDRESS` (default `0.0.0.0`). Its port comes from explicit `dev.env.HTTP_PORT` or
+`dev.env.PORT`, process `HTTP_PORT`, file `HTTP_PORT`, then file `PORT` when no explicit display URL is set, or
+`3000`. Ambient process `PORT` is ignored as a direct framework fallback; an explicit file expression such as
+`HTTP_PORT=${PORT}` still reads it. Empty process/file `HTTP_PORT` falls through;
+invalid nonempty listener values are reported at dev startup. Nitro uses `NITRO_HOST`/`HOST` and `NITRO_PORT` before
+`PORT`, including file `NITRO_PORT` before generic process `PORT`. Explicit `dev.env` ports take priority in both
+modes. Env-file quoting, comments and variable expansion are resolved before inferring ports.
 
-`--port 4000` sets the runtime endpoint for this session. A selected port updates the displayed URL, health checks,
-and the child process's `HTTP_PORT`, `PORT` and `NITRO_PORT`, preserving any URL path and query. The local resolved
-port also supplies these variables so `PORT` from an env file works with the framework's `HTTP_PORT` listener.
-No environment files or global port variables are rewritten. Port probes release their sockets before startup;
-another process can still claim a free port before the application binds it.
+If the listener port is occupied, an interactive terminal offers three choices: start anyway on that port,
+cancel startup, or use the next available port. Cancellation creates no builder or generated files. This question
+also works with plain logs on a terminal. CI, piped input and `TERM=dumb` never wait for an answer: the default
+`prompt` policy fails with advice instead. `--port-conflict next` (or `dev.portConflict: 'next'`) tries up to 100
+higher ports, including 65535 when in range; `error` fails immediately and `continue` skips the bind check.
+
+`--port 4000` and fallback choices set the child process's `HTTP_PORT`, `PORT` and `NITRO_PORT` for this session.
+An inferred display URL follows the selected port. An explicit `dev.url` stays unchanged, including its path and
+query, and its host/port are never probed as the bot listener. For example, `dev.url: 'https://localhost/bot'`
+can keep pointing at a proxy on 443 while the bot starts on 3000 or `--port 4000`. Without an explicit display URL,
+file `PORT` is forwarded to the framework's `HTTP_PORT` listener for compatibility. No environment files or global
+port variables are rewritten. Port probes release their sockets before startup; another process can still claim
+a free port before the application binds it.
 
 **Dashboard** (default on a TTY of at least 90×20): a full-screen view in the alternate buffer.
 
@@ -252,7 +258,7 @@ A question that is still open survives a restart of the bot, and a `y` given whi
 is carried out once it listens again. A refresh also empties a guild whose last command was removed since the last
 deploy, which pushing the registry alone would leave as it was.
 
-**Panel** (`dev.style: 'nuxt-style'`, `--style nuxt-style`, `dev.layout: 'panel'`, `--layout panel`, `v`, or a terminal smaller than 90×20): a bottom-aligned panel in
+**Panel** (`tui.style: 'nuxt-style'`, `--style nuxt-style`, `dev.layout: 'panel'`, `--layout panel`, `v`, or a terminal smaller than 90×20): a bottom-aligned panel in
 the normal buffer, following the layout and keyboard conventions of
 [Nuxt CLI's dev TUI](https://github.com/nuxt/cli/tree/b4b366eafdd9ac4d5b81b6ae7dadda35364252c9/packages/nuxt-cli/src/dev/tui).
 It shows a Stars wordmark, aligned URLs, a 20-cell progress bar with elapsed time, status and shortcuts, and folds

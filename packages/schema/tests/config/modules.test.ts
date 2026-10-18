@@ -82,6 +82,7 @@ describe('stars.config modules', () => {
 				'entry',
 				'build',
 				'dev',
+				'tui',
 				'codegen',
 				'imports',
 				'env',

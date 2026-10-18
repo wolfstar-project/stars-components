@@ -96,7 +96,7 @@ describe('renderers', () => {
 	}
 
 	test.each(['nuxt-style', 'dashboard'] as const)('renders the configured %s presentation', async (style) => {
-		service = new DevService({ ...service.config, dev: { ...service.config.dev, style } }, { builder: new IdleBuilder() });
+		service = new DevService({ ...service.config, tui: { style } }, { builder: new IdleBuilder() });
 		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: false, reducedMotion: true });
 		void renderer.start();
 		await waitFor(() => stdout.screen().includes(style === 'nuxt-style' ? 'Local' : 'channels'));

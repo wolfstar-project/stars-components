@@ -44,7 +44,7 @@ describe('runDev', () => {
 		if (!address || typeof address === 'string') throw new Error('Expected TCP address');
 		await fixture.write(
 			'stars.config.mjs',
-			`import { writeFileSync } from 'node:fs'; export default { build: { tool: 'none' }, imports: false, hooks: { 'builder:created': () => writeFileSync(${JSON.stringify(join(fixture.root, 'builder-started'))}, '') }, dev: { typecheck: false, url: 'http://127.0.0.1:${address.port}' } };`
+			`import { writeFileSync } from 'node:fs'; export default { build: { tool: 'none' }, imports: false, hooks: { 'builder:created': () => writeFileSync(${JSON.stringify(join(fixture.root, 'builder-started'))}, '') }, dev: { typecheck: false, url: 'http://127.0.0.1:${address.port}', env: { HTTP_PORT: '${address.port}', HTTP_ADDRESS: '127.0.0.1' } } };`
 		);
 		try {
 			await expect(runDev({ cwd: fixture.root, tui: false, portConflict: 'error' })).rejects.toMatchObject({ code: 'PORT_IN_USE' });

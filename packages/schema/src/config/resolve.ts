@@ -101,10 +101,13 @@ export interface ResolvedDevCommandsConfig {
 	readonly refresh: 'prompt' | 'auto' | 'off';
 }
 
+export interface ResolvedTuiConfig {
+	readonly style: 'nuxt-style' | 'dashboard' | 'none' | null;
+}
+
 export interface ResolvedDevConfig {
 	readonly banner: readonly string[] | false | null;
 	readonly layout: 'auto' | 'dashboard' | 'panel';
-	readonly style: 'nuxt-style' | 'dashboard' | 'none' | null;
 	readonly portConflict: 'prompt' | 'next' | 'error' | 'continue';
 	readonly mouse: boolean;
 	readonly logs: ResolvedDevLogsConfig;
@@ -117,6 +120,10 @@ export interface ResolvedDevConfig {
 	readonly nodeArgs: readonly string[];
 	readonly args: readonly string[];
 	readonly url: string | null;
+	/** Explicit URLs are for display/health and may point at a proxy rather than the bot listener. */
+	readonly urlSource: 'explicit' | 'inferred';
+	/** Raw listener port; stars dev validates it at startup, other commands can still inspect/build the project. */
+	readonly listener: { readonly port: string; readonly source: 'dev.env' | 'environment' | 'project' | 'default' };
 	readonly health: string | null;
 	readonly killTimeout: number;
 	readonly typecheck: ResolvedTypecheckConfig;
@@ -174,6 +181,7 @@ export interface ResolvedStarsConfig {
 	readonly entry: string;
 	readonly build: ResolvedBuildConfig;
 	readonly dev: ResolvedDevConfig;
+	readonly tui: ResolvedTuiConfig;
 	readonly codegen: ResolvedCodegenConfig;
 	readonly imports: ResolvedImportsConfig;
 	readonly env: ResolvedEnvConfig;
@@ -287,7 +295,22 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 	const hooks = resolveHooks(config.hooks, validator);
 	const modules = resolveModules(config.modules, validator);
 	const envConfig = resolveEnv(config.env, packageJson, future, experimental, validator, root);
-	const dev = resolveDev(root, entry, packageJson, build.tool, future, config.dev ?? {}, env, envConfig, options.projectEnv, validator);
+	const dev = resolveDev(
+		root,
+		entry,
+		packageJson,
+		build.tool,
+		future,
+		experimental.enableNitro,
+		config.dev ?? {},
+		env,
+		envConfig,
+		options.projectEnv,
+		validator
+	);
+	const tui = validator.plainObject(config.tui, 'tui') ?? {};
+	validator.knownKeys(tui, 'tui', ['style']);
+	const tuiStyle = oneOf(validator.string(tui.style, 'tui.style'), 'tui.style', ['nuxt-style', 'dashboard', 'none'], validator) ?? null;
 	const codegen = resolveCodegen(root, config.codegen ?? {}, validator);
 	const imports = resolveImports(root, build.tool, future, config.imports, validator);
 
@@ -307,6 +330,7 @@ export function resolveStarsConfig(options: ResolveConfigOptions): ResolvedStars
 		entry,
 		build,
 		dev,
+		tui: { style: tuiStyle },
 		codegen,
 		imports,
 		env: envConfig,
@@ -521,8 +545,6 @@ function resolveBuildOutput(root: string, entry: string, outDir: string, package
 	return join(outDir, `${basename(entry, extension)}${outputExtension}`);
 }
 
-const ENV_PORT_KEYS = ['HTTP_PORT', 'PORT'] as const;
-
 /**
  * Reads the project's environment layers from `src/.env*` and `.env*` into a plain object, the way `stars dev` and
  * `stars commands` need it:
@@ -535,10 +557,14 @@ export function readProjectEnvFiles(
 	environment = 'development',
 	options: { path?: string; env?: NodeJS.ProcessEnv } = {}
 ): Record<string, string> {
+	return expandEnvFile(readProjectEnvFileValues(root, environment, options.path), options.env ?? process.env);
+}
+
+function readProjectEnvFileValues(root: string, environment: string, customPath?: string): Record<string, string> {
 	const result: Record<string, string> = {};
 	const suffixes = [`.${environment}.local`, ...(environment === 'test' ? [] : ['.local']), `.${environment}`, ''];
 	// A custom `env.path` replaces both default locations, the way it does in `@wolfstar/env-utilities`.
-	const bases = options.path ? [options.path] : [join('src', '.env'), '.env'];
+	const bases = customPath ? [customPath] : [join('src', '.env'), '.env'];
 	const files = suffixes.flatMap((suffix) => bases.map((base) => `${base}${suffix}`));
 
 	for (const file of files) {
@@ -558,7 +584,7 @@ export function readProjectEnvFiles(
 		}
 	}
 
-	return expandEnvFile(result, options.env ?? process.env);
+	return result;
 }
 
 /** Node's dotenv parser is available from 20.12; keep configuration loading usable on earlier Node 20 releases. */
@@ -614,23 +640,23 @@ function expandEnvFile(parsed: Record<string, string>, env: NodeJS.ProcessEnv): 
 	return Object.fromEntries(Object.keys(parsed).map((key) => [key, resolved[key]!.replace(/\\\$/g, '$')]));
 }
 
-function readDevPortFromEnvFile(
+function readDevEnvironment(
 	root: string,
 	environment: string,
 	envConfig: ResolvedEnvConfig,
 	projectEnv: Readonly<Record<string, string>> | undefined,
-	env: NodeJS.ProcessEnv
-): string | null {
-	// Varlock resolves its `.env.schema` on its own terms (and may pull values from elsewhere), so a dotenv file is
-	// not what the bot loads: without the values the host resolved (`projectEnv`), there is nothing to read.
-	if (projectEnv === undefined && envConfig.loader === 'varlock') return null;
-
-	const values = projectEnv ?? readProjectEnvFiles(root, environment, { path: envConfig.options.path, env });
-	for (const key of ENV_PORT_KEYS) {
-		if (values[key] !== undefined) return values[key];
-	}
-
-	return null;
+	env: NodeJS.ProcessEnv,
+	nitro: boolean
+): Readonly<Record<string, string>> {
+	// Without values resolved by varlock, a dotenv file is not what the application will load.
+	if (projectEnv !== undefined) return projectEnv;
+	if (envConfig.loader === 'varlock') return {};
+	const parsed = readProjectEnvFileValues(root, environment, envConfig.options.path);
+	const expanded = expandEnvFile(parsed, env);
+	if (nitro || parsed.PORT === undefined) return expanded;
+	// HTTP_PORT may explicitly reference the shell's PORT. Only a direct generic fallback ignores that value.
+	const { PORT: _ambientPort, ...withoutAmbientPort } = env;
+	return { ...expanded, PORT: expandEnvFile(parsed, withoutAmbientPort).PORT! };
 }
 
 function resolveDev(
@@ -639,6 +665,7 @@ function resolveDev(
 	packageJson: PackageJsonLike | null,
 	buildTool: StarsBuildTool,
 	future: ResolvedFutureConfig,
+	nitro: boolean,
 	config: NonNullable<StarsConfig['dev']>,
 	env: NodeJS.ProcessEnv,
 	envConfig: ResolvedEnvConfig,
@@ -648,7 +675,6 @@ function resolveDev(
 	validator.knownKeys(config, 'dev', [
 		'banner',
 		'layout',
-		'style',
 		'portConflict',
 		'mouse',
 		'logs',
@@ -677,6 +703,34 @@ function resolveDev(
 	const killTimeout = validator.nonNegativeNumber(config.killTimeout, 'dev.killTimeout') ?? DEFAULT_KILL_TIMEOUT;
 	const health = validator.string(config.health, 'dev.health') ?? null;
 
+	const configuredPort = nitro ? (devEnv.NITRO_PORT ?? devEnv.PORT ?? devEnv.HTTP_PORT) : (devEnv.HTTP_PORT ?? devEnv.PORT);
+	const primaryKey = nitro ? 'NITRO_PORT' : 'HTTP_PORT';
+	const environmentPort = env[primaryKey] || undefined;
+	// Ambient generic PORT is relevant to Nitro, but not to the framework's HTTP_PORT listener.
+	const fileEnv = { ...env, ...devEnv };
+	const projectValues =
+		configuredPort === undefined && environmentPort === undefined
+			? readDevEnvironment(root, envConfig.options.env ?? env.NODE_ENV ?? 'development', envConfig, projectEnv, fileEnv, nitro)
+			: {};
+	const projectPort = projectValues[primaryKey] || undefined;
+	const genericEnvironmentPort = nitro ? env.PORT || undefined : undefined;
+	const genericProjectPort = nitro || config.url === undefined ? projectValues.PORT || undefined : undefined;
+	const listener: ResolvedDevConfig['listener'] = {
+		port: configuredPort ?? environmentPort ?? projectPort ?? genericEnvironmentPort ?? genericProjectPort ?? String(DEFAULT_DEV_PORT),
+		source:
+			configuredPort !== undefined
+				? 'dev.env'
+				: environmentPort !== undefined
+					? 'environment'
+					: projectPort !== undefined
+						? 'project'
+						: genericEnvironmentPort !== undefined
+							? 'environment'
+							: genericProjectPort !== undefined
+								? 'project'
+								: 'default'
+	};
+	const urlSource = config.url === undefined ? 'inferred' : 'explicit';
 	let url = validator.string(config.url, 'dev.url') ?? null;
 	if (url !== null) {
 		try {
@@ -689,19 +743,10 @@ function resolveDev(
 			});
 		}
 	} else {
-		// Mirrors Vite's and Nuxt's own dev servers: a URL is shown without any configuration. The exact host
-		// (`localhost` vs `127.0.0.1`) is resolved at runtime by `stars dev`, once it knows which one is actually reachable.
+		// A display default must not prevent build/info/doctor from running because of an irrelevant shell value.
 		const port =
-			devEnv.HTTP_PORT ??
-			devEnv.PORT ??
-			env.HTTP_PORT ??
-			env.PORT ??
-			readDevPortFromEnvFile(root, envConfig.options.env ?? env.NODE_ENV ?? 'development', envConfig, projectEnv, { ...env, ...devEnv }) ??
-			String(DEFAULT_DEV_PORT);
-		if (!/^\d+$/.test(port) || !Number.isInteger(Number(port)) || Number(port) < 1 || Number(port) > 65535) {
-			throw validator.error(configDiagnostics.INVALID_PORT, { port });
-		}
-		url = `http://localhost:${Number(port)}`;
+			/^\d+$/.test(listener.port) && Number(listener.port) >= 1 && Number(listener.port) <= 65535 ? Number(listener.port) : DEFAULT_DEV_PORT;
+		url = `http://localhost:${port}`;
 	}
 
 	const typecheck = resolveTypecheck(root, packageJson, buildTool, future, config.typecheck, validator);
@@ -715,7 +760,6 @@ function resolveDev(
 				: (validator.stringArray(config.banner, 'dev.banner') ?? null);
 
 	const layout = oneOf(validator.string(config.layout, 'dev.layout'), 'dev.layout', DEV_LAYOUTS, validator) ?? 'auto';
-	const style = oneOf(validator.string(config.style, 'dev.style'), 'dev.style', ['nuxt-style', 'dashboard', 'none'], validator) ?? null;
 	const portConflict =
 		oneOf(validator.string(config.portConflict, 'dev.portConflict'), 'dev.portConflict', ['prompt', 'next', 'error', 'continue'], validator) ??
 		'prompt';
@@ -732,6 +776,8 @@ function resolveDev(
 		nodeArgs,
 		args,
 		url,
+		urlSource,
+		listener,
 		health,
 		killTimeout,
 		typecheck,
@@ -739,7 +785,6 @@ function resolveDev(
 		logFile,
 		banner,
 		layout,
-		style,
 		portConflict,
 		mouse,
 		logs,

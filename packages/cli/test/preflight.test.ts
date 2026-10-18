@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { createBuilder } from '../src/builders/index.js';
 import { DevService } from '../src/dev/dev-service.js';
-import { checkDevDirectories, checkPortAvailability, localEndpoint, parseDevPort, prepareDevEndpoint } from '../src/dev/preflight.js';
+import { checkDevDirectories, checkPortAvailability, parseDevPort, prepareDevEndpoint } from '../src/dev/preflight.js';
 import { createFixture, waitFor, type Fixture } from './helpers.js';
 
 async function listen(server: Server, host = '127.0.0.1'): Promise<number> {
@@ -43,7 +43,16 @@ describe('development preflight', () => {
 		return server;
 	}
 	function endpoint(port: number, host = '127.0.0.1'): ResolvedStarsConfig {
-		return { ...config, dev: { ...config.dev, url: `http://${host}:${port}/interactions?test=/` } };
+		return {
+			...config,
+			dev: {
+				...config.dev,
+				url: `http://${host}:${port}/interactions?test=/`,
+				urlSource: 'inferred',
+				listener: { port: String(port), source: 'project' },
+				env: { HTTP_ADDRESS: host.replace(/^\[|\]$/g, '') }
+			}
+		};
 	}
 
 	test('detects a real occupied socket and releases a successful probe before returning', async () => {
@@ -59,13 +68,20 @@ describe('development preflight', () => {
 		expect(server.address()).toMatchObject({ port });
 	});
 
-	test('detects a wildcard bind conflict even when the advertised loopback address is free', async () => {
-		const port = await listen(socket(), '127.0.0.2');
-		expect(await checkPortAvailability(port, '127.0.0.1')).toBe('available');
-		await expect(prepareDevEndpoint(endpoint(port), { policy: 'error' })).rejects.toMatchObject({ code: 'PORT_IN_USE' });
-		const selected = await prepareDevEndpoint(endpoint(port), { policy: 'next' });
-		expect(Number(selected?.dev.env.HTTP_PORT)).toBeGreaterThan(port);
-		expect(await checkPortAvailability(Number(selected!.dev.env.HTTP_PORT), '0.0.0.0')).toBe('available');
+	test('checks and searches the actual wildcard listener rather than the displayed loopback address', async () => {
+		const configured = endpoint(4000);
+		const wildcard = { ...configured, dev: { ...configured.dev, env: {} } };
+		const checkPort = vi.fn(async (port: number, host: string) =>
+			port === 4000 && host === '0.0.0.0' ? ('in-use' as const) : ('available' as const)
+		);
+		await expect(prepareDevEndpoint(wildcard, { policy: 'error', checkPort })).rejects.toMatchObject({ code: 'PORT_IN_USE' });
+		checkPort.mockClear();
+		const selected = await prepareDevEndpoint(wildcard, { policy: 'next', checkPort });
+		expect(selected?.dev.env.HTTP_PORT).toBe('4001');
+		expect(checkPort.mock.calls).toEqual([
+			[4000, '0.0.0.0'],
+			[4001, '0.0.0.0']
+		]);
 	});
 
 	test('honors an explicit HTTP_ADDRESS instead of assuming a wildcard listener', async () => {
@@ -81,8 +97,9 @@ describe('development preflight', () => {
 	test('resolves HTTP_ADDRESS from expanded env-file values and dev overrides', async () => {
 		const port = await listen(socket(), '127.0.0.2');
 		await fixture.write('.env', 'BIND_IP=127.0.0.2\nHTTP_ADDRESS=${BIND_IP} # bind address\n');
-		await expect(prepareDevEndpoint(endpoint(port), { policy: 'error' })).rejects.toMatchObject({ code: 'PORT_IN_USE' });
-		const configured = endpoint(port);
+		const base = endpoint(port);
+		const configured = { ...base, dev: { ...base.dev, env: {} } };
+		await expect(prepareDevEndpoint(configured, { policy: 'error' })).rejects.toMatchObject({ code: 'PORT_IN_USE' });
 		const selected = await prepareDevEndpoint({ ...configured, dev: { ...configured.dev, env: { BIND_IP: '127.0.0.1' } } }, { policy: 'error' });
 		expect(selected?.dev.env.HTTP_PORT).toBe(String(port));
 	});
@@ -108,15 +125,17 @@ describe('development preflight', () => {
 			if (error.code === 'EAFNOSUPPORT' || error.code === 'EADDRNOTAVAIL') context.skip();
 			throw error;
 		});
-		expect(localEndpoint(`http://[::1]:${port}/health`)).toEqual({ host: '::1', port });
-		await expect(prepareDevEndpoint(endpoint(port, '[::1]'), { policy: 'error' })).rejects.toMatchObject({ code: 'PORT_IN_USE' });
+		const configured = endpoint(port, '[::1]');
+		await expect(
+			prepareDevEndpoint({ ...configured, dev: { ...configured.dev, env: { HTTP_ADDRESS: '[::1]' } } }, { policy: 'error' })
+		).rejects.toMatchObject({ code: 'PORT_IN_USE' });
 	});
 
 	test('does not bind a remote endpoint', async () => {
-		const remote = { ...config, dev: { ...config.dev, url: 'https://example.com/bot' } };
-		const checkPort = vi.fn();
+		const remote = { ...config, dev: { ...config.dev, url: 'https://example.com/bot', urlSource: 'explicit' as const } };
+		const checkPort = vi.fn(async () => 'available' as const);
 		expect(await prepareDevEndpoint(remote, { checkPort })).toBe(remote);
-		expect(checkPort).not.toHaveBeenCalled();
+		expect(checkPort.mock.calls).toEqual([[3000, '0.0.0.0']]);
 	});
 
 	test('allows the user to continue on an occupied port without changing the endpoint', async () => {
@@ -136,12 +155,13 @@ describe('development preflight', () => {
 	test.each(['next', 'prompt'] as const)('%s selects an available port and preserves the URL and original configuration', async (policy) => {
 		const port = await listen(socket());
 		const original = endpoint(port);
+		const originalEnv = { ...original.dev.env };
 		const result = await prepareDevEndpoint(original, { policy, interactive: true, selectPort: async () => 'next' });
 		const selected = Number(new URL(result!.dev.url!).port);
 		expect(selected).toBeGreaterThan(port);
 		expect(new URL(result!.dev.url!).pathname + new URL(result!.dev.url!).search).toBe('/interactions?test=/');
 		expect(result?.dev.env).toMatchObject({ HTTP_PORT: String(selected), PORT: String(selected), NITRO_PORT: String(selected) });
-		expect(original.dev.env).toEqual(config.dev.env);
+		expect(original.dev.env).toEqual(originalEnv);
 		expect(original.dev.url).toBe(`http://127.0.0.1:${port}/interactions?test=/`);
 		expect(await checkPortAvailability(selected, '127.0.0.1')).toBe('available');
 	});
@@ -160,14 +180,11 @@ describe('development preflight', () => {
 		expect(checkPort).not.toHaveBeenCalled();
 	});
 
-	test.each([
-		['http:', 80],
-		['https:', 443]
-	] as const)('preserves the effective default port for %s', async (protocol, port) => {
-		const configured = { ...config, dev: { ...config.dev, url: `${protocol}//127.0.0.1:${port}/interactions?test=/` } };
+	test.each(['http://localhost', 'https://localhost'])('keeps explicit proxy URL %s independent of its effective port', async (url) => {
+		const configured = { ...config, dev: { ...config.dev, url, urlSource: 'explicit' as const } };
 		const result = await prepareDevEndpoint(configured, { policy: 'continue' });
-		expect(result?.dev.env).toMatchObject({ HTTP_PORT: String(port), PORT: String(port), NITRO_PORT: String(port) });
-		expect(localEndpoint(result!.dev.url!)).toEqual({ host: '127.0.0.1', port });
+		expect(result?.dev.url).toBe(url);
+		expect(result?.dev.env.HTTP_PORT).toBeUndefined();
 	});
 
 	test('includes 65535 in the bounded search and stops at the TCP limit', async () => {

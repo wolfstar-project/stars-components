@@ -76,7 +76,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 		tui: options.tui,
 		style: options.style as (typeof STYLES)[number] | undefined,
 		layout,
-		configuredStyle: config.dev.style ?? undefined,
+		configuredStyle: config.tui.style ?? undefined,
 		configuredLayout: config.dev.layout
 	});
 	const color = shouldUseColor();
@@ -179,7 +179,7 @@ export default defineCommand({
 		},
 		style: {
 			type: 'string',
-			description: `Terminal presentation: ${STYLES.join(', ')} (overrides --layout and dev.style)`
+			description: `Terminal presentation: ${STYLES.join(', ')} (overrides --layout and tui.style)`
 		},
 		port: {
 			type: 'string',

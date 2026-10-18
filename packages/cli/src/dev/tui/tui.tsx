@@ -54,7 +54,7 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 	const { layout } = resolveDevPresentation({
 		layout: options.layout,
 		style: options.style,
-		configuredStyle: service.config.dev.style ?? undefined,
+		configuredStyle: service.config.tui.style ?? undefined,
 		configuredLayout: service.config.dev.layout
 	});
 	// The dashboard is painted from the first frame, so its buffer is entered before Ink writes anything.

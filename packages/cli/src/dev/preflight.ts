@@ -1,9 +1,8 @@
 import { access, stat } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { createServer, isIP } from 'node:net';
-import { networkInterfaces } from 'node:os';
+import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
-import type { ResolvedStarsConfig } from '@wolfstar/schema';
+import { configDiagnostics, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { isCIEnvironment } from '../utils/output-mode.js';
 import { readProjectEnv } from '../utils/project-env.js';
@@ -28,20 +27,6 @@ export function parseDevPort(value: string): number {
 		throw cliDiagnostics.INVALID_OPTION({ option: '--port', value, allowed: 'an integer from 1 to 65535' });
 	}
 	return port;
-}
-
-/** URL.hostname keeps IPv6 brackets; node:net expects an unbracketed address. Remote endpoints are never bound. */
-export function localEndpoint(url: string): { host: string; port: number } | null {
-	const parsed = new URL(url);
-	const host = parsed.hostname.replace(/^\[|\]$/g, '');
-	const local =
-		host === 'localhost' ||
-		host === '::' ||
-		host === '0.0.0.0' ||
-		host === '::1' ||
-		(isIP(host) === 4 && host.startsWith('127.')) ||
-		Object.values(networkInterfaces()).some((addresses) => addresses?.some(({ address }) => address === host));
-	return local ? { host, port: Number(parsed.port || (parsed.protocol === 'https:' ? 443 : 80)) } : null;
 }
 
 /** Release the probe before resolving; EADDRINUSE alone means a conflicting listener. */
@@ -79,21 +64,26 @@ async function selectPort(url: string): Promise<PortChoice> {
 }
 
 function withPort(config: ResolvedStarsConfig, port: number): ResolvedStarsConfig {
-	const url = new URL(config.dev.url!);
-	url.port = String(port);
+	let url = config.dev.url;
+	if (url && config.dev.urlSource === 'inferred') {
+		const parsed = new URL(url);
+		parsed.port = String(port);
+		url = parsed.pathname === '/' && !parsed.search && !parsed.hash && !url.endsWith('/') ? parsed.href.slice(0, -1) : parsed.href;
+	}
 	return {
 		...config,
 		dev: {
 			...config.dev,
-			url: url.pathname === '/' && !url.search && !url.hash && !config.dev.url!.endsWith('/') ? url.href.slice(0, -1) : url.href,
-			// The framework, generic Node servers, and Nitro must all see the selected endpoint.
+			url,
+			listener: { ...config.dev.listener, port: String(port) },
+			// A requested port applies to the child; an explicit display/health URL can belong to a proxy.
 			env: { ...config.dev.env, HTTP_PORT: String(port), PORT: String(port), NITRO_PORT: String(port) }
 		}
 	};
 }
 
-/** The advertised URL may be loopback while the application listens on every interface. */
-export function devBindHosts(config: ResolvedStarsConfig, advertisedHost: string): readonly string[] {
+/** Actual application bind addresses, independent of a display/health URL that may point at a proxy. */
+export function devBindHosts(config: ResolvedStarsConfig): readonly string[] {
 	const fromFiles = readProjectEnv(config);
 	const keys = config.experimental.enableNitro ? ['NITRO_HOST', 'HOST'] : ['HTTP_ADDRESS'];
 	let address: string | undefined;
@@ -101,43 +91,47 @@ export function devBindHosts(config: ResolvedStarsConfig, advertisedHost: string
 		address = config.dev.env[key] ?? process.env[key] ?? fromFiles[key];
 		if (address) break;
 	}
-	return [...new Set([advertisedHost, (address || '0.0.0.0').replace(/^\[|\]$/g, '')])];
+	return [(address || '0.0.0.0').replace(/^\[|\]$/g, '')];
 }
 
 /** Runs before builders, generated files, renderers and process signal handlers. Null means a graceful cancellation. */
 export async function prepareDevEndpoint(config: ResolvedStarsConfig, options: DevEndpointOptions = {}): Promise<ResolvedStarsConfig | null> {
-	if (!config.dev.url) return config;
-	let resolved = options.port === undefined ? config : withPort(config, options.port);
-	const endpoint = localEndpoint(resolved.dev.url!);
-	if (!endpoint) return resolved;
-
-	// Also carry an inferred PORT or an explicit dev.url through to the framework's HTTP_PORT listener.
-	resolved = withPort(resolved, endpoint.port);
+	const rawPort = options.port === undefined ? config.dev.listener.port : String(options.port);
+	if (!/^\d+$/.test(rawPort) || Number(rawPort) < 1 || Number(rawPort) > 65535) {
+		throw configDiagnostics.INVALID_PORT({ port: rawPort });
+	}
+	const port = Number(rawPort);
+	// Inferred project/dev ports must reach the framework, which reads HTTP_PORT rather than generic PORT.
+	const resolved =
+		options.port !== undefined || config.dev.urlSource === 'inferred' || config.dev.listener.source === 'dev.env'
+			? withPort(config, port)
+			: config;
 	const policy = options.policy ?? config.dev.portConflict ?? 'prompt';
 	if (policy === 'continue') return resolved;
 	const check = options.checkPort ?? checkPortAvailability;
-	const hosts = devBindHosts(resolved, endpoint.host);
-	const available = async (port: number): Promise<boolean> => {
+	const hosts = devBindHosts(resolved);
+	const endpoint = `http://${hosts[0]!.includes(':') ? `[${hosts[0]}]` : hosts[0]}:${port}`;
+	const available = async (candidate: number): Promise<boolean> => {
 		for (const host of hosts) {
-			if ((await check(port, host)) === 'in-use') return false;
+			if ((await check(candidate, host)) === 'in-use') return false;
 		}
 		return true;
 	};
-	if (await available(endpoint.port)) return resolved;
+	if (await available(port)) return resolved;
 	if (policy === 'error' || (policy === 'prompt' && !(options.interactive ?? canPrompt()))) {
-		throw cliDiagnostics.PORT_IN_USE({ url: resolved.dev.url! });
+		throw cliDiagnostics.PORT_IN_USE({ url: endpoint });
 	}
 
-	const choice = policy === 'next' ? 'next' : await (options.selectPort ?? selectPort)(resolved.dev.url!);
+	const choice = policy === 'next' ? 'next' : await (options.selectPort ?? selectPort)(endpoint);
 	if (choice === 'cancel') return null;
 	if (choice === 'continue') return resolved;
 
 	// A bounded search avoids hanging on an exhausted range and still includes the final valid TCP port.
-	const last = Math.min(endpoint.port + 100, 65535);
-	for (let port = endpoint.port + 1; port <= last; port++) {
-		if (await available(port)) return withPort(resolved, port);
+	const last = Math.min(port + 100, 65535);
+	for (let candidate = port + 1; candidate <= last; candidate++) {
+		if (await available(candidate)) return withPort(resolved, candidate);
 	}
-	throw cliDiagnostics.NO_AVAILABLE_PORT({ first: endpoint.port, last });
+	throw cliDiagnostics.NO_AVAILABLE_PORT({ first: port, last });
 }
 
 /** Check the nearest existing ancestor without creating directories or altering permissions. */
