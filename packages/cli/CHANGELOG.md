@@ -1,5 +1,23 @@
 # @wolfstar/cli
 
+## 2.11.0
+
+### Minor Changes
+
+- [#344](https://github.com/wolfstar-project/stars-components/pull/344) [`1245aad`](https://github.com/wolfstar-project/stars-components/commit/1245aadc8a0e4996154b5dc3d75df51b9a520d86) - Add configurable Nuxt-style, dashboard and plain dev output, with `tui.style` and `--style` while preserving `dev.layout`.
+
+    Check local development ports before startup and offer interactive continue, cancel or next-port choices. Add `--port` and configurable conflict policies for automation, synchronize the chosen runtime port, validate HTTP endpoints and dev listener ports, and report unwritable development directories before building.
+
+    Keep explicit display/health URLs independent of the bot listener, preserve them across port overrides, and ignore unrelated ambient PORT values in framework mode. Infer Nitro runtime ports from NITRO_PORT before PORT. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`1245aad`](https://github.com/wolfstar-project/stars-components/commit/1245aadc8a0e4996154b5dc3d75df51b9a520d86)]:
+    - @wolfstar/schema@0.12.0
+    - @wolfstar/kit@0.3.1
+    - @wolfstar/nitro-server@0.2.12
+    - @wolfstar/vite-server@0.5.1
+
 ## 2.10.0
 
 ### Minor Changes

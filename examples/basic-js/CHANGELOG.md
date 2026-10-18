@@ -1,5 +1,13 @@
 # basic-js
 
+## 0.0.34
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/env-utilities@2.3.1
+    - @wolfstar/http-framework@6.5.1
+
 ## 0.0.33
 
 ### Patch Changes
