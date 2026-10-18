@@ -13,6 +13,7 @@ export const BUILT_IN_CONFIG_KEYS = [
 	'entry',
 	'build',
 	'dev',
+	'tui',
 	'codegen',
 	'imports',
 	'env',

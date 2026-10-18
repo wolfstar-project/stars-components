@@ -111,6 +111,14 @@ export const configDiagnostics = defineDiagnostics({
 			why: (p: { locales: string }) => `The locales directory does not exist: ${p.locales}`,
 			fix: (_p: { locales: string }) => 'Point `codegen.i18n.locales` to the base locale directory, relative to the project root.'
 		},
+		ENV_EXPANSION_FAILED: {
+			why: (p: { key: string }) => `Environment expansion for ${p.key} exceeds the supported depth or size`,
+			fix: (_p: { key: string }) => 'Simplify the environment variable references (at most 100 levels and 1 MiB per value).'
+		},
+		INVALID_PORT: {
+			why: (p: { port: string }) => `Invalid development port "${p.port}"`,
+			fix: (_p: { port: string }) => 'Set HTTP_PORT or PORT (including dev.env and .env files) to an integer from 1 to 65535.'
+		},
 		INVALID_URL: {
 			why: (p: { url: string; fix: string }) => `Invalid URL "${p.url}"`,
 			fix: (p: { url: string; fix: string }) => p.fix

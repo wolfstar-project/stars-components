@@ -69,6 +69,7 @@ export type {
 	ResolvedCommandsCodegenConfig,
 	ResolvedDevCommandsConfig,
 	ResolvedDevConfig,
+	ResolvedTuiConfig,
 	ResolvedDevLogsConfig,
 	ResolvedExperimentalConfig,
 	ResolvedFutureConfig,

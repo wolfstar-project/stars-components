@@ -31,7 +31,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3
+              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
                   runtime: node@24
                   cache: true
@@ -62,7 +62,7 @@ jobs:
               run: echo "::add-matcher::.github/problemMatchers/tsc.json"
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3
+              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
                   runtime: node@24
                   cache: true
@@ -90,7 +90,7 @@ jobs:
                     # Windows only runs @wolfstar/cli: it is the one package with platform-sensitive code (process
                     # spawning, path handling), the rest is exercised by the ubuntu run below with coverage.
                     - os: ubuntu-24.04-arm
-                      command: pnpm test -- --reporter=default --reporter=junit --outputFile=test-report.junit.xml
+                      command: pnpm test --reporter=default --reporter=junit --outputFile=test-report.junit.xml
                       coverage: true
                     - os: windows-latest
                       command: pnpm --filter @wolfstar/cli test
@@ -103,7 +103,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3
+              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
                   runtime: node@24
                   cache: true
@@ -146,7 +146,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3
+              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
                   runtime: node@24
                   cache: true
@@ -174,7 +174,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup pnpm + Node.js v24
-              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3
+              uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
                   runtime: node@24
                   cache: true

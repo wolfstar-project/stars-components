@@ -1,3 +1,4 @@
+import { resolveDevPresentation, type DevStyle } from '../../utils/output-mode.js';
 import { render } from 'ink';
 import type { DevService } from '../dev-service.js';
 import { DevApp, resolveLayout, type DevLayout } from './ink/DevApp.js';
@@ -22,6 +23,7 @@ export interface TuiRendererOptions {
 	fps?: number;
 	/** `--layout`; defaults to `dev.layout`. */
 	layout?: DevLayout | 'auto';
+	style?: DevStyle;
 	/** The log filter the dashboard starts with; defaults to `dev.logs`. */
 	filter?: LogViewFilter;
 	/** `--no-mouse`; defaults to `dev.mouse`. */
@@ -49,7 +51,12 @@ export function createTuiRenderer(service: DevService, options: TuiRendererOptio
 	});
 	const restoreOutput =
 		stdout === process.stdout ? [captureOutput(service, process.stdout, 'info'), captureOutput(service, process.stderr, 'warn')] : [];
-	const layout = options.layout ?? service.config.dev.layout ?? 'auto';
+	const { layout } = resolveDevPresentation({
+		layout: options.layout,
+		style: options.style,
+		configuredStyle: service.config.tui.style ?? undefined,
+		configuredLayout: service.config.dev.layout
+	});
 	// The dashboard is painted from the first frame, so its buffer is entered before Ink writes anything.
 	let alternate = resolveLayout(layout, stdout.columns ?? 80, stdout.rows ?? 24) === 'dashboard';
 	const mouse = (options.mouse ?? service.config.dev.mouse) ? createMouseInput(stdin) : null;

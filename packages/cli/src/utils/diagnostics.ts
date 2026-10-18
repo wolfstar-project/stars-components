@@ -88,6 +88,25 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (p: { theme: string; themes: string }) => `Unknown theme \`${p.theme}\`.`,
 			fix: (p: { theme: string; themes: string }) => `Use one of: ${p.themes}.`
 		},
+		PORT_IN_USE: {
+			why: (p: { url: string }) => `The development port is already occupied: ${p.url}`,
+			fix: (_p: { url: string }) =>
+				'Stop the other server, choose --port <1..65535>, or set --port-conflict next|continue (dev.portConflict in stars.config).'
+		},
+		PORT_CHECK_FAILED: {
+			why: (p: { host: string; port: number; reason: string }) => `Cannot check ${p.host}:${p.port}: ${p.reason}`,
+			fix: (_p: { host: string; port: number; reason: string }) =>
+				'Check the local address and permission to bind it, or choose another --port.'
+		},
+		NO_AVAILABLE_PORT: {
+			why: (p: { first: number; last: number }) => `No free port between ${p.first} and ${p.last}`,
+			fix: (_p: { first: number; last: number }) => 'Stop an unused server, or choose another starting port with --port.'
+		},
+		DEV_DIRECTORY_UNWRITABLE: {
+			why: (p: { path: string; reason: string }) => `Cannot write development files to ${p.path}: ${p.reason}`,
+			fix: (_p: { path: string; reason: string }) =>
+				'Use a writable directory, grant write/search access, or remove the file blocking this directory.'
+		},
 		INVALID_OPTION: {
 			why: (p: { option: string; value: string; allowed: string }) => `Unknown value \`${p.value}\` for ${p.option}.`,
 			fix: (p: { option: string; value: string; allowed: string }) => `Use one of: ${p.allowed}.`

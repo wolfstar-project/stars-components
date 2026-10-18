@@ -1,4 +1,4 @@
-import { isCIEnvironment, prefersReducedMotion, resolveOutputMode, shouldUseColor } from '../src/utils/output-mode.js';
+import { isCIEnvironment, prefersReducedMotion, resolveDevPresentation, resolveOutputMode, shouldUseColor } from '../src/utils/output-mode.js';
 
 describe('resolveOutputMode', () => {
 	test('uses the TUI on an interactive terminal', () => {
@@ -56,5 +56,33 @@ describe('colours and motion', () => {
 		expect(prefersReducedMotion({})).toBe(false);
 		expect(prefersReducedMotion({ STARS_REDUCED_MOTION: '1' })).toBe(true);
 		expect(prefersReducedMotion({ STARS_REDUCED_MOTION: 'false' })).toBe(false);
+	});
+});
+
+describe('development presentation', () => {
+	const terminal = { env: {}, isTTY: true, isCI: false, columns: 100, rows: 24 };
+	test('keeps automatic sizing when no style is configured', () => {
+		expect(resolveDevPresentation(terminal)).toEqual({ mode: 'tui', layout: 'auto' });
+	});
+	test.each([
+		[{ configuredStyle: 'nuxt-style' }, 'panel'],
+		[{ configuredStyle: 'dashboard' }, 'dashboard'],
+		[{ configuredStyle: 'nuxt-style', layout: 'dashboard' }, 'dashboard'],
+		[{ configuredStyle: 'dashboard', layout: 'panel', style: 'nuxt-style' }, 'panel'],
+		[{ configuredLayout: 'panel' }, 'panel']
+	] as const)('resolves the explicit and configured style precedence %j', (options, layout) => {
+		expect(resolveDevPresentation({ ...terminal, ...options })).toEqual({ mode: 'tui', layout });
+	});
+	test('uses plain logs for none and lets an explicit --tui override the configured none', () => {
+		expect(resolveDevPresentation({ ...terminal, configuredStyle: 'none' }).mode).toBe('plain');
+		expect(resolveDevPresentation({ ...terminal, configuredStyle: 'none', tui: true }).mode).toBe('tui');
+		expect(resolveDevPresentation({ ...terminal, style: 'none', tui: true }).mode).toBe('plain');
+	});
+	test('respects --no-tui, environment plain output and redirected input with every style', () => {
+		for (const style of ['nuxt-style', 'dashboard'] as const) {
+			expect(resolveDevPresentation({ ...terminal, style, tui: false }).mode).toBe('plain');
+			expect(resolveDevPresentation({ ...terminal, style, env: { STARS_TUI: 'plain' } }).mode).toBe('plain');
+			expect(resolveDevPresentation({ ...terminal, style, isInputTTY: false }).mode).toBe('plain');
+		}
 	});
 });

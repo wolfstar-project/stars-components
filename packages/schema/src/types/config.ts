@@ -237,6 +237,11 @@ export interface StarsDevCommandsConfig {
 	refresh?: 'prompt' | 'auto' | 'off';
 }
 
+export interface StarsTuiConfig {
+	/** Terminal presentation. Omit to keep dev.layout's automatic sizing. */
+	style?: 'nuxt-style' | 'dashboard' | 'none';
+}
+
 export interface StarsDevConfig {
 	/** Custom terminal wordmark (one or more lines), or `false` to hide it. Defaults to the Stars wordmark. */
 	banner?: string | readonly string[] | false;
@@ -247,6 +252,8 @@ export interface StarsDevConfig {
 	 * @default 'auto'
 	 */
 	layout?: 'auto' | 'dashboard' | 'panel';
+	/** What to do when the local dev port is occupied. Noninteractive prompt mode fails with advice. */
+	portConflict?: 'prompt' | 'next' | 'error' | 'continue';
 	/**
 	 * Whether the dashboard reacts to the mouse: a click on a channel, a level, a group header or a key of the sidebar
 	 * does what its key does, and the wheel scrolls the logs. The terminal reports the mouse to `stars dev` while the
@@ -297,12 +304,13 @@ export interface StarsDevConfig {
 	 */
 	args?: string[];
 	/**
-	 * The URL the bot listens on, shown in the dev UI's status line and used for {@link StarsDevConfig.health}.
+	 * The URL shown in the dev UI's status line and used for {@link StarsDevConfig.health}.
 	 *
-	 * Resolved automatically, the way Vite's and Nuxt's dev servers do, from (in order) `dev.env.HTTP_PORT`, the
+	 * Resolved automatically, the way Vite's and Nuxt's dev servers do, from (in order) `dev.env.HTTP_PORT`/`PORT`, the
 	 * process's `HTTP_PORT`, the project's `src/.env*`/`.env*` (`HTTP_PORT` or `PORT`), or `3000`. `stars dev` also
 	 * resolves whether `localhost` should be shown as `127.0.0.1` instead, the same DNS-order check Vite does, so the
-	 * printed URL is always the one that is actually reachable.
+	 * inferred URL follows the selected dev port. An explicit URL is for display/health only and may point at a
+	 * local proxy or remote tunnel; --port never rewrites it or derives the bot's listener port from it.
 	 * @default `http://localhost:3000` (or whichever port is found)
 	 */
 	url?: string;
@@ -533,6 +541,8 @@ export interface StarsConfig {
 	entry?: string;
 	build?: StarsBuildConfig;
 	dev?: StarsDevConfig;
+	/** Interactive terminal presentation for stars dev. */
+	tui?: StarsTuiConfig;
 	codegen?: StarsCodegenConfig;
 	/**
 	 * Nuxt-style auto imports of the framework's exports and the project's own modules.

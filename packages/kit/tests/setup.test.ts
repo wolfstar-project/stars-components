@@ -131,7 +131,7 @@ describe('setupModules', () => {
 			await expect(result).rejects.toThrow(/"tasks" and "rival" both declare the `configKey` "scheduledTasks"/);
 		});
 
-		test.each(['build', 'dev', 'modules', 'tsdown'])(
+		test.each(['build', 'dev', 'tui', 'modules', 'tsdown'])(
 			'GIVEN the built-in key %s as configKey THEN it throws MODULE_INVALID',
 			async (configKey) => {
 				const { result } = run([defineModule({ meta: { name: 'greedy', configKey } })], [['greedy']]);

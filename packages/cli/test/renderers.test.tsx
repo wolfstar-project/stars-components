@@ -95,6 +95,20 @@ describe('renderers', () => {
 		await waitFor(() => stdout.screen().includes('READY'));
 	}
 
+	test.each(['nuxt-style', 'dashboard'] as const)('renders the configured %s presentation', async (style) => {
+		service = new DevService({ ...service.config, tui: { style } }, { builder: new IdleBuilder() });
+		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: false, reducedMotion: true });
+		void renderer.start();
+		await waitFor(() => stdout.screen().includes(style === 'nuxt-style' ? 'Local' : 'channels'));
+		if (style === 'nuxt-style') {
+			expect(stdout.screen()).toContain('http://localhost:3000');
+			expect(stdout.terminal.buffer.active.type).toBe('normal');
+		} else {
+			expect(stdout.screen()).toContain('levels');
+			expect(stdout.terminal.buffer.active.type).toBe('alternate');
+		}
+	});
+
 	test('plain renderer prefixes sources and passes app output through', async () => {
 		const stream = new PassThrough();
 		let output = '';
