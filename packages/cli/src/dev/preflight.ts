@@ -1,6 +1,6 @@
 import { access, stat } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { createServer } from 'node:net';
+import { createServer, isIP } from 'node:net';
 import { dirname, join } from 'node:path';
 import { configDiagnostics, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { cliDiagnostics } from '../utils/diagnostics.js';
@@ -13,6 +13,8 @@ export type PortAvailability = 'available' | 'in-use';
 
 export interface DevEndpointOptions {
 	port?: number;
+	/** Address the application binds to (`--host`), already validated by {@link parseDevHost}. */
+	host?: string;
 	policy?: PortConflictPolicy;
 	/** Whether a question can be answered; independent of whether Ink will be used. */
 	interactive?: boolean;
@@ -27,6 +29,41 @@ export function parseDevPort(value: string): number {
 		throw cliDiagnostics.INVALID_OPTION({ option: '--port', value, allowed: 'an integer from 1 to 65535' });
 	}
 	return port;
+}
+
+const WILDCARD_HOSTS = new Set(['0.0.0.0', '::']);
+const HOSTNAME = /^(?=.{1,253}$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
+
+/**
+ * `--host` the way Nuxt reads it: a bare `--host` (empty value) listens on every interface, anything else is an
+ * IP address or hostname. IPv6 literals may be written with or without brackets.
+ */
+export function parseDevHost(value: string): string {
+	const host = value.trim().replace(/^\[|\]$/g, '');
+	if (host === '') return '0.0.0.0';
+	if (isIP(host) === 0 && !HOSTNAME.test(host)) {
+		throw cliDiagnostics.INVALID_OPTION({ option: '--host', value, allowed: 'an IP address or hostname' });
+	}
+	return host;
+}
+
+function withHost(config: ResolvedStarsConfig, host: string): ResolvedStarsConfig {
+	let url = config.dev.url;
+	// A wildcard is a bind address, not somewhere to browse to: the inferred display URL keeps its own host then.
+	if (url && config.dev.urlSource === 'inferred' && !WILDCARD_HOSTS.has(host)) {
+		const parsed = new URL(url);
+		parsed.hostname = host.includes(':') ? `[${host}]` : host;
+		url = parsed.pathname === '/' && !parsed.search && !parsed.hash && !url.endsWith('/') ? parsed.href.slice(0, -1) : parsed.href;
+	}
+	return {
+		...config,
+		dev: {
+			...config.dev,
+			url,
+			// Nitro reads `NITRO_HOST` and then `HOST`; the framework reads `HTTP_ADDRESS`.
+			env: { ...config.dev.env, HTTP_ADDRESS: host, ...(config.experimental.enableNitro ? { NITRO_HOST: host, HOST: host } : {}) }
+		}
+	};
 }
 
 /** Release the probe before resolving; EADDRINUSE alone means a conflicting listener. */
@@ -95,7 +132,9 @@ export function devBindHosts(config: ResolvedStarsConfig): readonly string[] {
 }
 
 /** Runs before builders, generated files, renderers and process signal handlers. Null means a graceful cancellation. */
-export async function prepareDevEndpoint(config: ResolvedStarsConfig, options: DevEndpointOptions = {}): Promise<ResolvedStarsConfig | null> {
+export async function prepareDevEndpoint(input: ResolvedStarsConfig, options: DevEndpointOptions = {}): Promise<ResolvedStarsConfig | null> {
+	// The host goes first: the port probe below checks the address the application will actually bind.
+	const config = options.host === undefined ? input : withHost(input, options.host);
 	const rawPort = options.port === undefined ? config.dev.listener.port : String(options.port);
 	if (!/^\d+$/.test(rawPort) || Number(rawPort) < 1 || Number(rawPort) > 65535) {
 		throw configDiagnostics.INVALID_PORT({ port: rawPort });

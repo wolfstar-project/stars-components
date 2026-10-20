@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { loadStarsConfig, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { createBuilder } from '../src/builders/index.js';
 import { DevService } from '../src/dev/dev-service.js';
-import { checkDevDirectories, checkPortAvailability, parseDevPort, prepareDevEndpoint } from '../src/dev/preflight.js';
+import { checkDevDirectories, checkPortAvailability, parseDevHost, parseDevPort, prepareDevEndpoint } from '../src/dev/preflight.js';
 import { createFixture, waitFor, type Fixture } from './helpers.js';
 
 async function listen(server: Server, host = '127.0.0.1'): Promise<number> {
@@ -227,6 +227,42 @@ describe('development preflight', () => {
 		} finally {
 			await service.stop();
 		}
+	});
+
+	test('parses --host the way Nuxt does: bare means every interface, brackets and names are accepted', () => {
+		expect(parseDevHost('')).toBe('0.0.0.0');
+		expect(parseDevHost('127.0.0.1')).toBe('127.0.0.1');
+		expect(parseDevHost('[::1]')).toBe('::1');
+		expect(parseDevHost('my-bot.local')).toBe('my-bot.local');
+		for (const invalid of ['no spaces', 'http://localhost', '-bad', 'a..b']) {
+			expect(() => parseDevHost(invalid)).toThrow(expect.objectContaining({ code: 'INVALID_OPTION' }));
+		}
+	});
+
+	test('--host sets the bind address, follows an inferred URL and is the address the port probe checks', async () => {
+		const checkPort = vi.fn(async () => 'available' as const);
+		const configured = endpoint(4000, 'localhost');
+		const result = await prepareDevEndpoint(configured, { host: '127.0.0.2', policy: 'error', checkPort });
+		expect(result?.dev.env.HTTP_ADDRESS).toBe('127.0.0.2');
+		expect(result?.dev.url).toBe('http://127.0.0.2:4000/interactions?test=/');
+		expect(checkPort).toHaveBeenCalledWith(4000, '127.0.0.2');
+		expect(configured.dev.env.HTTP_ADDRESS).toBe('localhost');
+	});
+
+	test('a wildcard --host keeps the displayed URL, an explicit URL is never rewritten, Nitro gets NITRO_HOST and HOST', async () => {
+		const configured = endpoint(4000, 'localhost');
+		const wildcard = await prepareDevEndpoint(configured, { host: '0.0.0.0', policy: 'continue' });
+		expect(wildcard?.dev.url).toBe(configured.dev.url);
+		expect(wildcard?.dev.env.HTTP_ADDRESS).toBe('0.0.0.0');
+
+		const explicit = { ...configured, dev: { ...configured.dev, urlSource: 'explicit' as const } };
+		expect((await prepareDevEndpoint(explicit, { host: '127.0.0.2', policy: 'continue' }))?.dev.url).toBe(configured.dev.url);
+
+		const nitro = { ...configured, experimental: { ...configured.experimental, enableNitro: true } };
+		expect((await prepareDevEndpoint(nitro, { host: '::1', policy: 'continue' }))?.dev).toMatchObject({
+			url: 'http://[::1]:4000/interactions?test=/',
+			env: { HTTP_ADDRESS: '::1', NITRO_HOST: '::1', HOST: '::1' }
+		});
 	});
 
 	test('checks a missing directory through its existing ancestor without creating files', async () => {
