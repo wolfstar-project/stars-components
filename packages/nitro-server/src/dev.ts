@@ -50,7 +50,8 @@ export async function createNitroServer(
 	const url = new URL(config.dev.url ?? 'http://localhost:3000');
 	options.appType = 'custom';
 	options.mode ??= 'development';
-	options.server = { host: url.hostname, port: Number(url.port || 3000), ...options.server };
+	// `--host` lands in `dev.env`; a wildcard there cannot be the hostname of the displayed URL.
+	options.server = { host: config.dev.env.NITRO_HOST ?? config.dev.env.HOST ?? url.hostname, port: Number(url.port || 3000), ...options.server };
 	await hooks.configureVite?.(options, 'serve');
 	const viteServer = await vite.createServer(options);
 	let closed = false;

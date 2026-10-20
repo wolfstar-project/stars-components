@@ -24,7 +24,8 @@ export async function createViteServer(
 	const url = new URL(config.dev.url ?? 'http://localhost:3000');
 	options.appType = 'custom';
 	options.mode ??= 'development';
-	options.server = { host: url.hostname, port: Number(url.port || 3000), ...options.server };
+	// `--host` lands in `dev.env`; a wildcard there cannot be the hostname of the displayed URL.
+	options.server = { host: config.dev.env.HTTP_ADDRESS ?? url.hostname, port: Number(url.port || 3000), ...options.server };
 	await hooks.configure?.(options, 'serve');
 	let vite: ViteDevServer;
 	let closed = false;

@@ -76,7 +76,7 @@ console.log(config.entry, config.build.output);
 ## Commands
 
 ```sh
-stars dev [--no-tui] [--style <nuxt-style|dashboard|none>] [--port <port>] [--port-conflict <prompt|next|error|continue>] [--tunnel|--no-tunnel] [--no-mouse] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
+stars dev [--no-tui] [--style <nuxt-style|dashboard|none>] [--port|-p <port>] [--host [<address>]] [--port-conflict <prompt|next|error|continue>] [--tunnel|--no-tunnel] [--no-mouse] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
 stars build [--config <file>] [--cwd <dir>]
 stars info [--json] [--config <file>] [--cwd <dir>]
 stars codegen [--only <i18n|commands>] [--check] [--json] [--config <file>] [--cwd <dir>]
@@ -132,7 +132,14 @@ An inferred display URL follows the selected port. An explicit `dev.url` stays u
 query, and its host/port are never probed as the bot listener. For example, `dev.url: 'https://localhost/bot'`
 can keep pointing at a proxy on 443 while the bot starts on 3000 or `--port 4000`. Without an explicit display URL,
 file `PORT` is forwarded to the framework's `HTTP_PORT` listener for compatibility. No environment files or global
-port variables are rewritten. Port probes release their sockets before startup; another process can still claim
+port variables are rewritten.
+
+`--host <address>` (an IP address or hostname) sets the address the application listens on, like Nuxt's `--host`:
+the child gets `HTTP_ADDRESS` (and `NITRO_HOST`/`HOST` in Nitro mode), the Vite/Nitro dev servers bind to it, and the
+port check probes that address. A bare `--host` listens on every interface (`0.0.0.0`). An inferred display URL
+follows a concrete address; a wildcard or an explicit `dev.url` is left alone. `-p` is short for `--port`.
+
+Port probes release their sockets before startup; another process can still claim
 a free port before the application binds it.
 
 **Dashboard** (default on a TTY of at least 90×20): a full-screen view in the alternate buffer.

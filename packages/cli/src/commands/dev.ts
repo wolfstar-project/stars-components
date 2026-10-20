@@ -3,7 +3,7 @@ import { defineCommand } from 'citty';
 import { createBuilder } from '../builders/index.js';
 import { DevService } from '../dev/dev-service.js';
 import { withResolvedLocalhost } from '../dev/host.js';
-import { checkDevDirectories, parseDevPort, prepareDevEndpoint, type PortConflictPolicy } from '../dev/preflight.js';
+import { checkDevDirectories, parseDevHost, parseDevPort, prepareDevEndpoint, type PortConflictPolicy } from '../dev/preflight.js';
 import { LogFileWriter, runLogFile } from '../dev/log-file.js';
 import { initialLogView, isLogLevel } from '../dev/tui/log-view.js';
 import { collectFlag, projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
@@ -18,6 +18,8 @@ export interface DevTaskOptions extends ProjectArgs {
 	tui?: boolean;
 	style?: string;
 	port?: string;
+	/** `--host`; an empty string (a bare `--host`) means every interface. */
+	host?: string;
 	portConflict?: string;
 	/** `--theme`. */
 	theme?: string;
@@ -44,6 +46,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	}
 
 	const port = options.port === undefined ? undefined : parseDevPort(options.port);
+	const host = options.host === undefined ? undefined : parseDevHost(options.host);
 	for (const [option, value, allowed] of [
 		['--style', options.style, STYLES],
 		['--port-conflict', options.portConflict, PORT_POLICIES]
@@ -68,7 +71,7 @@ export async function runDev(options: DevTaskOptions): Promise<void> {
 	const hooks = project.hooks;
 	// `env:options` first: it may pick env files with another `HTTP_PORT`, which `dev.url` is derived from.
 	const initialConfig = await resolveDevConfig(withProjectEnv(await applyEnvOptions(project.config, hooks)));
-	const config = await prepareDevEndpoint(initialConfig, { port, policy: options.portConflict as PortConflictPolicy | undefined });
+	const config = await prepareDevEndpoint(initialConfig, { port, host, policy: options.portConflict as PortConflictPolicy | undefined });
 	if (!config) return;
 	await checkDevDirectories(config);
 	if (config.dev.url !== initialConfig.dev.url) process.stderr.write(`Development endpoint: ${config.dev.url}\n`);
@@ -186,7 +189,12 @@ export default defineCommand({
 		},
 		port: {
 			type: 'string',
+			alias: 'p',
 			description: 'Development port (1..65535), forwarded to the application and Nitro'
+		},
+		host: {
+			type: 'string',
+			description: 'Address the application listens on, forwarded to the application and Nitro (a bare --host listens on every interface)'
 		},
 		'port-conflict': {
 			type: 'string',
@@ -236,6 +244,7 @@ export default defineCommand({
 						: undefined,
 			style: args.style,
 			port: args.port,
+			host: args.host,
 			portConflict: args['port-conflict'],
 			theme: args.theme,
 			layout: args.layout,
