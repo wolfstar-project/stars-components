@@ -24,8 +24,10 @@ export async function createViteServer(
 	const url = new URL(config.dev.url ?? 'http://localhost:3000');
 	options.appType = 'custom';
 	options.mode ??= 'development';
-	// `--host` lands in `dev.env`; a wildcard there cannot be the hostname of the displayed URL.
-	options.server = { host: config.dev.env.HTTP_ADDRESS ?? url.hostname, port: Number(url.port || 3000), ...options.server };
+	// `--host` lands in `dev.env`; a wildcard there cannot be the hostname of the displayed URL. Brackets are
+	// stripped like `devBindHosts` does, and an explicit `vite.server.host` still wins through the spread below.
+	const bindHost = config.dev.env.HTTP_ADDRESS?.replace(/^\[|\]$/g, '');
+	options.server = { host: bindHost || url.hostname, port: Number(url.port || 3000), ...options.server };
 	await hooks.configure?.(options, 'serve');
 	let vite: ViteDevServer;
 	let closed = false;

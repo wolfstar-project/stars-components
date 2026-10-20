@@ -50,8 +50,10 @@ export async function createNitroServer(
 	const url = new URL(config.dev.url ?? 'http://localhost:3000');
 	options.appType = 'custom';
 	options.mode ??= 'development';
-	// `--host` lands in `dev.env`; a wildcard there cannot be the hostname of the displayed URL.
-	options.server = { host: config.dev.env.NITRO_HOST ?? config.dev.env.HOST ?? url.hostname, port: Number(url.port || 3000), ...options.server };
+	// `--host` lands in `dev.env`; a wildcard there cannot be the hostname of the displayed URL. Same order as
+	// `devBindHosts` (`NITRO_HOST`, then `HOST`) with brackets stripped; an explicit `vite.server.host` still wins.
+	const bindHost = (config.dev.env.NITRO_HOST || config.dev.env.HOST)?.replace(/^\[|\]$/g, '');
+	options.server = { host: bindHost || url.hostname, port: Number(url.port || 3000), ...options.server };
 	await hooks.configureVite?.(options, 'serve');
 	const viteServer = await vite.createServer(options);
 	let closed = false;
