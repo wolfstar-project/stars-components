@@ -317,6 +317,7 @@ stars commands list                 # global commands
 stars commands list --guild 1234    # a guild's commands
 stars commands clean                # wizard: pick from a checklist, then confirm
 stars commands clean --name ping    # delete one, asking first
+stars commands clean --name "settings server" --yes   # remove one subcommand, the rest of /settings stays
 stars commands clean --guild 1234 --yes
 ```
 
@@ -324,6 +325,14 @@ It reads `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID` (or `APPLICATION_ID`) from
 `.env`, the same place the bot reads them from. `clean` deletes deployed commands, so on a terminal it opens a wizard —
 a checklist of what is deployed, then a confirmation — and refuses to run without `--yes` (or `--name`) anywhere
 else.
+
+`--name` also takes the path of a subcommand or a group (`settings server`, `settings group sub`). Discord has no
+endpoint to delete one, so `clean` fetches the deployed command, drops that entry from its `options` and sends the
+command back with a `PATCH`; the parent and its other subcommands stay, and paths under the same command share one
+request. A path that matches nothing fails with `COMMAND_NOT_FOUND`. A command cannot exist without a subcommand, so
+removing the last one deletes the whole command (the confirmation says so, and `--yes` accepts it). `--json` reports
+`deleted` (whole commands) and `removed` (subcommands and groups). The wizard still lists whole commands only. `clean`
+reads the command and writes it back, so a deploy that runs in between is overwritten.
 
 `diff` and `deploy` compare that with what the project defines:
 
