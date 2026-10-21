@@ -7,14 +7,22 @@ import { readLocalCommands } from '../src/utils/local-commands.js';
 import { loadStarsConfig } from '@wolfstar/schema';
 import { createFixture, waitFor, type Fixture } from './helpers.js';
 
-function createClient(
-	commands: ApplicationCommand[]
-): DiscordClient & { deleted: string[]; put: { guild: string | null; commands: readonly object[] }[] } {
+function createClient(commands: ApplicationCommand[]): DiscordClient & {
+	deleted: string[];
+	patched: { guild: string | null; id: string; body: object }[];
+	put: { guild: string | null; commands: readonly object[] }[];
+} {
 	const deleted: string[] = [];
+	const patched: { guild: string | null; id: string; body: object }[] = [];
 	const put: { guild: string | null; commands: readonly object[] }[] = [];
 	return {
 		deleted,
+		patched,
 		put,
+		patchCommand: (guild, id, body) => {
+			patched.push({ guild, id, body });
+			return Promise.resolve({ ...commands.find((command) => command.id === id)!, ...body });
+		},
 		putCommands: (guild, body) => {
 			put.push({ guild, commands: body });
 			return Promise.resolve(body.map((command, index) => ({ id: String(index), application_id: '42', ...(command as { name: string }) })));
@@ -40,6 +48,20 @@ async function capture(run: (stdout: NodeJS.WritableStream) => Promise<void>): P
 const DEPLOYED: ApplicationCommand[] = [
 	{ id: '1', application_id: '42', name: 'ping', type: 1 },
 	{ id: '2', application_id: '42', name: 'Report', type: 3 }
+];
+
+const option = (type: number, name: string, options?: object[]) => ({ type, name, description: name, ...(options ? { options } : {}) });
+
+const NESTED: ApplicationCommand[] = [
+	{
+		id: '10',
+		application_id: '42',
+		name: 'settings',
+		type: 1,
+		options: [option(1, 'server'), option(1, 'user'), option(2, 'roles', [option(1, 'add'), option(1, 'remove')])]
+	} as ApplicationCommand,
+	{ id: '11', application_id: '42', name: 'ping', type: 1 },
+	{ id: '12', application_id: '42', name: 'Report User', type: 2 }
 ];
 
 describe('stars commands', () => {
@@ -147,6 +169,135 @@ describe('stars commands', () => {
 			code: 'CONFIRMATION_REQUIRED'
 		});
 		expect(client.deleted).toEqual([]);
+	});
+
+	describe('clean with a subcommand or group path', () => {
+		test('removes a subcommand with one PATCH of the remaining options and deletes nothing', async () => {
+			const client = createClient([...NESTED]);
+			const output = await capture((stdout) => runCommandsClean({ cwd: fixture.root, yes: true, names: ['settings server'], client, stdout }));
+
+			expect(client.deleted).toEqual([]);
+			expect(client.patched).toEqual([
+				{ guild: null, id: '10', body: { options: [option(1, 'user'), option(2, 'roles', [option(1, 'add'), option(1, 'remove')])] } }
+			]);
+			expect(output).toContain('removed settings server');
+		});
+
+		test('removes a group, and a subcommand inside a group', async () => {
+			const group = createClient([...NESTED]);
+			await capture((stdout) => runCommandsClean({ cwd: fixture.root, yes: true, names: ['settings roles'], client: group, stdout }));
+			expect(group.patched[0]?.body).toEqual({ options: [option(1, 'server'), option(1, 'user')] });
+
+			const nested = createClient([...NESTED]);
+			await capture((stdout) => runCommandsClean({ cwd: fixture.root, yes: true, names: ['settings roles add'], client: nested, stdout }));
+			expect(nested.patched[0]?.body).toEqual({
+				options: [option(1, 'server'), option(1, 'user'), option(2, 'roles', [option(1, 'remove')])]
+			});
+		});
+
+		test('drops a group once its last subcommand is removed', async () => {
+			const client = createClient([...NESTED]);
+			await capture((stdout) =>
+				runCommandsClean({ cwd: fixture.root, yes: true, names: ['settings roles add', 'settings roles remove'], client, stdout })
+			);
+
+			expect(client.patched).toHaveLength(1);
+			expect(client.patched[0]?.body).toEqual({ options: [option(1, 'server'), option(1, 'user')] });
+		});
+
+		test('sends one PATCH for several paths under the same command', async () => {
+			const client = createClient([...NESTED]);
+			await capture((stdout) =>
+				runCommandsClean({ cwd: fixture.root, yes: true, names: ['settings server', 'settings user'], client, stdout })
+			);
+
+			expect(client.patched).toHaveLength(1);
+			expect(client.patched[0]?.body).toEqual({ options: [option(2, 'roles', [option(1, 'add'), option(1, 'remove')])] });
+		});
+
+		test('ignores a path below a command that is deleted in the same run', async () => {
+			const client = createClient([...NESTED]);
+			await capture((stdout) => runCommandsClean({ cwd: fixture.root, yes: true, names: ['settings server', 'settings'], client, stdout }));
+
+			expect(client.deleted).toEqual(['10']);
+			expect(client.patched).toEqual([]);
+		});
+
+		test('deletes the command when the path is its last subcommand, and says so', async () => {
+			const only: ApplicationCommand = {
+				id: '20',
+				application_id: '42',
+				name: 'whois',
+				type: 1,
+				options: [option(1, 'channel')]
+			} as ApplicationCommand;
+			const asked: string[] = [];
+			const prompt: CommandsPrompt = {
+				pick: () => Promise.reject(new Error('the wizard must not run for --name')),
+				confirm: (message) => {
+					asked.push(message);
+					return Promise.resolve(true);
+				}
+			};
+			const client = createClient([only]);
+			const output = await capture((stdout) => runCommandsClean({ cwd: fixture.root, names: ['whois channel'], prompt, client, stdout }));
+
+			expect(asked[0]).toContain('whois channel would leave the command without a subcommand');
+			expect(client.patched).toEqual([]);
+			expect(client.deleted).toEqual(['20']);
+			expect(output).toContain('deleted whois');
+		});
+
+		test('rejects a path that matches nothing and changes nothing', async () => {
+			for (const name of ['settings nope', 'settings server extra', 'settings roles add extra', 'ping sub', 'nope server', 'Report User sub']) {
+				const client = createClient([...NESTED]);
+				await expect(
+					runCommandsClean({ cwd: fixture.root, yes: true, names: [name], client, stdout: new PassThrough() })
+				).rejects.toMatchObject({
+					code: 'COMMAND_NOT_FOUND'
+				});
+				expect(client.patched).toEqual([]);
+				expect(client.deleted).toEqual([]);
+			}
+		});
+
+		test('still deletes a context menu command whose name holds a space', async () => {
+			const client = createClient([...NESTED]);
+			await capture((stdout) => runCommandsClean({ cwd: fixture.root, yes: true, names: ['Report User'], client, stdout }));
+
+			expect(client.deleted).toEqual(['12']);
+			expect(client.patched).toEqual([]);
+		});
+
+		test('passes the guild to the PATCH and reports both lists with --json', async () => {
+			const client = createClient([...NESTED]);
+			const output = await capture((stdout) =>
+				runCommandsClean({ cwd: fixture.root, yes: true, json: true, guild: '99', names: ['settings server', 'ping'], client, stdout })
+			);
+
+			expect(client.patched[0]?.guild).toBe('99');
+			expect(JSON.parse(output)).toEqual({ deleted: [{ id: '11', name: 'ping' }], removed: [{ id: '10', path: 'settings server' }] });
+		});
+
+		test('asks once, counting both kinds, and aborts before any PATCH when declined', async () => {
+			const asked: string[] = [];
+			const prompt: CommandsPrompt = {
+				pick: () => Promise.reject(new Error('the wizard must not run for --name')),
+				confirm: (message) => {
+					asked.push(message);
+					return Promise.resolve(false);
+				}
+			};
+			const client = createClient([...NESTED]);
+
+			await expect(
+				runCommandsClean({ cwd: fixture.root, names: ['settings server', 'ping'], prompt, client, stdout: new PassThrough() })
+			).rejects.toMatchObject({ code: 'ABORTED' });
+			expect(asked).toHaveLength(1);
+			expect(asked[0]).toContain('delete 1 command(s) and remove 1 subcommand(s) or group(s)');
+			expect(client.patched).toEqual([]);
+			expect(client.deleted).toEqual([]);
+		});
 	});
 
 	test('clean --name aborts when a given prompt declines the single confirmation', async () => {

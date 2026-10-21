@@ -55,7 +55,7 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (p: { message: string }) => `Build failed${p.message ? `: ${p.message}` : ''}`
 		},
 		COMMAND_NOT_FOUND: {
-			why: (p: { names: string }) => `No deployed command is named ${p.names}`,
+			why: (p: { names: string }) => `No deployed command, subcommand or group is named ${p.names}`,
 			fix: (_p: { names: string }) => 'Run `stars commands list` to see what is deployed.'
 		},
 		ABORTED: {
