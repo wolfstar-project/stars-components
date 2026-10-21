@@ -1,5 +1,11 @@
 # @wolfstar/vite-server
 
+## 0.5.2
+
+### Patch Changes
+
+- [#348](https://github.com/wolfstar-project/stars-components/pull/348) [`a79b487`](https://github.com/wolfstar-project/stars-components/commit/a79b487575d2b897a128e5a1f27abd82d614a24e) - Add `stars dev --host [address]` and the `-p` alias for `--port`, as Nuxt's dev command has them. `--host` sets the address the application listens on (`HTTP_ADDRESS`, plus `NITRO_HOST`/`HOST` for Nitro), a bare `--host` listens on every interface, the occupied-port check probes that address, and an inferred display URL follows a concrete one. The Vite and Nitro dev servers bind to the address from `dev.env` before falling back to the hostname of `dev.url`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.5.1
 
 ### Patch Changes
