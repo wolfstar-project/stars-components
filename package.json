@@ -27,7 +27,7 @@
 		"@changesets/cli": "^3.0.3",
 		"@changesets/get-github-info": "^1.0.1",
 		"@changesets/types": "^7.0.0",
-		"@codspeed/tinybench-plugin": "^5.7.1",
+		"@codspeed/tinybench-plugin": "^6.1.0",
 		"@commitlint/cli": "^21.2.3",
 		"@commitlint/config-conventional": "^21.2.3",
 		"@favware/npm-deprecate": "^2.0.0",
