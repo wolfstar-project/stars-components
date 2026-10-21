@@ -26,15 +26,22 @@ export function envImportArgs(config: ResolvedStarsConfig): string[] {
 }
 
 /**
- * `node` arguments that register the runtime plugins of the installed modules (`ctx.addPlugin`) before the entry
- * runs, for the build tools the entry transform cannot reach. `@wolfstar/http-framework` and every plugin are resolved
+ * `node` arguments that register the runtime plugins, hooks and pieces directories of the installed modules (`ctx.addPlugin`,
+ * `ctx.addClientHook`, `ctx.addPiecesDir`, `ctx.addLocales`) before the entry runs, for the build tools the entry transform cannot reach. `@wolfstar/http-framework` and every plugin are resolved
  * from the project first, with the `import` condition (both are ESM), because a `data:` URL cannot resolve bare
  * specifiers; the framework is the bot's own copy, so `Client.use` reaches the `Client` the bot constructs. When the
  * framework is not installed nothing is preloaded, and the bot's own import of it reports the missing install.
  */
 export function moduleImportArgs(config: ResolvedStarsConfig): string[] {
 	const plugins = config.runtime?.plugins ?? [];
-	if (plugins.length === 0 || !UNTRANSFORMED_TOOLS.has(config.build.tool)) return [];
+	const piecesDirs = config.runtime?.piecesDirs ?? [];
+	const clientHooks = config.runtime?.clientHooks ?? [];
+	const locales = config.runtime?.locales ?? [];
+	if (
+		(plugins.length === 0 && piecesDirs.length === 0 && clientHooks.length === 0 && locales.length === 0) ||
+		!UNTRANSFORMED_TOOLS.has(config.build.tool)
+	)
+		return [];
 
 	const url = pathToFileURL(`${config.root}/package.json`).href;
 	let framework: string;
@@ -46,6 +53,9 @@ export function moduleImportArgs(config: ResolvedStarsConfig): string[] {
 
 	const source = modulesModuleSource(plugins, {
 		framework,
+		piecesDirs,
+		locales,
+		clientHooks,
 		resolve: (from) => {
 			if (from.startsWith('file:')) return from;
 			if (isAbsolute(from)) return pathToFileURL(from).href;

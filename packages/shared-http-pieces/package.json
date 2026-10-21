@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/shared-http-pieces",
-	"version": "2.0.11",
+	"version": "2.1.0",
 	"description": "The common pieces for Star Network's HTTP-only bots",
 	"keywords": [
 		"api",
@@ -27,7 +27,8 @@
 	],
 	"type": "module",
 	"sideEffects": [
-		"./dist/register.js"
+		"./dist/register.js",
+		"./dist/pieces.js"
 	],
 	"main": "dist/index.js",
 	"module": "dist/index.js",
@@ -40,6 +41,14 @@
 		"./register": {
 			"types": "./dist/register.d.ts",
 			"import": "./dist/register.js"
+		},
+		"./module": {
+			"types": "./dist/module.d.ts",
+			"import": "./dist/module.js"
+		},
+		"./pieces": {
+			"types": "./dist/pieces.d.ts",
+			"import": "./dist/pieces.js"
 		}
 	},
 	"publishConfig": {
@@ -70,9 +79,18 @@
 	"devDependencies": {
 		"@vitest/coverage-v8": "^5.0.3",
 		"@wolfstar/i18next-type-generator": "workspace:^",
+		"@wolfstar/kit": "workspace:^",
 		"golar": "^0.1.10",
 		"typescript": "~7.0.2",
 		"vitest": "^5.0.3"
+	},
+	"peerDependencies": {
+		"@wolfstar/kit": ">=0.3.0"
+	},
+	"peerDependenciesMeta": {
+		"@wolfstar/kit": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=20"

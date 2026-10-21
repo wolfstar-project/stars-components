@@ -1,5 +1,37 @@
 # with-i18n
 
+## 0.0.34
+
+### Patch Changes
+
+- Updated dependencies []:
+    - @wolfstar/env-utilities@2.3.1
+    - @wolfstar/http-framework@6.5.1
+
+## 0.0.33
+
+### Patch Changes
+
+- Updated dependencies [[`f1969c0`](https://github.com/wolfstar-project/stars-components/commit/f1969c00b773ebc711b0bbaa5321f2cef6dd373f), [`847fba8`](https://github.com/wolfstar-project/stars-components/commit/847fba8205c9622f04552c2e0dcbb5686e9cfd6f), [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689)]:
+    - @wolfstar/shared-http-pieces@2.1.0
+    - @wolfstar/http-framework@6.5.0
+    - @wolfstar/env-utilities@2.3.1
+
+## 0.0.32
+
+### Patch Changes
+
+- Updated dependencies [[`c2542d7`](https://github.com/wolfstar-project/stars-components/commit/c2542d72639334a6f68ac733336ee9e95abf4d15)]:
+    - @wolfstar/http-framework@6.4.0
+
+## 0.0.31
+
+### Patch Changes
+
+- Updated dependencies [[`9d40129`](https://github.com/wolfstar-project/stars-components/commit/9d40129da57632753ba336f076c61dbe4a84131d), [`ec3fa97`](https://github.com/wolfstar-project/stars-components/commit/ec3fa97e8e64403fcc89f7cb0efff4183241697c)]:
+    - @wolfstar/shared-http-pieces@2.0.12
+    - @wolfstar/http-framework@6.3.2
+
 ## 0.0.30
 
 ### Patch Changes

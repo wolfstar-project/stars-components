@@ -1,4 +1,7 @@
 import { loadStarsConfig } from '@wolfstar/schema';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Tunnel, endpointUrl, readDiscordCredentials, type TunnelOptions } from '../src/dev/tunnel.js';
 import { loadNgrok, ngrokAddress, NGROK_INSTALL_HINT, NGROK_PACKAGE, type NgrokModule } from '../src/dev/tunnel-providers.js';
 import { cliDiagnostics } from '../src/utils/diagnostics.js';
@@ -182,6 +185,144 @@ describe('Tunnel', () => {
 		expect(close).toHaveBeenCalledOnce();
 		expect(tunnel.state).toBe('off');
 		expect(tunnel.url).toBeNull();
+	});
+
+	describe('a broken cloudflared binary', () => {
+		let binDirectory: string;
+
+		beforeEach(async () => {
+			binDirectory = await mkdtemp(join(tmpdir(), 'stars-untun-'));
+		});
+
+		afterEach(async () => {
+			await rm(binDirectory, { recursive: true, force: true });
+		});
+
+		const spawnError = (code: string, path: string) => Object.assign(new Error(`spawn ${path} ${code}`), { code, path });
+		const working = () => ({ getURL: vi.fn().mockResolvedValue('https://foo.trycloudflare.com'), close: vi.fn().mockResolvedValue(undefined) });
+		const exists = (path: string) =>
+			stat(path).then(
+				() => true,
+				() => false
+			);
+
+		async function createTunnel(startTunnel: TunnelOptions['startTunnel']) {
+			fixture = await createFixture({ 'src/main.js': '', 'stars.config.mjs': 'export default { dev: { tunnel: true } };' });
+			const config = await loadStarsConfig({ cwd: fixture.root, env: {} });
+			const tunnel = new Tunnel(config, { startTunnel, binDirectory });
+			const logs: Array<[string, string]> = [];
+			tunnel.on('log', (level, text) => logs.push([level, text]));
+			return { tunnel, logs };
+		}
+
+		test.each(['EACCES', 'ENOEXEC'])('deletes the binary and opens the tunnel again after %s', async (code) => {
+			const binary = join(binDirectory, 'cloudflared.1');
+			await writeFile(binary, 'partial');
+			const startTunnelMock = vi
+				.fn()
+				.mockResolvedValueOnce({ getURL: vi.fn().mockRejectedValue(spawnError(code, binary)), close: vi.fn() })
+				.mockResolvedValueOnce(working());
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+
+			expect(startTunnelMock).toHaveBeenCalledTimes(2);
+			expect(await exists(binary)).toBe(false);
+			expect(tunnel.state).toBe('up');
+			expect(tunnel.url).toBe('https://foo.trycloudflare.com');
+			expect(logs).toContainEqual(['warn', `The cloudflared binary at ${binary} is broken, deleting it and downloading it again`]);
+			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
+		});
+
+		test('also repairs a binary that fails while the tunnel is being started', async () => {
+			const binary = join(binDirectory, 'cloudflared.1');
+			await writeFile(binary, 'partial');
+			const startTunnelMock = vi.fn().mockRejectedValueOnce(spawnError('EACCES', binary)).mockResolvedValueOnce(working());
+			const { tunnel } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+
+			expect(startTunnelMock).toHaveBeenCalledTimes(2);
+			expect(tunnel.state).toBe('up');
+		});
+
+		test('tries once only, so a file that keeps failing does not loop', async () => {
+			const binary = join(binDirectory, 'cloudflared.1');
+			await writeFile(binary, 'partial');
+			const startTunnelMock = vi.fn().mockResolvedValue({ getURL: vi.fn().mockRejectedValue(spawnError('EACCES', binary)), close: vi.fn() });
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+
+			expect(startTunnelMock).toHaveBeenCalledTimes(2);
+			expect(tunnel.state).toBe('failed');
+			expect(logs).toContainEqual(['error', `cloudflared failed: spawn ${binary} EACCES`]);
+		});
+
+		test('leaves a file outside the directory untun downloads to', async () => {
+			const outside = await mkdtemp(join(tmpdir(), 'stars-other-'));
+			const other = join(outside, 'cloudflared.1');
+			await writeFile(other, 'not ours');
+			const startTunnelMock = vi.fn().mockResolvedValue({ getURL: vi.fn().mockRejectedValue(spawnError('EACCES', other)), close: vi.fn() });
+			const { tunnel } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+			const kept = await exists(other);
+			await rm(outside, { recursive: true, force: true });
+
+			expect(kept).toBe(true);
+			expect(startTunnelMock).toHaveBeenCalledOnce();
+			expect(tunnel.state).toBe('failed');
+		});
+
+		test('does not retry other spawn errors', async () => {
+			await mkdir(binDirectory, { recursive: true });
+			const binary = join(binDirectory, 'cloudflared.1');
+			const startTunnelMock = vi.fn().mockResolvedValue({ getURL: vi.fn().mockRejectedValue(spawnError('ENOENT', binary)), close: vi.fn() });
+			const { tunnel } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+
+			expect(startTunnelMock).toHaveBeenCalledOnce();
+			expect(tunnel.state).toBe('failed');
+		});
+
+		test('reports the original error when the broken file cannot be deleted', async () => {
+			// A directory where the binary should be: `rm` without `recursive` refuses it.
+			const binary = join(binDirectory, 'cloudflared.1');
+			await mkdir(binary);
+			const startTunnelMock = vi.fn().mockResolvedValue({ getURL: vi.fn().mockRejectedValue(spawnError('EACCES', binary)), close: vi.fn() });
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+
+			await tunnel.start();
+
+			expect(startTunnelMock).toHaveBeenCalledOnce();
+			expect(tunnel.state).toBe('failed');
+			expect(logs).toContainEqual(['error', `cloudflared failed: spawn ${binary} EACCES`]);
+		});
+
+		test('closes the reopened tunnel when it was closed in the meantime', async () => {
+			const binary = join(binDirectory, 'cloudflared.1');
+			await writeFile(binary, 'partial');
+			const reopened = working();
+			let openReopened!: () => void;
+			const startTunnelMock = vi
+				.fn()
+				.mockResolvedValueOnce({ getURL: vi.fn().mockRejectedValue(spawnError('EACCES', binary)), close: vi.fn() })
+				.mockImplementationOnce(() => new Promise((resolve) => (openReopened = () => resolve(reopened))));
+			const { tunnel, logs } = await createTunnel(startTunnelMock);
+
+			const starting = tunnel.start();
+			await vi.waitFor(() => expect(startTunnelMock).toHaveBeenCalledTimes(2));
+			await tunnel.close();
+			openReopened();
+			await starting;
+
+			expect(reopened.close).toHaveBeenCalledOnce();
+			expect(tunnel.state).toBe('off');
+			expect(tunnel.url).toBeNull();
+			expect(logs.filter(([level]) => level === 'error')).toEqual([]);
+		});
 	});
 
 	describe('cloudflared exiting', () => {

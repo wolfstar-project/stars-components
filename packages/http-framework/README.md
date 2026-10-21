@@ -805,8 +805,64 @@ an actionable `hint`. See the [`@wolfstar/cli` README](../cli#configuration) for
 
 The `ApplicationCommandRegistry` is `@wolfstar/http-framework`'s centralized registry and uses [`@discordjs/rest`] to register them in Discord.
 
+Registration is off by default. Enable it in the **Client options** to synchronize commands after `listen()` has
+finished its `postListen` hooks:
+
 ```typescript
-// Assuming you have the code above, and that you called `client.load()`:
+const client = new Client({
+	commands: {
+		register: 'on-start',
+		onConflict: 'overwrite',
+		removeUnknown: false
+	}
+});
+await client.load();
+await client.listen({ port: 3000 });
+```
+
+`on-start` always compares the deployed definitions first and writes only differences. It creates missing commands,
+updates changed commands, and logs the result (`Commands: 33 up to date` or counts of created, updated and removed
+commands). An API failure produces a warning and leaves the HTTP server running. Unknown remote commands are kept;
+set `removeUnknown: true` only when this bot owns every command in the selected scopes. Removing or renaming a local
+command therefore leaves its previous remote definition in place unless that option is enabled.
+
+`onConflict: 'log'` reports proposed changes without writing. `'ignore'` skips synchronization and logs entirely.
+Without `guildIds`, global commands go to the global scope and guild-restricted commands to their respective guilds.
+With `guildIds: ['123']`, only those guilds are synchronized, each receiving the global commands plus commands
+restricted to that guild. Global-only fields such as `contexts` and `integration_types` are excluded from guild writes.
+Empty `guildIds` uses the default global and restricted-guild scopes. Guilds with no current restricted commands are
+not discovered or cleaned automatically; pass their IDs explicitly or use the CLI's manual cleanup.
+
+For sharder/broker deployments, **enable registration on one process only**. The framework does not take a distributed
+lock or infer which plugin worker is primary. Use an asynchronous or synchronous `when` predicate, for example:
+
+```typescript
+commands: { register: 'on-start', when: () => shard.id === 0 }
+```
+
+Concurrent `registry.sync()` calls in one process share the running operation and its options. Across separate replicas,
+choose a single registrar yourself. The `stars commands deploy|diff|clean|list` commands remain available for manual
+operations and CI. Automatic registration is skipped in the CLI's `STARS_COMMANDS_DUMP=1` mode.
+
+For fetch/Nitro bots that do not call `listen()`, synchronize explicitly after loading all pieces:
+
+```typescript
+await client.load();
+const result = await client.registry.sync({ onConflict: 'overwrite', when: () => isRegistrar });
+```
+
+Manual `sync()` attempts every scope, logs partial results, then rejects with an `AggregateError` if any scope
+failed, so the caller can retry or fail startup. Each error identifies the scope and retains the original failure
+as its `cause`. It returns
+`{ created, updated, removed, unchanged }`; with `'log'`, change counts describe proposed changes.
+`fetchDeployed(guildId?)` reads deployed commands with full localization dictionaries. The comparison handles
+Discord's response defaults and removal of options, localizations, or member permissions; omitted app-dependent
+`contexts` and `integration_types` accept the deployed defaults. Configure those explicitly to change them.
+
+This option belongs to `Client`, not to `stars.config`; exposing it through a CLI module is a follow-up.
+
+```typescript
+// For manual bulk registration, after loading commands on a Client with automatic registration off:
 
 // Register all global commands:
 await client.registry.pushGlobalCommands();

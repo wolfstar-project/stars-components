@@ -119,13 +119,13 @@ function setClientSecret(value: string | null) {
 
 const EVENT_SUB_SECRET = 'TWITCH_EVENT_SUB_SECRET' satisfies EnvString;
 export function getEventSubSecret() {
-	return EventSubCallback === undefined ? (EventSubCallback = getVariable(EVENT_SUB_SECRET)) : EventSubCallback;
+	return EventSubSecret === undefined ? (EventSubSecret = getVariable(EVENT_SUB_SECRET)) : EventSubSecret;
 }
 export const getRequiredEventSubSecret = makeRequiredCallback(EVENT_SUB_SECRET, getEventSubSecret);
 
 const EVENT_SUB_CALLBACK = 'TWITCH_EVENT_SUB_CALLBACK' satisfies EnvString;
 export function getEventSubCallback() {
-	return EventSubSecret === undefined ? (EventSubSecret = getVariable(EVENT_SUB_CALLBACK)) : EventSubSecret;
+	return EventSubCallback === undefined ? (EventSubCallback = getVariable(EVENT_SUB_CALLBACK)) : EventSubCallback;
 }
 export const getRequiredEventSubCallback = makeRequiredCallback(EVENT_SUB_CALLBACK, getEventSubCallback);
 

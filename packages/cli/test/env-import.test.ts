@@ -61,18 +61,33 @@ const FAKE_RUNTIME = {
 		type: 'module',
 		exports: { '.': { import: './index.js' } }
 	}),
-	'node_modules/@wolfstar/http-framework/index.js': 'export const Client = { use(plugin) { (globalThis.__starsPlugins ??= []).push(plugin); } };',
+	'node_modules/@wolfstar/http-framework/index.js':
+		'export const Client = { use(plugin) { (globalThis.__starsPlugins ??= []).push(plugin); } };\n' +
+		'export const getRootData = () => ({ root: "/bot" });\n' +
+		'export const container = { stores: { registerPath(path) { (globalThis.__starsPaths ??= []).push(path); } } };',
 	'node_modules/fake-plugin/package.json': JSON.stringify({
 		name: 'fake-plugin',
 		type: 'module',
 		exports: { './plugin': { import: './plugin.js' } }
 	}),
 	'node_modules/fake-plugin/plugin.js': 'export default (options) => ({ name: "fake", options });',
-	'src/main.js': 'console.log(JSON.stringify(globalThis.__starsPlugins));'
+	'src/main.js': 'console.log(JSON.stringify(globalThis.__starsPlugins));',
+	'src/paths.js': 'console.log(JSON.stringify(globalThis.__starsPaths));'
 };
 
-function withPlugins(root: string, tool: string, plugins: object[]): ResolvedStarsConfig {
-	return { root, build: { tool }, runtime: { modules: [], imports: [], plugins } } as unknown as ResolvedStarsConfig;
+function withPlugins(
+	root: string,
+	tool: string,
+	plugins: object[],
+	piecesDirs: object[] = [],
+	clientHooks: object[] = [],
+	locales: object[] = []
+): ResolvedStarsConfig {
+	return {
+		root,
+		build: { tool },
+		runtime: { modules: [], imports: [], plugins, piecesDirs, clientHooks, locales }
+	} as unknown as ResolvedStarsConfig;
 }
 
 describe('moduleImportArgs', () => {
@@ -115,6 +130,73 @@ describe('moduleImportArgs', () => {
 			);
 		});
 		expect(JSON.parse(stdout)).toEqual([{ name: 'fake', options: { ttl: 5 } }]);
+	});
+
+	test('node registers the pieces directories of the modules with the stores before the entry runs', async () => {
+		const directory = join(fixture.root, 'pieces');
+		const args = moduleImportArgs(withPlugins(fixture.root, 'none', [], [{ module: 'fake', path: directory }]));
+		expect(args[0]).toBe('--import');
+
+		const stdout = await new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, [...args, join(fixture.root, 'src/paths.js')], { cwd: fixture.root }, (error, out) =>
+				error ? reject(error) : resolve(out)
+			);
+		});
+		expect(JSON.parse(stdout)).toEqual([directory]);
+	});
+
+	test('node runs the runtime hooks of a module through a plugin named after it', async () => {
+		await fixture.write(
+			'node_modules/fake-plugin/package.json',
+			JSON.stringify({ name: 'fake-plugin', type: 'module', exports: { './hooks': { import: './hooks.js' } } })
+		);
+		await fixture.write(
+			'node_modules/fake-plugin/hooks.js',
+			'export default (client, options) => (globalThis.__starsHookCalls ??= []).push([client, options]);'
+		);
+		await fixture.write(
+			'src/hooks.js',
+			'const [plugin] = globalThis.__starsPlugins; plugin.preLoad("client", "options"); console.log(JSON.stringify([plugin.name, Object.keys(plugin), globalThis.__starsHookCalls]));'
+		);
+		const hooks = [{ module: 'fake', hook: 'preLoad', from: 'fake-plugin/hooks', export: 'default' }];
+		const args = moduleImportArgs(withPlugins(fixture.root, 'none', [], [], hooks));
+
+		const stdout = await new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, [...args, join(fixture.root, 'src/hooks.js')], { cwd: fixture.root }, (error, out) =>
+				error ? reject(error) : resolve(out)
+			);
+		});
+		expect(JSON.parse(stdout)).toEqual(['fake', ['name', 'preLoad'], [['client', 'options']]]);
+	});
+
+	test('node merges the locales of a module into the i18n option, keeping the project languages', async () => {
+		await fixture.write(
+			'src/locales.js',
+			[
+				'const [plugin] = globalThis.__starsPlugins;',
+				'const options = { i18n: { backend: { paths: ["/custom/{{lng}}/{{ns}}.json"] }, i18next: (found) => ({ ns: ["configured"], found }) } };',
+				'plugin.preGenericsInitialization({}, options);',
+				'const { i18n } = options;',
+				'console.log(JSON.stringify({ name: plugin.name, enforce: plugin.enforce, paths: i18n.backend.paths, i18next: i18n.i18next(["found"], ["en-US"]) }));'
+			].join('\n')
+		);
+		const locales = [{ module: 'fake', path: join(fixture.root, 'locales'), namespaces: ['commands/shared'] }];
+		const args = moduleImportArgs(withPlugins(fixture.root, 'none', [], [], [], locales));
+
+		const stdout = await new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, [...args, join(fixture.root, 'src/locales.js')], { cwd: fixture.root }, (error, out) =>
+				error ? reject(error) : resolve(out)
+			);
+		});
+		const result = JSON.parse(stdout) as { name: string; enforce: string; paths: string[]; i18next: { ns: string[] } };
+		expect(result.name).toBe('stars:locales');
+		expect(result.enforce).toBe('pre');
+		expect(result.paths.map((path) => path.replaceAll('\\', '/'))).toEqual([
+			'/bot/languages/{{lng}}/{{ns}}.json',
+			'/custom/{{lng}}/{{ns}}.json',
+			`${join(fixture.root, 'locales').replaceAll('\\', '/')}/{{lng}}/{{ns}}.json`
+		]);
+		expect(result.i18next.ns).toEqual(['found', 'configured', 'commands/shared']);
 	});
 
 	test('a plugin that cannot be resolved fails with a DEPENDENCY_MISSING diagnostic', () => {

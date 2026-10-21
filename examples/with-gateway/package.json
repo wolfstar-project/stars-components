@@ -1,6 +1,6 @@
 {
 	"name": "with-gateway",
-	"version": "0.0.11",
+	"version": "0.0.15",
 	"private": true,
 	"description": "WolfStar HTTP bot example receiving gateway events through @wolfstar/plugin-gateway",
 	"type": "module",

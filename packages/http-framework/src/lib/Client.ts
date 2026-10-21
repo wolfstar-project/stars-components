@@ -190,6 +190,13 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 				await plugin.run(this, this.options);
 				this.emit(Events.PluginLoaded, plugin.type, plugin.name);
 			}
+			if (this.options.commands?.register === 'on-start' && process.env.STARS_COMMANDS_DUMP !== '1') {
+				try {
+					await this.registry.sync(this.options.commands);
+				} catch (error) {
+					this.logger.warn('Commands: automatic registration failed; serving interactions with the existing commands', error);
+				}
+			}
 		} catch (error) {
 			// A postListen hook failed: close the server we just opened so it does not stay bound to the
 			// port as an orphaned listener, then propagate the original error to the caller.
@@ -283,7 +290,18 @@ export class Client extends AsyncEventEmitter<MappedClientEvents> {
 	}
 }
 
+export interface ClientCommandOptions extends ApplicationCommandRegistry.SyncOptions {
+	/** Register after postListen hooks. Defaults to off; on-start writes only differences. */
+	register?: 'off' | 'on-start';
+}
+
 export interface ClientOptions {
+	/**
+	 * Opt-in startup command registration. Enable on only one process with `when` for sharder/broker workers.
+	 * Bots using fetch instead of listen can call `registry.sync()` after loading their pieces.
+	 */
+	commands?: ClientCommandOptions;
+
 	/**
 	 * Plugins that apply to this client only, next to the ones registered globally with {@link Client.use}.
 	 * Nested arrays are flattened and falsy entries are dropped.
@@ -417,6 +435,7 @@ export interface FetchOptions {
 export namespace Client {
 	export type Options = ClientOptions;
 	export type LoggerOptions = ClientLoggerOptions;
+	export type CommandOptions = ClientCommandOptions;
 	export type PieceLoadOptions = LoadOptions;
 	export type ServerListenOptions = ListenOptions;
 	export type ServerFetchOptions = FetchOptions;

@@ -52,7 +52,7 @@ describe('stars hooks', () => {
 			'src/main.ts': '',
 			'package.json': WITH_ENV_UTILITIES,
 			'.env': 'HTTP_PORT=4000',
-			'config/.env': 'HTTP_PORT=4100',
+			'config/.env': 'BASE_PORT=4100\nHTTP_PORT=${BASE_PORT} # custom port\n',
 			'stars.config.mjs': "export default { hooks: { 'env:options'(options) { options.path = 'config/.env'; } } };"
 		});
 		const { config, hooks } = await loadProject({ cwd: fixture.root, env: {} });

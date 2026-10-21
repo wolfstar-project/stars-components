@@ -95,6 +95,20 @@ describe('renderers', () => {
 		await waitFor(() => stdout.screen().includes('READY'));
 	}
 
+	test.each(['nuxt-style', 'dashboard'] as const)('renders the configured %s presentation', async (style) => {
+		service = new DevService({ ...service.config, tui: { style } }, { builder: new IdleBuilder() });
+		renderer = createTuiRenderer(service, { stdout: stdout as never, stdin: stdin as never, color: false, reducedMotion: true });
+		void renderer.start();
+		await waitFor(() => stdout.screen().includes(style === 'nuxt-style' ? 'Local' : 'channels'));
+		if (style === 'nuxt-style') {
+			expect(stdout.screen()).toContain('http://localhost:3000');
+			expect(stdout.terminal.buffer.active.type).toBe('normal');
+		} else {
+			expect(stdout.screen()).toContain('levels');
+			expect(stdout.terminal.buffer.active.type).toBe('alternate');
+		}
+	});
+
 	test('plain renderer prefixes sources and passes app output through', async () => {
 		const stream = new PassThrough();
 		let output = '';
@@ -365,6 +379,25 @@ describe('renderers', () => {
 					.split('\n')
 					.every((row) => row.length <= 120)
 			).toBe(true);
+		});
+
+		test('repaints only what changed while a build runs, instead of the whole screen on every tick', async () => {
+			await dashboard({ reducedMotion: false });
+			for (let index = 0; index < 30; index++) service.log('app', 'info', `line ${index} of the log`);
+			await waitFor(() => stdout.screen().includes('line 29 of the log'));
+			await wait(100);
+
+			const mark = stdout.output.length;
+			service.builder.emit('start');
+			await wait(700);
+
+			// The clock and the spinner tick about eight times a second, and each tick used to write the whole screen again.
+			const written = stdout.output.slice(mark);
+			// Ink wraps every frame in synchronized output, which makes the frames countable.
+			const frames = written.split('\u001B[?2026h').length - 1;
+			expect(frames).toBeGreaterThan(2);
+			// A repaint of the whole screen costs at least what the screen holds; a changed clock is a few dozen bytes.
+			expect(written.length / frames).toBeLessThan(stdout.screen().length / 4);
 		});
 
 		test('reports the running state and the ready line once the bot is up', async () => {

@@ -2,15 +2,15 @@ import { displayPath, type ResolvedStarsConfig } from '@wolfstar/schema';
 import { defineCommand } from 'citty';
 import { createColors } from 'colorette';
 import { existsSync, readFileSync } from 'node:fs';
-import { createServer } from 'node:net';
 import { delimiter, join } from 'node:path';
+import { checkPortAvailability, devBindHosts } from '../dev/preflight.js';
 import { BRIDGE_FRAMEWORK_VERSION, isAtLeast } from '../dev/bridge.js';
 import { endpointUrl, describeQuickTunnel, readDiscordCredentials } from '../dev/tunnel.js';
 import { NGROK_AUTHTOKEN_VARIABLE, NGROK_INSTALL_HINT, NGROK_PACKAGE } from '../dev/tunnel-providers.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { loadProject, withProjectEnv, applyEnvOptions, type StarsHookable } from '../utils/hooks.js';
-import { modulesPreloadWarning } from '../utils/modules.js';
+import { modulesPreloadWarning, registersModulesOnly, unlistedPlugins, unregisteredPluginsWarning } from '../utils/modules.js';
 import { isCIEnvironment, shouldUseColor } from '../utils/output-mode.js';
 import { createClackPrompt } from '../utils/prompts.js';
 import { findLegacyRootTsconfig } from '../utils/tsconfig.js';
@@ -82,8 +82,17 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 	}
 
 	checks.push({ name: 'config', status: 'ok', message: config.configFile ? show(config.configFile) : 'no stars.config, running on defaults' });
-	for (const warning of [...config.warnings, modulesPreloadWarning(config)]) {
+	for (const warning of [...config.warnings, modulesPreloadWarning(config), unregisteredPluginsWarning(config)]) {
 		if (warning) checks.push({ name: 'config', status: 'warn', message: warning.message, ...(warning.fix ? { fix: warning.fix } : {}) });
+	}
+
+	const byName = registersModulesOnly(config) ? [] : unlistedPlugins(config);
+	if (byName.length > 0) {
+		checks.push({
+			name: 'plugins',
+			status: 'ok',
+			message: `Registered by their name (/register): ${byName.join(', ')}. List a plugin in \`modules\` once it is a module; \`future.compatibilityVersion: 7\` stops registering by name.`
+		});
 	}
 
 	const framework = findInstalledVersion(config.root, '@wolfstar/http-framework');
@@ -148,20 +157,46 @@ export async function collectChecks(config: ResolvedStarsConfig, hooks: StarsHoo
 		});
 	}
 
-	if (config.dev.url) {
-		const url = new URL(config.dev.url);
-		const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
-		const free = await (options.isPortFree ?? isPortFree)(port, url.hostname);
-		checks.push(
-			free
-				? { name: 'port', status: 'ok', message: `${config.dev.url} is free` }
-				: {
-						name: 'port',
-						status: 'warn',
-						message: `Something already listens on ${config.dev.url}`,
-						fix: 'Stop it, or set another HTTP_PORT, unless it is this bot running.'
-					}
-		);
+	const listenerPort = Number(config.dev.listener.port);
+	if (!/^\d+$/.test(config.dev.listener.port) || listenerPort < 1 || listenerPort > 65535) {
+		checks.push({
+			name: 'port',
+			status: 'warn',
+			message: `Invalid bot listener port: ${config.dev.listener.port}`,
+			fix: 'Set HTTP_PORT or dev.env to a port from 1 to 65535 before starting stars dev.'
+		});
+	} else {
+		try {
+			const hosts = devBindHosts(config);
+			const endpoint =
+				config.dev.urlSource === 'inferred'
+					? config.dev.url!
+					: `http://${hosts[0]!.includes(':') ? `[${hosts[0]}]` : hosts[0]}:${listenerPort}`;
+			let free = true;
+			for (const host of hosts) {
+				free = options.isPortFree
+					? await options.isPortFree(listenerPort, host)
+					: (await checkPortAvailability(listenerPort, host)) === 'available';
+				if (!free) break;
+			}
+			checks.push(
+				free
+					? { name: 'port', status: 'ok', message: `${endpoint} is free` }
+					: {
+							name: 'port',
+							status: 'warn',
+							message: `Something already listens on ${endpoint}`,
+							fix: 'Stop it, use stars dev --port <port>, or set dev.portConflict to next, unless it is this bot running.'
+						}
+			);
+		} catch (error) {
+			checks.push({
+				name: 'port',
+				status: 'error',
+				message: error instanceof Error ? error.message : String(error),
+				fix: 'Check the local address and permission to bind it.'
+			});
+		}
 	}
 
 	const { tunnel } = config.dev;
@@ -387,15 +422,6 @@ function findOnPath(binary: string, env: NodeJS.ProcessEnv): boolean {
 		.split(delimiter)
 		.filter(Boolean)
 		.some((directory) => extensions.some((extension) => existsSync(join(directory, `${binary}${extension}`))));
-}
-
-/** Whether nothing listens on `host:port`: the port is bound for an instant and released. */
-function isPortFree(port: number, host: string): Promise<boolean> {
-	return new Promise((resolve) => {
-		const server = createServer();
-		server.once('error', () => resolve(false));
-		server.listen({ port, host, exclusive: true }, () => server.close(() => resolve(true)));
-	});
 }
 
 const SYMBOLS: Record<CheckStatus, string> = { ok: '✔', info: 'ℹ', warn: '⚠', error: '✖' };

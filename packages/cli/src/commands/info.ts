@@ -6,7 +6,7 @@ import { relative } from 'node:path';
 import { describeQuickTunnel } from '../dev/tunnel.js';
 import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import { applyEnvOptions, loadProject } from '../utils/hooks.js';
-import { modulesPreloadWarning } from '../utils/modules.js';
+import { modulesPreloadWarning, registersModulesOnly, unlistedPlugins, unregisteredPluginsWarning } from '../utils/modules.js';
 import { varlockWarning } from '../utils/varlock.js';
 import { resolveOutputMode, shouldUseColor } from '../utils/output-mode.js';
 import { findInstalledVersion } from '../utils/project.js';
@@ -30,6 +30,7 @@ export interface ProjectInfo {
 	};
 	build: ResolvedStarsConfig['build'];
 	dev: ResolvedStarsConfig['dev'];
+	tui: ResolvedStarsConfig['tui'];
 	codegen: ResolvedStarsConfig['codegen'];
 	imports: ResolvedStarsConfig['imports'];
 	experimental: ResolvedStarsConfig['experimental'];
@@ -37,8 +38,8 @@ export interface ProjectInfo {
 	env: ResolvedStarsConfig['env'];
 	/** The names of the hooks registered in `stars.config`, flattened (`build:done`). */
 	hooks: string[];
-	/** The installed modules, and the runtime plugins they registered (`module → export from package`). */
-	modules: { installed: string[]; plugins: string[] };
+	/** The installed modules, and the runtime plugins and pieces directories they registered (`module → export from package`). */
+	modules: { installed: string[]; plugins: string[]; piecesDirs: string[]; locales: string[]; clientHooks: string[]; registeredByName: string[] };
 	/** Non-fatal configuration diagnostics, as `CODE: message`. */
 	warnings: string[];
 	/**
@@ -67,6 +68,7 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		},
 		build: config.build,
 		dev: config.dev,
+		tui: config.tui,
 		codegen: config.codegen,
 		imports: config.imports,
 		experimental: config.experimental,
@@ -75,9 +77,13 @@ export function collectInfo(config: ResolvedStarsConfig): ProjectInfo {
 		hooks: Object.keys(config.hooks),
 		modules: {
 			installed: (config.runtime?.modules ?? []).map((module) => module.name),
-			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`)
+			plugins: (config.runtime?.plugins ?? []).map((plugin) => `${plugin.module} → ${plugin.export} from ${plugin.from}`),
+			piecesDirs: (config.runtime?.piecesDirs ?? []).map((dir) => `${dir.module} → ${dir.path}`),
+			locales: (config.runtime?.locales ?? []).map((locales) => `${locales.module} → ${locales.path} (${locales.namespaces.join(', ')})`),
+			clientHooks: (config.runtime?.clientHooks ?? []).map((hook) => `${hook.module} → client:${hook.hook} from ${hook.from}`),
+			registeredByName: registersModulesOnly(config) ? [] : unlistedPlugins(config)
 		},
-		warnings: [...config.warnings, modulesPreloadWarning(config), varlockWarning(config)]
+		warnings: [...config.warnings, modulesPreloadWarning(config), unregisteredPluginsWarning(config), varlockWarning(config)]
 			.filter((warning) => warning !== null)
 			.map((warning) => `${warning.code}: ${warning.message}`),
 		options: { tsdown: Object.keys(config.tsdown), vite: Object.keys(config.vite) }
@@ -162,7 +168,11 @@ export function formatInfo(info: ProjectInfo, useColor: boolean): string {
 		section('Hooks', [row('registered', info.hooks.join(', ') || colors.dim('none'))]),
 		section('Modules', [
 			row('installed', info.modules.installed.join(', ') || colors.dim('none')),
-			...info.modules.plugins.map((plugin) => row('plugin', plugin))
+			...(info.modules.registeredByName.length > 0 ? [row('by name', info.modules.registeredByName.join(', '))] : []),
+			...info.modules.plugins.map((plugin) => row('plugin', plugin)),
+			...info.modules.piecesDirs.map((dir) => row('pieces', dir)),
+			...info.modules.locales.map((locales) => row('locales', locales)),
+			...info.modules.clientHooks.map((hook) => row('hook', hook))
 		]),
 		section('Experimental', [
 			row('vite', flag(info.experimental.enableVite, colors)),

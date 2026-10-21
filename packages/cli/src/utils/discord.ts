@@ -4,6 +4,14 @@ import { readDiscordCredentials } from '../dev/tunnel.js';
 
 const API = 'https://discord.com/api/v10';
 
+/** An option of a chat input command; a subcommand (`type` 1) or a group (`type` 2) holds further options. */
+export interface ApplicationCommandOption {
+	type: number;
+	name: string;
+	options?: ApplicationCommandOption[];
+	[key: string]: unknown;
+}
+
 export interface ApplicationCommand {
 	id: string;
 	application_id: string;
@@ -12,12 +20,15 @@ export interface ApplicationCommand {
 	type?: number;
 	guild_id?: string;
 	version?: string;
+	options?: ApplicationCommandOption[];
 }
 
 export interface DiscordClient {
 	applicationId: string;
 	listCommands(guildId: string | null): Promise<ApplicationCommand[]>;
 	deleteCommand(guildId: string | null, commandId: string): Promise<void>;
+	/** Edits one command; `options` is replaced as a whole, so send every option that should stay. */
+	patchCommand(guildId: string | null, commandId: string, body: object): Promise<ApplicationCommand>;
 	/** Replaces every command of the scope with `commands` (Discord's bulk overwrite): what is not listed is deleted. */
 	putCommands(guildId: string | null, commands: readonly object[]): Promise<ApplicationCommand[]>;
 }
@@ -69,6 +80,9 @@ export function createDiscordClient(config: ResolvedStarsConfig, env: NodeJS.Pro
 		},
 		async deleteCommand(guildId, commandId) {
 			await request('DELETE', `${scope(guildId)}/${commandId}`);
+		},
+		async patchCommand(guildId, commandId, body) {
+			return (await request('PATCH', `${scope(guildId)}/${commandId}`, body)) as ApplicationCommand;
 		},
 		async putCommands(guildId, commands) {
 			const body = await request('PUT', scope(guildId), commands);

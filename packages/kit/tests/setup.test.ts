@@ -1,4 +1,8 @@
 import type { ResolvedStarsConfig, StarsHookName } from '@wolfstar/schema';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { ModuleError, defineModule, mergeOptions, setupModules, type ModuleHookHost, type StarsModule } from '../src/index.js';
 
 function host() {
@@ -59,7 +63,15 @@ describe('mergeOptions', () => {
 
 describe('setupModules', () => {
 	test('GIVEN no modules THEN the runtime is empty', async () => {
-		expect(await run([], []).result).toEqual({ modules: [], plugins: [], imports: [], configKeys: [] });
+		expect(await run([], []).result).toEqual({
+			modules: [],
+			plugins: [],
+			piecesDirs: [],
+			locales: [],
+			clientHooks: [],
+			imports: [],
+			configKeys: []
+		});
 	});
 
 	test('GIVEN defaults and user options THEN setup receives them merged', async () => {
@@ -119,7 +131,7 @@ describe('setupModules', () => {
 			await expect(result).rejects.toThrow(/"tasks" and "rival" both declare the `configKey` "scheduledTasks"/);
 		});
 
-		test.each(['build', 'dev', 'modules', 'tsdown'])(
+		test.each(['build', 'dev', 'tui', 'modules', 'tsdown'])(
 			'GIVEN the built-in key %s as configKey THEN it throws MODULE_INVALID',
 			async (configKey) => {
 				const { result } = run([defineModule({ meta: { name: 'greedy', configKey } })], [['greedy']]);
@@ -208,10 +220,151 @@ describe('setupModules', () => {
 				{ module: 'cache', from: 'cache/plugin', export: 'default' },
 				{ module: 'cache', from: '/pkg/runtime.js', export: 'plugin', options: { ttl: 5 } }
 			],
+			piecesDirs: [],
+			locales: [],
+			clientHooks: [],
 			imports: ['cache', 'other'],
 			configKeys: []
 		});
 	});
+
+	test('GIVEN addPiecesDir THEN absolute paths and file URLs are collected once, with the module name', async () => {
+		const directory = resolve('pkg', 'pieces');
+		const { result } = run(
+			[
+				defineModule({
+					meta: { name: 'shared' },
+					setup(_options, ctx) {
+						ctx.addPiecesDir(directory);
+						ctx.addPiecesDir(pathToFileURL(directory));
+						ctx.addPiecesDir(pathToFileURL(resolve('pkg', 'more')));
+					}
+				})
+			],
+			[['shared']]
+		);
+
+		expect((await result).piecesDirs).toEqual([
+			{ module: 'shared', path: directory },
+			{ module: 'shared', path: resolve('pkg', 'more') }
+		]);
+	});
+
+	describe('addLocales', () => {
+		let directory: string;
+
+		beforeEach(async () => {
+			directory = await mkdtemp(join(tmpdir(), 'kit-locales-'));
+			for (const file of [
+				'en-US/commands/shared.json',
+				'en-US/misc.json',
+				'es-ES/commands/shared.json',
+				'es-ES/extra.json',
+				'en-US/readme.md'
+			]) {
+				await mkdir(dirname(join(directory, file)), { recursive: true });
+				await writeFile(join(directory, file), '{}');
+			}
+		});
+
+		afterEach(async () => {
+			await rm(directory, { recursive: true, force: true });
+		});
+
+		test('GIVEN a locales directory THEN its namespaces are read from every language, once, sorted', async () => {
+			const { result } = run(
+				[
+					defineModule({
+						meta: { name: 'i18n' },
+						setup(_options, ctx) {
+							ctx.addLocales(directory);
+							ctx.addLocales(pathToFileURL(directory));
+						}
+					})
+				],
+				[['i18n']]
+			);
+
+			expect((await result).locales).toEqual([{ module: 'i18n', path: directory, namespaces: ['commands/shared', 'extra', 'misc'] }]);
+		});
+
+		test('GIVEN a language folder that cannot be read below the directory THEN it throws MODULE_LOCALES_INVALID', async () => {
+			// A dangling symlink makes `statSync` throw inside the namespace walk. Symlinks need a privilege on some systems.
+			try {
+				await symlink(join(directory, 'missing.json'), join(directory, 'en-US', 'dangling.json'));
+			} catch {
+				return;
+			}
+
+			const { result } = run([defineModule({ meta: { name: 'bad' }, setup: (_options, ctx) => ctx.addLocales(directory) })], [['bad']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_LOCALES_INVALID', moduleName: 'bad' });
+		});
+
+		test.each([
+			['a relative path', './locales'],
+			['an empty path', ''],
+			['a directory that does not exist', join(tmpdir(), 'kit-locales-missing', 'nope')]
+		])('GIVEN %s THEN it throws MODULE_LOCALES_INVALID', async (_name, value) => {
+			const { result } = run([defineModule({ meta: { name: 'bad' }, setup: (_options, ctx) => ctx.addLocales(value) })], [['bad']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_LOCALES_INVALID', moduleName: 'bad' });
+		});
+	});
+
+	test('GIVEN client hooks in hooks and ctx.addClientHook THEN they are collected by source, once per name', async () => {
+		const hook = resolve('pkg', 'hooks.js');
+		const { result, registered } = run(
+			[
+				defineModule({
+					meta: { name: 'hooked' },
+					hooks: { 'client:preLoad': pathToFileURL(hook), 'build:done': () => {} },
+					setup(_options, ctx) {
+						ctx.addClientHook('client:postListen', { from: 'hooked/hooks', export: 'postListen' });
+					}
+				})
+			],
+			[['hooked']]
+		);
+
+		expect((await result).clientHooks).toEqual([
+			{ module: 'hooked', hook: 'preLoad', from: hook, export: 'default' },
+			{ module: 'hooked', hook: 'postListen', from: 'hooked/hooks', export: 'postListen' }
+		]);
+		// The CLI hook is still registered on the host; the runtime hook is not.
+		expect(registered.map(([name]) => name)).toEqual(['build:done']);
+	});
+
+	test.each([
+		['an unknown runtime hook', { 'client:nope': 'x/hooks' }],
+		['a relative path', { 'client:preLoad': './hooks.js' }],
+		['a value that is not a source', { 'client:preLoad': () => {} }],
+		['an object without from', { 'client:preLoad': { export: 'a' } }]
+	])('GIVEN %s in hooks THEN it throws MODULE_HOOK_INVALID', async (_name, hooks) => {
+		const { result } = run([{ meta: { name: 'bad' }, hooks } as unknown as StarsModule], [['bad']]);
+		await expect(result).rejects.toMatchObject({ code: 'MODULE_HOOK_INVALID', moduleName: 'bad' });
+	});
+
+	test('GIVEN the same runtime hook twice THEN it throws MODULE_HOOK_INVALID', async () => {
+		const { result } = run(
+			[
+				defineModule({
+					meta: { name: 'twice' },
+					hooks: { 'client:preLoad': 'twice/a' },
+					setup: (_options, ctx) => ctx.addClientHook('client:preLoad', 'twice/b')
+				})
+			],
+			[['twice']]
+		);
+		await expect(result).rejects.toThrow(/twice/);
+		await expect(result).rejects.toMatchObject({ code: 'MODULE_HOOK_INVALID' });
+	});
+
+	test.each(['./pieces', '../pieces', 'pieces', ''])(
+		'GIVEN the relative pieces directory "%s" THEN it throws MODULE_PIECES_INVALID',
+		async (directory) => {
+			const { result } = run([defineModule({ meta: { name: 'rel' }, setup: (_options, ctx) => ctx.addPiecesDir(directory) })], [['rel']]);
+			await expect(result).rejects.toMatchObject({ code: 'MODULE_PIECES_INVALID', moduleName: 'rel' });
+		}
+	);
 
 	test('GIVEN a plugin with options that are not JSON THEN it throws MODULE_PLUGIN_INVALID', async () => {
 		const { result } = run(

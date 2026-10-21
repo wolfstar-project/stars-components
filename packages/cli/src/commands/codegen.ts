@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
+import { collectFlag, projectArgs, resolveCwd, type ProjectArgs } from '../utils/args.js';
 import type { CommandSnapshot } from '../dev/bridge.js';
 import { generateCommandTypes } from '../utils/command-types.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
@@ -14,7 +14,14 @@ import { shouldUseColor } from '../utils/output-mode.js';
 import { readLocalCommands } from '../utils/local-commands.js';
 import { resolveFromProject } from '../utils/project.js';
 
+/** The generators `stars codegen` can run, in the order it runs them. */
+export const CODEGEN_GENERATORS = ['i18n', 'commands'] as const;
+
+export type CodegenGenerator = (typeof CODEGEN_GENERATORS)[number];
+
 export interface CodegenTaskOptions extends ProjectArgs {
+	/** Runs only these generators, each value possibly a comma-separated list. Every one of them has to be enabled. */
+	only?: readonly string[];
 	check?: boolean;
 	json?: boolean;
 	stdout?: NodeJS.WritableStream;
@@ -23,7 +30,7 @@ export interface CodegenTaskOptions extends ProjectArgs {
 }
 
 export interface CodegenResult {
-	generator: 'i18n' | 'commands';
+	generator: CodegenGenerator;
 	output: string;
 	status: 'written' | 'up-to-date' | 'outdated';
 }
@@ -31,12 +38,20 @@ export interface CodegenResult {
 export async function runCodegen(options: CodegenTaskOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
 	const colors = createColors({ useColor: shouldUseColor() && !options.json });
+	const only = parseOnly(options.only);
 	const project = await loadProject({ cwd: resolveCwd(options), configFile: options.config });
 	const { config } = project;
 	const results: CodegenResult[] = [];
 
-	if (config.codegen.i18n) results.push(await runI18n(config, Boolean(options.check)));
-	if (config.codegen.commands) {
+	// A job that asks for one generator must not pass because that generator is off and nothing ran.
+	for (const generator of only ?? []) {
+		if (!config.codegen[generator]) throw cliDiagnostics.CODEGEN_GENERATOR_DISABLED({ generator });
+	}
+
+	const selected = (generator: CodegenGenerator) => !only || only.includes(generator);
+
+	if (selected('i18n') && config.codegen.i18n) results.push(await runI18n(config, Boolean(options.check)));
+	if (selected('commands') && config.codegen.commands) {
 		// What the bot is started with: `env:options` (and varlock) may pick other env files than the defaults.
 		const botConfig = withProjectEnv(await applyEnvOptions(config, project.hooks));
 		results.push(await runCommands(botConfig, Boolean(options.check), options.commands));
@@ -56,6 +71,22 @@ export async function runCodegen(options: CodegenTaskOptions): Promise<void> {
 	if (results.some((result) => result.status === 'outdated')) {
 		throw cliDiagnostics.CODEGEN_OUTDATED({});
 	}
+}
+
+/** The generators `--only` names, or `undefined` when it was not given. */
+function parseOnly(values: readonly string[] | undefined): CodegenGenerator[] | undefined {
+	if (!values || values.length === 0) return undefined;
+
+	return values
+		.flatMap((value) => value.split(','))
+		.map((value) => {
+			const name = value.trim();
+			if (!(CODEGEN_GENERATORS as readonly string[]).includes(name)) {
+				throw cliDiagnostics.INVALID_OPTION({ option: '--only', value: name, allowed: CODEGEN_GENERATORS.join(', ') });
+			}
+
+			return name as CodegenGenerator;
+		});
 }
 
 /**
@@ -124,6 +155,10 @@ export default defineCommand({
 	},
 	args: {
 		...projectArgs,
+		only: {
+			type: 'string',
+			description: `Run only these generators (repeatable, or comma-separated): ${CODEGEN_GENERATORS.join(', ')}`
+		},
 		check: {
 			type: 'boolean',
 			description: 'Fail when the generated files are out of date instead of writing them',
@@ -135,7 +170,8 @@ export default defineCommand({
 			default: false
 		}
 	},
-	async run({ args }) {
-		await runCodegen({ config: args.config, cwd: args.cwd, check: args.check, json: args.json });
+	async run({ args, rawArgs }) {
+		const only = collectFlag(rawArgs, 'only');
+		await runCodegen({ config: args.config, cwd: args.cwd, only: only.length > 0 ? only : undefined, check: args.check, json: args.json });
 	}
 });

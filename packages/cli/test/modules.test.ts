@@ -46,6 +46,90 @@ describe('stars modules', () => {
 		]);
 	});
 
+	function piecesModule(call: string) {
+		return {
+			'node_modules/pieces-module/package.json': JSON.stringify({
+				name: 'pieces-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/pieces-module/index.js': `export default { meta: { name: 'pieces-module' }, setup: (_options, ctx) => ctx.addPiecesDir(${call}) };`,
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['pieces-module'] };"
+		};
+	}
+
+	test('addPiecesDir is carried into the runtime', async () => {
+		fixture = await createFixture(piecesModule("new URL('./pieces', import.meta.url)"));
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.piecesDirs).toEqual([{ module: 'pieces-module', path: join(fixture.root, 'node_modules/pieces-module/pieces') }]);
+	});
+
+	test('client hooks from hooks and ctx.addClientHook are carried into the runtime', async () => {
+		fixture = await createFixture({
+			'node_modules/hook-module/package.json': JSON.stringify({
+				name: 'hook-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/hook-module/index.js':
+				"export default { meta: { name: 'hook-module' }, hooks: { 'client:preLoad': 'hook-module/hooks' }, setup: (_options, ctx) => ctx.addClientHook('client:postListen', { from: 'hook-module/hooks', export: 'listen' }) };",
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['hook-module'] };"
+		});
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.clientHooks).toEqual([
+			{ module: 'hook-module', hook: 'preLoad', from: 'hook-module/hooks', export: 'default' },
+			{ module: 'hook-module', hook: 'postListen', from: 'hook-module/hooks', export: 'listen' }
+		]);
+	});
+
+	test('addLocales reads the namespaces of the directory into the runtime', async () => {
+		fixture = await createFixture({
+			'node_modules/i18n-module/package.json': JSON.stringify({
+				name: 'i18n-module',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/i18n-module/index.js':
+				"export default { meta: { name: 'i18n-module' }, setup: (_options, ctx) => ctx.addLocales(new URL('./locales', import.meta.url)) };",
+			'node_modules/i18n-module/locales/en-US/commands/shared.json': '{}',
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['i18n-module'] };"
+		});
+		const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+		expect(config.runtime.locales).toEqual([
+			{ module: 'i18n-module', path: join(fixture.root, 'node_modules/i18n-module/locales'), namespaces: ['commands/shared'] }
+		]);
+	});
+
+	test('a relative locales directory fails the load, and the diagnostic says how to fix it', async () => {
+		fixture = await createFixture({
+			'node_modules/bad-locales/package.json': JSON.stringify({
+				name: 'bad-locales',
+				type: 'module',
+				exports: { '.': { import: './index.js' } }
+			}),
+			'node_modules/bad-locales/index.js':
+				"export default { meta: { name: 'bad-locales' }, setup: (_options, ctx) => ctx.addLocales('./locales') };",
+			'src/main.ts': '',
+			'stars.config.mjs': "export default { modules: ['bad-locales'] };"
+		});
+
+		const error = (await loadProject({ cwd: fixture.root, env: {} }).catch((error: unknown) => error)) as Diagnostic;
+		expect(error).toMatchObject({ code: 'MODULE_FAILED' });
+		expect(error.fix).toContain('<language>/<namespace>.json');
+	});
+
+	test('a relative pieces directory fails the load', async () => {
+		fixture = await createFixture(piecesModule("'./pieces'"));
+
+		await expect(loadProject({ cwd: fixture.root, env: {} })).rejects.toMatchObject({ code: 'MODULE_FAILED' });
+	});
+
 	test('addImports extends imports.presets, and the module hooks run on the shared registry', async () => {
 		fixture = await createFixture({ ...MODULE_PACKAGE, 'src/main.ts': '', 'stars.config.mjs': "export default { modules: ['fake-module'] };" });
 		const { config, hooks } = await loadProject({ cwd: fixture.root, env: {} });
@@ -255,6 +339,74 @@ describe('stars modules', () => {
 			expect(modulesPreloadWarning(config)?.code ?? null).toBe(warns ? 'MODULES_PRELOAD_REQUIRED' : null);
 			// `stars dev` preloads the plugins itself: the warning is about production, so it is not a config warning.
 			expect(config.warnings).toEqual([]);
+		});
+
+		test('the preload warning also names a module that only adds a pieces directory', async () => {
+			fixture = await createFixture({
+				'node_modules/pieces-only/package.json': JSON.stringify({
+					name: 'pieces-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/pieces-only/index.js':
+					"export default { meta: { name: 'pieces-only' }, setup: (_options, ctx) => ctx.addPiecesDir(new URL('./pieces', import.meta.url)) };",
+				'src/main.js': '',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['pieces-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const warning = modulesPreloadWarning(config);
+			expect(warning?.code).toBe('MODULES_PRELOAD_REQUIRED');
+			expect(warning?.message).toContain('plugins and pieces directories');
+			expect(warning?.message).toContain('pieces-only');
+		});
+
+		test('a module that only declares runtime hooks needs the preload too, and .stars/modules.mjs registers them', async () => {
+			fixture = await createFixture({
+				...NO_BUILD,
+				'node_modules/hook-only/package.json': JSON.stringify({
+					name: 'hook-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' }, './hooks': { import: './hooks.js' } }
+				}),
+				'node_modules/hook-only/index.js': "export default { meta: { name: 'hook-only' }, hooks: { 'client:preLoad': 'hook-only/hooks' } };",
+				'node_modules/hook-only/hooks.js': 'export default () => {};',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['hook-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			expect(config.runtime.plugins).toEqual([]);
+			expect(modulesPreloadWarning(config)?.code).toBe('MODULES_PRELOAD_REQUIRED');
+
+			expect((await prepareProject(config)).modules?.status).toBe('written');
+			const content = await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8');
+			expect(content).toContain('import __stars_hook_0 from "hook-only/hooks";');
+			expect(content).toContain('__stars_hooks("hook-only", { "preLoad": __stars_hook_0 });');
+		});
+
+		test('a module that only adds locales needs the preload too, and .stars/modules.mjs registers the locales plugin', async () => {
+			fixture = await createFixture({
+				...NO_BUILD,
+				'node_modules/locales-only/package.json': JSON.stringify({
+					name: 'locales-only',
+					type: 'module',
+					exports: { '.': { import: './index.js' } }
+				}),
+				'node_modules/locales-only/index.js':
+					"export default { meta: { name: 'locales-only' }, setup: (_options, ctx) => ctx.addLocales(new URL('./locales', import.meta.url)) };",
+				'node_modules/locales-only/locales/en-US/misc.json': '{}',
+				'stars.config.mjs': "export default { build: { tool: 'none' }, modules: ['locales-only'] };"
+			});
+			const { config } = await loadProject({ cwd: fixture.root, env: {} });
+
+			const warning = modulesPreloadWarning(config);
+			expect(warning?.code).toBe('MODULES_PRELOAD_REQUIRED');
+			expect(warning?.message).toContain('locales-only');
+
+			expect((await prepareProject(config)).modules?.status).toBe('written');
+			const content = await readFile(join(fixture.root, '.stars/modules.mjs'), 'utf-8');
+			expect(content).toContain('import { Client, getRootData } from');
+			expect(content).toContain('Client.use({ name: "stars:locales", enforce: "pre"');
 		});
 
 		test('reportWarnings prints the preload warning for build and prepare, not for dev', async () => {

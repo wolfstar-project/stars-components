@@ -35,6 +35,7 @@ export {
 	DEFAULT_COMPATIBILITY_VERSION,
 	EOL_COMPATIBILITY_VERSIONS,
 	LATEST_COMPATIBILITY_VERSION,
+	MODULES_ONLY_VERSION,
 	LEGACY_COMPATIBILITY_VERSION,
 	SPLIT_TSCONFIG_VERSION,
 	STARS_CONFIG_TSDOWN_VERSION
@@ -68,6 +69,7 @@ export type {
 	ResolvedCommandsCodegenConfig,
 	ResolvedDevCommandsConfig,
 	ResolvedDevConfig,
+	ResolvedTuiConfig,
 	ResolvedDevLogsConfig,
 	ResolvedExperimentalConfig,
 	ResolvedFutureConfig,

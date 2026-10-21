@@ -12,7 +12,7 @@ import { resolveBinary } from './project.js';
 export function readProjectEnv(config: ResolvedStarsConfig): Record<string, string> {
 	const { path, env = 'development' } = config.env.options;
 	const { loader } = config.env;
-	if (loader !== 'varlock') return readProjectEnvFiles(config.root, env, { path });
+	if (loader !== 'varlock') return readProjectEnvFiles(config.root, env, { path, env: { ...process.env, ...config.dev.env } });
 
 	const binary = resolveBinary(config.root, 'varlock', 'varlock');
 	if (binary === null) return {};

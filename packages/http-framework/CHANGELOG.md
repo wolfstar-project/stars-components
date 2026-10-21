@@ -1,5 +1,39 @@
 # Changelog
 
+## 6.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`1245aad`](https://github.com/wolfstar-project/stars-components/commit/1245aadc8a0e4996154b5dc3d75df51b9a520d86)]:
+    - @wolfstar/cli@2.11.0
+    - @wolfstar/schema@0.12.0
+
+## 6.5.0
+
+### Minor Changes
+
+- [#339](https://github.com/wolfstar-project/stars-components/pull/339) [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689) - Modules can add a directory of locales with `ctx.addLocales(directory)`. The directory is laid out as `<language>/<namespace>.json`, and its namespaces are read when the module is set up. A runtime plugin generated into the `\0stars:modules` source (and the `node --import` preload) merges it into the client's `i18n` option before `@wolfstar/plugin-i18next` builds its handler, keeping the project's own languages directory. `ModulesRuntime` gains `locales`, `stars info` lists them, and a bad directory fails with `MODULE_LOCALES_INVALID`. `@wolfstar/http-framework` now re-exports `getRootData` from `@sapphire/pieces`, which the generated plugin uses to find the default languages directory. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`b98cbef`](https://github.com/wolfstar-project/stars-components/commit/b98cbef7581c69d8e7493e2ad880f6785415b078), [`1871d36`](https://github.com/wolfstar-project/stars-components/commit/1871d36faec909343bbf824306a553a3eb1eb581), [`af4289e`](https://github.com/wolfstar-project/stars-components/commit/af4289eaaef37d8e1879bb1984997bffe74bf42c), [`5727740`](https://github.com/wolfstar-project/stars-components/commit/572774059d8ede5f2fcc0aabe1001aa6bfa86371), [`c2b1430`](https://github.com/wolfstar-project/stars-components/commit/c2b14303847ceb920d5bb93be8a6d4dcb1e26fa8), [`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689)]:
+    - @wolfstar/schema@0.11.0
+    - @wolfstar/cli@2.10.0
+
+## 6.4.0
+
+### Minor Changes
+
+- [#325](https://github.com/wolfstar-project/stars-components/pull/325) [`c2542d7`](https://github.com/wolfstar-project/stars-components/commit/c2542d72639334a6f68ac733336ee9e95abf4d15) - Add opt-in startup command registration through `ClientOptions.commands` and incremental `ApplicationCommandRegistry.sync()`. Synchronize global or guild commands, report conflicts, preserve unknown deployed commands by default, and select a single registering process with `when`. Startup registration failures warn without stopping the HTTP server. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+## 6.3.2
+
+### Patch Changes
+
+- [#322](https://github.com/wolfstar-project/stars-components/pull/322) [`ec3fa97`](https://github.com/wolfstar-project/stars-components/commit/ec3fa97e8e64403fcc89f7cb0efff4183241697c) - fix(http-framework): skip the error reply when the response already ended
+
+    `handleError` only checked `response.closed`, which turns `true` after the socket flushed. A command, autocomplete or interaction handler that threw right after answering the interaction made it call `end()` on an ended response, and the unhandled `ERR_STREAM_WRITE_AFTER_END` crashed the process. It now also skips the reply when `response.writableEnded` is set; the error is still emitted. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 6.3.1
 
 ### Patch Changes

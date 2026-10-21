@@ -55,7 +55,7 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (p: { message: string }) => `Build failed${p.message ? `: ${p.message}` : ''}`
 		},
 		COMMAND_NOT_FOUND: {
-			why: (p: { names: string }) => `No deployed command is named ${p.names}`,
+			why: (p: { names: string }) => `No deployed command, subcommand or group is named ${p.names}`,
 			fix: (_p: { names: string }) => 'Run `stars commands list` to see what is deployed.'
 		},
 		ABORTED: {
@@ -88,12 +88,35 @@ export const cliDiagnostics = defineDiagnostics({
 			why: (p: { theme: string; themes: string }) => `Unknown theme \`${p.theme}\`.`,
 			fix: (p: { theme: string; themes: string }) => `Use one of: ${p.themes}.`
 		},
+		PORT_IN_USE: {
+			why: (p: { url: string }) => `The development port is already occupied: ${p.url}`,
+			fix: (_p: { url: string }) =>
+				'Stop the other server, choose --port <1..65535>, or set --port-conflict next|continue (dev.portConflict in stars.config).'
+		},
+		PORT_CHECK_FAILED: {
+			why: (p: { host: string; port: number; reason: string }) => `Cannot check ${p.host}:${p.port}: ${p.reason}`,
+			fix: (_p: { host: string; port: number; reason: string }) =>
+				'Check the local address and permission to bind it, or choose another --port.'
+		},
+		NO_AVAILABLE_PORT: {
+			why: (p: { first: number; last: number }) => `No free port between ${p.first} and ${p.last}`,
+			fix: (_p: { first: number; last: number }) => 'Stop an unused server, or choose another starting port with --port.'
+		},
+		DEV_DIRECTORY_UNWRITABLE: {
+			why: (p: { path: string; reason: string }) => `Cannot write development files to ${p.path}: ${p.reason}`,
+			fix: (_p: { path: string; reason: string }) =>
+				'Use a writable directory, grant write/search access, or remove the file blocking this directory.'
+		},
 		INVALID_OPTION: {
 			why: (p: { option: string; value: string; allowed: string }) => `Unknown value \`${p.value}\` for ${p.option}.`,
 			fix: (p: { option: string; value: string; allowed: string }) => `Use one of: ${p.allowed}.`
 		},
 		CODEGEN_OUTDATED: {
 			why: (_p: {}) => 'Generated files are out of date, run `stars codegen` to update them.'
+		},
+		CODEGEN_GENERATOR_DISABLED: {
+			why: (p: { generator: string }) => `\`--only ${p.generator}\` was given, but \`codegen.${p.generator}\` is off in stars.config`,
+			fix: (p: { generator: string }) => `Turn \`codegen.${p.generator}\` on, or leave ${p.generator} out of \`--only\`.`
 		},
 		DEPENDENCY_MISSING: {
 			why: (p: { name: string; root: string; hint: string }) => `"${p.name}" is not installed in ${p.root}`,
@@ -111,16 +134,28 @@ export const cliDiagnostics = defineDiagnostics({
 						return 'Export the module with `defineModule` from @wolfstar/kit as the default export, and give its `meta` a `name` and, if it has a `configKey`, one that is not a built-in key of stars.config or used by another module.';
 					case 'MODULE_PLUGIN_INVALID':
 						return 'Pass `ctx.addPlugin` a package specifier, an absolute path or a `file:` URL, and JSON-serialisable options.';
+					case 'MODULE_PIECES_INVALID':
+						return "Pass `ctx.addPiecesDir` an absolute path or a `file:` URL, e.g. `new URL('./pieces', import.meta.url)`.";
+					case 'MODULE_LOCALES_INVALID':
+						return "Pass `ctx.addLocales` an absolute path or a `file:` URL to an existing directory laid out as <language>/<namespace>.json, e.g. `new URL('./locales', import.meta.url)`.";
+					case 'MODULE_HOOK_INVALID':
+						return 'Give each `client:*` hook of a module once, by source: a package specifier, an absolute path or a `file:` URL, or `{ from, export }`.';
 					default:
 						return 'Fix the error the module threw (see the cause), or remove it from `modules` in stars.config.';
 				}
 			}
 		},
 		MODULES_PRELOAD_REQUIRED: {
-			why: (p: { tool: string; plugins: string }) =>
-				`The runtime plugins added by modules (${p.plugins}) are registered through \`node --import\` with build.tool "${p.tool}", which only \`stars dev\` does for you`,
-			fix: (_p: { tool: string; plugins: string }) =>
+			why: (p: { tool: string; modules: string }) =>
+				`The runtime plugins and pieces directories added by modules (${p.modules}) are registered through \`node --import\` with build.tool "${p.tool}", which only \`stars dev\` does for you`,
+			fix: (_p: { tool: string; modules: string }) =>
 				'Start the production bot with `node --import ./.stars/modules.mjs <entry>`; `stars prepare` (and `stars build`) writes that file.'
+		},
+		PLUGINS_NOT_REGISTERED: {
+			why: (p: { plugins: string }) =>
+				`future.compatibilityVersion 7 registers only the modules in \`modules\`, so the installed plugins ${p.plugins} are not registered by their name any more and will not run`,
+			fix: (_p: { plugins: string }) =>
+				'List the plugin in `modules` once its package exports a module, import it in the bot yourself, or set `future.compatibilityVersion` back to 6.'
 		},
 		VARLOCK_LOADER_IMPLICIT: {
 			why: (_p: {}) =>

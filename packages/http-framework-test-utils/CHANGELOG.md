@@ -1,5 +1,11 @@
 # @wolfstar/http-framework-test-utils
 
+## 4.0.4
+
+### Patch Changes
+
+- [#332](https://github.com/wolfstar-project/stars-components/pull/332) [`847fba8`](https://github.com/wolfstar-project/stars-components/commit/847fba8205c9622f04552c2e0dcbb5686e9cfd6f) - Raise the `@wolfstar/http-framework` range to `^6.4.0`. The packages already declare it as `workspace:^`, but `onlyUpdatePeerDependentsWhenOutOfRange` kept them from being republished after the framework's minor releases, so the ranges on npm were still `^6.0.0` (and `^6.3.0` for `@wolfstar/decorators`). Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 4.0.3
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 import { ModuleError, setupModules } from '@wolfstar/kit';
-import { assertModuleOptionsClaimed, type ResolvedStarsConfig } from '@wolfstar/schema';
-import { envModuleSource, modulesModuleSource } from '@wolfstar/vite-server/internal';
+import { MODULES_ONLY_VERSION, assertModuleOptionsClaimed, type ResolvedStarsConfig } from '@wolfstar/schema';
+import { envModuleSource, findUnlistedPlugins, modulesModuleSource } from '@wolfstar/vite-server/internal';
 import { resolve as resolveModule } from 'mlly';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { Diagnostic } from 'nostics';
@@ -68,13 +68,55 @@ export function modulesPreloadWarning(config: ResolvedStarsConfig): Diagnostic |
 	if (!needsPreload(config)) return null;
 	return cliDiagnostics.MODULES_PRELOAD_REQUIRED({
 		tool: config.build.tool,
-		plugins: [...new Set(config.runtime.plugins.map((plugin) => plugin.module))].join(', ')
+		modules: [
+			...new Set(
+				[...config.runtime.plugins, ...config.runtime.piecesDirs, ...config.runtime.locales, ...config.runtime.clientHooks].map(
+					(registration) => registration.module
+				)
+			)
+		].join(', ')
 	});
 }
 
-/** A build tool the entry transform cannot reach, with runtime plugins to register: they need a `node --import` preload. */
+/** Whether only the modules register (`future.compatibilityVersion` 7 on): a plugin is not activated by its name. */
+export function registersModulesOnly(config: ResolvedStarsConfig): boolean {
+	return config.future.compatibilityVersion >= MODULES_ONLY_VERSION;
+}
+
+/**
+ * The installed `@wolfstar/plugin-*` packages that are not modules: activated by their name (`/register`) before
+ * {@link MODULES_ONLY_VERSION}, not at all from it. Only a build whose entry is transformed (`tsdown`, `vite`, Nitro)
+ * gets the `/register` import: `tsc` and `none` never did, so nothing is reported for them. Empty as well when
+ * `package.json` cannot be read.
+ */
+export function unlistedPlugins(config: ResolvedStarsConfig): string[] {
+	if (UNTRANSFORMED_TOOLS.has(config.build.tool)) return [];
+	try {
+		return findUnlistedPlugins(config);
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * The warning for a project on {@link MODULES_ONLY_VERSION} that has plugins installed which are not modules: nothing
+ * registers them any more, so they silently never run. `null` before that version, where they still register by name.
+ */
+export function unregisteredPluginsWarning(config: ResolvedStarsConfig): Diagnostic | null {
+	if (!registersModulesOnly(config)) return null;
+	const plugins = unlistedPlugins(config);
+	return plugins.length === 0 ? null : cliDiagnostics.PLUGINS_NOT_REGISTERED({ plugins: plugins.join(', ') });
+}
+
+/** A build tool the entry transform cannot reach, with runtime plugins or pieces to register: they need a `node --import` preload. */
 function needsPreload(config: ResolvedStarsConfig): boolean {
-	return UNTRANSFORMED_TOOLS.has(config.build.tool) && (config.runtime?.plugins.length ?? 0) > 0;
+	return (
+		UNTRANSFORMED_TOOLS.has(config.build.tool) &&
+		((config.runtime?.plugins.length ?? 0) > 0 ||
+			(config.runtime?.piecesDirs.length ?? 0) > 0 ||
+			(config.runtime?.locales.length ?? 0) > 0 ||
+			(config.runtime?.clientHooks.length ?? 0) > 0)
+	);
 }
 
 export interface ModulesPreloadResult {
@@ -100,7 +142,12 @@ export async function prepareModulesPreload(config: ResolvedStarsConfig, check =
 	const path = join(directory, 'modules.mjs');
 	const withEnv = config.env?.enabled === true;
 	// An absolute path is a `file:` URL in the import, like in `moduleImportArgs`: Node rejects a Windows path there.
-	const plugins = modulesModuleSource(config.runtime.plugins, { resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from) });
+	const plugins = modulesModuleSource(config.runtime.plugins, {
+		piecesDirs: config.runtime.piecesDirs,
+		locales: config.runtime.locales,
+		clientHooks: config.runtime.clientHooks,
+		resolve: (from) => (isAbsolute(from) ? pathToFileURL(from).href : from)
+	});
 	const files = [
 		{ path, content: withEnv ? `import "./env.mjs";\n${plugins}` : plugins },
 		...(withEnv ? [{ path: join(directory, 'env.mjs'), content: envModuleSource(config.env.options) }] : [])

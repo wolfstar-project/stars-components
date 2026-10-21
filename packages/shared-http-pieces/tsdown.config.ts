@@ -4,7 +4,7 @@ import { createTsdownOptions } from '../../scripts/tsdown.config';
 export default defineConfig({
 	...createTsdownOptions({
 		cjsOptions: { disabled: true },
-		entry: ['src/index.ts', 'src/register.ts'],
+		entry: ['src/index.ts', 'src/register.ts', 'src/module.ts', 'src/pieces.ts'],
 		esmOptions: { outDir: 'dist' },
 		target: 'es2022'
 	}),

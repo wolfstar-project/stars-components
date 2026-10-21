@@ -9,6 +9,10 @@
 
 </div>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wolfstar-project/stars-components/main/.github/media/stars-dev.gif" alt="pnpm dev running stars dev: build, bot start and restart on change in the dashboard" width="720" />
+</p>
+
 ## Description
 
 `stars` is a small, fast CLI that owns the developer workflow of a bot built with `@wolfstar/http-framework`. Like
@@ -56,7 +60,7 @@ import { defineConfig } from '@wolfstar/http-framework/config';
 export default defineConfig({});
 ```
 
-`stars dev`'s URL needs no configuration either — it is detected from `HTTP_PORT` (env var, `src/.env*`/`.env*`, or `dev.env`) or `3000`, the same way Vite's and Nuxt's dev servers do, and `localhost` is swapped for `127.0.0.1` at runtime if that is what is actually reachable. Set `dev.url` only to override it.
+`stars dev`'s display URL needs no configuration: it follows `dev.env.HTTP_PORT`/`PORT`, process `HTTP_PORT`, project env-file `HTTP_PORT`/`PORT`, or `3000`. An ambient process `PORT` is ignored by the framework mode. `localhost` is resolved at startup when needed. An explicit `dev.url` overrides display and health checks only, so it can point at a local proxy or remote tunnel.
 
 The resolved configuration is also available programmatically, exactly as the commands see it (re-exported from this package for convenience, or import it directly from `@wolfstar/http-framework/config`):
 
@@ -72,10 +76,10 @@ console.log(config.entry, config.build.output);
 ## Commands
 
 ```sh
-stars dev [--no-tui] [--tunnel|--no-tunnel] [--no-mouse] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
+stars dev [--no-tui] [--style <nuxt-style|dashboard|none>] [--port|-p <port>] [--host [<address>]] [--port-conflict <prompt|next|error|continue>] [--tunnel|--no-tunnel] [--no-mouse] [--layout <auto|dashboard|panel>] [--channel <name>] [--level <level>] [--theme <name>] [--config <file>] [--cwd <dir>]
 stars build [--config <file>] [--cwd <dir>]
 stars info [--json] [--config <file>] [--cwd <dir>]
-stars codegen [--check] [--json] [--config <file>] [--cwd <dir>]
+stars codegen [--only <i18n|commands>] [--check] [--json] [--config <file>] [--cwd <dir>]
 stars prepare [--check] [--json] [--config <file>] [--cwd <dir>]
 stars typecheck [--config <file>] [--cwd <dir>]
 stars commands [list|clean|diff|deploy] [--guild <id>] [--name <name>] [--check] [--yes] [--json]
@@ -89,6 +93,54 @@ stars --help | --version
 Watches the sources through the configured build tool (`tsdown` programmatically, configured from your `stars.config`, `tsc -b --watch`, or a plain file watcher for JavaScript projects), starts the bot after the first successful build and restarts it after every following one. Failed builds keep the previous process running and wait for the next change; a crashed bot waits for the next change or a manual restart.
 
 The bot runs as a child `node` process with `STARS_DEV=1` and `NODE_ENV=development` in its environment.
+
+Choose the presentation in `stars.config.ts`:
+
+```ts
+export default defineConfig({
+	tui: { style: 'nuxt-style' }, // 'dashboard' for the full-screen view, 'none' for plain logs
+	dev: { portConflict: 'prompt' }
+});
+```
+
+`--style` overrides `--layout`, then `tui.style`, then `dev.layout`. With no style, the existing automatic
+layout selection stays in effect. `--no-tui` and `STARS_TUI=plain` use plain logs; redirected terminals never use
+raw input. An explicit `--tui` can override `tui.style: 'none'`; an explicit `--style none` always uses plain logs.
+
+**Startup checks.** Before creating the builder or writing generated files, Stars checks that output,
+generated-file and log directories can be written and that the bot's actual listener port is available. HTTP(S)
+URLs are validated by the schema; listener ports are validated only when starting `stars dev`, so an unrelated
+shell value cannot prevent `stars build`, `info` or `doctor` from inspecting the project. These checks follow the
+startup approach of [Nuxt CLI](https://github.com/nuxt/cli/tree/ad8153ae532df2ed07bf6fd84d8f5ae1e766532f/packages/nuxt-cli).
+
+The framework listener uses `HTTP_ADDRESS` (default `0.0.0.0`). Its port comes from explicit `dev.env.HTTP_PORT` or
+`dev.env.PORT`, process `HTTP_PORT`, file `HTTP_PORT`, then file `PORT` when no explicit display URL is set, or
+`3000`. Ambient process `PORT` is ignored as a direct framework fallback; an explicit file expression such as
+`HTTP_PORT=${PORT}` still reads it. Empty process/file `HTTP_PORT` falls through;
+invalid nonempty listener values are reported at dev startup. Nitro uses `NITRO_HOST`/`HOST` and `NITRO_PORT` before
+`PORT`, including file `NITRO_PORT` before generic process `PORT`. Explicit `dev.env` ports take priority in both
+modes. Env-file quoting, comments and variable expansion are resolved before inferring ports.
+
+If the listener port is occupied, an interactive terminal offers three choices: start anyway on that port,
+cancel startup, or use the next available port. Cancellation creates no builder or generated files. This question
+also works with plain logs on a terminal. CI, piped input and `TERM=dumb` never wait for an answer: the default
+`prompt` policy fails with advice instead. `--port-conflict next` (or `dev.portConflict: 'next'`) tries up to 100
+higher ports, including 65535 when in range; `error` fails immediately and `continue` skips the bind check.
+
+`--port 4000` and fallback choices set the child process's `HTTP_PORT`, `PORT` and `NITRO_PORT` for this session.
+An inferred display URL follows the selected port. An explicit `dev.url` stays unchanged, including its path and
+query, and its host/port are never probed as the bot listener. For example, `dev.url: 'https://localhost/bot'`
+can keep pointing at a proxy on 443 while the bot starts on 3000 or `--port 4000`. Without an explicit display URL,
+file `PORT` is forwarded to the framework's `HTTP_PORT` listener for compatibility. No environment files or global
+port variables are rewritten.
+
+`--host <address>` (an IP address or hostname) sets the address the application listens on, like Nuxt's `--host`:
+the child gets `HTTP_ADDRESS` (and `NITRO_HOST`/`HOST` in Nitro mode), the Vite/Nitro dev servers bind to it, and the
+port check probes that address. A bare `--host` listens on every interface (`0.0.0.0`). An inferred display URL
+follows a concrete address; a wildcard or an explicit `dev.url` is left alone. `-p` is short for `--port`.
+
+Port probes release their sockets before startup; another process can still claim
+a free port before the application binds it.
 
 **Dashboard** (default on a TTY of at least 90×20): a full-screen view in the alternate buffer.
 
@@ -213,7 +265,7 @@ A question that is still open survives a restart of the bot, and a `y` given whi
 is carried out once it listens again. A refresh also empties a guild whose last command was removed since the last
 deploy, which pushing the registry alone would leave as it was.
 
-**Panel** (`dev.layout: 'panel'`, `--layout panel`, `v`, or a terminal smaller than 90×20): a bottom-aligned panel in
+**Panel** (`tui.style: 'nuxt-style'`, `--style nuxt-style`, `dev.layout: 'panel'`, `--layout panel`, `v`, or a terminal smaller than 90×20): a bottom-aligned panel in
 the normal buffer, following the layout and keyboard conventions of
 [Nuxt CLI's dev TUI](https://github.com/nuxt/cli/tree/b4b366eafdd9ac4d5b81b6ae7dadda35364252c9/packages/nuxt-cli/src/dev/tui).
 It shows a Stars wordmark, aligned URLs, a 20-cell progress bar with elapsed time, status and shortcuts, and folds
@@ -265,6 +317,7 @@ stars commands list                 # global commands
 stars commands list --guild 1234    # a guild's commands
 stars commands clean                # wizard: pick from a checklist, then confirm
 stars commands clean --name ping    # delete one, asking first
+stars commands clean --name "settings server" --yes   # remove one subcommand, the rest of /settings stays
 stars commands clean --guild 1234 --yes
 ```
 
@@ -272,6 +325,14 @@ It reads `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID` (or `APPLICATION_ID`) from
 `.env`, the same place the bot reads them from. `clean` deletes deployed commands, so on a terminal it opens a wizard —
 a checklist of what is deployed, then a confirmation — and refuses to run without `--yes` (or `--name`) anywhere
 else.
+
+`--name` also takes the path of a subcommand or a group (`settings server`, `settings group sub`). Discord has no
+endpoint to delete one, so `clean` fetches the deployed command, drops that entry from its `options` and sends the
+command back with a `PATCH`; the parent and its other subcommands stay, and paths under the same command share one
+request. A path that matches nothing fails with `COMMAND_NOT_FOUND`. A command cannot exist without a subcommand, so
+removing the last one deletes the whole command (the confirmation says so, and `--yes` accepts it). `--json` reports
+`deleted` (whole commands) and `removed` (subcommands and groups). The wizard still lists whole commands only. `clean`
+reads the command and writes it back, so a deploy that runs in between is overwritten.
 
 `diff` and `deploy` compare that with what the project defines:
 
@@ -296,7 +357,8 @@ run without `--yes` outside a terminal, or with `--json`.
 ### `stars codegen`
 
 Runs the code generators `codegen` in `stars.config` enables, writing their files (`--check` fails with
-`CODEGEN_OUTDATED` instead when one is stale, `--json` prints `{ check, results }`):
+`CODEGEN_OUTDATED` instead when one is stale, `--json` prints `{ check, results }`, `--only i18n` or `--only commands`
+runs just that generator, repeated or comma-separated for both):
 
 - `codegen.i18n` types the i18next resources with `@wolfstar/i18next-type-generator`. It is on by default when
   `src/locales/en-US` exists.
@@ -330,6 +392,17 @@ that loads its pieces, reports its registry and exits before it listens or talks
 ```sh
 DISCORD_CLIENT_ID=1 DISCORD_TOKEN=x DISCORD_PUBLIC_KEY=0 stars codegen --check
 ```
+
+`--only` lets a CI job run the part it can. The i18n types only read the locale files, so they can be checked without the
+bot's secrets or a build, while the commands need the built bot and whatever it reads before `client.load()`:
+
+```sh
+stars codegen --check --only i18n
+stars build && DISCORD_CLIENT_ID=1 DISCORD_TOKEN=x DISCORD_PUBLIC_KEY=0 stars codegen --check --only commands
+```
+
+A generator named in `--only` has to be enabled: `--only commands` with `codegen.commands` off fails with
+`CODEGEN_GENERATOR_DISABLED` instead of passing without checking anything.
 
 It is not part of `stars dev` or `stars prepare` (which has no build to read from yet): run `stars codegen` after
 changing an option, and `stars codegen --check` in CI to keep the file up to date. A path registered more than once

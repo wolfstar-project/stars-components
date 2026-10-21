@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
 	envModuleSource,
+	findUnlistedPlugins,
 	modulesModuleSource,
 	pluginRegistrations,
 	REGISTER_PLUGIN_SOURCE,
@@ -180,6 +181,58 @@ describe('pluginRegistrations modules', () => {
 		);
 	});
 
+	test('the virtual module registers the pieces directories with the stores', () => {
+		const source = modulesModuleSource([], { piecesDirs: [{ module: 'a', path: '/pkg/pieces' }] });
+		expect(source.split('\n')).toEqual([
+			'import { Client, container } from "@wolfstar/http-framework";',
+			'container.stores.registerPath("/pkg/pieces");',
+			REGISTER_PLUGIN_SOURCE,
+			''
+		]);
+	});
+
+	test('the virtual module merges the locales of modules into the i18n option before the i18n plugin runs', () => {
+		const source = modulesModuleSource([], { locales: [{ module: 'a', path: '/pkg/locales', namespaces: ['commands/shared'] }] });
+		expect(source.split('\n').slice(0, 3)).toEqual([
+			'import { Client, getRootData } from "@wolfstar/http-framework";',
+			'import { join as __stars_join } from "node:path";',
+			REGISTER_PLUGIN_SOURCE
+		]);
+		expect(source).toContain('const __stars_locales = [{"path":"/pkg/locales","namespaces":["commands/shared"]}];');
+		expect(source).toContain('Client.use({ name: "stars:locales", enforce: "pre", preGenericsInitialization(client, options) {');
+	});
+
+	test('imports the modules module for locales alone', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const locales = [{ module: 'a', path: '/pkg/locales', namespaces: [] }];
+		const instance = plugin({
+			runtime: { modules: [], imports: [], plugins: [], piecesDirs: [], clientHooks: [], locales } as unknown as ResolvedStarsConfig['runtime']
+		});
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
+		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { locales }));
+	});
+
+	test('the virtual module puts the runtime hooks of a module on one plugin named after it', () => {
+		const source = modulesModuleSource([], {
+			clientHooks: [
+				{ module: 'a', hook: 'preLoad', from: 'a/hooks', export: 'default' },
+				{ module: 'b', hook: 'postListen', from: '/pkg/b.js', export: 'later' },
+				{ module: 'a', hook: 'postListen', from: 'a/hooks', export: 'listen' }
+			]
+		});
+		expect(source.split('\n')).toEqual([
+			'import { Client } from "@wolfstar/http-framework";',
+			'import __stars_hook_0 from "a/hooks";',
+			'import { "later" as __stars_hook_1 } from "/pkg/b.js";',
+			'import { "listen" as __stars_hook_2 } from "a/hooks";',
+			REGISTER_PLUGIN_SOURCE,
+			'const __stars_hooks = (name, hooks) => Client.use({ name, ...hooks });',
+			'__stars_hooks("a", { "preLoad": __stars_hook_0, "postListen": __stars_hook_2 });',
+			'__stars_hooks("b", { "postListen": __stars_hook_1 });',
+			''
+		]);
+	});
+
 	test('the virtual module can point at resolved files', () => {
 		const source = modulesModuleSource([{ module: 'a', from: 'a/plugin', export: 'default' }], {
 			framework: 'file:///fw/index.js',
@@ -201,6 +254,24 @@ describe('pluginRegistrations modules', () => {
 			'import "@wolfstar/plugin-i18next/register";',
 			'x'
 		]);
+	});
+
+	test('imports the modules module for pieces directories alone', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const piecesDirs = [{ module: 'a', path: '/pkg/pieces' }];
+		const instance = plugin({ runtime: { modules: [], imports: [], plugins: [], piecesDirs } as unknown as ResolvedStarsConfig['runtime'] });
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
+		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { piecesDirs }));
+	});
+
+	test('imports the modules module for runtime hooks alone', async () => {
+		await write({ 'app/package.json': JSON.stringify({ name: 'app' }) });
+		const clientHooks = [{ module: 'a', hook: 'preLoad', from: 'a/hooks', export: 'default' }];
+		const instance = plugin({
+			runtime: { modules: [], imports: [], plugins: [], piecesDirs: [], clientHooks } as unknown as ResolvedStarsConfig['runtime']
+		});
+		expect(instance.transform('x', entry())!.code.split('\n')).toEqual([`import ${JSON.stringify(STARS_MODULES_MODULE)};`, 'x']);
+		expect(instance.load(STARS_MODULES_MODULE)).toBe(modulesModuleSource([], { clientHooks: clientHooks as never }));
 	});
 
 	test('resolves and loads the virtual module only when there are runtime plugins', async () => {
@@ -227,6 +298,25 @@ describe('pluginRegistrations modules', () => {
 			modules: [{ specifier: '@wolfstar/plugin-a', options: {} }]
 		} as unknown as ResolvedStarsConfig) as RegistrationPlugin;
 		expect(instance.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-b/register";']);
+	});
+
+	test('from compatibility version 7 no plugin is activated by its name, listed or not', async () => {
+		await write({
+			'app/package.json': JSON.stringify({ name: 'app', dependencies: { '@wolfstar/plugin-a': '1', '@wolfstar/plugin-b': '1' } })
+		});
+		const config = { root: join(workspace, 'app'), entry: entry(), modules: [{ specifier: '@wolfstar/plugin-a', options: {} }] };
+
+		const before = pluginRegistrations({
+			...config,
+			future: { compatibilityVersion: 6 }
+		} as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+		expect(before.transform('', entry())!.code.split('\n').filter(Boolean)).toEqual(['import "@wolfstar/plugin-b/register";']);
+
+		const after = pluginRegistrations({ ...config, future: { compatibilityVersion: 7 } } as unknown as ResolvedStarsConfig) as RegistrationPlugin;
+		expect(after.transform('', entry())).toBeNull();
+		expect(findUnlistedPlugins({ ...config, future: { compatibilityVersion: 7 } } as unknown as ResolvedStarsConfig)).toEqual([
+			'@wolfstar/plugin-b'
+		]);
 	});
 
 	test('a package installed by another module is not activated through /register either', async () => {

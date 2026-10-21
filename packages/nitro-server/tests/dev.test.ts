@@ -36,6 +36,28 @@ test('dispatches through Nitro directly, without a listening socket, and closes 
 	}
 }, 30000);
 
+test('binds to NITRO_HOST, then HOST, from dev.env, falling back to the hostname of dev.url', async () => {
+	const f = await fixture(true);
+	const hostOf = async (env: Record<string, string>, vite: object = { server: { port: 0 } }) => {
+		const server = await createNitroServer({ ...f.config, vite, dev: { ...f.config.dev, env } });
+		try {
+			return server.vite.config.server.host;
+		} finally {
+			await server.close();
+		}
+	};
+	try {
+		expect(await hostOf({})).toBe('localhost');
+		expect(await hostOf({ HOST: '127.0.0.2' })).toBe('127.0.0.2');
+		expect(await hostOf({ NITRO_HOST: '127.0.0.3', HOST: '127.0.0.2' })).toBe('127.0.0.3');
+		expect(await hostOf({ NITRO_HOST: '', HOST: '[::1]' })).toBe('::1');
+		// An explicit vite.server.host is the user's own choice and stays in charge.
+		expect(await hostOf({ NITRO_HOST: '127.0.0.3' }, { server: { host: '127.0.0.4', port: 0 } })).toBe('127.0.0.4');
+	} finally {
+		await f.cleanup();
+	}
+}, 60000);
+
 test('answers unhandled entry errors as JSON, never an HTML error page', async () => {
 	const f = await fixture(true);
 	await writeFile(join(f.root, 'src/main.ts'), 'export default { fetch: () => { throw new Error("boom"); } };');

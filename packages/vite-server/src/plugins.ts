@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { ResolvedStarsConfig, RuntimePluginRegistration, StarsEnvSetupOptions } from '@wolfstar/schema';
+import {
+	MODULES_ONLY_VERSION,
+	type ClientHookRegistration,
+	type LocalesRegistration,
+	type PiecesDirRegistration,
+	type ResolvedStarsConfig,
+	type RuntimePluginRegistration,
+	type StarsEnvSetupOptions
+} from '@wolfstar/schema';
 
 interface PackageJson {
 	dependencies?: Record<string, string>;
@@ -43,18 +51,33 @@ export const REGISTER_PLUGIN_SOURCE =
 export interface ModulesModuleSourceOptions {
 	/** Where `Client` is imported from. `resolve` and this let a host that cannot resolve bare specifiers point at files. */
 	framework?: string;
+	/** The directories of pieces modules added with `ctx.addPiecesDir`, handed to `container.stores.registerPath`. */
+	piecesDirs?: readonly PiecesDirRegistration[];
+	/** The directories of locales modules added with `ctx.addLocales`, merged into the `i18n` option by a runtime plugin. */
+	locales?: readonly LocalesRegistration[];
+	/** The runtime hooks modules declared (`hooks['client:*']`, `ctx.addClientHook`): one plugin per module carries them. */
+	clientHooks?: readonly ClientHookRegistration[];
 	/** Maps a plugin's `from` to what the generated `import` uses. */
 	resolve?: (from: string) => string;
 }
 
 /**
- * The source of the modules module: every runtime plugin is imported from its `from` and handed to `Client.use`. A
- * function export is a factory called with the plugin's options (`definePlugin((options) => ({ … }))`), anything else
+ * The source of the modules module: every pieces directory is registered with the stores, every runtime plugin is
+ * imported from its `from` and handed to `Client.use`, and the runtime hooks of a module go on one plugin named after
+ * it. A function export is a factory called with the plugin's options (`definePlugin((options) => ({ … }))`), anything else
  * is the plugin itself (see {@link REGISTER_PLUGIN_SOURCE}).
  */
 export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[], options: ModulesModuleSourceOptions = {}): string {
-	const { framework = '@wolfstar/http-framework', resolve: resolveFrom = (from: string) => from } = options;
-	const lines = [`import { Client } from ${JSON.stringify(framework)};`];
+	const {
+		framework = '@wolfstar/http-framework',
+		piecesDirs = [],
+		locales = [],
+		clientHooks = [],
+		resolve: resolveFrom = (from: string) => from
+	} = options;
+	const names = ['Client', ...(piecesDirs.length > 0 ? ['container'] : []), ...(locales.length > 0 ? ['getRootData'] : [])];
+	const lines = [`import { ${names.join(', ')} } from ${JSON.stringify(framework)};`];
+	if (locales.length > 0) lines.push('import { join as __stars_join } from "node:path";');
 	for (const [index, plugin] of plugins.entries()) {
 		const from = JSON.stringify(resolveFrom(plugin.from));
 		const local = `__stars_plugin_${index}`;
@@ -63,32 +86,93 @@ export function modulesModuleSource(plugins: readonly RuntimePluginRegistration[
 		);
 	}
 
+	for (const [index, hook] of clientHooks.entries()) {
+		const from = JSON.stringify(resolveFrom(hook.from));
+		const local = `__stars_hook_${index}`;
+		lines.push(
+			hook.export === 'default' ? `import ${local} from ${from};` : `import { ${JSON.stringify(hook.export)} as ${local} } from ${from};`
+		);
+	}
+
+	for (const { path } of piecesDirs) lines.push(`container.stores.registerPath(${JSON.stringify(path)});`);
 	lines.push(REGISTER_PLUGIN_SOURCE);
 	for (const [index, plugin] of plugins.entries()) {
 		lines.push(`__stars_register(__stars_plugin_${index}, ${plugin.options === undefined ? 'undefined' : JSON.stringify(plugin.options)});`);
+	}
+
+	if (locales.length > 0) lines.push(localesPluginSource(locales));
+
+	if (clientHooks.length > 0) {
+		lines.push('const __stars_hooks = (name, hooks) => Client.use({ name, ...hooks });');
+		const byModule = new Map<string, string[]>();
+		for (const [index, hook] of clientHooks.entries()) {
+			byModule.set(hook.module, [...(byModule.get(hook.module) ?? []), `${JSON.stringify(hook.hook)}: __stars_hook_${index}`]);
+		}
+
+		for (const [module, entries] of byModule) lines.push(`__stars_hooks(${JSON.stringify(module)}, { ${entries.join(', ')} });`);
 	}
 
 	return `${lines.join('\n')}\n`;
 }
 
 /**
- * Activates installed WolfStar plugins without making applications maintain a list
- * of side-effect-only plugin registration imports in their entry point, and registers the project's environment
- * ahead of them.
+ * The runtime plugin that merges the locales modules added into the `i18n` option of the client. It runs `pre`, so it
+ * is in place before `@wolfstar/plugin-i18next` builds its handler in its own `preGenericsInitialization`. The plugin
+ * only reads its options once, and letting `backend.paths` replace its generated path would drop the project's own
+ * languages, so the project's directory (`defaultLanguageDirectory`, else `<root>/languages`) is put back first; the
+ * namespaces are added because the plugin only discovers them below that directory.
  */
-export function pluginRegistrations(config: ResolvedStarsConfig): object {
-	// A package that is a module — listed in `modules`, or installed by one that is — was installed because the project
-	// says so: it is not also activated by its name, which would register its plugins twice.
+function localesPluginSource(locales: readonly LocalesRegistration[]): string {
+	const data = JSON.stringify(locales.map(({ path, namespaces }) => ({ path, namespaces })));
+	return [
+		`const __stars_locales = ${data};`,
+		'Client.use({ name: "stars:locales", enforce: "pre", preGenericsInitialization(client, options) {',
+		'	const i18n = options.i18n;',
+		'	if (!i18n) return;',
+		'	const pattern = (directory) => __stars_join(directory, "{{lng}}", "{{ns}}.json");',
+		'	const consumer = pattern(i18n.defaultLanguageDirectory ?? __stars_join(getRootData().root, "languages"));',
+		'	const configured = i18n.i18next;',
+		'	options.i18n = { ...i18n,',
+		'		backend: { ...i18n.backend, paths: [...new Set([consumer, ...(i18n.backend?.paths ?? []), ...__stars_locales.map((locales) => pattern(locales.path))])] },',
+		'		i18next(discovered, languages) {',
+		'			const resolved = typeof configured === "function" ? configured(discovered, languages) : configured;',
+		'			const own = resolved?.ns === undefined ? [] : [resolved.ns].flat();',
+		'			return { ...resolved, ns: [...new Set([...discovered, ...own, ...__stars_locales.flatMap((locales) => locales.namespaces)])] };',
+		'		} };',
+		'} });'
+	].join('\n');
+}
+
+/**
+ * The `@wolfstar/plugin-*` dependencies of the project that are not modules, with a `./register` entrypoint (or none
+ * known): the ones activated by their name until {@link MODULES_ONLY_VERSION}. A package that is a module — listed in
+ * `modules`, or installed by one that is — was installed because the project says so, and is left out so its plugins
+ * are not registered twice.
+ */
+export function findUnlistedPlugins(config: ResolvedStarsConfig): string[] {
 	const listed = new Set([
 		...(config.modules ?? []).map((module) => module.specifier),
 		...(config.runtime?.modules ?? []).map((module) => module.name)
 	]);
-	const plugins = findPluginDependencies(config.root).filter((name) => !listed.has(name));
+	return findPluginDependencies(config.root).filter((name) => !listed.has(name));
+}
+
+/**
+ * Activates installed WolfStar plugins without making applications maintain a list
+ * of side-effect-only plugin registration imports in their entry point, and registers the project's environment
+ * ahead of them. From {@link MODULES_ONLY_VERSION} on only the modules register: a plugin is no longer activated by its name.
+ */
+export function pluginRegistrations(config: ResolvedStarsConfig): object {
+	const modulesOnly = (config.future?.compatibilityVersion ?? 0) >= MODULES_ONLY_VERSION;
+	const plugins = modulesOnly ? [] : findUnlistedPlugins(config);
 	const entry = resolve(config.entry);
 	// Optional: hosts and tests may hand over a configuration resolved before `env` existed.
 	const env = config.env?.enabled ? config.env.options : null;
 	const runtimePlugins = config.runtime?.plugins ?? [];
-	const hasModules = runtimePlugins.length > 0;
+	const piecesDirs = config.runtime?.piecesDirs ?? [];
+	const clientHooks = config.runtime?.clientHooks ?? [];
+	const locales = config.runtime?.locales ?? [];
+	const hasModules = runtimePlugins.length > 0 || piecesDirs.length > 0 || locales.length > 0 || clientHooks.length > 0;
 
 	return {
 		name: 'stars:plugin-registrations',
@@ -98,7 +182,7 @@ export function pluginRegistrations(config: ResolvedStarsConfig): object {
 		},
 		load(id: string) {
 			if (env !== null && id === STARS_ENV_MODULE) return envModuleSource(env);
-			return hasModules && id === STARS_MODULES_MODULE ? modulesModuleSource(runtimePlugins) : null;
+			return hasModules && id === STARS_MODULES_MODULE ? modulesModuleSource(runtimePlugins, { piecesDirs, locales, clientHooks }) : null;
 		},
 		transform(code: string, id: string) {
 			if ((plugins.length === 0 && env === null && !hasModules) || cleanId(id) !== entry) return null;

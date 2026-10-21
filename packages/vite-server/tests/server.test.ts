@@ -65,6 +65,27 @@ describe('standalone Vite integration', () => {
 			await f.cleanup();
 		}
 	});
+	test('binds to the HTTP_ADDRESS of dev.env, falling back to the hostname of dev.url', async () => {
+		const f = await fixture();
+		const hostOf = async (env: Record<string, string>, vite: object = { server: { port: 0 } }) => {
+			const server = await createViteServer({ ...f.config, vite, dev: { ...f.config.dev, env } });
+			try {
+				return server.vite.config.server.host;
+			} finally {
+				await server.close();
+			}
+		};
+		try {
+			expect(await hostOf({})).toBe('localhost');
+			expect(await hostOf({ HTTP_ADDRESS: '' })).toBe('localhost');
+			expect(await hostOf({ HTTP_ADDRESS: '127.0.0.2' })).toBe('127.0.0.2');
+			expect(await hostOf({ HTTP_ADDRESS: '[::1]' })).toBe('::1');
+			// An explicit vite.server.host is the user's own choice and stays in charge.
+			expect(await hostOf({ HTTP_ADDRESS: '127.0.0.2' }, { server: { host: '127.0.0.3', port: 0 } })).toBe('127.0.0.3');
+		} finally {
+			await f.cleanup();
+		}
+	});
 	test('returns an HTTP error for invalid entries without exposing stack traces', async () => {
 		const f = await fixture();
 		await writeFile(join(f.root, 'src/main.ts'), 'export default {};');

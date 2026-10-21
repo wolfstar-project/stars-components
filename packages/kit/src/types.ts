@@ -1,4 +1,4 @@
-import type { ResolvedStarsConfig, StarsHookName, StarsHooks } from '@wolfstar/schema';
+import type { ClientHookName, ResolvedStarsConfig, StarsHookName, StarsHooks } from '@wolfstar/schema';
 
 type Awaitable<T> = T | PromiseLike<T>;
 
@@ -58,6 +58,19 @@ export interface ModulePluginSource {
 	options?: unknown;
 }
 
+/**
+ * A runtime hook to run at a point of the client's lifecycle, given by source like a {@link ModulePluginSource}: the hook
+ * lives in the bot's process, the module's `setup` in the CLI's. The `export` of `from` is a function called with
+ * `(client, clientOptions)`, the same arguments a `StarsPlugin` hook gets, and it may return a promise for `client:preLoad`
+ * and `client:postListen` only: the other three run inside the synchronous constructor.
+ */
+export interface ModuleClientHookSource {
+	/** A package specifier, an absolute path or a `file:` URL. A relative path is rejected. */
+	from: string | URL;
+	/** @default 'default' */
+	export?: string;
+}
+
 /** A module to install: its specifier, or its definition, optionally with options. */
 export type ModuleInput<Options extends ModuleOptions = ModuleOptions> = string | StarsModule<Options>;
 
@@ -69,8 +82,32 @@ export interface ModuleContext {
 	readonly versions: Readonly<ModuleVersions>;
 	/** Registers a runtime plugin. See {@link ModulePluginSource}. */
 	addPlugin(plugin: string | URL | ModulePluginSource): void;
+	/**
+	 * Registers a directory of pieces. It holds one folder per store (`commands`, `listeners`, `interaction-handlers`,
+	 * `preconditions`), like the bot's own `src`, and is loaded next to the bot's pieces. Give an absolute path or a
+	 * `file:` URL (`new URL('./pieces', import.meta.url)`); a relative path is rejected. The pieces are loaded from files
+	 * at runtime, so the directory has to exist in the built bot: a build that bundles everything (Vite, Nitro) has none.
+	 * Only the stores that exist when the modules source runs are covered (the framework's four, and any registered by an
+	 * earlier import): a folder for a store that a plugin registers later is ignored.
+	 */
+	addPiecesDir(directory: string | URL): void;
+	/**
+	 * Registers a directory of locales, `<lng>/<namespace>.json` (nested folders make namespaces such as
+	 * `commands/shared`), next to the project's own. Give an absolute path or a `file:` URL; the directory has to exist
+	 * when the module is set up, because its namespaces are read then. It is merged into the `i18n` option of the
+	 * client by a runtime plugin that runs before `@wolfstar/plugin-i18next` builds its handler, so the project's
+	 * languages directory is kept. It needs `@wolfstar/plugin-i18next` and a framework that exports `getRootData`. Like
+	 * `addPiecesDir`, the absolute path is written into the generated source and read at runtime, so a build that bundles
+	 * everything (Vite, Nitro) or one moved to another machine will not find the directory.
+	 */
+	addLocales(directory: string | URL): void;
 	/** Adds a package to the auto imports presets (`imports.presets`): all its exports become auto imports. */
 	addImports(preset: string | { from: string }): void;
+	/**
+	 * Registers a function to run in the bot at `name` (`client:preLoad`, …). It goes on a runtime plugin named after
+	 * the module, so a failing hook is reported with the module's name. One hook per name and module.
+	 */
+	addClientHook(name: ClientHookName, hook: string | URL | ModuleClientHookSource): void;
 	/** Registers a hook of the `stars` CLI. */
 	hook: ModuleHookHost['hook'];
 	/** Calls a hook of the `stars` CLI. */
@@ -85,10 +122,22 @@ export interface StarsModule<Options extends ModuleOptions = ModuleOptions> {
 	defaults?: Options;
 	/** Modules installed before this one. */
 	dependencies?: readonly ModuleInput[];
-	/** Hooks of the `stars` CLI, registered before `setup` runs. An unknown hook name or a value that is not a function is rejected. */
-	hooks?: { [Name in StarsHookName]?: StarsHooks[Name] };
+	/**
+	 * Hooks of the `stars` CLI (functions), registered before `setup` runs, and runtime hooks (`client:*`, given by
+	 * source, see {@link ModuleClientHookSource}), the same as `ctx.addClientHook`. An unknown name or a value of the
+	 * wrong kind is rejected.
+	 */
+	hooks?: { [Name in StarsHookName]?: StarsHooks[Name] } & { [Name in ClientHookName]?: string | URL | ModuleClientHookSource };
 	/** Runs in the CLI process, once, while the project loads. */
 	setup?(options: Options, ctx: ModuleContext): Awaitable<void>;
 }
 
-export type ModuleErrorCode = 'MODULE_LOAD_FAILED' | 'MODULE_INVALID' | 'MODULE_INCOMPATIBLE' | 'MODULE_SETUP_FAILED' | 'MODULE_PLUGIN_INVALID';
+export type ModuleErrorCode =
+	| 'MODULE_LOAD_FAILED'
+	| 'MODULE_INVALID'
+	| 'MODULE_INCOMPATIBLE'
+	| 'MODULE_SETUP_FAILED'
+	| 'MODULE_PLUGIN_INVALID'
+	| 'MODULE_PIECES_INVALID'
+	| 'MODULE_HOOK_INVALID'
+	| 'MODULE_LOCALES_INVALID';

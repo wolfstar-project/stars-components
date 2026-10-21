@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.1.0
+
+### Minor Changes
+
+- [#341](https://github.com/wolfstar-project/stars-components/pull/341) [`f1969c0`](https://github.com/wolfstar-project/stars-components/commit/f1969c00b773ebc711b0bbaa5321f2cef6dd373f) - Add a `@wolfstar/shared-http-pieces/module` entry, so the package can be listed in `modules` in `stars.config` instead of importing `/register`. It adds the bundled locales with `ctx.addLocales` and registers a `@wolfstar/shared-http-pieces/pieces` plugin that loads the shared commands and listeners. `@wolfstar/kit` is an optional peer dependency. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#332](https://github.com/wolfstar-project/stars-components/pull/332) [`847fba8`](https://github.com/wolfstar-project/stars-components/commit/847fba8205c9622f04552c2e0dcbb5686e9cfd6f) - Raise the `@wolfstar/http-framework` range to `^6.4.0`. The packages already declare it as `workspace:^`, but `onlyUpdatePeerDependentsWhenOutOfRange` kept them from being republished after the framework's minor releases, so the ranges on npm were still `^6.0.0` (and `^6.3.0` for `@wolfstar/decorators`). Thanks [@RedStar071](https://github.com/RedStar071)!
+- Updated dependencies [[`cda12c2`](https://github.com/wolfstar-project/stars-components/commit/cda12c27a2ccf313d78a84d55f9114228d0b1689)]:
+    - @wolfstar/http-framework@6.5.0
+
+## 2.0.12
+
+### Patch Changes
+
+- [#229](https://github.com/wolfstar-project/stars-components/pull/229) [`9d40129`](https://github.com/wolfstar-project/stars-components/commit/9d40129da57632753ba336f076c61dbe4a84131d) - fix(deps): update dependency @sentry/node to v11 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`ec3fa97`](https://github.com/wolfstar-project/stars-components/commit/ec3fa97e8e64403fcc89f7cb0efff4183241697c)]:
+    - @wolfstar/http-framework@6.3.2
+
 ## 2.0.11
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.9
+
+### Patch Changes
+
+- [#345](https://github.com/wolfstar-project/stars-components/pull/345) [`d38056d`](https://github.com/wolfstar-project/stars-components/commit/d38056d4cedc0b55af3475f50e414aeca75d4542) - Fix the EventSub secret and callback being swapped when they are passed to `setVariables`. The secret was sent to Twitch as the webhook callback, and the callback URL was used to sign and verify notifications. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.0.8
 
 ### Patch Changes
