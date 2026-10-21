@@ -1,5 +1,20 @@
 # @wolfstar/cli
 
+## 2.12.0
+
+### Minor Changes
+
+- [#351](https://github.com/wolfstar-project/stars-components/pull/351) [`3ae9bfb`](https://github.com/wolfstar-project/stars-components/commit/3ae9bfbd35c1df49256b64e0ae3dd0c6a2094f10) - Let `stars commands clean --name` take the path of a subcommand or a group (`settings server`, `settings group sub`). Discord cannot delete one, so the deployed command is sent back with a `PATCH` without that entry while the parent and its other subcommands stay; paths under one command share a request, and a path that matches nothing still fails with `COMMAND_NOT_FOUND`. Removing a command's last subcommand deletes the command, and the confirmation says so. `--json` output gains a `removed` list next to `deleted`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#348](https://github.com/wolfstar-project/stars-components/pull/348) [`a79b487`](https://github.com/wolfstar-project/stars-components/commit/a79b487575d2b897a128e5a1f27abd82d614a24e) - Add `stars dev --host [address]` and the `-p` alias for `--port`, as Nuxt's dev command has them. `--host` sets the address the application listens on (`HTTP_ADDRESS`, plus `NITRO_HOST`/`HOST` for Nitro), a bare `--host` listens on every interface, the occupied-port check probes that address, and an inferred display URL follows a concrete one. The Vite and Nitro dev servers bind to the address from `dev.env` before falling back to the hostname of `dev.url`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#320](https://github.com/wolfstar-project/stars-components/pull/320) [`8782557`](https://github.com/wolfstar-project/stars-components/commit/87825570c600b4161fe870a89aa4ea60477df4bc) - fix(deps): update dependency ink to v8 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`a79b487`](https://github.com/wolfstar-project/stars-components/commit/a79b487575d2b897a128e5a1f27abd82d614a24e)]:
+    - @wolfstar/vite-server@0.5.2
+    - @wolfstar/nitro-server@0.2.13
+
 ## 2.11.0
 
 ### Minor Changes
