@@ -6,6 +6,7 @@ import type { ResolvedStarsConfig } from '@wolfstar/schema';
 import type { CommandData, CommandSnapshot } from '../dev/bridge.js';
 import { describeCommand, diffCommands, matchesDeployed, type CommandChange } from '../utils/command-diff.js';
 import { COMMAND_TYPE_NAMES, createDiscordClient, type ApplicationCommand, type DiscordClient } from '../utils/discord.js';
+import { resolveCleanTargets, type CleanTarget } from '../utils/command-path.js';
 import { cliDiagnostics } from '../utils/diagnostics.js';
 import { readLocalCommands } from '../utils/local-commands.js';
 import { shouldUseColor } from '../utils/output-mode.js';
@@ -22,7 +23,10 @@ export interface CommandsTaskOptions extends ProjectArgs {
 }
 
 export interface CommandsCleanOptions extends CommandsTaskOptions {
-	/** Names to delete; without any, the wizard asks which of the deployed commands to remove. */
+	/**
+	 * Commands to delete, or paths of a subcommand or group to remove (`settings server`, `whois group sub`); without
+	 * any, the wizard asks which of the deployed commands to remove.
+	 */
 	names?: string[];
 	/** Deletes without asking. Required in a non-interactive terminal. */
 	yes?: boolean;
@@ -72,7 +76,8 @@ export async function runCommandsList(options: CommandsTaskOptions): Promise<voi
 
 /**
  * Deletes deployed application commands. Discord keeps whatever was registered last, so this is the way to clear
- * commands a project no longer defines (or a whole guild's test deployment).
+ * commands a project no longer defines (or a whole guild's test deployment). A `--name` path through a command's
+ * options removes that subcommand or group: Discord has no endpoint for it, so the command is sent back without it.
  */
 export async function runCommandsClean(options: CommandsCleanOptions): Promise<void> {
 	const stdout = options.stdout ?? process.stdout;
@@ -81,31 +86,46 @@ export async function runCommandsClean(options: CommandsCleanOptions): Promise<v
 	const deployed = await client.listCommands(guild);
 	const wanted = options.names?.filter((name) => name.length > 0) ?? [];
 
-	const missing = wanted.filter((name) => !deployed.some((command) => command.name === name));
-	if (missing.length > 0) {
-		throw cliDiagnostics.COMMAND_NOT_FOUND({ names: missing.join(', ') });
+	const resolved = resolveCleanTargets(deployed, wanted);
+	if (resolved.missing.length > 0) {
+		throw cliDiagnostics.COMMAND_NOT_FOUND({ names: resolved.missing.join(', ') });
 	}
 
-	if (deployed.length === 0) {
-		if (options.json) stdout.write(`${JSON.stringify({ deleted: [] }, null, 2)}\n`);
+	const nothing = () => {
+		if (options.json) stdout.write(`${JSON.stringify({ deleted: [], removed: [] }, null, 2)}\n`);
 		else stdout.write(`${colors.dim('stars')} nothing to delete\n`);
-		return;
-	}
+	};
+
+	if (deployed.length === 0) return nothing();
 
 	const scope = guild ? `guild ${guild}` : 'the global scope';
-	const targets = await selectTargets(options, deployed, wanted, scope, stdout, colors);
-	if (targets.length === 0) {
-		if (options.json) stdout.write(`${JSON.stringify({ deleted: [] }, null, 2)}\n`);
-		else stdout.write(`${colors.dim('stars')} nothing to delete\n`);
-		return;
+	const targets = await selectTargets(options, deployed, resolved.targets, wanted.length > 0, scope, stdout, colors);
+	if (targets.length === 0) return nothing();
+
+	const deletedCommands: ApplicationCommand[] = [];
+	const removedEntries: { id: string; path: string }[] = [];
+	for (const target of targets) {
+		if (target.kind === 'command') {
+			await client.deleteCommand(guild, target.command.id);
+			deletedCommands.push(target.command);
+			if (!options.json) {
+				const note = target.lastOf ? ` ${colors.dim(`(the last subcommand: ${target.lastOf.join(', ')})`)}` : '';
+				stdout.write(`${colors.dim('stars')} ${colors.red('deleted')} ${describeName(target.command)}${note}\n`);
+			}
+			continue;
+		}
+
+		await client.patchCommand(guild, target.command.id, { options: target.options });
+		for (const path of target.paths) {
+			removedEntries.push({ id: target.command.id, path });
+			if (!options.json) stdout.write(`${colors.dim('stars')} ${colors.red('removed')} ${path}\n`);
+		}
 	}
 
-	for (const command of targets) {
-		await client.deleteCommand(guild, command.id);
-		if (!options.json) stdout.write(`${colors.dim('stars')} ${colors.red('deleted')} ${describeName(command)}\n`);
+	if (options.json) {
+		const deleted = deletedCommands.map((command) => ({ id: command.id, name: command.name }));
+		stdout.write(`${JSON.stringify({ deleted, removed: removedEntries }, null, 2)}\n`);
 	}
-
-	if (options.json) stdout.write(`${JSON.stringify({ deleted: targets.map((command) => ({ id: command.id, name: command.name })) }, null, 2)}\n`);
 }
 
 const SYMBOLS = { added: '+', removed: '-', changed: '~' } as const;
@@ -202,25 +222,27 @@ export async function runCommandsDeploy(options: CommandsDeployOptions): Promise
 
 /**
  * Works out what to delete: `--name` (and `--yes`) keep the command scriptable, while a bare `stars commands clean`
- * on a terminal runs the wizard — a checklist of what Discord has deployed, then a confirmation.
+ * on a terminal runs the wizard — a checklist of what Discord has deployed, then a confirmation. The wizard lists
+ * whole commands only.
  */
 async function selectTargets(
 	options: CommandsCleanOptions,
 	deployed: ApplicationCommand[],
-	wanted: string[],
+	named: CleanTarget[],
+	hasNames: boolean,
 	scope: string,
 	stdout: NodeJS.WritableStream,
 	colors: ReturnType<typeof createColors>
-): Promise<ApplicationCommand[]> {
-	if (wanted.length > 0) {
-		const named = deployed.filter((command) => wanted.includes(command.name));
+): Promise<CleanTarget[]> {
+	if (hasNames) {
 		if (options.yes) return named;
 
-		await confirmOrThrow(options, stdout, colors, `delete ${colors.bold(String(named.length))} command(s) from ${scope}?`);
+		await confirmOrThrow(options, stdout, colors, describeQuestion(named, scope, colors));
 		return named;
 	}
 
-	if (options.yes) return deployed;
+	const commands = (list: ApplicationCommand[]): CleanTarget[] => list.map((command) => ({ kind: 'command', command }));
+	if (options.yes) return commands(deployed);
 
 	const stdin = options.stdin ?? process.stdin;
 	if (!options.prompt && !stdin.isTTY) throw confirmationRequired();
@@ -235,7 +257,21 @@ async function selectTargets(
 		throw cliDiagnostics.ABORTED({});
 	}
 
-	return targets;
+	return commands(targets);
+}
+
+/** The confirmation for `--name`: how many commands go, how many subcommands or groups leave, and which commands go with their last one. */
+function describeQuestion(targets: readonly CleanTarget[], scope: string, colors: ReturnType<typeof createColors>): string {
+	const commands = targets.filter((target) => target.kind === 'command').length;
+	const entries = targets.reduce((count, target) => count + (target.kind === 'option' ? target.paths.length : 0), 0);
+	const lastOf = targets.flatMap((target) => (target.kind === 'command' ? (target.lastOf ?? []) : []));
+
+	const actions = [
+		commands > 0 ? `delete ${colors.bold(String(commands))} command(s)` : '',
+		entries > 0 ? `remove ${colors.bold(String(entries))} subcommand(s) or group(s)` : ''
+	].filter(Boolean);
+	const warning = lastOf.length > 0 ? ` ${lastOf.join(', ')} would leave the command without a subcommand, so the whole command is deleted.` : '';
+	return `${actions.join(' and ')} from ${scope}?${warning}`;
 }
 
 async function connect(options: CommandsTaskOptions): Promise<{ client: DiscordClient; guild: string | null }> {
@@ -308,12 +344,12 @@ const list = defineCommand({
 });
 
 const clean = defineCommand({
-	meta: { name: 'clean', description: 'Delete deployed application commands (all of them, or the named ones)' },
+	meta: { name: 'clean', description: 'Delete deployed application commands or remove a subcommand or group (all of them, or the named ones)' },
 	args: {
 		...scopeArgs,
 		name: {
 			type: 'string',
-			description: 'Only delete the command with this name (repeatable)'
+			description: 'Only delete the command with this name, or remove the subcommand or group at this path, e.g. "settings server" (repeatable)'
 		},
 		yes: {
 			type: 'boolean',
