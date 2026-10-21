@@ -47,7 +47,7 @@
 		"oxlint": "1.86.0",
 		"pkg-pr-new": "^0.0.88",
 		"publint": "^0.3.24",
-		"tinybench": "^5.1.0",
+		"tinybench": "^6.2.2",
 		"tsdown": "^0.23.0",
 		"turbo": "^2.11.5",
 		"typedoc": "^0.28.20",
