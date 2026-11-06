@@ -36,6 +36,12 @@ exhaustive list, but here are some things to consider before/while submitting yo
 - Everything should follow our Oxlint rules as closely as possible, and should pass lint tests even if you must disable
   a rule for a single line.
 
+### AI-assisted contributions
+
+AI tools are welcome. You may use them to write code, tests, documentation, issues, and pull request descriptions, as long as you understand and stand behind everything you submit. Maintainers may close or rework a pull request whose author does not understand its changes.
+
+Disclosing AI usage is not required, but appreciated: [Disclosure](../AI_POLICY.md#disclosure) gives the line to end the pull request body with. The full rules are in [`AI_POLICY.md`](../AI_POLICY.md).
+
 <!-- Link Dump -->
 
 [discord server]: https://join.wolfstar.rocks
