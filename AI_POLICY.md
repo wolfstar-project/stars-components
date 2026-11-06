@@ -25,7 +25,7 @@ Keep commit messages and pull request descriptions short, and say why the change
 Declaring AI usage is not required. As a common courtesy, when an AI tool wrote or edited the code or the pull request description, end the pull request body with a disclosure line:
 
 ```md
-> 🤖 AI disclosure: <agent or tool name> modified this description. Code written with <model id>; PR description written with <model id>. [My AI open-source policy](https://redstar071.dev/blog/ai-in-open-source).
+> 🤖 AI disclosure: <agent or tool name> was used on this PR. Code written with <model id>; PR description written with <model id>. [AI policy](https://github.com/wolfstar-project/stars-components/blob/main/AI_POLICY.md).
 ```
 
 - Use the exact model ids that were used, never a guess. If the code and the description came from different models or tools, name each one.
