@@ -59,10 +59,10 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
 - When you need to open a PR, use the `/create-pull-request` skill if it is available in your environment (otherwise use `gh pr create`). Either way, the PR must follow the template rule below.
 - To implement a `Feature` issue (issue type `Feature`; older issues carry the `feature` label instead), use the repo skill `/implement-issue` (`.claude/skills/implement-issue/`): it reads the implementation plan Pullfrog posted on the issue, checks it against the code, then follows the conventions in this file through to the PR.
 - Always open a PR with [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md): keep every section (linked issue, context, description, key changes, type of change, pre-flight checklist), fill them in, and tick the checklist items that apply. Never replace the body with a free-form summary, and never drop a section; write in your own words rather than pasting generated text. Pass the filled template to `gh pr create --body-file`.
-- AI disclosure: when an AI agent wrote or edited the code or the PR description, end the PR body with a disclosure line, outside the template sections, in this form:
+- AI disclosure: when an AI agent wrote or edited the code or the PR description, end the PR body with the disclosure line defined in [`AI_POLICY.md`](AI_POLICY.md#disclosure), outside the template sections:
 
     ```md
-    > 🤖 AI disclosure: <agent or tool name> modified this description. Code written with <model id>; PR description written with <model id>. [My AI open-source policy](https://redstar071.dev/blog/ai-in-open-source).
+    > 🤖 AI disclosure: <agent or tool name> was used on this PR. Code written with <model id>; PR description written with <model id>. [AI policy](https://github.com/wolfstar-project/stars-components/blob/main/AI_POLICY.md).
     ```
 
     Use the exact model ids you ran on (for example `claude-opus-5-5`), never a guess; if the code and the description were produced by different models or tools, name each one. Leave the line out when no AI tool was involved. Add it whenever you edit an existing PR description too, and never remove a disclosure line another contributor left.
