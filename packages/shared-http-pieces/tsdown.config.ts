@@ -8,8 +8,9 @@ export default defineConfig({
 		esmOptions: { outDir: 'dist' },
 		target: 'es2022'
 	}),
-	// `sideEffects` in package.json only covers `./dist/register.js` for downstream
-	// bundlers; without this, rolldown treats every local module as pure and
+	// `sideEffects` in package.json is for downstream bundlers, and lists the `_load-*.js` chunk
+	// the entries import to register the pieces (`tests/side-effects.test.ts` bundles them as a bot
+	// does). It does not apply to this build: without this, rolldown treats every local module as pure and
 	// tree-shakes away the `commands/_load.js` / `listeners/_load.js` imports that
 	// register pieces as a side effect, even though the built file is never dropped
 	// as a whole. `@wolfstar/plugin-i18next/register` is imported dynamically in
