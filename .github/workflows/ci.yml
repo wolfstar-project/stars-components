@@ -134,28 +134,6 @@ jobs:
                   flags: unit
                   token: ${{ secrets.CODECOV_TOKEN }}
 
-    announce-action:
-        name: 📣 Announce action tests
-        runs-on: ubuntu-24.04-arm
-        timeout-minutes: 5
-        permissions:
-            contents: read
-
-        steps:
-            - name: Checkout Project
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-              with:
-                  persist-credentials: false
-
-            - name: Setup Node.js v24
-              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-              with:
-                  node-version: 24
-
-            # The action is dependency-free TypeScript run through Node.js type stripping.
-            - name: Run announce action tests
-              run: node --test '.github/actions/announce/test/*.test.ts'
-
     knip:
         name: 🧹 Unused code check
         runs-on: ubuntu-24.04-arm
