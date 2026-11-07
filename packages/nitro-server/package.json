@@ -61,7 +61,7 @@
 	"dependencies": {
 		"@wolfstar/schema": "workspace:^",
 		"@wolfstar/vite-server": "workspace:^",
-		"chokidar": "^5.0.0",
+		"chokidar": "^6.0.0",
 		"picomatch": "^4.0.7"
 	},
 	"devDependencies": {
