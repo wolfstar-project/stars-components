@@ -30,3 +30,5 @@ minimumReleaseAgeExclude:
   - '@wolfstar/plugin-*'
   # Renovate security update: handlebars@4.7.10
   - handlebars@4.7.10
+  # Renovate security update: vite@8.3.3
+  - vite@8.3.3
