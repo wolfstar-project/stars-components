@@ -1366,8 +1366,8 @@ importers:
         specifier: workspace:^
         version: link:../http-framework
       '@wolfstar/plugin-i18next':
-        specifier: 2.1.1
-        version: 2.1.1(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(typescript@7.0.2)
+        specifier: 3.0.0
+        version: 3.0.0(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(@wolfstar/kit@packages+kit)(@wolfstar/schema@packages+schema)(typescript@7.0.2)
       discord-api-types:
         specifier: ^0.38.8
         version: 0.38.56
@@ -3411,14 +3411,20 @@ packages:
       '@wolfstar/i18next-type-generator':
         optional: true
 
-  '@wolfstar/plugin-i18next@2.1.1':
-    resolution: {integrity: sha512-4l/inaa866LrsAFri+JhPzxrKRIvUkVP8d0YgAg3oKhw4BWNchaZAOZv5a77U0012WDTsCIlK3HQ27mG4CfsLg==}
-    engines: {node: '>=20.0.0'}
+  '@wolfstar/plugin-i18next@3.0.0':
+    resolution: {integrity: sha512-vSiZlUYVaWWE5CQw3tQ8hdvilywlYssx1yfiYeMjk7xE0r/yQTiO8tA2etr/ug7JD1o3X1UBSeRYzPGszYWzXQ==}
+    engines: {node: '>=22.22.0'}
     peerDependencies:
-      '@wolfstar/http-framework': ^3.1.0 || ^5.0.0
+      '@wolfstar/http-framework': ^3.1.0 || ^5.0.0 || ^6.0.0
       '@wolfstar/i18next-type-generator': ^3.0.0
+      '@wolfstar/kit': ^0.2.0 || ^0.3.0
+      '@wolfstar/schema': ^0.9.0 || ^0.12.0
     peerDependenciesMeta:
       '@wolfstar/i18next-type-generator':
+        optional: true
+      '@wolfstar/kit':
+        optional: true
+      '@wolfstar/schema':
         optional: true
 
   '@wolfstar/plugin-sharder@0.0.0':
@@ -3924,6 +3930,10 @@ packages:
   chokidar@5.0.0:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
+
+  chokidar@6.0.0:
+    resolution: {integrity: sha512-Ec2Z7wpcKBiMpR7DxteoqS/sq5G5d2A4fpxzPv6+fD7xNNdrTghn7L11YwV5EN1B3i72Erc3XVT5FkWIDx90+A==}
+    engines: {node: '>= 22.22'}
 
   chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
@@ -7785,7 +7795,7 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@wolfstar/plugin-i18next@2.1.1(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(typescript@7.0.2)':
+  '@wolfstar/plugin-i18next@3.0.0(@wolfstar/http-framework@packages+http-framework)(@wolfstar/i18next-type-generator@packages+i18next-type-generator)(@wolfstar/kit@packages+kit)(@wolfstar/schema@packages+schema)(typescript@7.0.2)':
     dependencies:
       '@discordjs/collection': 2.1.1
       '@sapphire/pieces': 4.4.1
@@ -7793,11 +7803,13 @@ snapshots:
       '@sapphire/utilities': 3.18.2
       '@wolfstar/http-framework': link:packages/http-framework
       '@wolfstar/i18next-backend': 2.0.12
-      chokidar: 5.0.0
+      chokidar: 6.0.0
       discord-api-types: 0.38.56
       i18next: 26.4.2(typescript@7.0.2)
     optionalDependencies:
       '@wolfstar/i18next-type-generator': link:packages/i18next-type-generator
+      '@wolfstar/kit': link:packages/kit
+      '@wolfstar/schema': link:packages/schema
     transitivePeerDependencies:
       - typescript
 
@@ -8144,6 +8156,10 @@ snapshots:
   chardet@2.2.0: {}
 
   chokidar@5.0.0:
+    dependencies:
+      readdirp: 5.1.1
+
+  chokidar@6.0.0:
     dependencies:
       readdirp: 5.1.1
 
