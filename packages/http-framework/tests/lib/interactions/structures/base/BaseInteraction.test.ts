@@ -1,6 +1,6 @@
 import type { APIChannel, APIInteractionGuildMember, APIUser, InteractionType, LocaleString, Permissions, Snowflake } from 'discord-api-types/v10';
-import { ChatInputCommandInteraction, type BaseInteractionType, type InGuild } from '../../../../../src/index.js';
-import { ChatInputApplicationCommandInteractionData, makeResponse } from '../../../../shared.js';
+import { ChatInputCommandInteraction, type BaseInteractionType, type InDM, type InGuild } from '../../../../../src/index.js';
+import { ChatInputApplicationCommandInteractionData, UserData, makeResponse } from '../../../../shared.js';
 
 describe('BaseInteraction', () => {
 	const instance = new ChatInputCommandInteraction(makeResponse(), ChatInputApplicationCommandInteractionData);
@@ -103,6 +103,44 @@ describe('BaseInteraction', () => {
 			expect<LocaleString | undefined>(instance.guild_locale);
 			expect<LocaleString | undefined>(instance.guildLocale);
 			expect<APIInteractionGuildMember | undefined>(instance.member);
+		}
+	});
+
+	test('GIVEN inDM in a guild interaction THEN returns false', () => {
+		expect<boolean>(instance.inDM()).toBe(false);
+	});
+
+	describe('in a DM', () => {
+		const { member: _member, guild_id: _guildId, guild_locale: _guildLocale, ...rest } = ChatInputApplicationCommandInteractionData;
+		const dm = new ChatInputCommandInteraction(makeResponse(), { ...rest, user: UserData });
+
+		test('GIVEN user THEN returns the top-level user', () => {
+			expect<APIUser>(dm.user).toBe(UserData);
+		});
+
+		test('GIVEN inDM THEN returns true and narrows the guild fields', () => {
+			const value = dm.inDM();
+
+			expect<boolean>(value).toBe(true);
+			if (value) {
+				expect<InDM<typeof dm>>(dm);
+				expect<undefined>(dm.guild_id);
+				expect<undefined>(dm.guildId);
+				expect<undefined>(dm.guild_locale);
+				expect<undefined>(dm.guildLocale);
+				expect<undefined>(dm.member);
+				expect<APIUser>(dm.user);
+			}
+		});
+
+		test('GIVEN inGuild THEN returns false', () => {
+			expect<boolean>(dm.inGuild()).toBe(false);
+		});
+	});
+
+	test('GIVEN inGuild THEN narrows user to the member user', () => {
+		if (instance.inGuild()) {
+			expect<APIUser>(instance.user).toBe(ChatInputApplicationCommandInteractionData.member!.user);
 		}
 	});
 
