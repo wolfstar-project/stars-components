@@ -106,6 +106,7 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   Scripts: `pnpm tolgee:push` (base `en`), `pnpm tolgee:pull` (pull + remap), `pnpm tolgee:ensure-languages`.
   Discord locale folders (en-US, es-ES, …) map to shorter Tolgee tags (en, es, …); see `LOCALE_MAP` in `.tolgeerc.cjs`.
   Project **Shared HTTP Pieces** (`33773`) has Tolgee namespaces disabled — keys live in the default namespace and remap into `commands/shared.json`.
+  `.github/workflows/tolgee-sync.yml` runs `pnpm tolgee:pull` daily at 02:00 UTC (and on `workflow_dispatch`) through the reusable workflow in `wolfstar-project/.github` (pinned by commit SHA), and opens or updates a single `i18n` pull request. It needs the `TOLGEE_API_KEY` and `WOLFSTAR_TOKEN` repository secrets.
 
 ## The `stars` CLI configuration
 
