@@ -1,6 +1,6 @@
 import type { APIChannel, APIInteractionGuildMember, APIUser, InteractionType, LocaleString, Permissions, Snowflake } from 'discord-api-types/v10';
 import { ChatInputCommandInteraction, type BaseInteractionType, type InGuild } from '../../../../../src/index.js';
-import { ChatInputApplicationCommandInteractionData, makeResponse } from '../../../../shared.js';
+import { ChatInputApplicationCommandInteractionData, UserData, makeResponse } from '../../../../shared.js';
 
 describe('BaseInteraction', () => {
 	const instance = new ChatInputCommandInteraction(makeResponse(), ChatInputApplicationCommandInteractionData);
@@ -104,6 +104,32 @@ describe('BaseInteraction', () => {
 			expect<LocaleString | undefined>(instance.guildLocale);
 			expect<APIInteractionGuildMember | undefined>(instance.member);
 		}
+	});
+
+	test('GIVEN inDM in a guild interaction THEN returns false', () => {
+		expect<boolean>(instance.inDM()).toBe(false);
+	});
+
+	describe('in a DM', () => {
+		const { member: _member, guild_id: _guildId, guild_locale: _guildLocale, ...rest } = ChatInputApplicationCommandInteractionData;
+		const dm = new ChatInputCommandInteraction(makeResponse(), { ...rest, user: UserData });
+
+		test('GIVEN user THEN returns the top-level user', () => {
+			expect<APIUser>(dm.user).toBe(UserData);
+		});
+
+		test('GIVEN inDM THEN returns true and the guild fields are empty', () => {
+			expect<boolean>(dm.inDM()).toBe(true);
+			expect(dm.guild_id).toBeUndefined();
+			expect(dm.guildId).toBeUndefined();
+			expect(dm.guild_locale).toBeUndefined();
+			expect(dm.guildLocale).toBeUndefined();
+			expect(dm.member).toBeUndefined();
+		});
+
+		test('GIVEN inGuild THEN returns false', () => {
+			expect<boolean>(dm.inGuild()).toBe(false);
+		});
 	});
 
 	describe.todo('fetchChannel');
