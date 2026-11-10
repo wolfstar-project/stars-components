@@ -1,4 +1,4 @@
-import type { APIInteractionDataResolvedChannel, APIRole, APIUserInteractionDataResolved } from 'discord-api-types/v10';
+import type { APIInteractionDataResolvedChannel, APIRole } from 'discord-api-types/v10';
 import {
 	MessageComponentButtonInteraction,
 	MessageComponentChannelSelectInteraction,
@@ -26,8 +26,8 @@ describe('MessageComponentInteraction#resolved', () => {
 		const button = new MessageComponentButtonInteraction(makeResponse(), MessageComponentButtonInteractionData);
 		const string = new MessageComponentStringSelectInteraction(makeResponse(), MessageComponentStringSelectInteractionData);
 
-		expect<null>(button.resolved).toBeNull();
-		expect<null>(string.resolved).toBeNull();
+		expect(button.resolved).toBeNull();
+		expect(string.resolved).toBeNull();
 	});
 
 	test('GIVEN a user select THEN returns the raw resolved data and pairs it with the ids', () => {
@@ -37,7 +37,7 @@ describe('MessageComponentInteraction#resolved', () => {
 		};
 		const interaction = new MessageComponentUserSelectInteraction(makeResponse(), data);
 
-		expect<APIUserInteractionDataResolved>(interaction.resolved).toBe(data.data.resolved);
+		expect(interaction.resolved).toBe(data.data.resolved);
 		expect(interaction.users.get(UserData.id)).toEqual({ id: UserData.id, user: UserData, member: null });
 	});
 
