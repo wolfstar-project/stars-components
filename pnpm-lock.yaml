@@ -975,6 +975,9 @@ importers:
       '@wolfstar/cli':
         specifier: workspace:^
         version: link:../cli
+      '@wolfstar/discord-utilities':
+        specifier: workspace:^
+        version: link:../discord-utilities
       '@wolfstar/schema':
         specifier: workspace:^
         version: link:../schema
@@ -982,7 +985,7 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       discord-api-types:
-        specifier: ^0.38.8
+        specifier: ^0.38.30
         version: 0.38.56
       mlly:
         specifier: ^1.8.2

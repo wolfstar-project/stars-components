@@ -11,6 +11,7 @@ export default defineProject(
 			alias: [
 				{ find: '@wolfstar/schema', replacement: fileURLToPath(new URL('../schema/src/index.ts', import.meta.url)) },
 				{ find: '@wolfstar/kit', replacement: fileURLToPath(new URL('../kit/src/index.ts', import.meta.url)) },
+				{ find: '@wolfstar/discord-utilities', replacement: fileURLToPath(new URL('../discord-utilities/src/index.ts', import.meta.url)) },
 				{ find: '@wolfstar/http-framework', replacement: fileURLToPath(new URL('../http-framework/src/index.ts', import.meta.url)) }
 			]
 		},
