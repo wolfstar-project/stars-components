@@ -430,6 +430,36 @@ export class UserListener extends Listener {
 }
 ```
 
+### Typed interaction accessors
+
+The interaction wrappers expose the resolved payload, so a handler does not walk `interaction.data` by hand. The raw `data`
+and the response methods are unchanged.
+
+| Interaction                                 | Accessors                                                                                                     |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Any                                         | `inGuild()` and `inDM()` narrow `guildId`, `guildLocale`, `member` and `user` to what the context guarantees. |
+| `ChatInputCommandInteraction`               | `options`: the resolved options, with `subCommand` and `subCommandGroup`.                                     |
+| `AutocompleteInteraction`                   | `options` (with `focused`, the name of the option being typed) and `focused`, the option itself.              |
+| `UserContextMenuCommandInteraction`         | `targetId`, `targetUser`, `targetMember` (`null` outside a guild).                                            |
+| `MessageContextMenuCommandInteraction`      | `targetId`, `targetMessage`.                                                                                  |
+| User, role, channel and mentionable selects | `resolved`, plus `users`, `roles`, `channels` and `mentionables` paired with the selected IDs.                |
+| `ModalSubmitInteraction`                    | `fields`, to read a submitted field by its custom ID.                                                         |
+
+```typescript
+if (interaction.inGuild()) {
+	// `member` is not optional here, and `user` is the member's user.
+	console.log(interaction.member.user.id === interaction.user.id);
+}
+
+// In a modal submit handler:
+const reason = interaction.fields.getTextInput('reason');
+const roles = interaction.fields.getSelectedRoles('roles');
+```
+
+`options` builds a new object on every access, so read it once when you need several values. The `fields` getters come from
+`ModalInteractionOptionResolver` in `@wolfstar/discord-utilities` and throw when a custom ID is missing or belongs to a
+component of another type.
+
 ### Hot Module Reloading
 
 `@wolfstar/http-framework` ships with Hot Module Reloading (HMR) as a core feature, no plugin required. When enabled,

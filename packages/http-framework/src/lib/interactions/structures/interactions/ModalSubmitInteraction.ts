@@ -1,4 +1,5 @@
 import { container } from '@sapphire/pieces';
+import { ModalInteractionOptionResolver } from '@wolfstar/discord-utilities';
 import { InteractionResponseType, Routes, type APIModalSubmitInteraction, type RESTPostAPIInteractionFollowupResult } from 'discord-api-types/v10';
 import type { AsyncDiscordResult } from '../../utils/util-types.js';
 import { resultFromDiscord } from '../../utils/util.js';
@@ -17,6 +18,28 @@ import type {
 } from './base/common.js';
 
 export class ModalSubmitInteraction extends BaseInteraction<ModalSubmitInteraction.Type> {
+	private _fields: ModalInteractionOptionResolver | undefined;
+
+	/**
+	 * Typed access to the submitted fields, found by the custom ID of their component.
+	 *
+	 * It reads text inputs, string, user, role, channel, member and mentionable selects, and uploaded files, whether they
+	 * sit in an action row or in a label. The resolver is built on first access and reused after that.
+	 *
+	 * @example
+	 * ```typescript
+	 * const reason = interaction.fields.getTextInput('reason');
+	 * const roles = interaction.fields.getSelectedRoles('roles');
+	 * ```
+	 *
+	 * @remarks The getters throw when the component is missing or of another type, as the resolver in
+	 * `@wolfstar/discord-utilities` does.
+	 * @seealso {@link ModalSubmitInteraction.data} for the raw data.
+	 */
+	public get fields(): ModalInteractionOptionResolver {
+		return (this._fields ??= new ModalInteractionOptionResolver(this[Data]));
+	}
+
 	/**
 	 * The message the interaction was attached to, if any.
 	 */
