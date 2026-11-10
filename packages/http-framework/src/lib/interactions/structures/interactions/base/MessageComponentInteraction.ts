@@ -26,7 +26,24 @@ import type {
 
 export type MessageComponentInteractionType = APIMessageComponentButtonInteraction | APIMessageComponentSelectMenuInteraction;
 
+/**
+ * The `resolved` data of a message component interaction: the entities behind the selected values for the user, role,
+ * channel and mentionable selects, and `null` for the button and the string select, which have none.
+ */
+export type MessageComponentResolved<T extends MessageComponentInteractionType> = T extends { data: { resolved: infer R } } ? R : null;
+
 export abstract class MessageComponentInteraction<T extends MessageComponentInteractionType> extends BaseInteraction<T> {
+	/**
+	 * The entities behind the selected values (users, members, roles and channels), as Discord sent them.
+	 *
+	 * It is `null` for buttons and string selects. Prefer the accessors of each select variant, such as
+	 * `MessageComponentUserSelectInteraction#users`, when you want them paired with the selected IDs.
+	 */
+	public get resolved(): MessageComponentResolved<T> {
+		const { data } = this;
+		return ('resolved' in data ? data.resolved : null) as MessageComponentResolved<T>;
+	}
+
 	/**
 	 * The message the interaction was attached to.
 	 */
