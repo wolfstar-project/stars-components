@@ -19,8 +19,8 @@ describe('ModalSubmitInteraction#fields', () => {
 			]
 		} as never);
 
-		expect<string>(interaction.fields.getTextInput('title')).toBe('Hello');
-		expect<string>(interaction.fields.getTextInput('reason')).toBe('Because');
+		expect(interaction.fields.getTextInput('title')).toBe('Hello');
+		expect(interaction.fields.getTextInput('reason')).toBe('Because');
 	});
 
 	test('GIVEN selects THEN resolves users and roles from the resolved data', () => {
