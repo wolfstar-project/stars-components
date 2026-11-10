@@ -1,4 +1,4 @@
 ---
 ---
 
-Run the CodSpeed benchmarks on Node 26 without the removed `--experimental-transform-types` flag.
+Run the CodSpeed benchmarks on Node 26 through `tsx`, since Node 26 removed `--experimental-transform-types`.
