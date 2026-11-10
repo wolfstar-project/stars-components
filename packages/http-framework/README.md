@@ -458,7 +458,8 @@ const roles = interaction.fields.getSelectedRoles('roles');
 
 `options` builds a new object on every access, so read it once when you need several values. The `fields` getters come from
 `ModalInteractionOptionResolver` in `@wolfstar/discord-utilities` and throw when a custom ID is missing or belongs to a
-component of another type.
+component of another type. The select getters also throw when the payload has no `resolved` data, for example
+`getSelectedMembers` in a DM. Radio and checkbox groups have no typed getter, use `fields.get(customId)` for them.
 
 ### Hot Module Reloading
 

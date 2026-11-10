@@ -23,8 +23,10 @@ export class ModalSubmitInteraction extends BaseInteraction<ModalSubmitInteracti
 	/**
 	 * Typed access to the submitted fields, found by the custom ID of their component.
 	 *
-	 * It reads text inputs, string, user, role, channel, member and mentionable selects, and uploaded files, whether they
-	 * sit in an action row or in a label. The resolver is built on first access and reused after that.
+	 * It reads text inputs, string, user, role, channel and mentionable selects, the members behind a user select, and
+	 * uploaded files, whether they sit in an action row or in a label. Other components, such as radio and checkbox
+	 * groups, are only reachable through `fields.get(customId)`, which returns the raw component. The resolver is built
+	 * on first access and reused after that.
 	 *
 	 * @example
 	 * ```typescript
@@ -32,7 +34,8 @@ export class ModalSubmitInteraction extends BaseInteraction<ModalSubmitInteracti
 	 * const roles = interaction.fields.getSelectedRoles('roles');
 	 * ```
 	 *
-	 * @remarks The getters throw when the component is missing or of another type, as the resolver in
+	 * @remarks The getters throw when the component is missing or of another type, and the select getters throw a
+	 * `TypeError` when the payload has no `resolved` data (or no `members`, in a DM), as the resolver in
 	 * `@wolfstar/discord-utilities` does.
 	 * @seealso {@link ModalSubmitInteraction.data} for the raw data.
 	 */
