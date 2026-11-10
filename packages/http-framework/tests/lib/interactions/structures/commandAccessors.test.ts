@@ -3,9 +3,7 @@ import {
 	ApplicationCommandType,
 	type APIApplicationCommandAutocompleteInteraction,
 	type APIChatInputApplicationCommandInteraction,
-	type APIInteractionDataResolvedGuildMember,
-	type APIMessage,
-	type APIUser
+	type APIInteractionDataResolvedGuildMember
 } from 'discord-api-types/v10';
 import {
 	AutocompleteInteraction,
@@ -142,9 +140,9 @@ describe('UserContextMenuCommandInteraction', () => {
 		};
 		const interaction = new UserContextMenuCommandInteraction(makeResponse(), data);
 
-		expect<string>(interaction.targetId).toBe(UserData.id);
-		expect<APIUser>(interaction.targetUser).toBe(UserData);
-		expect<APIInteractionDataResolvedGuildMember | null>(interaction.targetMember).toBe(resolvedMember);
+		expect(interaction.targetId).toBe(UserData.id);
+		expect(interaction.targetUser).toBe(UserData);
+		expect(interaction.targetMember).toBe(resolvedMember);
 	});
 
 	test('GIVEN a DM interaction THEN targetMember is null', () => {
@@ -159,8 +157,8 @@ describe('MessageContextMenuCommandInteraction', () => {
 	test('GIVEN a message target THEN exposes its id and message', () => {
 		const interaction = new MessageContextMenuCommandInteraction(makeResponse(), MessageApplicationCommandInteractionData);
 
-		expect<string>(interaction.targetId).toBe(MessageData.id);
-		expect<APIMessage>(interaction.targetMessage).toBe(MessageData);
+		expect(interaction.targetId).toBe(MessageData.id);
+		expect(interaction.targetMessage).toBe(MessageData);
 		expect(MessageApplicationCommandInteractionData.data.type).toBe(ApplicationCommandType.Message);
 	});
 });
