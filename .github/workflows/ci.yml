@@ -21,7 +21,7 @@ concurrency:
 jobs:
     lint:
         name: 🔠 Lint project
-        runs-on: ubuntu-24.04-arm
+        runs-on: ubuntu-26.04-arm
         timeout-minutes: 15
 
         steps:
@@ -33,7 +33,7 @@ jobs:
             - name: Setup pnpm + Node.js v24
               uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
-                  runtime: node@24
+                  runtime: node@26
                   cache: true
                   install: false
 
@@ -45,7 +45,7 @@ jobs:
 
     build:
         name: 🏗️ Build & Typecheck
-        runs-on: ubuntu-24.04-arm
+        runs-on: ubuntu-26.04-arm
         timeout-minutes: 15
         permissions:
             contents: read
@@ -64,7 +64,7 @@ jobs:
             - name: Setup pnpm + Node.js v24
               uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
-                  runtime: node@24
+                  runtime: node@26
                   cache: true
                   install: false
 
@@ -105,7 +105,7 @@ jobs:
             - name: Setup pnpm + Node.js v24
               uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
-                  runtime: node@24
+                  runtime: node@26
                   cache: true
                   install: false
 
@@ -136,7 +136,7 @@ jobs:
 
     knip:
         name: 🧹 Unused code check
-        runs-on: ubuntu-24.04-arm
+        runs-on: ubuntu-26.04-arm
         timeout-minutes: 10
 
         steps:
@@ -148,7 +148,7 @@ jobs:
             - name: Setup pnpm + Node.js v24
               uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
-                  runtime: node@24
+                  runtime: node@26
                   cache: true
                   install: false
 
@@ -160,12 +160,13 @@ jobs:
 
     changesets:
         name: 🦋 Verify changesets
-        runs-on: ubuntu-24.04-arm
+        runs-on: ubuntu-26.04-arm
         timeout-minutes: 10
         if: |
             github.event_name == 'pull_request'
             && github.event.pull_request.title != 'chore: update changelog and release'
             && !startsWith(github.head_ref, 'changeset-release/')
+            && !(github.head_ref == 'i18n' && github.event.pull_request.head.repo.full_name == github.repository)
         steps:
             - name: Checkout Project
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -176,7 +177,7 @@ jobs:
             - name: Setup pnpm + Node.js v24
               uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
               with:
-                  runtime: node@24
+                  runtime: node@26
                   cache: true
                   install: false
 

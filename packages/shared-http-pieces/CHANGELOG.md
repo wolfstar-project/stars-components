@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1
+
+### Patch Changes
+
+- [#362](https://github.com/wolfstar-project/stars-components/pull/362) [`6d8345d`](https://github.com/wolfstar-project/stars-components/commit/6d8345d619d1668234f074c1bd35ed0f3008f205) - Keep `/info` and the shared listeners in the bots that bundle the package: `sideEffects` now lists the `dist/_load-*.js` chunk that registers them, so a bundler no longer drops it from `dist/pieces.js` and `dist/register.js`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 2.1.0
 
 ### Minor Changes

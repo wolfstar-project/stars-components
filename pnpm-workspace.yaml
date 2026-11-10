@@ -1,6 +1,6 @@
 packages:
-    - 'packages/*'
-    - 'examples/*'
+  - 'packages/*'
+  - 'examples/*'
 
 autoInstallPeers: true
 
@@ -13,18 +13,22 @@ preferWorkspacePackages: true
 strictPeerDependencies: false
 
 overrides:
-    ansi-regex: '^6.4.0'
-    esbuild: '^0.28.2'
-    minimist: '1.2.8'
+  ansi-regex: '^6.4.0'
+  esbuild: '^0.28.2'
+  minimist: '1.2.8'
 
 allowBuilds:
-    '@swc/core': true
-    esbuild: true
-    sharp: true
+  '@swc/core': true
+  esbuild: true
+  sharp: true
 
 minimumReleaseAge: 1440
 
 # Plugins published from wolfstar-project/plugins (the examples install them) come from this organization's own
 # trusted-publishing workflows, so they skip the supply-chain quarantine above. Other first-party packages keep it.
 minimumReleaseAgeExclude:
-    - '@wolfstar/plugin-*'
+  - '@wolfstar/plugin-*'
+  # Renovate security update: handlebars@4.7.10
+  - handlebars@4.7.10
+  # Renovate security update: vite@8.3.3
+  - vite@8.3.3
