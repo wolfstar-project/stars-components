@@ -52,7 +52,7 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
 - Commits: Conventional Commits (`@commitlint/config-conventional`); `cz-conventional-changelog` via commitizen.
 - PR titles follow Conventional Commits and are validated by `.github/workflows/semantic-pull-requests.yml` (the allowed types and scopes are listed there; the subject must not start with an uppercase letter). Scope rules:
     - Use the package directory name without the `@wolfstar/` prefix (e.g. `feat(cli): ...`, `fix(schema): ...`).
-    - Use `deps` for dependency updates, `release` for the release PR, and `ci` for workflow changes. Documentation about a package uses that package's scope (e.g. `docs(http-framework): ...`).
+    - Use `deps` for dependency updates, `release` for the release PR, `ci` for workflow changes, and `i18n` for translation tooling and sync (Tolgee). Documentation about a package uses that package's scope (e.g. `docs(http-framework): ...`).
     - Omit the scope when the change is too broad for a single one.
     - A new package must be added to the `scopes` list in that workflow, or PRs scoped to it fail title validation.
 - When you need to commit, use the `/git-commit` skill if it is available in your environment (otherwise commit by hand following the Conventional Commits rules above; commitlint rejects body lines longer than 100 characters).
@@ -106,6 +106,7 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   Scripts: `pnpm tolgee:push` (base `en`), `pnpm tolgee:pull` (pull + remap), `pnpm tolgee:ensure-languages`.
   Discord locale folders (en-US, es-ES, …) map to shorter Tolgee tags (en, es, …); see `LOCALE_MAP` in `.tolgeerc.cjs`.
   Project **Shared HTTP Pieces** (`33773`) has Tolgee namespaces disabled — keys live in the default namespace and remap into `commands/shared.json`.
+  `.github/workflows/tolgee-sync.yml` runs `pnpm tolgee:pull` daily at 02:00 UTC (and on `workflow_dispatch`) through the reusable workflow in `wolfstar-project/.github` (pinned by commit SHA), and opens or updates a single `i18n` pull request. It needs the `TOLGEE_API_KEY` and `WOLFSTAR_TOKEN` repository secrets.
 
 ## The `stars` CLI configuration
 

@@ -1,0 +1,29 @@
+name: Tolgee Translation Sync
+
+on:
+    workflow_dispatch:
+    schedule:
+        # Every day at 02:00 UTC
+        - cron: '0 2 * * *'
+
+concurrency:
+    group: tolgee-sync
+    cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+    SyncTranslations:
+        name: Sync translations from Tolgee
+        permissions:
+            contents: read
+        uses: wolfstar-project/.github/.github/workflows/reusable-tolgee-sync.yml@0a65e26dd292ea41e046e8d75ae681918a0ec046 # main
+        with:
+            # `pnpm tolgee:pull` runs the CLI (config: .tolgeerc.cjs) and then
+            # scripts/tolgee-pull-remap.ts, which remaps Tolgee language tags
+            # onto the Discord locale directories of shared-http-pieces.
+            pull-command: pnpm tolgee:pull
+            paths: packages/shared-http-pieces/src/locales
+        secrets:
+            TOLGEE_API_KEY: ${{ secrets.TOLGEE_API_KEY }}
+            WOLFSTAR_TOKEN: ${{ secrets.WOLFSTAR_TOKEN }}
