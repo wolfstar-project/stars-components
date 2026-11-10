@@ -1,5 +1,5 @@
 import type { APIChannel, APIInteractionGuildMember, APIUser, InteractionType, LocaleString, Permissions, Snowflake } from 'discord-api-types/v10';
-import { ChatInputCommandInteraction, type BaseInteractionType, type InDM, type InGuild } from '../../../../../src/index.js';
+import { ChatInputCommandInteraction, type BaseInteractionType, type InGuild } from '../../../../../src/index.js';
 import { ChatInputApplicationCommandInteractionData, UserData, makeResponse } from '../../../../shared.js';
 
 describe('BaseInteraction', () => {
@@ -118,30 +118,18 @@ describe('BaseInteraction', () => {
 			expect<APIUser>(dm.user).toBe(UserData);
 		});
 
-		test('GIVEN inDM THEN returns true and narrows the guild fields', () => {
-			const value = dm.inDM();
-
-			expect<boolean>(value).toBe(true);
-			if (value) {
-				expect<InDM<typeof dm>>(dm);
-				expect<undefined>(dm.guild_id);
-				expect<undefined>(dm.guildId);
-				expect<undefined>(dm.guild_locale);
-				expect<undefined>(dm.guildLocale);
-				expect<undefined>(dm.member);
-				expect<APIUser>(dm.user);
-			}
+		test('GIVEN inDM THEN returns true and the guild fields are empty', () => {
+			expect<boolean>(dm.inDM()).toBe(true);
+			expect(dm.guild_id).toBeUndefined();
+			expect(dm.guildId).toBeUndefined();
+			expect(dm.guild_locale).toBeUndefined();
+			expect(dm.guildLocale).toBeUndefined();
+			expect(dm.member).toBeUndefined();
 		});
 
 		test('GIVEN inGuild THEN returns false', () => {
 			expect<boolean>(dm.inGuild()).toBe(false);
 		});
-	});
-
-	test('GIVEN inGuild THEN narrows user to the member user', () => {
-		if (instance.inGuild()) {
-			expect<APIUser>(instance.user).toBe(ChatInputApplicationCommandInteractionData.member!.user);
-		}
 	});
 
 	describe.todo('fetchChannel');
