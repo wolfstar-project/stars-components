@@ -47,12 +47,12 @@
 		"packages/shared-http-pieces": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignoreDependencies": ["@discordjs/collection", "tslib"]
+			"ignoreDependencies": ["@discordjs/collection", "@wolfstar/schema", "tslib"]
 		},
 		"packages/shared-influx-pieces": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignoreDependencies": ["@sapphire/pieces", "tslib"]
+			"ignoreDependencies": ["@sapphire/pieces", "@wolfstar/schema", "tslib"]
 		},
 		"packages/weather-helpers": {
 			"entry": ["src/index.ts", "src/register.ts", "tests/**/*.ts"],
