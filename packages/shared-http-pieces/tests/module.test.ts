@@ -4,9 +4,9 @@ import module from '../src/module.js';
 
 type Config = Parameters<typeof setupModules>[0]['config'];
 
-async function install() {
+async function install(moduleOptions: Record<string, unknown> = {}) {
 	const hooks = { hook: () => undefined, callHook: async () => undefined } as unknown as ModuleHookHost;
-	const config = { root: '/app', moduleOptions: {}, modules: [{ specifier: module.meta.name, options: {} }] } as unknown as Config;
+	const config = { root: '/app', moduleOptions, modules: [{ specifier: module.meta.name, options: {} }] } as unknown as Config;
 	return setupModules({
 		config,
 		hooks,
@@ -32,6 +32,13 @@ describe('module', () => {
 		expect(runtime.plugins).toHaveLength(1);
 		expect(runtime.plugins[0]).toMatchObject({ module: '@wolfstar/shared-http-pieces', export: 'default' });
 		expect(String(runtime.plugins[0]!.from)).toMatch(/pieces\.js$/);
+	});
+
+	test('GIVEN the httpPieces key in stars.config THEN the module claims it', async () => {
+		const runtime = await install({ httpPieces: {} });
+
+		expect(module.meta.configKey).toBe('httpPieces');
+		expect(runtime.configKeys).toEqual(['httpPieces']);
 	});
 
 	test('GIVEN the plugin source is imported THEN it registers the shared pieces under the package name', async () => {

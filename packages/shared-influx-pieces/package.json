@@ -58,6 +58,7 @@
 		"build": "tsdown --config-loader unrun",
 		"watch": "tsdown --config-loader unrun --watch",
 		"typecheck": "golar tsc -p ../../tsconfig.json",
+		"test": "vitest run",
 		"lint": "oxlint src --fix",
 		"prepack": "pnpm run build"
 	},
@@ -72,16 +73,23 @@
 	},
 	"devDependencies": {
 		"@influxdata/influxdb-client": "^1.35.0",
+		"@vitest/coverage-v8": "^5.0.3",
 		"@wolfstar/kit": "workspace:^",
+		"@wolfstar/schema": "workspace:^",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",
-		"typescript": "~7.0.2"
+		"typescript": "~7.0.2",
+		"vitest": "^5.0.3"
 	},
 	"peerDependencies": {
-		"@wolfstar/kit": ">=0.2.1"
+		"@wolfstar/kit": ">=0.2.1",
+		"@wolfstar/schema": ">=0.9.0"
 	},
 	"peerDependenciesMeta": {
 		"@wolfstar/kit": {
+			"optional": true
+		},
+		"@wolfstar/schema": {
 			"optional": true
 		}
 	},
