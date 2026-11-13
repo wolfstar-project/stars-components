@@ -1,5 +1,23 @@
 # Changelog
 
+## 6.6.0
+
+### Minor Changes
+
+- [#373](https://github.com/wolfstar-project/stars-components/pull/373) [`f9af4de`](https://github.com/wolfstar-project/stars-components/commit/f9af4deb25a8ddd56339f91baef621d1ab1e192b) - Add `ModalSubmitInteraction#fields`, a `ModalInteractionOptionResolver` from `@wolfstar/discord-utilities` to read submitted text inputs, selects and uploaded files by custom ID. `@wolfstar/http-framework` now depends on `@wolfstar/discord-utilities`, and its `discord-api-types` range is raised to `^0.38.30` to match that package's peer range. Adds a README section on the typed interaction accessors. Resolves [#359](https://github.com/wolfstar-project/stars-components/issues/359). Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#372](https://github.com/wolfstar-project/stars-components/pull/372) [`35240ae`](https://github.com/wolfstar-project/stars-components/commit/35240ae9c31f93dabe3898eee4a8740910109b3c) - Add `MessageComponentInteraction#resolved` and the `MessageComponentResolved` type. It returns the raw `resolved` data of the user, role, channel and mentionable selects, typed per variant, and `null` for buttons and string selects. The select variants now read it instead of each reaching into `data.resolved`. Refs [#359](https://github.com/wolfstar-project/stars-components/issues/359). Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#371](https://github.com/wolfstar-project/stars-components/pull/371) [`c553cfb`](https://github.com/wolfstar-project/stars-components/commit/c553cfba9cca7e29bdd72541958170ed9f82b9ec) - Add typed accessors to the command interactions: `ChatInputCommandInteraction#options`, `AutocompleteInteraction#options` and `#focused`, `UserContextMenuCommandInteraction#targetId`, `#targetUser` and `#targetMember`, and `MessageContextMenuCommandInteraction#targetId` and `#targetMessage`. They resolve the payload the same way as the arguments a command handler receives, and the raw `data` is unchanged. Refs [#359](https://github.com/wolfstar-project/stars-components/issues/359). Thanks [@RedStar071](https://github.com/RedStar071)!
+
+- [#370](https://github.com/wolfstar-project/stars-components/pull/370) [`a64551c`](https://github.com/wolfstar-project/stars-components/commit/a64551ce145c638e2bd3f7348c12d6cd115ce25d) - Add `BaseInteraction#inDM()` and the `InDM` type next to `inGuild()`/`InGuild`. `inGuild()` now also narrows `user` to the member's user, `inDM()` narrows the guild fields and `member` to `undefined`, and `BaseInteraction#user` no longer relies on a non-null assertion. Refs [#359](https://github.com/wolfstar-project/stars-components/issues/359). Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- [#354](https://github.com/wolfstar-project/stars-components/pull/354) [`8ff3f45`](https://github.com/wolfstar-project/stars-components/commit/8ff3f450c853efd294ae7815ec4137cc6fe699db) - fix(deps): update dependency chokidar to v6 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`8ff3f45`](https://github.com/wolfstar-project/stars-components/commit/8ff3f450c853efd294ae7815ec4137cc6fe699db)]:
+    - @wolfstar/cli@2.12.1
+
 ## 6.5.1
 
 ### Patch Changes
