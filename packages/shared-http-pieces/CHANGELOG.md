@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0
+
+### Minor Changes
+
+- [#375](https://github.com/wolfstar-project/stars-components/pull/375) [`097d648`](https://github.com/wolfstar-project/stars-components/commit/097d6480525cd5b8794598a8168af3b359bc481e) - The module sets `meta.configKey` to `httpPieces`, so the `httpPieces` key of `stars.config` belongs to it (no options yet) and is typed in `defineConfig` through a `StarsConfig` augmentation. `@wolfstar/schema` is a new optional peer, needed only for that type. Refs wolfstar-project/plugins#258. Thanks [@RedStar071](https://github.com/RedStar071)!
+
+### Patch Changes
+
+- Updated dependencies [[`8ff3f45`](https://github.com/wolfstar-project/stars-components/commit/8ff3f450c853efd294ae7815ec4137cc6fe699db), [`f9af4de`](https://github.com/wolfstar-project/stars-components/commit/f9af4deb25a8ddd56339f91baef621d1ab1e192b), [`35240ae`](https://github.com/wolfstar-project/stars-components/commit/35240ae9c31f93dabe3898eee4a8740910109b3c), [`c553cfb`](https://github.com/wolfstar-project/stars-components/commit/c553cfba9cca7e29bdd72541958170ed9f82b9ec), [`a64551c`](https://github.com/wolfstar-project/stars-components/commit/a64551ce145c638e2bd3f7348c12d6cd115ce25d)]:
+    - @wolfstar/http-framework@6.6.0
+
 ## 2.1.1
 
 ### Patch Changes
