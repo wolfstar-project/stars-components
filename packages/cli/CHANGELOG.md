@@ -1,5 +1,13 @@
 # @wolfstar/cli
 
+## 2.12.1
+
+### Patch Changes
+
+- [#354](https://github.com/wolfstar-project/stars-components/pull/354) [`8ff3f45`](https://github.com/wolfstar-project/stars-components/commit/8ff3f450c853efd294ae7815ec4137cc6fe699db) - fix(deps): update dependency chokidar to v6 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`8ff3f45`](https://github.com/wolfstar-project/stars-components/commit/8ff3f450c853efd294ae7815ec4137cc6fe699db)]:
+    - @wolfstar/nitro-server@0.2.14
+
 ## 2.12.0
 
 ### Minor Changes
