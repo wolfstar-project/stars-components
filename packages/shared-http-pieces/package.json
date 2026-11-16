@@ -72,7 +72,7 @@
 		"@sentry/node": "^11.4.0",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/http-framework": "workspace:^",
-		"@wolfstar/plugin-i18next": "2.1.1",
+		"@wolfstar/plugin-i18next": "3.0.0",
 		"discord-api-types": "^0.38.8",
 		"i18next": "^26.4.2",
 		"tslib": "^2.8.1"
