@@ -7,6 +7,7 @@ import {
 	type APIGuild,
 	type APIInteraction,
 	type APIPingInteraction,
+	type APIUser,
 	type RESTGetAPIChannelResult,
 	type RESTGetAPIGuildResult
 } from 'discord-api-types/v10';
@@ -199,9 +200,15 @@ export abstract class BaseInteraction<T extends BaseInteractionType = BaseIntera
 
 	/**
 	 * User object for the invoking user.
+	 *
+	 * Discord sends `member` (with its nested `user`) in a guild and `user` in a DM, and never neither, so this always
+	 * resolves for a payload that came from Discord.
+	 *
+	 * @remarks Use {@link inGuild} or {@link inDM} to narrow the context the interaction was sent from.
 	 */
-	public get user() {
-		return (this[Data].member?.user ?? this[Data].user)!;
+	public get user(): APIUser {
+		const data = this[Data];
+		return (data.member?.user ?? data.user) as APIUser;
 	}
 
 	/**
@@ -217,6 +224,14 @@ export abstract class BaseInteraction<T extends BaseInteractionType = BaseIntera
 	 */
 	public inGuild(): this is InGuild<this> {
 		return !isNullish(this.guild_id);
+	}
+
+	/**
+	 * Determines whether or not the interaction was sent from a DM, that is, without a guild.
+	 * @returns The casted interaction type.
+	 */
+	public inDM(): this is InDM<this> {
+		return isNullish(this.guild_id);
 	}
 
 	/**
@@ -260,4 +275,14 @@ export type InGuild<T extends BaseInteraction> = T & {
 	get guild_locale(): NonNullable<T['guild_locale']>;
 	get guildLocale(): NonNullable<T['guildLocale']>;
 	get member(): NonNullable<T['member']>;
+	get user(): NonNullable<T['member']>['user'];
+};
+
+export type InDM<T extends BaseInteraction> = T & {
+	get guild_id(): undefined;
+	get guildId(): undefined;
+	get guild_locale(): undefined;
+	get guildLocale(): undefined;
+	get member(): undefined;
+	get user(): APIUser;
 };

@@ -33,6 +33,12 @@ The module registers the `@wolfstar/shared-influx-pieces/plugin` plugin, which d
 `container.influx` (and loads the listeners) when `INFLUX_ENABLED` is not `false` and the credentials below are set.
 The environment is loaded before the module's plugins run. Use one of the two, not both.
 
+The module owns the `influxPieces` key of `stars.config` (`meta.configKey`, read by `@wolfstar/kit` 0.2 and later). It takes
+no options yet and only reserves the name. When it does, options written under the key and options given in the
+`['@wolfstar/shared-influx-pieces', options]` tuple of `modules` both work, and the tuple wins. To type the key in `defineConfig`,
+import the package's types in `stars.config.ts` (`import type {} from '@wolfstar/shared-influx-pieces/module';`), with
+`@wolfstar/schema` installed.
+
 ## Usage
 
 You can either register after setting the environment parameters:

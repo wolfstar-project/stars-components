@@ -47,6 +47,12 @@ registers the `@wolfstar/shared-http-pieces/pieces` plugin, which loads the shar
 plugin's own `register` entrypoint. Importing `@wolfstar/shared-http-pieces/register` keeps working; use one or the
 other, not both. Sentry and the information variables below are set up the same way either way.
 
+The module owns the `httpPieces` key of `stars.config` (`meta.configKey`, read by `@wolfstar/kit` 0.2 and later). It takes
+no options yet and only reserves the name. When it does, options written under the key and options given in the
+`['@wolfstar/shared-http-pieces', options]` tuple of `modules` both work, and the tuple wins. To type the key in `defineConfig`,
+import the package's types in `stars.config.ts` (`import type {} from '@wolfstar/shared-http-pieces/module';`), with
+`@wolfstar/schema` installed.
+
 ## Usage
 
 You can either register after setting environment parameters:

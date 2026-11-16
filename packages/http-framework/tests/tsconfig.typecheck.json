@@ -3,7 +3,11 @@
 	"extends": "../../../tsconfig.base.json",
 	"compilerOptions": {
 		// Resolve the package to its sources so the module augmentation in the tests merges with `CommandOptionsRegistry`.
-		"paths": { "@wolfstar/http-framework": ["../src/index.ts"], "@wolfstar/schema": ["../../schema/src/index.ts"] }
+		"paths": {
+			"@wolfstar/http-framework": ["../src/index.ts"],
+			"@wolfstar/schema": ["../../schema/src/index.ts"],
+			"@wolfstar/discord-utilities": ["../../discord-utilities/src/index.ts"]
+		}
 	},
 	"include": ["./**/*.test-d.ts"]
 }

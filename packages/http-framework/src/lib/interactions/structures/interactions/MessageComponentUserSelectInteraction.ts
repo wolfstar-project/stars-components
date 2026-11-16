@@ -39,7 +39,7 @@ export class MessageComponentUserSelectInteraction extends MessageComponentInter
 	 * @seealso {@link MessageComponentUserSelectInteraction.entries}.
 	 */
 	public *values(): IterableIterator<MessageComponentUserSelectInteraction.Value> {
-		const { resolved } = this.data;
+		const { resolved } = this;
 		for (const id of this.ids) {
 			yield { id, user: resolved.users[id], member: resolved.members?.[id] ?? null };
 		}

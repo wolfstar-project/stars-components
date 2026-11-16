@@ -50,6 +50,7 @@ jobs:
                       http-framework
                       http-framework-test-utils
                       http-framework-utilities
+                      i18n
                       i18next-backend
                       i18next-type-generator
                       influx-utilities

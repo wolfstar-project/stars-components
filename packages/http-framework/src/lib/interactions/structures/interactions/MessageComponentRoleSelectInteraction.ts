@@ -39,7 +39,7 @@ export class MessageComponentRoleSelectInteraction extends MessageComponentInter
 	 * @seealso {@link MessageComponentRoleSelectInteraction.entries}.
 	 */
 	public *values(): IterableIterator<MessageComponentRoleSelectInteraction.Value> {
-		const { resolved } = this.data;
+		const { resolved } = this;
 		for (const id of this.ids) {
 			yield resolved.roles[id];
 		}

@@ -39,7 +39,7 @@ export class MessageComponentChannelSelectInteraction extends MessageComponentIn
 	 * @seealso {@link MessageComponentChannelSelectInteraction.entries}.
 	 */
 	public *values(): IterableIterator<MessageComponentChannelSelectInteraction.Value> {
-		const { resolved } = this.data;
+		const { resolved } = this;
 		for (const id of this.ids) {
 			yield resolved.channels[id];
 		}

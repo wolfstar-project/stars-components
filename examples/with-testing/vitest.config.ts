@@ -20,6 +20,10 @@ export default defineProject(
 					replacement: fileURLToPath(new URL('../../packages/http-framework-test-utils/src/index.ts', import.meta.url))
 				},
 				{
+					find: '@wolfstar/discord-utilities',
+					replacement: fileURLToPath(new URL('../../packages/discord-utilities/src/index.ts', import.meta.url))
+				},
+				{
 					find: '@wolfstar/http-framework',
 					replacement: fileURLToPath(new URL('../../packages/http-framework/src/index.ts', import.meta.url))
 				}

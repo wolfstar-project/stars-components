@@ -20,7 +20,7 @@ export class MessageComponentMentionableSelectInteraction extends MessageCompone
 	 */
 	public get users(): Collection<Snowflake, MessageComponentMentionableSelectInteraction.ValueUser> {
 		const output = new Collection<Snowflake, MessageComponentMentionableSelectInteraction.ValueUser>();
-		const { users, members } = this.data.resolved;
+		const { users, members } = this.resolved;
 		if (users) {
 			for (const user of Object.values(users)) {
 				output.set(user.id, { id: user.id, user, member: members?.[user.id] ?? null });
@@ -40,7 +40,7 @@ export class MessageComponentMentionableSelectInteraction extends MessageCompone
 	 */
 	public get roles(): Collection<Snowflake, APIRole> {
 		const output = new Collection<Snowflake, APIRole>();
-		const { roles } = this.data.resolved;
+		const { roles } = this.resolved;
 		if (roles) {
 			for (const role of Object.values(roles)) {
 				output.set(role.id, role);
@@ -80,7 +80,7 @@ export class MessageComponentMentionableSelectInteraction extends MessageCompone
 	 * @seealso {@link MessageComponentMentionableSelectInteraction.entries}.
 	 */
 	public *values(): IterableIterator<MessageComponentMentionableSelectInteraction.Value> {
-		const { resolved } = this.data;
+		const { resolved } = this;
 		for (const id of this.ids) {
 			const user = resolved.users?.[id];
 			if (user) {

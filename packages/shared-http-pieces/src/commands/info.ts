@@ -75,7 +75,7 @@ export class SharedCommand extends Command {
 			style: ButtonStyle.Link,
 			label: t('commands/shared:infoButtonSupport'),
 			emoji: { name: '🆘' },
-			url: 'https://discord.gg/6gakFR2'
+			url: 'https://discord.gg/gqAnRyUXG8'
 		};
 	}
 
