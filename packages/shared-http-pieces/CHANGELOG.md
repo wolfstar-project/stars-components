@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.1
+
+### Patch Changes
+
+- [#367](https://github.com/wolfstar-project/stars-components/pull/367) [`39313c4`](https://github.com/wolfstar-project/stars-components/commit/39313c48843141c99167291ea4f57be0d655064d) - fix(deps): update dependency @wolfstar/plugin-i18next to v3 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 2.2.0
 
 ### Minor Changes
