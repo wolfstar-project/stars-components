@@ -93,9 +93,9 @@ jobs:
 
                       Details:
 
-                      ```
+                      ````
                       ${{ steps.lint_pr_title.outputs.error_message }}
-                      ```
+                      ````
 
             # Delete the previous comment once the title has been fixed
             - if: ${{ steps.lint_pr_title.outputs.error_message == null }}
