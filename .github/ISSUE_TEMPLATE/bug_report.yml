@@ -2,7 +2,6 @@ name: Bug Report
 description: File a bug report here
 title: 'bug: '
 type: Bug
-labels: ['bug:unverified']
 projects: ['wolfstar-project/17']
 body:
     - type: markdown
@@ -56,3 +55,15 @@ body:
           label: Additional context
           description: Do you want to share any additional context about this bug?
           placeholder: Add any other context about the problem here.
+    - type: dropdown
+      id: priority
+      attributes:
+          label: Priority
+          description: Select the impact on your work. Maintainers can change it during triage.
+          options:
+              - Urgent
+              - High
+              - Medium
+              - Low
+      validations:
+          required: false
