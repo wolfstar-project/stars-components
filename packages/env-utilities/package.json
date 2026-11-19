@@ -83,7 +83,7 @@
 		"@redstardev/unplugin-version-injector": "^0.0.2",
 		"@vitest/coverage-v8": "^5.0.3",
 		"@wolfstar/schema": "workspace:^",
-		"dotenv": "^18.0.5",
+		"dotenv": "^18.0.6",
 		"dotenv-expand": "^13.0.0",
 		"golar": "^0.1.10",
 		"tsdown": "^0.23.0",

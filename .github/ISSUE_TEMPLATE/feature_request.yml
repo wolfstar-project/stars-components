@@ -2,7 +2,7 @@ name: Feature request
 description: Suggest an idea for this project
 title: 'request: '
 type: Feature
-labels: ['feature', 'enhancement']
+labels: ['enhancement']
 projects: ['wolfstar-project/17']
 body:
     - type: markdown
@@ -46,3 +46,15 @@ body:
           label: Additional context
           description: Do you want to share any additional context about this feature request?
           placeholder: Add any other context, links or screenshots about the feature request here.
+    - type: dropdown
+      id: priority
+      attributes:
+          label: Priority
+          description: Select the impact on your work. Maintainers can change it during triage.
+          options:
+              - Urgent
+              - High
+              - Medium
+              - Low
+      validations:
+          required: false
