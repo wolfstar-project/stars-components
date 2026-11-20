@@ -218,7 +218,7 @@ pnpm changeset                        # add a changeset (`pnpm changeset add --e
   `.stars/tsconfig.json` byte for byte (a root `tsconfig.json` extending it). On 6 `build.tsconfig` of a `tsdown`
   build defaults to the app config, `dev.typecheck.tsconfig` too (the dev checker watches only the app project) and
   `dev.typecheck.projects` lists both; `stars typecheck` (`packages/cli/src/commands/typecheck.ts`, like `nuxt
-typecheck`) runs `stars prepare` then the checker once per project, since `tsc -p` on a `files: []` root checks
+  typecheck`) runs `stars prepare` then the checker once per project, since `tsc -p` on a `files: []` root checks
   nothing. A root `tsconfig.json` still extending `./.stars/tsconfig.json` raises `TSCONFIG_LEGACY_EXTENDS` from
   `stars prepare`/`build`/`dev`/`info` (`reportWarnings`) and `stars doctor`. `shared`/`server` projects (Nuxt's) are
   not generated yet.
