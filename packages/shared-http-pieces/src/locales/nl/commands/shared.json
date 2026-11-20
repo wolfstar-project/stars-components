@@ -1,12 +1,12 @@
 {
-  "infoButtonDonate": "Doneer",
-  "infoButtonGitHub": "GitHub Repository",
-  "infoButtonInvite": "Voeg me toe aan jouw server!",
-  "infoButtonSupport": "Support server",
-  "infoDescription": "Geeft informatie over mij, een link om mij toe te voegen en een link voor de support server",
-  "infoFieldServerUsageTitle": "Server Gebruik",
-  "infoFieldServerUsageValue": "• **CPU Gebruik**: {{cpu}}\n• **Geheugen**: {{heapUsed}}MB (Totaal: {{heapTotal}}MB)",
-  "infoFieldUptimeTitle": "Up-time",
-  "infoFieldUptimeValue": "• **Host**: {{host}}\n• **Client**: {{client}}",
-  "infoName": "info"
+	"infoButtonDonate": "Doneer",
+	"infoButtonGitHub": "GitHub Repository",
+	"infoButtonInvite": "Voeg me toe aan jouw server!",
+	"infoButtonSupport": "Support server",
+	"infoDescription": "Geeft informatie over mij, een link om mij toe te voegen en een link voor de support server",
+	"infoFieldServerUsageTitle": "Server Gebruik",
+	"infoFieldServerUsageValue": "• **CPU Gebruik**: {{cpu}}\n• **Geheugen**: {{heapUsed}}MB (Totaal: {{heapTotal}}MB)",
+	"infoFieldUptimeTitle": "Up-time",
+	"infoFieldUptimeValue": "• **Host**: {{host}}\n• **Client**: {{client}}",
+	"infoName": "info"
 }

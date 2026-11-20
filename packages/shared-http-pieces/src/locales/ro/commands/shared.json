@@ -1,12 +1,12 @@
 {
-  "infoButtonDonate": "Donează",
-  "infoButtonGitHub": "Depozit GitHub",
-  "infoButtonInvite": "Adaugă-mă pe serverul tău!",
-  "infoButtonSupport": "Server de asistență",
-  "infoDescription": "Oferă informații despre mine și link-uri pentru adăugarea botului și alăturarea serverului de suport",
-  "infoFieldServerUsageTitle": "Utilizarea server-ului",
-  "infoFieldServerUsageValue": "• **Utilizarea procesorului**: {{cpu}}\n• **Memorie**: {{heapUsed}}MB (Total: {{heapTotal}}MB)",
-  "infoFieldUptimeTitle": "Timp de funcționare",
-  "infoFieldUptimeValue": "• **Host**: {{host}}\n• **Client**: {{client}}",
-  "infoName": "info"
+	"infoButtonDonate": "Donează",
+	"infoButtonGitHub": "Depozit GitHub",
+	"infoButtonInvite": "Adaugă-mă pe serverul tău!",
+	"infoButtonSupport": "Server de asistență",
+	"infoDescription": "Oferă informații despre mine și link-uri pentru adăugarea botului și alăturarea serverului de suport",
+	"infoFieldServerUsageTitle": "Utilizarea server-ului",
+	"infoFieldServerUsageValue": "• **Utilizarea procesorului**: {{cpu}}\n• **Memorie**: {{heapUsed}}MB (Total: {{heapTotal}}MB)",
+	"infoFieldUptimeTitle": "Timp de funcționare",
+	"infoFieldUptimeValue": "• **Host**: {{host}}\n• **Client**: {{client}}",
+	"infoName": "info"
 }
