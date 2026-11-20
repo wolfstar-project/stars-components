@@ -1,12 +1,12 @@
 {
-	"infoName": "bilgilendirme",
-	"infoDescription": "Benim hakkımda bilgi sağlar, botu davet etmek ve destek sunucusuna katılmak için linkleri gösterir",
-	"infoFieldUptimeTitle": "Çalışma Süresi",
-	"infoFieldUptimeValue": "• **Sunucu**: {{host}}\n• **İstemci**: {{client}}",
-	"infoFieldServerUsageTitle": "Sunucu Kullanımı",
-	"infoFieldServerUsageValue": "• **İşlemci (CPU) Kullanımı**: {{cpu}}\n• **Hafıza**: {{heapUsed}}MB (Toplam: {{heapTotal}}MB)",
-	"infoButtonInvite": "Beni sunucuna ekle!",
-	"infoButtonSupport": "Destek sunucusu",
-	"infoButtonGitHub": "GitHub Reposu",
-	"infoButtonDonate": "Bağış Yap"
+  "infoButtonDonate": "Bağış Yap",
+  "infoButtonGitHub": "GitHub Reposu",
+  "infoButtonInvite": "Beni sunucuna ekle!",
+  "infoButtonSupport": "Destek sunucusu",
+  "infoDescription": "Benim hakkımda bilgi sağlar, botu davet etmek ve destek sunucusuna katılmak için linkleri gösterir",
+  "infoFieldServerUsageTitle": "Sunucu Kullanımı",
+  "infoFieldServerUsageValue": "• **İşlemci (CPU) Kullanımı**: {{cpu}}\n• **Hafıza**: {{heapUsed}}MB (Toplam: {{heapTotal}}MB)",
+  "infoFieldUptimeTitle": "Çalışma Süresi",
+  "infoFieldUptimeValue": "• **Sunucu**: {{host}}\n• **İstemci**: {{client}}",
+  "infoName": "bilgilendirme"
 }
