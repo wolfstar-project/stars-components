@@ -35,8 +35,9 @@ const SOURCES: Record<string, string> = {
  * sources drops it. The published `dist` keeps it, being one module. This plugin keeps every source module whole.
  */
 const SOURCES_SIDE_EFFECTS = `{ name: 'stars-e2e:sources-side-effects', transform(code, id) { return ${JSON.stringify(
-	Object.values(SOURCES).map((entry) => dirname(entry))
-)}.some((directory) => id.startsWith(directory)) ? { code, map: null, moduleSideEffects: true } : null; } }`;
+	// Vite's module ids use forward slashes, also on Windows.
+	Object.values(SOURCES).map((entry) => `${dirname(entry).replaceAll('\\', '/')}/`)
+)}.some((directory) => id.replaceAll('\\\\', '/').startsWith(directory)) ? { code, map: null, moduleSideEffects: true } : null; } }`;
 
 /**
  * The entry of `examples/with-nitro/src/main.ts`, without its command push: that call reaches Discord's API, which a
