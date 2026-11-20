@@ -1,5 +1,13 @@
 # @wolfstar/eslint-config
 
+## 0.1.4
+
+### Patch Changes
+
+- [#317](https://github.com/wolfstar-project/stars-components/pull/317) [`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2)]:
+    - @wolfstar/eslint-plugin-http-framework@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

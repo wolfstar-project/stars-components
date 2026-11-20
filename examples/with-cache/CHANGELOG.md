@@ -1,5 +1,12 @@
 # with-cache
 
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2)]:
+    - @wolfstar/env-utilities@2.3.2
+
 ## 0.0.16
 
 ### Patch Changes
