@@ -149,6 +149,15 @@ describe('flags', () => {
 		expect(rust(String.raw`(?x) [a b]+ \# `).test('ab#')).toBe(true);
 	});
 
+	test('GIVEN (?x) and spaces around the dash of a class range THEN it is still a range', () => {
+		for (const pattern of ['(?x)^[a - z]+$', '(?x)^[a- z]+$', '(?x)^[a -z]+$']) {
+			expect(rust(pattern).test('bcd')).toBe(true);
+		}
+
+		expect(rust('(?x)^[a - ]+$').test('a-')).toBe(true);
+		expect(rust('(?x)^[a - ]+$').test('b')).toBe(false);
+	});
+
 	test('GIVEN (?U) THEN greediness is swapped', () => {
 		expect(rust('(?U)a+').exec('aaa')?.[0]).toBe('a');
 		expect(rust('(?U)a+?').exec('aaa')?.[0]).toBe('aaa');
@@ -199,6 +208,10 @@ describe('groups and repetitions', () => {
 		expect(named?.groups).toMatchObject({ year: '2026', month: '11' });
 		expect(named?.[1]).toBe('2026');
 		expect(rust('(?:a)(b)').exec('ab')?.[1]).toBe('b');
+	});
+
+	test('GIVEN a capture group name with non-ASCII letters THEN it is kept', () => {
+		expect(rust('(?P<名前>x)(?<é1>y)').exec('xy')?.groups).toMatchObject({ 名前: 'x', é1: 'y' });
 	});
 
 	test('GIVEN alternation THEN the leftmost alternative wins, like Rust', () => {
@@ -325,7 +338,9 @@ describe('errors', () => {
 		['(?-u)a', 'unsupported_feature'],
 		['(?R)a', 'unsupported_feature'],
 		[String.raw`\p{Age=1.1}`, 'unsupported_feature'],
-		['(?P<a.b>x)', 'unsupported_feature']
+		['(?P<a.b>x)', 'unsupported_feature'],
+		['(?P<é.b>x)', 'unsupported_feature'],
+		['[a' + '~~b'.repeat(30) + ']', 'unsupported_feature']
 	] as const)('GIVEN %s THEN it fails with %s', (pattern, code) => {
 		const error = failure(pattern);
 		expect(error).toBeInstanceOf(SyntaxError);

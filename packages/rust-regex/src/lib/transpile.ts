@@ -81,7 +81,7 @@ function parseFlags(flags: string, pattern: string): Flags {
  */
 export function transpile(pattern: string, options: TranspileOptions = {}): TranspileResult {
 	const { alt, initialI } = parse(pattern, parseFlags(options.flags ?? '', pattern));
-	const { source, usesModifiers } = new Emitter().emit(alt, initialI);
+	const { source, usesModifiers } = new Emitter(pattern).emit(alt, initialI);
 	const flags = initialI ? 'iv' : 'v';
 
 	if (options.validate !== false) {

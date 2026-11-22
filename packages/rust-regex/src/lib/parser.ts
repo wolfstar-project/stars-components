@@ -73,6 +73,12 @@ const ASCII_CLASS = /\[:(\^?)([a-z]+):\]/y;
 
 const WHITESPACE = /^\p{White_Space}$/u;
 
+/** What the Rust `regex` crate accepts as a capture group name: a letter or `_`, then letters, numbers, `_`, `.`, `[` and `]`. */
+const RUST_GROUP_NAME = /^[_\p{Alphabetic}][_.[\]\p{Alphabetic}\p{N}]*$/u;
+
+/** What JavaScript accepts as a capture group name: an identifier. */
+const JS_GROUP_NAME = /^[_\p{ID_Start}]\p{ID_Continue}*$/u;
+
 /** What the parser hands back for an atom: the node, and whether a quantifier may follow it. */
 interface Parsed {
 	readonly node: Node;
@@ -332,10 +338,8 @@ class Parser {
 
 		const name = this.src.slice(this.pos, end);
 		if (name === '') throw this.error('invalid_syntax', 'a capture group name cannot be empty', start);
-		if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-			const code = /^[A-Za-z_][A-Za-z0-9_.[\]]*$/.test(name) ? 'unsupported_feature' : 'invalid_syntax';
-			throw this.error(code, `the capture group name "${name}" is not valid in JavaScript`, start);
-		}
+		if (!RUST_GROUP_NAME.test(name)) throw this.error('invalid_syntax', `the capture group name "${name}" is not valid`, start);
+		if (!JS_GROUP_NAME.test(name)) throw this.error('unsupported_feature', `the capture group name "${name}" is not valid in JavaScript`, start);
 
 		if (this.names.has(name)) throw this.error('invalid_syntax', `duplicate capture group name "${name}"`, start);
 
@@ -480,11 +484,11 @@ class Parser {
 			if (ch === '\\') {
 				const escape = this.parseEscape(true);
 				if (escape.kind === 'item') items.push(escape.item);
-				else if (escape.kind === 'char') this.pushCharOrRange(items, escape.cp);
+				else if (escape.kind === 'char') this.pushCharOrRange(items, escape.cp, flags);
 				continue;
 			}
 
-			this.pushCharOrRange(items, this.readCodePoint());
+			this.pushCharOrRange(items, this.readCodePoint(), flags);
 		}
 
 		this.leave();
@@ -496,15 +500,26 @@ class Parser {
 		return { negated, expr };
 	}
 
-	private pushCharOrRange(items: ClassItem[], lo: number): void {
-		const dash = this.src[this.pos];
-		const after = this.src[this.pos + 1];
-		if (dash !== '-' || after === undefined || after === '-' || after === ']') {
+	/** In verbose mode (`(?x)`) whitespace may sit on either side of the dash, as in `[a - z]`. */
+	private pushCharOrRange(items: ClassItem[], lo: number, flags: Flags): void {
+		const afterLo = this.pos;
+		this.skipClassSpace(flags);
+
+		const dashAt = this.pos;
+		const joinsRange = this.src[dashAt] === '-' && this.src[dashAt + 1] !== '-';
+		if (joinsRange) {
+			this.pos++; // -
+			this.skipClassSpace(flags);
+		}
+
+		const next = this.src[this.pos];
+		if (!joinsRange || next === undefined || next === ']') {
+			// Not a range: the dash, if any, is read again as a character of its own.
+			this.pos = afterLo;
 			items.push({ kind: 'char', cp: lo });
 			return;
 		}
 
-		this.pos++; // -
 		let hi: number;
 		if (this.src[this.pos] === '\\') {
 			const escape = this.parseEscape(true);

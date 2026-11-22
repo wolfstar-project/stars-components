@@ -1,4 +1,5 @@
 import type { AssertionKind, ClassExpr, ClassItem, ClassSet, Node, PerlClass } from './ast.js';
+import { RustRegexError } from './errors.js';
 
 /**
  * Unicode `\w` as Rust defines it (UTS #18): letters, marks, decimal digits, connector punctuation and joiners.
@@ -26,6 +27,15 @@ const SYNTAX_CHARACTERS = new Set('^$\\.*+?()[]{}|/');
  * punctuators, which also covers the doubled ones (`&&`, `!!`, `##`, ...) the flag refuses to see unescaped.
  */
 const CLASS_ESCAPES = new Set('()[]{}/-\\|&!#%,:;<=>@`~$*+.?^');
+
+/**
+ * The longest source, in UTF-16 units, that one `~~` may produce. Each `~~` writes both of its sides twice, so a short
+ * chain such as `[a~~b~~b~~b...]` doubles its output at every step and would otherwise run out of memory.
+ */
+const MAX_SYMMETRIC_DIFFERENCE_LENGTH = 1_000_000;
+
+/** Thrown by the class writers, which know no pattern, and turned into a {@link RustRegexError} by {@link Emitter.emit}. */
+const OUTPUT_TOO_LARGE = Symbol('output too large');
 
 function isPrintableAscii(cp: number): boolean {
 	return cp >= 0x20 && cp <= 0x7e;
@@ -99,6 +109,8 @@ function body(expr: ClassExpr): string {
 		// `a ~~ b` is `(a -- b) || (b -- a)`.
 		const left = operand(expr.left);
 		const right = operand(expr.right);
+		if (left.length + right.length > MAX_SYMMETRIC_DIFFERENCE_LENGTH / 2) throw OUTPUT_TOO_LARGE;
+
 		return `[${left}--${right}][${right}--${left}]`;
 	}
 
@@ -141,9 +153,21 @@ export interface EmitResult {
 export class Emitter {
 	private usesModifiers = false;
 
+	public constructor(private readonly pattern: string) {}
+
 	public emit(alt: Node[][], initialI: boolean): EmitResult {
-		const source = this.alt(alt, { rustI: initialI }, initialI);
-		return { source: source === '' ? '(?:)' : source, usesModifiers: this.usesModifiers };
+		try {
+			const source = this.alt(alt, { rustI: initialI }, initialI);
+			return { source: source === '' ? '(?:)' : source, usesModifiers: this.usesModifiers };
+		} catch (error) {
+			if (error !== OUTPUT_TOO_LARGE) throw error;
+
+			throw new RustRegexError(
+				'unsupported_feature',
+				'the symmetric difference "~~" nests too deeply to be written as a JavaScript RegExp',
+				this.pattern
+			);
+		}
 	}
 
 	/** `jsI` is whether the JavaScript engine is matching case-insensitively at this point of the output. */
