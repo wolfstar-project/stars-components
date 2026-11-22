@@ -34,6 +34,12 @@ packages:reddit-helpers:
                 - packages/reddit-helpers/*
                 - packages/reddit-helpers/**/*
 
+packages:rust-regex:
+    - changed-files:
+          - any-glob-to-any-file:
+                - packages/rust-regex/*
+                - packages/rust-regex/**/*
+
 packages:safe-fetch:
     - changed-files:
           - any-glob-to-any-file:
