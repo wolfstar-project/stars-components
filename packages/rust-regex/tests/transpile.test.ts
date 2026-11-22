@@ -340,6 +340,7 @@ describe('errors', () => {
 		[String.raw`\p{Age=1.1}`, 'unsupported_feature'],
 		['(?P<a.b>x)', 'unsupported_feature'],
 		['(?P<é.b>x)', 'unsupported_feature'],
+		['(?P>name)', 'unsupported_feature'],
 		['[a' + '~~b'.repeat(30) + ']', 'unsupported_feature']
 	] as const)('GIVEN %s THEN it fails with %s', (pattern, code) => {
 		const error = failure(pattern);
@@ -383,6 +384,19 @@ describe('errors', () => {
 		'(?P<1a>a)',
 		String.raw`\pX`,
 		String.raw`\p{`,
+		String.raw`\p`,
+		String.raw`\p{Lu2}`,
+		'a{2',
+		'a{4294967296}',
+		'(?Pa)',
+		'(?P<abc',
+		'(?i:a',
+		String.raw`[a-\d]`,
+		String.raw`[a-[b]]`,
+		String.raw`\ka`,
+		String.raw`[\b]`,
+		String.raw`\x{41`,
+		String.raw`\x{zz}`,
 		'(?i)*',
 		'(?x) #comment\n *',
 		'\\'
@@ -423,7 +437,29 @@ describe('toRegExp', () => {
 	);
 });
 
+describe('flags Rust accepts without a JavaScript counterpart', () => {
+	test('GIVEN (?u) and (?-R) THEN they change nothing', () => {
+		expect(rust('(?u)a').test('a')).toBe(true);
+		expect(rust('(?-R)a').test('a')).toBe(true);
+	});
+});
+
+describe('Unicode properties', () => {
+	test('GIVEN Script_Extensions THEN it resolves', () => {
+		expect(rust(String.raw`^\p{scx=Greek}+$`).test('αβγ')).toBe(true);
+		expect(rust(String.raw`^\p{Script_Extensions=Latin}+$`).test('abc')).toBe(true);
+	});
+
+	test('GIVEN a script with an irregular spelling THEN it is written the way JavaScript wants', () => {
+		expect(transpile(String.raw`\p{signwriting}`).source).toBe(String.raw`\p{Script=SignWriting}`);
+	});
+});
+
 describe('options', () => {
+	test('GIVEN a pattern JavaScript refuses THEN toRegExp reports invalid_output', () => {
+		expect(() => toRegExp(String.raw`\p{NotAScript}`)).toThrow(expect.objectContaining({ code: 'invalid_output' }));
+	});
+
 	test('GIVEN an unknown Rust flag THEN the error names the flag and the pattern, with no position', () => {
 		try {
 			transpile('abc', { flags: 'z' });
