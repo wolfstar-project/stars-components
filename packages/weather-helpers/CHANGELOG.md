@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.8
+
+### Patch Changes
+
+- [#393](https://github.com/wolfstar-project/stars-components/pull/393) [`8ca3c7b`](https://github.com/wolfstar-project/stars-components/commit/8ca3c7b110711cd93062f27e024a20029e38008e) - fix(deps): update dependency @sapphire/utilities to v4 Thanks [@renovate](https://github.com/apps/renovate)!
+
 ## 1.1.7
 
 ### Patch Changes

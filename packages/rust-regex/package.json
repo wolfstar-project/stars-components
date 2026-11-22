@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/rust-regex",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Transpiles regular expressions written for the Rust regex crate, the flavour Discord uses, into JavaScript RegExp",
 	"keywords": [
 		"automod",
