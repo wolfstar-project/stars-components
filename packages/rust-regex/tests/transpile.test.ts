@@ -388,6 +388,7 @@ describe('errors', () => {
 	test('GIVEN an unknown script THEN JavaScript rejects it and the error says so', () => {
 		const error = failure(String.raw`\p{NotAScript}`);
 		expect(error.code).toBe('invalid_output');
+		expect(error.position).toBeUndefined();
 		expect(() => transpile(String.raw`\p{NotAScript}`, { validate: false })).not.toThrow();
 	});
 });
@@ -397,5 +398,26 @@ describe('toRegExp', () => {
 		const regex = toRegExp('(?i)a', { extraFlags: 'g' });
 		expect(regex.flags).toBe('giv');
 		expect('aAa'.match(regex)).toHaveLength(3);
+	});
+
+	test.each(['i', 'm', 's', 'u', 'v', 'z', 'gg'])(
+		'GIVEN the extraFlags %j THEN it is refused as an invalid option, not as bad output',
+		(extraFlags) => {
+			expect(() => toRegExp('(?i)a', { extraFlags })).toThrow(expect.objectContaining({ code: 'invalid_option', position: undefined }));
+		}
+	);
+});
+
+describe('options', () => {
+	test('GIVEN an unknown Rust flag THEN the error names the flag and the pattern, with no position', () => {
+		try {
+			transpile('abc', { flags: 'z' });
+			expect.unreachable();
+		} catch (error) {
+			expect(error).toBeInstanceOf(RustRegexError);
+			expect(error).toMatchObject({ code: 'invalid_option', pattern: 'abc', position: undefined });
+			expect((error as RustRegexError).message).toContain('"z"');
+			expect((error as RustRegexError).message).not.toContain('at index');
+		}
 	});
 });

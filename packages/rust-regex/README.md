@@ -59,11 +59,11 @@ The result always uses the [`v` flag](https://developer.mozilla.org/docs/Web/Jav
 | ------------ | ----------------------- | --------------------------------------------------------------------------------------------------- |
 | `flags`      | `transpile`, `toRegExp` | Rust flags the pattern starts with, as if it began with `(?flags)`: any of `i`, `m`, `s`, `x`, `U`. |
 | `validate`   | `transpile`             | Compile the result to prove JavaScript accepts it. On by default.                                   |
-| `extraFlags` | `toRegExp`              | JavaScript flags added to the ones the pattern needs, for example `g`.                              |
+| `extraFlags` | `toRegExp`              | JavaScript flags added to the ones the pattern needs: `d`, `g` or `y`. Other flags are refused.     |
 
 ### Errors
 
-Every failure is a `RustRegexError`, a `SyntaxError` with a `code`, the `pattern` and the `position` of the problem:
+Every failure is a `RustRegexError`, a `SyntaxError` with a `code`, the `pattern` and the `position` of the problem. `position` is `undefined` when the problem is not at a place in the pattern, as for `invalid_option` and `invalid_output`:
 
 | `code`                      | Meaning                                                                                                        |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -72,6 +72,7 @@ Every failure is a `RustRegexError`, a `SyntaxError` with a `code`, the `pattern
 | `unsupported_backreference` | `\1`, `\k<name>` or `(?P=name)`. Rust does not have them either.                                               |
 | `unsupported_feature`       | Valid Rust that cannot be written as a JavaScript `RegExp`, see below.                                         |
 | `invalid_output`            | The pattern is fine, but the JavaScript engine refuses the result, for example an unknown Unicode script name. |
+| `invalid_option`            | An option is wrong, for example an unknown Rust flag in `flags`, or `i` or `m` in `extraFlags`.                |
 
 ## What is not supported
 
@@ -81,8 +82,9 @@ Every failure is a `RustRegexError`, a `SyntaxError` with a `code`, the `pattern
 
 ## Known differences from Rust
 
-The transpiler is meant to preview and test patterns, not to replace Discord as the source of truth. Differential tests against the real crate over thousands of generated patterns found these differences, all in corners most patterns never reach:
+The transpiler is meant to preview and test patterns, not to replace Discord as the source of truth. These differences are known:
 
+- **No linear time guarantee.** Rust matches in time linear in the size of the text. A JavaScript `RegExp` backtracks, so a pattern such as `(a+)+$`, which is safe in Rust, can take exponential time on a long text such as `aaaa…!`. Do not run the result on text a stranger controls without a limit, for example in a worker with a timeout.
 - **Case-insensitive scoping needs ES2025.** `(?i)` at the start of the pattern becomes the `i` flag, which works everywhere. `(?i:...)`, `(?-i)` or a flag group in the middle becomes a regular expression modifier, and `transpile` reports `usesModifiers`. Modifiers need Node.js 23 or newer, and Node.js 24 has an engine bug that lets a modifier group leak into the rest of the pattern in some cases. It was not reproduced on a newer V8.
 - **Groups that can match nothing, repeated.** For a pattern such as `(a?|b){1,2}`, JavaScript and Rust disagree about whether an empty iteration counts, so the overall match can differ in length.
 - **Zero-width matches next to emoji.** V8 can report an empty match in the middle of a surrogate pair, for example `\B` on `x😀y`, where Rust only matches between characters.
