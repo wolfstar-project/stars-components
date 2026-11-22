@@ -197,8 +197,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0(supports-color@7.2.0)
       '@sapphire/ts-config':
-        specifier: ^5.0.3
-        version: 5.0.3
+        specifier: ^6.0.0
+        version: 6.0.0
       '@swc/core':
         specifier: ^1.16.13
         version: 1.16.13
@@ -687,8 +687,8 @@ importers:
         specifier: '>=1.0.0'
         version: 1.7.0
       '@sapphire/ts-config':
-        specifier: ^5.0.3
-        version: 5.0.3
+        specifier: ^6.0.0
+        version: 6.0.0
       '@wolfstar/kit':
         specifier: workspace:^
         version: link:../kit
@@ -3031,14 +3031,15 @@ packages:
   '@sapphire/shapeshift@4.0.0':
     resolution: {integrity: sha512-d9dUmWVA7MMiKobL3VpLF8P2aeanRTu6ypG2OIaEv/ZHH/SUQ2iHOVyi5wAPjQ+HmnMuL0whK9ez8I/raWbtIg==}
     engines: {node: '>=v16'}
+    deprecated: Shapeshift was created when other validation libraries had significant limitations in performance and error reporting. Those advantages have diminished as libraries such as Zod have become faster and improved their error messages, while also gaining broader environment support, a larger community, and custom error printers.
 
   '@sapphire/snowflake@3.5.5':
     resolution: {integrity: sha512-xzvBr1Q1c4lCe7i6sRnrofxeO1QTP/LKQ6A6qy0iB4x5yfiSfARMEQEghojzTNALDTcv8En04qYNIco9/K9eZQ==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
 
-  '@sapphire/ts-config@5.0.3':
-    resolution: {integrity: sha512-bFyGYHFT3TpOf5Sg2P+zY2ad0t5IA2epc5HtewlghhL7MYvbZvxtKsdaNaMwAdNObBx7hpiQm5OcOhyzEwQvbQ==}
-    engines: {node: '>=v16.0.0', npm: '>=8.0.0'}
+  '@sapphire/ts-config@6.0.0':
+    resolution: {integrity: sha512-iV0Pdg8yfuwyky8PFDsOGzY5hgMh1Stbpb4rrKj9M1JEOnBq5N2WFImZWWiBBS08K1nkvXAXqFf+EYqxCeSjgw==}
+    engines: {node: '>=v24.0.0', npm: '>=11.0.0'}
 
   '@sapphire/utilities@3.18.2':
     resolution: {integrity: sha512-QGLdC9+pT74Zd7aaObqn0EUfq40c4dyTL65pFnkM6WO1QYN7Yg/s4CdH+CXmx0Zcu6wcfCWILSftXPMosJHP5A==}
@@ -5948,11 +5949,6 @@ packages:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
       typescript: '>=4.8.4 <6.1.0'
 
-  typescript@5.4.5:
-    resolution: {integrity: sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@5.6.1-rc:
     resolution: {integrity: sha512-E3b2+1zEFu84jB0YQi9BORDjz9+jGbwwy1Zi3G0LUNw7a7cePUrHMRNy8aPh53nXpkFGVHSxIZo5vKTfYaFiBQ==}
     engines: {node: '>=14.17'}
@@ -5960,6 +5956,11 @@ packages:
 
   typescript@5.8.3:
     resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -7006,31 +7007,44 @@ snapshots:
       '@tybys/wasm-util': 0.10.4
     optional: true
 
-  '@ngrok/ngrok-android-arm64@1.7.0': {}
+  '@ngrok/ngrok-android-arm64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-arm64@1.7.0': {}
+  '@ngrok/ngrok-darwin-arm64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-universal@1.7.0': {}
+  '@ngrok/ngrok-darwin-universal@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-x64@1.7.0': {}
+  '@ngrok/ngrok-darwin-x64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-freebsd-x64@1.7.0': {}
+  '@ngrok/ngrok-freebsd-x64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm-gnueabihf@1.7.0': {}
+  '@ngrok/ngrok-linux-arm-gnueabihf@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm64-gnu@1.7.0': {}
+  '@ngrok/ngrok-linux-arm64-gnu@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm64-musl@1.7.0': {}
+  '@ngrok/ngrok-linux-arm64-musl@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-x64-gnu@1.7.0': {}
+  '@ngrok/ngrok-linux-x64-gnu@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-x64-musl@1.7.0': {}
+  '@ngrok/ngrok-linux-x64-musl@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-arm64-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-arm64-msvc@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-ia32-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-ia32-msvc@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-x64-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-x64-msvc@1.7.0':
+    optional: true
 
   '@ngrok/ngrok@1.7.0':
     optionalDependencies:
@@ -7488,10 +7502,10 @@ snapshots:
 
   '@sapphire/snowflake@3.5.5': {}
 
-  '@sapphire/ts-config@5.0.3':
+  '@sapphire/ts-config@6.0.0':
     dependencies:
-      tslib: 2.8.1
-      typescript: 5.4.5
+      '@types/node': 22.15.21
+      typescript: 6.0.3
 
   '@sapphire/utilities@3.18.2': {}
 
@@ -10315,11 +10329,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  typescript@5.4.5: {}
-
   typescript@5.6.1-rc: {}
 
   typescript@5.8.3: {}
+
+  typescript@6.0.3: {}
 
   typescript@7.0.2:
     optionalDependencies:
