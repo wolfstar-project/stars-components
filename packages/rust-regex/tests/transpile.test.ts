@@ -149,6 +149,22 @@ describe('flags', () => {
 		expect(rust(String.raw`(?x) [a b]+ \# `).test('ab#')).toBe(true);
 	});
 
+	test('GIVEN (?x) and a comment inside a class THEN the comment is ignored and an escaped # is not', () => {
+		const regex = rust('(?x)^[a#ignored\nb]+$');
+		expect(regex.test('ab')).toBe(true);
+		expect(regex.test('#')).toBe(false);
+		expect(regex.test('i')).toBe(false);
+
+		expect(rust(String.raw`(?x)^[a\#b]+$`).test('#')).toBe(true);
+		expect(rust('(?x)^[a-# note\nc]+$').test('b')).toBe(true);
+		expect(rust('(?x)^a{2 # note\n}$').test('aa')).toBe(true);
+	});
+
+	test('GIVEN (?x) and a space before the ? that follows a repetition THEN it repeats the repetition, as in Rust', () => {
+		// regex-syntax only looks for the lazy marker right after the operator, so `a+ ?` is `(?:a+)?`, not `a+?`.
+		expect(rust('(?x)^a+ ?').exec('aaa')?.[0]).toBe('aaa');
+	});
+
 	test('GIVEN (?x) and spaces around the dash of a class range THEN it is still a range', () => {
 		for (const pattern of ['(?x)^[a - z]+$', '(?x)^[a- z]+$', '(?x)^[a -z]+$']) {
 			expect(rust(pattern).test('bcd')).toBe(true);
@@ -417,6 +433,22 @@ describe('errors', () => {
 
 	test('GIVEN a pattern nested deeper than Rust allows THEN it fails instead of overflowing the stack', () => {
 		expect(failure('('.repeat(300) + ')'.repeat(300)).message).toContain('nest limit');
+	});
+
+	test.each([
+		['a chain of repetitions', 'a' + '*'.repeat(10_000)],
+		['a chain of class operations', '[a' + '&&a'.repeat(10_000) + ']'],
+		['repeated groups', Array.from({ length: 130 }).reduce<string>((inner) => `(${inner})*`, 'a')]
+	])('GIVEN %s deeper than the nest limit THEN it is a RustRegexError, not a RangeError', (_name, pattern) => {
+		const error = failure(pattern);
+		expect(error.code).toBe('invalid_syntax');
+		expect(error.message).toContain('nest limit');
+		expect(() => transpile(pattern, { validate: false })).toThrow(RustRegexError);
+	});
+
+	test('GIVEN nesting well inside the limit THEN it still transpiles', () => {
+		expect(rust(Array.from({ length: 50 }).reduce<string>((inner) => `(${inner})*`, 'a')).test('a')).toBe(true);
+		expect(rust('^[a' + '&&a'.repeat(100) + ']$').test('a')).toBe(true);
 	});
 
 	test('GIVEN an unknown script THEN JavaScript rejects it and the error says so', () => {
