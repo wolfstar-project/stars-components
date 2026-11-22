@@ -103,6 +103,13 @@ class Parser {
 	private depth = 0;
 	private readonly names = new Set<string>();
 
+	/**
+	 * How many levels of groups, repetitions and classes sit below a node, counted the way the nest limit of the Rust
+	 * `regex` crate counts the depth of its tree. A chain such as `a*****...` adds a level per operator without opening
+	 * a group, so `depth` alone would not stop it, and the emitter would overflow the stack on it.
+	 */
+	private readonly heights = new WeakMap<object, number>();
+
 	public constructor(private readonly src: string) {}
 
 	public parse(flags: Flags): Node[][] {
@@ -117,7 +124,37 @@ class Parser {
 	}
 
 	private enter(): void {
-		if (++this.depth > NEST_LIMIT) throw this.error('invalid_syntax', `exceeded the nest limit of ${NEST_LIMIT}`);
+		if (++this.depth > NEST_LIMIT) throw this.nestLimit();
+	}
+
+	private nestLimit(position = this.pos): RustRegexError {
+		return this.error('invalid_syntax', `exceeded the nest limit of ${NEST_LIMIT}`, position);
+	}
+
+	private height(value: object): number {
+		return this.heights.get(value) ?? 0;
+	}
+
+	private withHeight<T extends object>(value: T, height: number, start: number): T {
+		if (height > NEST_LIMIT) throw this.nestLimit(start);
+
+		this.heights.set(value, height);
+		return value;
+	}
+
+	private altHeight(alt: readonly (readonly Node[])[]): number {
+		let tallest = 0;
+		for (const branch of alt) for (const node of branch) tallest = Math.max(tallest, this.height(node));
+
+		return tallest;
+	}
+
+	/** A union is a level of its own only with two items or more: Rust folds a union of one item into that item. */
+	private unionHeight(items: readonly ClassItem[]): number {
+		let tallest = 0;
+		for (const item of items) if (item.kind === 'class') tallest = Math.max(tallest, this.height(item.set));
+
+		return (items.length > 1 ? 1 : 0) + tallest;
 	}
 
 	private leave(): void {
@@ -132,7 +169,10 @@ class Parser {
 		return cp;
 	}
 
-	/** In verbose mode (`(?x)`) whitespace and `#` comments are not part of the pattern. */
+	/**
+	 * In verbose mode (`(?x)`) whitespace and `#` comments are not part of the pattern. That holds inside a class and
+	 * a counted repetition too, where an escaped `\#` is still a literal.
+	 */
 	private skipVerbose(flags: Flags): void {
 		if (!flags.x) return;
 
@@ -148,13 +188,6 @@ class Parser {
 				return;
 			}
 		}
-	}
-
-	/** Inside a class verbose mode only ignores whitespace: `#` is an ordinary character there. */
-	private skipClassSpace(flags: Flags): void {
-		if (!flags.x) return;
-
-		while (this.pos < this.src.length && WHITESPACE.test(this.src[this.pos]!)) this.pos++;
 	}
 
 	private parseAlternation(flags: Flags): Node[][] {
@@ -182,7 +215,9 @@ class Parser {
 				if (next !== '*' && next !== '+' && next !== '?' && next !== '{') break;
 				if (!repeatable) throw this.error('invalid_syntax', 'repetition operator missing expression');
 
-				node = this.parseRepetition(flags, node);
+				const operand = node;
+				const operatorAt = this.pos;
+				node = this.withHeight(this.parseRepetition(flags, node), this.height(operand) + 1, operatorAt);
 				repeatable = true;
 			}
 
@@ -227,16 +262,16 @@ class Parser {
 	private parseCounted(flags: Flags): [min: number, max: number | null] {
 		const start = this.pos;
 		this.pos++; // {
-		this.skipClassSpace(flags);
+		this.skipVerbose(flags);
 		const min = this.readDecimal();
-		this.skipClassSpace(flags);
+		this.skipVerbose(flags);
 
 		let max: number | null = min;
 		if (this.src[this.pos] === ',') {
 			this.pos++;
-			this.skipClassSpace(flags);
+			this.skipVerbose(flags);
 			max = this.src[this.pos] === '}' ? null : this.readDecimal();
-			this.skipClassSpace(flags);
+			this.skipVerbose(flags);
 		}
 
 		if (this.src[this.pos] !== '}') throw this.error('invalid_syntax', 'unclosed counted repetition', start);
@@ -263,8 +298,14 @@ class Parser {
 		switch (this.src[this.pos]) {
 			case '(':
 				return this.parseGroup(flags);
-			case '[':
-				return { node: { type: 'class', set: this.parseBracket(flags) }, repeatable: true };
+			case '[': {
+				const start = this.pos;
+				const set = this.parseBracket(flags);
+
+				// Groups and repetitions look up the height of the node, not of the class set it wraps.
+				const node: Node = { type: 'class', set };
+				return { node: this.withHeight(node, this.height(set), start), repeatable: true };
+			}
 			case '.':
 				this.pos++;
 				return { node: { type: 'dot', dotAll: flags.s }, repeatable: true };
@@ -359,7 +400,8 @@ class Parser {
 		if (this.src[this.pos] !== ')') throw this.error('invalid_syntax', 'unclosed group', start);
 
 		this.pos++;
-		return { node: { type: 'group', capture, name, iStart, alt }, repeatable: true };
+		const group: Node = { type: 'group', capture, name, iStart, alt };
+		return { node: this.withHeight(group, 1 + this.altHeight(alt), start), repeatable: true };
 	}
 
 	/** `(?flags)`, which changes the flags until the end of the group, and `(?flags:...)`, which scopes them to its body. */
@@ -419,7 +461,8 @@ class Parser {
 			if (this.src[this.pos] !== ')') throw this.error('invalid_syntax', 'unclosed group', start);
 
 			this.pos++;
-			return { node: { type: 'group', capture: false, name: undefined, iStart, alt }, repeatable: true };
+			const group: Node = { type: 'group', capture: false, name: undefined, iStart, alt };
+			return { node: this.withHeight(group, 1 + this.altHeight(alt), start), repeatable: true };
 		}
 
 		if (seen.size === 0 && !negated && this.src[this.pos - 1] === '?')
@@ -442,12 +485,13 @@ class Parser {
 		}
 
 		let lhs: ClassExpr | null = null;
+		let lhsHeight = 0;
 		let op: ClassOp | null = null;
 		let items: ClassItem[] = [];
 		let first = true;
 
 		for (;;) {
-			this.skipClassSpace(flags);
+			this.skipVerbose(flags);
 			const ch = this.src[this.pos];
 			if (ch === undefined) throw this.error('invalid_syntax', 'unclosed character class', start);
 
@@ -469,7 +513,16 @@ class Parser {
 				if (items.length === 0) throw this.error('invalid_syntax', `the "${operator}" operator is missing its left operand`);
 
 				const operand = union(items);
-				lhs = lhs === null || op === null ? operand : { kind: 'binary', op, left: lhs, right: operand };
+				const operandHeight = this.unionHeight(items);
+				if (lhs === null || op === null) {
+					lhs = operand;
+					lhsHeight = operandHeight;
+				} else {
+					lhs = { kind: 'binary', op, left: lhs, right: operand };
+					lhsHeight = 1 + Math.max(lhsHeight, operandHeight);
+					if (lhsHeight > NEST_LIMIT) throw this.nestLimit(start);
+				}
+
 				op = operator;
 				items = [];
 				this.pos += 2;
@@ -496,20 +549,23 @@ class Parser {
 		if (items.length === 0)
 			throw this.error('invalid_syntax', op === null ? 'empty character class' : `the "${op}" operator is missing its right operand`, start);
 
+		const lastHeight = this.unionHeight(items);
 		const expr: ClassExpr = lhs === null || op === null ? union(items) : { kind: 'binary', op, left: lhs, right: union(items) };
-		return { negated, expr };
+		const exprHeight = lhs === null || op === null ? lastHeight : 1 + Math.max(lhsHeight, lastHeight);
+
+		return this.withHeight({ negated, expr }, 1 + exprHeight, start);
 	}
 
 	/** In verbose mode (`(?x)`) whitespace may sit on either side of the dash, as in `[a - z]`. */
 	private pushCharOrRange(items: ClassItem[], lo: number, flags: Flags): void {
 		const afterLo = this.pos;
-		this.skipClassSpace(flags);
+		this.skipVerbose(flags);
 
 		const dashAt = this.pos;
 		const joinsRange = this.src[dashAt] === '-' && this.src[dashAt + 1] !== '-';
 		if (joinsRange) {
 			this.pos++; // -
-			this.skipClassSpace(flags);
+			this.skipVerbose(flags);
 		}
 
 		const next = this.src[this.pos];
