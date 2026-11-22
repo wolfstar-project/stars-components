@@ -22,6 +22,9 @@
 - name: packages:reddit-helpers
   color: '1d76db'
   description: Changes in reddit-helpers
+- name: packages:rust-regex
+  color: '1d76db'
+  description: Changes in rust-regex
 - name: packages:safe-fetch
   color: '1d76db'
   description: Changes in safe-fetch

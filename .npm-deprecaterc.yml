@@ -10,6 +10,7 @@ package:
     - '@wolfstar/i18next-type-generator'
     - '@wolfstar/influx-utilities'
     - '@wolfstar/reddit-helpers'
+    - '@wolfstar/rust-regex'
     - '@wolfstar/safe-fetch'
     - '@wolfstar/shared-http-pieces'
     - '@wolfstar/shared-influx-pieces'
