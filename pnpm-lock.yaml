@@ -964,8 +964,8 @@ importers:
         specifier: ^4.4.1
         version: 4.4.1
       '@sapphire/result':
-        specifier: ^2.8.0
-        version: 2.8.0
+        specifier: ^3.0.0
+        version: 3.0.0
       '@sapphire/utilities':
         specifier: ^3.18.2
         version: 3.18.2
@@ -1279,8 +1279,8 @@ importers:
         specifier: ^0.6.2
         version: 0.6.2
       '@sapphire/result':
-        specifier: ^2.8.0
-        version: 2.8.0
+        specifier: ^3.0.0
+        version: 3.0.0
       '@sapphire/utilities':
         specifier: ^3.18.2
         version: 3.18.2
@@ -1331,8 +1331,8 @@ importers:
   packages/safe-fetch:
     dependencies:
       '@sapphire/result':
-        specifier: ^2.8.0
-        version: 2.8.0
+        specifier: ^3.0.0
+        version: 3.0.0
     devDependencies:
       golar:
         specifier: ^0.1.10
@@ -1430,8 +1430,8 @@ importers:
         specifier: ^4.4.1
         version: 4.4.1
       '@sapphire/result':
-        specifier: ^2.8.0
-        version: 2.8.0
+        specifier: ^3.0.0
+        version: 3.0.0
       '@wolfstar/env-utilities':
         specifier: workspace:^
         version: link:../env-utilities
@@ -1494,8 +1494,8 @@ importers:
   packages/twitch-helpers:
     dependencies:
       '@sapphire/result':
-        specifier: ^2.8.0
-        version: 2.8.0
+        specifier: ^3.0.0
+        version: 3.0.0
       '@wolfstar/env-utilities':
         specifier: workspace:^
         version: link:../env-utilities
@@ -1547,8 +1547,8 @@ importers:
   packages/weather-helpers:
     dependencies:
       '@sapphire/result':
-        specifier: ^2.8.0
-        version: 2.8.0
+        specifier: ^3.0.0
+        version: 3.0.0
       '@sapphire/utilities':
         specifier: ^3.18.2
         version: 3.18.2
@@ -3046,9 +3046,14 @@ packages:
     resolution: {integrity: sha512-693yWouX+hR9uJm1Jgq0uSSjbSD3UrblMaxiuGbHPjSwzLCSZTcm0h3kvdVhq3o/yl4+oeAWW3hiaJ0TELuRJQ==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
 
+  '@sapphire/result@3.0.0':
+    resolution: {integrity: sha512-HIK0PwBYfM26CewxqAi61SI710HiRzEpYL9K1WPDKGyVyWrqm0rC2CDJUeSZQhXwTNaCqfLMvz5lvnyv+5wW+g==}
+    engines: {node: '>=v24.0.0', npm: '>=11.0.0'}
+
   '@sapphire/shapeshift@4.0.0':
     resolution: {integrity: sha512-d9dUmWVA7MMiKobL3VpLF8P2aeanRTu6ypG2OIaEv/ZHH/SUQ2iHOVyi5wAPjQ+HmnMuL0whK9ez8I/raWbtIg==}
     engines: {node: '>=v16'}
+    deprecated: Shapeshift was created when other validation libraries had significant limitations in performance and error reporting. Those advantages have diminished as libraries such as Zod have become faster and improved their error messages, while also gaining broader environment support, a larger community, and custom error printers.
 
   '@sapphire/snowflake@3.5.5':
     resolution: {integrity: sha512-xzvBr1Q1c4lCe7i6sRnrofxeO1QTP/LKQ6A6qy0iB4x5yfiSfARMEQEghojzTNALDTcv8En04qYNIco9/K9eZQ==}
@@ -7024,31 +7029,44 @@ snapshots:
       '@tybys/wasm-util': 0.10.4
     optional: true
 
-  '@ngrok/ngrok-android-arm64@1.7.0': {}
+  '@ngrok/ngrok-android-arm64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-arm64@1.7.0': {}
+  '@ngrok/ngrok-darwin-arm64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-universal@1.7.0': {}
+  '@ngrok/ngrok-darwin-universal@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-x64@1.7.0': {}
+  '@ngrok/ngrok-darwin-x64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-freebsd-x64@1.7.0': {}
+  '@ngrok/ngrok-freebsd-x64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm-gnueabihf@1.7.0': {}
+  '@ngrok/ngrok-linux-arm-gnueabihf@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm64-gnu@1.7.0': {}
+  '@ngrok/ngrok-linux-arm64-gnu@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm64-musl@1.7.0': {}
+  '@ngrok/ngrok-linux-arm64-musl@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-x64-gnu@1.7.0': {}
+  '@ngrok/ngrok-linux-x64-gnu@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-x64-musl@1.7.0': {}
+  '@ngrok/ngrok-linux-x64-musl@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-arm64-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-arm64-msvc@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-ia32-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-ia32-msvc@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-x64-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-x64-msvc@1.7.0':
+    optional: true
 
   '@ngrok/ngrok@1.7.0':
     optionalDependencies:
@@ -7498,6 +7516,8 @@ snapshots:
       tslib: 2.8.1
 
   '@sapphire/result@2.8.0': {}
+
+  '@sapphire/result@3.0.0': {}
 
   '@sapphire/shapeshift@4.0.0':
     dependencies:

@@ -47,7 +47,7 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@sapphire/result": "^2.8.0",
+		"@sapphire/result": "^3.0.0",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/safe-fetch": "workspace:^"
 	},

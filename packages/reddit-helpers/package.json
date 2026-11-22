@@ -48,7 +48,7 @@
 	},
 	"dependencies": {
 		"@discordjs/formatters": "^0.6.2",
-		"@sapphire/result": "^2.8.0",
+		"@sapphire/result": "^3.0.0",
 		"@sapphire/utilities": "^3.18.2",
 		"@wolfstar/env-utilities": "workspace:^",
 		"@wolfstar/safe-fetch": "workspace:^",
