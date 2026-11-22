@@ -149,11 +149,12 @@ class Parser {
 		return tallest;
 	}
 
+	/** A union is a level of its own only with two items or more: Rust folds a union of one item into that item. */
 	private unionHeight(items: readonly ClassItem[]): number {
 		let tallest = 0;
 		for (const item of items) if (item.kind === 'class') tallest = Math.max(tallest, this.height(item.set));
 
-		return 1 + tallest;
+		return (items.length > 1 ? 1 : 0) + tallest;
 	}
 
 	private leave(): void {

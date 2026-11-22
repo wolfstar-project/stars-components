@@ -453,6 +453,11 @@ describe('errors', () => {
 		expect(rust('^[a' + '&&a'.repeat(100) + ']$').test('a')).toBe(true);
 	});
 
+	test('GIVEN classes nested one inside the other THEN each costs one level, as in Rust', () => {
+		expect(rust('^' + '['.repeat(200) + 'a' + ']'.repeat(200) + '$').test('a')).toBe(true);
+		expect(failure('['.repeat(300) + 'a' + ']'.repeat(300)).message).toContain('nest limit');
+	});
+
 	test('GIVEN an unknown script THEN JavaScript rejects it and the error says so', () => {
 		const error = failure(String.raw`\p{NotAScript}`);
 		expect(error.code).toBe('invalid_output');
