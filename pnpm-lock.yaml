@@ -967,8 +967,8 @@ importers:
         specifier: ^2.8.0
         version: 2.8.0
       '@sapphire/utilities':
-        specifier: ^3.18.2
-        version: 3.18.2
+        specifier: ^4.0.0
+        version: 4.0.0
       '@vladfrangu/async_event_emitter':
         specifier: ^2.4.7
         version: 2.4.7
@@ -1019,8 +1019,8 @@ importers:
         specifier: ^4.4.1
         version: 4.4.1
       '@sapphire/utilities':
-        specifier: ^3.18.2
-        version: 3.18.2
+        specifier: ^4.0.0
+        version: 4.0.0
       '@wolfstar/http-framework':
         specifier: workspace:*
         version: link:../http-framework
@@ -1282,8 +1282,8 @@ importers:
         specifier: ^2.8.0
         version: 2.8.0
       '@sapphire/utilities':
-        specifier: ^3.18.2
-        version: 3.18.2
+        specifier: ^4.0.0
+        version: 4.0.0
       '@wolfstar/env-utilities':
         specifier: workspace:^
         version: link:../env-utilities
@@ -1309,6 +1309,24 @@ importers:
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
+
+  packages/rust-regex:
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^5.0.3
+        version: 5.0.3(vitest@5.0.3)
+      golar:
+        specifier: ^0.1.10
+        version: 0.1.10
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.25)(tsx@4.23.15)(typescript@7.0.2)(unrun@0.3.1)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@22.15.21)(@vitest/coverage-v8@5.0.3)(vite@8.3.3)
 
   packages/safe-fetch:
     dependencies:
@@ -1532,8 +1550,8 @@ importers:
         specifier: ^2.8.0
         version: 2.8.0
       '@sapphire/utilities':
-        specifier: ^3.18.2
-        version: 3.18.2
+        specifier: ^4.0.0
+        version: 4.0.0
       '@wolfstar/safe-fetch':
         specifier: workspace:^
         version: link:../safe-fetch
@@ -3031,6 +3049,7 @@ packages:
   '@sapphire/shapeshift@4.0.0':
     resolution: {integrity: sha512-d9dUmWVA7MMiKobL3VpLF8P2aeanRTu6ypG2OIaEv/ZHH/SUQ2iHOVyi5wAPjQ+HmnMuL0whK9ez8I/raWbtIg==}
     engines: {node: '>=v16'}
+    deprecated: Shapeshift was created when other validation libraries had significant limitations in performance and error reporting. Those advantages have diminished as libraries such as Zod have become faster and improved their error messages, while also gaining broader environment support, a larger community, and custom error printers.
 
   '@sapphire/snowflake@3.5.5':
     resolution: {integrity: sha512-xzvBr1Q1c4lCe7i6sRnrofxeO1QTP/LKQ6A6qy0iB4x5yfiSfARMEQEghojzTNALDTcv8En04qYNIco9/K9eZQ==}
@@ -3043,6 +3062,10 @@ packages:
   '@sapphire/utilities@3.18.2':
     resolution: {integrity: sha512-QGLdC9+pT74Zd7aaObqn0EUfq40c4dyTL65pFnkM6WO1QYN7Yg/s4CdH+CXmx0Zcu6wcfCWILSftXPMosJHP5A==}
     engines: {node: '>=v14.0.0'}
+
+  '@sapphire/utilities@4.0.0':
+    resolution: {integrity: sha512-GBM5Caqiw7amBxwbeuXc6asBAZkiRPexXxjN9zX6jD8glpGTvq5zjnDOzeTsNAWhsRpZOc+KeFoWURbImS2Yww==}
+    engines: {node: '>=v24.0.0'}
 
   '@sentry/bundler-plugins@11.5.0':
     resolution: {integrity: sha512-3stxFCNFO2f8GTOsF0rgUOa1UN0if4GYQspZTCdI0MISKinIsts5z3QJUeyZDnGjPkUBBoTo7STuUSqiK88IQg==}
@@ -7006,31 +7029,44 @@ snapshots:
       '@tybys/wasm-util': 0.10.4
     optional: true
 
-  '@ngrok/ngrok-android-arm64@1.7.0': {}
+  '@ngrok/ngrok-android-arm64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-arm64@1.7.0': {}
+  '@ngrok/ngrok-darwin-arm64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-universal@1.7.0': {}
+  '@ngrok/ngrok-darwin-universal@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-darwin-x64@1.7.0': {}
+  '@ngrok/ngrok-darwin-x64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-freebsd-x64@1.7.0': {}
+  '@ngrok/ngrok-freebsd-x64@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm-gnueabihf@1.7.0': {}
+  '@ngrok/ngrok-linux-arm-gnueabihf@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm64-gnu@1.7.0': {}
+  '@ngrok/ngrok-linux-arm64-gnu@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-arm64-musl@1.7.0': {}
+  '@ngrok/ngrok-linux-arm64-musl@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-x64-gnu@1.7.0': {}
+  '@ngrok/ngrok-linux-x64-gnu@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-linux-x64-musl@1.7.0': {}
+  '@ngrok/ngrok-linux-x64-musl@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-arm64-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-arm64-msvc@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-ia32-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-ia32-msvc@1.7.0':
+    optional: true
 
-  '@ngrok/ngrok-win32-x64-msvc@1.7.0': {}
+  '@ngrok/ngrok-win32-x64-msvc@1.7.0':
+    optional: true
 
   '@ngrok/ngrok@1.7.0':
     optionalDependencies:
@@ -7494,6 +7530,8 @@ snapshots:
       typescript: 5.4.5
 
   '@sapphire/utilities@3.18.2': {}
+
+  '@sapphire/utilities@4.0.0': {}
 
   '@sentry/bundler-plugins@11.5.0':
     dependencies:
