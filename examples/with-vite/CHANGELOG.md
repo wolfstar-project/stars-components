@@ -1,5 +1,13 @@
 # with-vite
 
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2), [`8ca3c7b`](https://github.com/wolfstar-project/stars-components/commit/8ca3c7b110711cd93062f27e024a20029e38008e), [`5a78eba`](https://github.com/wolfstar-project/stars-components/commit/5a78eba7f4a47e2cbf9e05d035cf949c986d4f05)]:
+    - @wolfstar/env-utilities@2.3.2
+    - @wolfstar/http-framework@6.6.1
+
 ## 0.0.16
 
 ### Patch Changes
