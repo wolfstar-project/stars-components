@@ -2,6 +2,7 @@ import { Piece } from '@sapphire/pieces';
 import type { Awaitable, NonNullObject } from '@sapphire/utilities';
 import type { AutocompleteInteractionArguments, Interactions } from '../interactions/index.js';
 import { CommandRouter } from '../interactions/router/CommandRouter.js';
+import type { ApplicationCommandRegistryEntry } from '../interactions/shared/ApplicationCommandRegistryEntry.js';
 import { CommandRegistry } from '../interactions/shared/CommandRegistry.js';
 import type { PreconditionArrayResolvable } from '../utils/preconditions.js';
 
@@ -43,7 +44,7 @@ export abstract class Command<Options extends Command.Options = Command.Options>
 	 *
 	 * @returns The registry for this command, or `null` if it is not registered.
 	 */
-	public get registry() {
+	public get registry(): ApplicationCommandRegistryEntry | null {
 		return this.container.applicationCommandRegistry.get(this.constructor as typeof Command) ?? null;
 	}
 
