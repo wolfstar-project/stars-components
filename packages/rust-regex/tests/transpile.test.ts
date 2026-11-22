@@ -438,6 +438,8 @@ describe('errors', () => {
 	test.each([
 		['a chain of repetitions', 'a' + '*'.repeat(10_000)],
 		['a chain of class operations', '[a' + '&&a'.repeat(10_000) + ']'],
+		['repetitions on a deep class', '[a' + '&&a'.repeat(200) + ']' + '*'.repeat(100)],
+		['a group around a deep class', '('.repeat(60) + '[a' + '&&a'.repeat(200) + ']' + ')'.repeat(60)],
 		['repeated groups', Array.from({ length: 130 }).reduce<string>((inner) => `(${inner})*`, 'a')]
 	])('GIVEN %s deeper than the nest limit THEN it is a RustRegexError, not a RangeError', (_name, pattern) => {
 		const error = failure(pattern);

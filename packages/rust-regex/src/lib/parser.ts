@@ -297,8 +297,14 @@ class Parser {
 		switch (this.src[this.pos]) {
 			case '(':
 				return this.parseGroup(flags);
-			case '[':
-				return { node: { type: 'class', set: this.parseBracket(flags) }, repeatable: true };
+			case '[': {
+				const start = this.pos;
+				const set = this.parseBracket(flags);
+
+				// Groups and repetitions look up the height of the node, not of the class set it wraps.
+				const node: Node = { type: 'class', set };
+				return { node: this.withHeight(node, this.height(set), start), repeatable: true };
+			}
 			case '.':
 				this.pos++;
 				return { node: { type: 'dot', dotAll: flags.s }, repeatable: true };
