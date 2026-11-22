@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { prepareProject, runPrepare } from '../src/commands/prepare.js';
 import { findLegacyRootTsconfig } from '../src/utils/tsconfig.js';
-import { createFixture, type Fixture } from './helpers.js';
+import { createFixture, linkNodeTypes, type Fixture } from './helpers.js';
 
 describe('generated TypeScript configuration', () => {
 	let fixture: Fixture;
@@ -18,6 +18,7 @@ describe('generated TypeScript configuration', () => {
 			'tsconfig.json': '{"extends":"./.stars/tsconfig.json"}',
 			'stars.config.mjs': "export default { future: { compatibilityVersion: 5 }, build: { tool: 'tsdown' }, imports: false };"
 		});
+		await linkNodeTypes(fixture);
 	});
 
 	afterEach(async () => fixture.cleanup());
