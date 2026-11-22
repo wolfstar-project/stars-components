@@ -56,7 +56,7 @@
 	"devDependencies": {
 		"@discordjs/builders": "^1.14.1",
 		"@sapphire/pieces": "^4.4.1",
-		"@sapphire/utilities": "^3.18.2",
+		"@sapphire/utilities": "^4.0.0",
 		"@wolfstar/http-framework": "workspace:*",
 		"discord-api-types": "^0.38.8",
 		"golar": "^0.1.10",
