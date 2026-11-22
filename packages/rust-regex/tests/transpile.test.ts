@@ -156,6 +156,11 @@ describe('flags', () => {
 
 		expect(rust('(?x)^[a - ]+$').test('a-')).toBe(true);
 		expect(rust('(?x)^[a - ]+$').test('b')).toBe(false);
+
+		for (const pattern of ['(?x)^[a - -]+$', '(?x)^[a- -]+$']) {
+			expect(rust(pattern).test('a-')).toBe(true);
+			expect(rust(pattern).test('b')).toBe(false);
+		}
 	});
 
 	test('GIVEN (?U) THEN greediness is swapped', () => {

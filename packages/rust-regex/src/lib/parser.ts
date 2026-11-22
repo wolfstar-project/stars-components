@@ -513,7 +513,8 @@ class Parser {
 		}
 
 		const next = this.src[this.pos];
-		if (!joinsRange || next === undefined || next === ']') {
+		// Rust looks past whitespace for the `]` or the `-` that follows the dash, so `[a - -]` is `a` and `-`.
+		if (!joinsRange || next === undefined || next === ']' || next === '-') {
 			// Not a range: the dash, if any, is read again as a character of its own.
 			this.pos = afterLo;
 			items.push({ kind: 'char', cp: lo });
