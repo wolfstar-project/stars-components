@@ -50,9 +50,9 @@
 		"@wolfstar/eslint-plugin-http-framework": "workspace:*"
 	},
 	"devDependencies": {
-		"golar": "^0.1.10",
-		"oxlint": "1.87.0",
-		"tsdown": "^0.23.0",
+		"golar": "^0.1.11",
+		"oxlint": "1.94.0",
+		"tsdown": "^0.23.7",
 		"typescript": "~7.0.2"
 	},
 	"peerDependencies": {

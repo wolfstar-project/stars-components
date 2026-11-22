@@ -60,15 +60,15 @@
 	},
 	"dependencies": {
 		"@wolfstar/schema": "workspace:^",
-		"srvx": "^1.0.5"
+		"srvx": "^1.0.8"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^5.0.3",
-		"golar": "^0.1.10",
-		"tsdown": "^0.23.0",
+		"@vitest/coverage-v8": "^5.1.1",
+		"golar": "^0.1.11",
+		"tsdown": "^0.23.7",
 		"typescript": "~7.0.2",
-		"vite": "^8.3.3",
-		"vitest": "^5.0.3"
+		"vite": "^8.3.8",
+		"vitest": "^5.1.1"
 	},
 	"peerDependencies": {
 		"vite": ">=6.0.0"
