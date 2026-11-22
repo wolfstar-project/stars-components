@@ -1,5 +1,13 @@
 # @wolfstar/nitro-server
 
+## 0.2.15
+
+### Patch Changes
+
+- [#317](https://github.com/wolfstar-project/stars-components/pull/317) [`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2) - fix(deps): update all non-major dependencies Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2)]:
+    - @wolfstar/vite-server@0.5.3
+
 ## 0.2.14
 
 ### Patch Changes
