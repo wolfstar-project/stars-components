@@ -1,5 +1,6 @@
 // Workspace packages the sources import by name: resolved to their sources so that no build is needed first.
 const SOURCES = new Map([
+	['@wolfstar/discord-utilities', new URL('../packages/discord-utilities/src/index.ts', import.meta.url).href],
 	['@wolfstar/schema', new URL('../packages/schema/src/index.ts', import.meta.url).href],
 	['@wolfstar/http-framework', new URL('../packages/http-framework/src/index.ts', import.meta.url).href]
 ]);
