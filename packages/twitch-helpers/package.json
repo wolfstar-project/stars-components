@@ -53,8 +53,8 @@
 	},
 	"devDependencies": {
 		"@redstardev/unplugin-version-injector": "^0.0.2",
-		"golar": "^0.1.10",
-		"tsdown": "^0.23.0",
+		"golar": "^0.1.11",
+		"tsdown": "^0.23.7",
 		"typescript": "~7.0.2"
 	},
 	"engines": {

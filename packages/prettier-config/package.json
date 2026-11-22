@@ -47,9 +47,9 @@
 		"prepack": "pnpm run build"
 	},
 	"devDependencies": {
-		"golar": "^0.1.10",
-		"prettier": "^3.9.9",
-		"tsdown": "^0.23.0",
+		"golar": "^0.1.11",
+		"prettier": "^3.10.1",
+		"tsdown": "^0.23.7",
 		"typescript": "~7.0.2"
 	},
 	"peerDependencies": {

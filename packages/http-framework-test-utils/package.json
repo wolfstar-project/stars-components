@@ -54,15 +54,15 @@
 		"prepack": "pnpm run build"
 	},
 	"devDependencies": {
-		"@discordjs/builders": "^1.14.1",
+		"@discordjs/builders": "^1.15.0",
 		"@sapphire/pieces": "^4.4.1",
-		"@sapphire/utilities": "^3.18.2",
+		"@sapphire/utilities": "^3.18.3",
 		"@wolfstar/http-framework": "workspace:*",
 		"discord-api-types": "^0.38.8",
-		"golar": "^0.1.10",
-		"tsdown": "^0.23.0",
+		"golar": "^0.1.11",
+		"tsdown": "^0.23.7",
 		"typescript": "~7.0.2",
-		"vitest": "^5.0.3"
+		"vitest": "^5.1.1"
 	},
 	"peerDependencies": {
 		"@wolfstar/http-framework": "workspace:^",
