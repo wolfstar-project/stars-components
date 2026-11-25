@@ -1,5 +1,11 @@
 # @wolfstar/rust-regex
 
+## 0.1.1
+
+### Patch Changes
+
+- [#395](https://github.com/wolfstar-project/stars-components/pull/395) [`e681815`](https://github.com/wolfstar-project/stars-components/commit/e68181581d96975d6e657c454a294b59bdf225fd) - Ignore `#` comments inside character classes and counted repetitions under `(?x)`, as the Rust `regex` crate does. Reject a chain of repetitions or class operations deeper than the nest limit with a `RustRegexError` instead of a native `RangeError`. Thanks [@RedStar071](https://github.com/RedStar071)!
+
 ## 0.1.0
 
 ### Minor Changes
