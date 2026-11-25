@@ -148,7 +148,7 @@ For a complete list of available examples, see [`examples/README.md`](./examples
 
 ## Sponsors
 
-WolfStar is free, open-source and self-hosted, but the servers, database and CI/CD it runs on have real costs. Sponsorships go directly to hosting, tooling and maintenance. Stars Components is part of the WolfStar ecosystem.
+WolfStar is free and open-source, but the servers, database and CI/CD it runs on have real costs. Sponsorships go directly to hosting, tooling and maintenance. Stars Components is part of the WolfStar ecosystem.
 
 ### How to sponsor
 
