@@ -1,6 +1,6 @@
 {
 	"name": "@wolfstar/weather-helpers",
-	"version": "1.1.7",
+	"version": "1.1.8",
 	"description": "Very basic weather helper functions used across several Star bots",
 	"keywords": [
 		"api",
@@ -48,7 +48,7 @@
 	},
 	"dependencies": {
 		"@sapphire/result": "^2.8.0",
-		"@sapphire/utilities": "^3.18.2",
+		"@sapphire/utilities": "^4.0.0",
 		"@wolfstar/safe-fetch": "workspace:^"
 	},
 	"devDependencies": {

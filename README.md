@@ -97,6 +97,7 @@ pnpm add @wolfstar/http-framework @wolfstar/env-utilities
 | **Utilities & Helpers**                                                             |                                                                                                                     |                                                                                                                                                                   |
 | [`@wolfstar/env-utilities`](./packages/env-utilities)                               | Functional utilities for reading and parsing environment variables                                                  | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/env-utilities)](https://npmx.dev/package/@wolfstar/env-utilities)                               |
 | [`@wolfstar/influx-utilities`](./packages/influx-utilities)                         | Opinionated abstraction layer for InfluxDB single-organization access                                               | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/influx-utilities)](https://npmx.dev/package/@wolfstar/influx-utilities)                         |
+| [`@wolfstar/rust-regex`](./packages/rust-regex)                                     | Transpiles Rust `regex` syntax (the flavour Discord uses) into JavaScript `RegExp`                                  | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/rust-regex)](https://npmx.dev/package/@wolfstar/rust-regex)                                     |
 | [`@wolfstar/safe-fetch`](./packages/safe-fetch)                                     | Fetch wrapper implementing Rust-style Result types for error handling                                               | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/safe-fetch)](https://npmx.dev/package/@wolfstar/safe-fetch)                                     |
 | [`@wolfstar/start-banner`](./packages/start-banner)                                 | CLI banner generator utility for startup messages                                                                   | [![version](https://npmx.dev/api/registry/badge/version/@wolfstar/start-banner)](https://npmx.dev/package/@wolfstar/start-banner)                                 |
 | **Third-Party Integrations**                                                        |                                                                                                                     |                                                                                                                                                                   |
@@ -142,6 +143,23 @@ pnpm --filter basic-js dev
 ```
 
 For a complete list of available examples, see [`examples/README.md`](./examples/README.md).
+
+---
+
+## Sponsors
+
+WolfStar is free and open-source, but the servers, database and CI/CD it runs on have real costs. Sponsorships go directly to hosting, tooling and maintenance. Stars Components is part of the WolfStar ecosystem.
+
+### How to sponsor
+
+- [GitHub Sponsors](https://github.com/sponsors/RedStar071)
+- [Open Collective](https://opencollective.com/wolfstar-project)
+- [Ko-fi](https://ko-fi.com/redstar071)
+- [Patreon](https://www.patreon.com/RedStar071)
+
+### Current Sponsors
+
+<!-- sponsors:start --><!-- sponsors:end -->
 
 ---
 

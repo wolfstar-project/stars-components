@@ -1,5 +1,5 @@
-import { Module } from 'node:module';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { Module, createRequire } from 'node:module';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -24,6 +24,19 @@ export async function createFixture(files: Record<string, string> = {}): Promise
 
 	for (const [path, content] of Object.entries(files)) await fixture.write(path, content);
 	return fixture;
+}
+
+/**
+ * `@sapphire/ts-config` v6 lists `types: ['node']`, which a real project resolves from its own `@types/node`. A fixture
+ * lives in the temporary directory with no `node_modules`, so `tsc` would fail with TS2688 before checking anything:
+ * link the repository's copy in, the way an installed project would have it.
+ */
+export async function linkNodeTypes(fixture: Fixture): Promise<void> {
+	const source = dirname(createRequire(import.meta.url).resolve('@types/node/package.json'));
+	const target = join(fixture.root, 'node_modules', '@types', 'node');
+	await mkdir(dirname(target), { recursive: true });
+	// A junction needs no elevated rights on Windows and behaves like a symlink elsewhere.
+	await symlink(source, target, 'junction');
 }
 
 /** A bot stand-in: prints a line, then stays alive until terminated. */

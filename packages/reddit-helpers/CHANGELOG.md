@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.9
+
+### Patch Changes
+
+- [#393](https://github.com/wolfstar-project/stars-components/pull/393) [`8ca3c7b`](https://github.com/wolfstar-project/stars-components/commit/8ca3c7b110711cd93062f27e024a20029e38008e) - fix(deps): update dependency @sapphire/utilities to v4 Thanks [@renovate](https://github.com/apps/renovate)!
+- Updated dependencies [[`595a252`](https://github.com/wolfstar-project/stars-components/commit/595a2520c6bfbeb28c71247869194c7476aa49a2)]:
+    - @wolfstar/env-utilities@2.3.2
+
 ## 1.2.8
 
 ### Patch Changes
