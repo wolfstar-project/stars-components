@@ -31,7 +31,7 @@
 		"@commitlint/cli": "^21.2.3",
 		"@commitlint/config-conventional": "^21.2.3",
 		"@favware/npm-deprecate": "^2.0.0",
-		"@sapphire/ts-config": "^5.0.3",
+		"@sapphire/ts-config": "^6.0.0",
 		"@swc/core": "^1.16.13",
 		"@tolgee/cli": "^2.20.0",
 		"@types/node": "22.15.21",
