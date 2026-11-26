@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.3
+
+### Patch Changes
+
+- [#385](https://github.com/wolfstar-project/stars-components/pull/385) [`5cf6a5b`](https://github.com/wolfstar-project/stars-components/commit/5cf6a5b870755cfaae4bc66adc43ea1d00d3da5f) - Add the Japanese translation of the `info` command and sync the other locales from Tolgee. Thanks [@wolfstarbot](https://github.com/wolfstarbot)!
+
 ## 2.2.2
 
 ### Patch Changes

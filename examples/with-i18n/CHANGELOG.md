@@ -1,5 +1,12 @@
 # with-i18n
 
+## 0.0.39
+
+### Patch Changes
+
+- Updated dependencies [[`5cf6a5b`](https://github.com/wolfstar-project/stars-components/commit/5cf6a5b870755cfaae4bc66adc43ea1d00d3da5f)]:
+    - @wolfstar/shared-http-pieces@2.2.3
+
 ## 0.0.38
 
 ### Patch Changes
