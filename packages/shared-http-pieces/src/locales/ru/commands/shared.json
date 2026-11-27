@@ -1,12 +1,12 @@
 {
-	"infoButtonDonate": "Пожертвовать",
-	"infoButtonGitHub": "Репозиторий на GitHub",
-	"infoButtonInvite": "Добавьте меня на ваш сервер!",
-	"infoButtonSupport": "Сервер поддержки",
-	"infoDescription": "Предоставляет информацию обо мне, ссылки для добавления бота и присоединения к серверу поддержки",
-	"infoFieldServerUsageTitle": "Использование сервера",
-	"infoFieldServerUsageValue": "• **Загрузка ЦП**: {{cpu}}\n• **Память**: {{heapUsed}}МБ (Всего: {{heapTotal}}МБ)",
-	"infoFieldUptimeTitle": "Время непрерывной работы",
-	"infoFieldUptimeValue": "• **Хост**: {{host}}\n• **Клиент**: {{client}}",
-	"infoName": "инфо"
+  "infoButtonDonate": "Пожертвовать",
+  "infoButtonGitHub": "Репозиторий на GitHub",
+  "infoButtonInvite": "Добавьте меня на ваш сервер!",
+  "infoButtonSupport": "Сервер поддержки",
+  "infoDescription": "Предоставляет информацию обо мне, ссылки для добавления бота и присоединения к серверу поддержки",
+  "infoFieldServerUsageTitle": "Использование сервера",
+  "infoFieldServerUsageValue": "• **Загрузка ЦП**: {{cpu}}\n• **Память**: {{heapUsed}}МБ (Всего: {{heapTotal}}МБ)",
+  "infoFieldUptimeTitle": "Время непрерывной работы",
+  "infoFieldUptimeValue": "• **Хост**: {{host}}\n• **Клиент**: {{client}}",
+  "infoName": "инфо"
 }

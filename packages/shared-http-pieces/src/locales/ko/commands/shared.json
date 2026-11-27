@@ -1,12 +1,12 @@
 {
-	"infoButtonDonate": "후원하기",
-	"infoButtonGitHub": "Github 저장소",
-	"infoButtonInvite": "서버에 초대하기",
-	"infoButtonSupport": "지원 서버",
-	"infoDescription": "봇 정보, 봇 초대 링크와 지원 서버 링크 등을 제공해요.",
-	"infoFieldServerUsageTitle": "서버 사용량",
-	"infoFieldServerUsageValue": "• **CPU 사용량**: {{cpu}}\n• **메모리**: {{heapUsed}}MB (전체: {{heapTotal}}MB)",
-	"infoFieldUptimeTitle": "작동 시간",
-	"infoFieldUptimeValue": "• **호스트**: {{host}}\n• **클라이언트**: {{client}}",
-	"infoName": "정보"
+  "infoButtonDonate": "후원하기",
+  "infoButtonGitHub": "Github 저장소",
+  "infoButtonInvite": "서버에 초대하기",
+  "infoButtonSupport": "지원 서버",
+  "infoDescription": "봇 정보, 봇 초대 링크와 지원 서버 링크 등을 제공해요.",
+  "infoFieldServerUsageTitle": "서버 사용량",
+  "infoFieldServerUsageValue": "• **CPU 사용량**: {{cpu}}\n• **메모리**: {{heapUsed}}MB (전체: {{heapTotal}}MB)",
+  "infoFieldUptimeTitle": "작동 시간",
+  "infoFieldUptimeValue": "• **호스트**: {{host}}\n• **클라이언트**: {{client}}",
+  "infoName": "정보"
 }

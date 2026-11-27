@@ -1,12 +1,12 @@
 {
-	"infoButtonDonate": "Wesprzyj",
-	"infoButtonGitHub": "Repozytorium na GitHub",
-	"infoButtonInvite": "Dodaj mnie do swojego serwera!",
-	"infoButtonSupport": "Serwer wsparcia",
-	"infoDescription": "Wyświetla informacje o mnie oraz podaje linki do dodania bota i serwera wsparcia",
-	"infoFieldServerUsageTitle": "Użycie Serwera",
-	"infoFieldServerUsageValue": "• **Procesor**: {{cpu}}\n• **Pamięć**: {{heapUsed}}MB (Łącznie: {{heapTotal}}MB)",
-	"infoFieldUptimeTitle": "Czas Pracy",
-	"infoFieldUptimeValue": "• **Host**: {{host}}\n• **Klient**: {{client}}",
-	"infoName": "info"
+  "infoButtonDonate": "Wesprzyj",
+  "infoButtonGitHub": "Repozytorium na GitHub",
+  "infoButtonInvite": "Dodaj mnie do swojego serwera!",
+  "infoButtonSupport": "Serwer wsparcia",
+  "infoDescription": "Wyświetla informacje o mnie oraz podaje linki do dodania bota i serwera wsparcia",
+  "infoFieldServerUsageTitle": "Użycie Serwera",
+  "infoFieldServerUsageValue": "• **Procesor**: {{cpu}}\n• **Pamięć**: {{heapUsed}}MB (Łącznie: {{heapTotal}}MB)",
+  "infoFieldUptimeTitle": "Czas Pracy",
+  "infoFieldUptimeValue": "• **Host**: {{host}}\n• **Klient**: {{client}}",
+  "infoName": "info"
 }
