@@ -1,12 +1,12 @@
 {
-  "infoButtonDonate": "寄付",
-  "infoButtonGitHub": "GitHub リポジトリ",
-  "infoButtonInvite": "サーバー に 追加 して ください！",
-  "infoButtonSupport": "サポート サーバー",
-  "infoDescription": "自分 についての 情報 を 提供 し、 bot を 追加 する リンク と サポート サーバー に 参加 する リンク を 提供 します",
-  "infoFieldServerUsageTitle": "サーバー使用状況",
-  "infoFieldServerUsageValue": "• ** CPU 使用率 **: {{cpu}}\n• ** メモリ **: {{heapUsed}}MB (合計: {{heapTotal}}MB)",
-  "infoFieldUptimeTitle": "稼働時間",
-  "infoFieldUptimeValue": "・**ホスト**: {{host}}\n・**クライアント**: {{client}}",
-  "infoName": "情報"
+	"infoButtonDonate": "寄付",
+	"infoButtonGitHub": "GitHub リポジトリ",
+	"infoButtonInvite": "サーバー に 追加 して ください！",
+	"infoButtonSupport": "サポート サーバー",
+	"infoDescription": "自分 についての 情報 を 提供 し、 bot を 追加 する リンク と サポート サーバー に 参加 する リンク を 提供 します",
+	"infoFieldServerUsageTitle": "サーバー使用状況",
+	"infoFieldServerUsageValue": "• ** CPU 使用率 **: {{cpu}}\n• ** メモリ **: {{heapUsed}}MB (合計: {{heapTotal}}MB)",
+	"infoFieldUptimeTitle": "稼働時間",
+	"infoFieldUptimeValue": "・**ホスト**: {{host}}\n・**クライアント**: {{client}}",
+	"infoName": "情報"
 }
